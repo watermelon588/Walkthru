@@ -24,19 +24,22 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] Checkpoint A: extension completes the easy fixture flow end to end
 
 ## Week 2 (Sep 28–Oct 4): report + scans
-- [ ] T6 `first_impression` + `synthesize` + report JSON (M)
-- [ ] T7 `seo_scan` (plain checks + PSI API + LLM content review) (M)
-- [ ] T8 `security_scan` (headers, TLS, cookies, exposed files, JS secret patterns) + domain verification (M)
+- [x] T6 `first_impression` + `synthesize` + report JSON (M)
+  - Done 2026-09-18: `app/agent/report.py` graph (first_impression, seo_scan, security_scan in parallel, then synthesize), `Report` schema, saved to `runs.report`, tokens logged.
+- [x] T7 `seo_scan` (plain checks + PSI API + LLM content review) (M)
+  - Done 2026-09-18: `app/scans/seo.py` (title, description, h1, canonical, viewport, lang, noindex, alt, OG, robots, sitemap; PageSpeed when key set). Content review lives in first_impression.
+- [x] T8 `security_scan` (headers, TLS, cookies, exposed files, JS secret patterns) + domain verification (M)
+  - Done 2026-09-18: `app/scans/security.py`; exposed files and bundle secrets only on verified domains (meta tag or /.well-known/walkthru.txt; `GET /verification`). SSRF guard in `scans/fetch.py`.
 - [ ] T9 Eval runner: % traps found, $ per run, free vs paid model → docs/decisions.md (S)
 - [ ] Checkpoint B: ≥ 60% traps found; cost measured
 
 ## Week 3 (Oct 5–11): product surface
 - [x] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
   - Done 2026-09-18: `apps/api/schema.sql` (runs + RLS), `app/auth.py` (bearer check via Supabase Auth), `app/db.py`; web `lib/auth.ts`, `RequireAuth`; extension gets the session from the dashboard (externally_connectable) and refreshes it.
-- [~] T11 Dashboard: sites, runs, Instant Scan (no install) (M)
-  - 2026-09-18: `/app` lists runs from Supabase (RLS), connect-extension button. Sites and Instant Scan pending T7/T8.
-- [~] T12 Report page + share link + CSV/Sheet export + email (M)
-  - 2026-09-18: `/app/runs/:id` shows outcome, steps, peak confusion, think-aloud log. Share, export, email pending.
+- [x] T11 Dashboard: sites, runs, Instant Scan (no install) (M)
+  - 2026-09-18: `/app` lists runs and scans, Instant Scan form, connect-extension button. Sites list deferred (runs are keyed by site already).
+- [x] T12 Report page + share link + CSV/Sheet export + email (M)
+  - 2026-09-18: `ReportView` (summary, first impression, top fixes, findings, think-aloud), `/r/:id` public page, Share (public link), Export CSV (Sheets via File > Import), Email me (Resend when key set).
 - [ ] T13 Chrome Web Store submission (review can take days) (S)
 - [ ] Checkpoint C: 20 community sites tested, feedback collected
 

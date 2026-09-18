@@ -19,11 +19,11 @@ def pool() -> ConnectionPool:
     return p
 
 
-def insert_run(run_id: str, user_id: str, site: str, goal: str, persona: str, tier: str, logged_in: bool) -> None:
+def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", email: str | None = None, public: bool = False) -> None:
     with pool().connection() as conn:
         conn.execute(
-            "insert into runs (id, user_id, site, goal, persona, tier, logged_in) values (%s, %s, %s, %s, %s, %s, %s)",
-            (run_id, user_id, site, goal, persona, tier, logged_in),
+            "insert into runs (id, user_id, site, goal, persona, tier, logged_in, kind, email, public) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (run_id, user_id, site, goal, persona, tier, logged_in, kind, email, public),
         )
 
 
@@ -32,9 +32,22 @@ def get_run(run_id: str) -> dict | None:
         return conn.execute("select * from runs where id = %s", (run_id,)).fetchone()
 
 
-def update_run(run_id: str, status: str, steps: list[dict]) -> None:
+def update_run(run_id: str, status: str, steps: list[dict], tokens: int = 0) -> None:
     with pool().connection() as conn:
-        conn.execute("update runs set status = %s, steps = %s, updated_at = now() where id = %s", (status, Jsonb(steps), run_id))
+        conn.execute("update runs set status = %s, steps = %s, tokens = %s, updated_at = now() where id = %s", (status, Jsonb(steps), tokens, run_id))
+
+
+def set_report(run_id: str, report: dict, status: str | None = None) -> None:
+    with pool().connection() as conn:
+        conn.execute(
+            "update runs set report = %s, tokens = %s, status = coalesce(%s, status), updated_at = now() where id = %s",
+            (Jsonb(report), report.get("tokens", 0), status, run_id),
+        )
+
+
+def set_public(run_id: str, public: bool = True) -> None:
+    with pool().connection() as conn:
+        conn.execute("update runs set public = %s, updated_at = now() where id = %s", (public, run_id))
 
 
 def setup() -> None:

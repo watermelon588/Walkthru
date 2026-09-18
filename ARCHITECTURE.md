@@ -26,7 +26,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 | Extension | Chrome MV3, TypeScript, WXT, React side panel | Built: snapshot, redaction, executor, step loop. Not yet run in a real Chrome |
 | Data | Supabase Postgres (RLS on every table) + Storage (screenshots) | `runs` table + RLS live (`apps/api/schema.sql`); LangGraph checkpoint tables in the same DB |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
-| Email | Resend | Not started |
+| Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
 | Payments | Dodo Payments (test mode first) | Not started |
 | Hosting | Vercel (web), Oracle Always Free VM or ~$5 VPS (API) | Not started |
 
@@ -42,7 +42,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 9. **Reads bypass the API.** The web app reads `runs` straight from Supabase under RLS; only the API (postgres role) writes. Fewer endpoints, and the DB enforces ownership.
 10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 
-## Agent graphs (planned)
+## Agent graphs
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
 - `site_scan`: seo_scan and security_scan in parallel.
