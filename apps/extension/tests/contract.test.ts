@@ -1,5 +1,6 @@
-/** Snapshot -> API contract. Runs only when the API (:8000) and fixtures (:8101) are up.
- *  Start them with the "api" and "fixtures" launch configs, then: npx vitest run tests/contract.test.ts */
+/** Snapshot -> API contract. Runs only when the API (:8000) and fixtures (:8101) are up and
+ *  WALKTHRU_TOKEN holds a Supabase access token (see apps/api/scripts/test_user.py).
+ *  Start the "api" and "fixtures" launch configs, then: WALKTHRU_TOKEN=... npx vitest run tests/contract.test.ts */
 
 import { JSDOM } from "jsdom";
 import { snapshot } from "../lib/snapshot";
@@ -15,7 +16,8 @@ async function up(url: string) {
   }
 }
 
-const live = (await up(API + "/health")) && (await up(EASY + "/"));
+const TOKEN = process.env.WALKTHRU_TOKEN;
+const live = !!TOKEN && (await up(API + "/health")) && (await up(EASY + "/"));
 
 describe.skipIf(!live)("snapshot of the easy fixture drives the live persona API", () => {
   test("first action targets an element the snapshot numbered", async () => {
@@ -26,7 +28,7 @@ describe.skipIf(!live)("snapshot of the easy fixture drives the live persona API
 
     const res = await fetch(API + "/runs", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify({ site: EASY, goal: "create an account", persona: "first_timer", logged_in: false, max_steps: 3, observation: obs }),
     });
     expect(res.status).toBe(200);

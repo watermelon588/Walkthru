@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getSession, WEB_URL } from "../../lib/api";
 import { runTest, type Progress, type RunOptions } from "./run";
 
 const PERSONAS = [
@@ -23,15 +24,22 @@ export function App() {
   const [persona, setPersona] = useState<(typeof PERSONAS)[number][0]>("first_timer");
   const [loggedIn, setLoggedIn] = useState(false);
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (typeof chrome === "undefined" || !chrome.tabs) return; // previewing outside the extension
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => setSite(tab?.url ?? ""));
+    getSession().then((s) => setSignedIn(!!s));
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ("session" in changes) setSignedIn(!!changes.session.newValue);
+    };
+    chrome.storage.onChanged.addListener(onChange);
+    return () => chrome.storage.onChanged.removeListener(onChange);
   }, []);
 
   const running = progress.phase === "running" || progress.phase === "starting";
-  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running;
+  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true;
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +55,12 @@ export function App() {
         <h1>Walkthru</h1>
         <span>See where strangers get stuck.</span>
       </header>
+
+      {signedIn === false && (
+        <p className="notice" role="status">
+          Not connected. <a href={`${WEB_URL}/app`} target="_blank" rel="noreferrer">Sign in to Walkthru</a> and click "Connect extension".
+        </p>
+      )}
 
       <form onSubmit={start} aria-busy={running}>
         <label>

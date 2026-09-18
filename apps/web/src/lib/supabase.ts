@@ -5,3 +5,6 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 /** null until VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in apps/web/.env */
 export const supabase = url && key ? createClient(url, key) : null
+
+// Dev only: lets a browser console call supabase.auth.setSession(...) to test signed-in pages.
+if (import.meta.env.DEV && supabase) (window as unknown as { supabase: unknown }).supabase = supabase

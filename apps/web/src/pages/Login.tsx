@@ -1,19 +1,23 @@
 import { EnvelopeSimpleIcon, GithubLogoIcon, GoogleLogoIcon } from '@phosphor-icons/react'
 import { useRef, useState, type FormEvent } from 'react'
+import { Navigate } from 'react-router'
 import { brand } from '../brand'
 import { Asset, btnGhost, btnPrimary, Logo } from '../components/Shared'
+import { useSession } from '../lib/auth'
 import { useReveal } from '../lib/motion'
 import { supabase } from '../lib/supabase'
 
 type Status = { kind: 'idle' } | { kind: 'sending' } | { kind: 'sent'; email: string } | { kind: 'error'; message: string }
 
-// Where Supabase sends people after they sign in. Becomes /app once the dashboard exists (T10).
-const redirectTo = `${location.origin}/`
+// Where Supabase sends people after they sign in.
+const redirectTo = `${location.origin}/app`
 
 export default function Login() {
   const root = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const { session } = useSession()
   useReveal(root)
+  if (session) return <Navigate to="/app" replace />
 
   async function sendLink(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()

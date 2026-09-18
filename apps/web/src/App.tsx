@@ -1,7 +1,20 @@
+import { BrowserRouter, Route, Routes } from 'react-router'
+import { RequireAuth } from './components/RequireAuth'
+import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import Report from './pages/Report'
 
-// Two pages don't need a router. Add react-router when the dashboard (T10) brings nested routes.
 export default function App() {
-  return location.pathname.startsWith('/login') ? <Login /> : <Landing />
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
+        <Route path="*" element={<Landing />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }

@@ -35,6 +35,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 @keyframes pulse { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .status .dot.live { animation: none; } }
 .error { color: var(--danger); font-size: 13px; margin: 0; }
+.notice { background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 13px; margin: 0; }
+.notice a { color: var(--ink); }
 
 .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
 .step { padding: 12px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 24px 1fr; gap: 8px; }

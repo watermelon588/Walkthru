@@ -17,13 +17,13 @@ Walkthru: AI test users try a website's flows (signup, dashboard, checkout) in t
 ## Repo layout
 ```
 apps/web/        React 19 + Vite + TS + Tailwind v4 + GSAP. Landing, login, (soon) dashboard and report pages.
-  src/pages/     One file per page (Landing.tsx, Login.tsx)
+  src/pages/     One file per page (Landing, Login, Dashboard, Report)
   src/components/Shared.tsx   Nav, Pricing, Faq, ScanForm, Closing, Footer, Asset, Words, class constants
-  src/lib/       supabase.ts (client), motion.ts (useReveal GSAP hook)
+  src/lib/       supabase.ts (client), auth.ts (useSession, signOut), runs.ts (Supabase reads), motion.ts
   src/content.ts All marketing copy. Edit copy here, not in components.
   public/assets/ Images. *.png screenshots are placeholders rendered from design/mocks.
   design/        mocks/ (HTML sources for placeholder screenshots), source-images/ (originals, not shipped)
-apps/api/        FastAPI + LangGraph (scaffold only so far)
+apps/api/        FastAPI + LangGraph. app/agent/ (persona graph), app/auth.py, app/db.py, schema.sql, scripts/test_user.py
 apps/extension/  Chrome MV3 extension (WXT + React). entrypoints/ (background, inject, sidepanel), lib/ (snapshot, redact, execute, safety, api), tests/
 evals/           Fixture sites (fixtures/easy, fixtures/hard, traps.json, serve.py) + LangSmith evals (T9, not started)
 ```
@@ -41,6 +41,8 @@ bash design/mocks/render.sh   # re-render placeholder screenshots (uses local Ed
 cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"
 .venv/Scripts/python -m pytest -q
 .venv/Scripts/ruff check .
+.venv/Scripts/python -m app.db            # apply schema.sql to Supabase (idempotent)
+.venv/Scripts/python scripts/test_user.py # throwaway account + session for local testing
 
 # extension
 cd apps/extension && npm install
