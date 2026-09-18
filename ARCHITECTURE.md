@@ -20,11 +20,11 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 | Part | Tech | Status |
 |---|---|---|
 | Web (landing, login, dashboard, report) | React 19, Vite, TypeScript, Tailwind v4, GSAP + @gsap/react, Phosphor icons, Geist | Landing and login built |
-| Auth | Supabase Auth: Google, GitHub, email magic link | UI built, keys not set |
+| Auth | Supabase Auth: Google, GitHub, email magic link. API validates bearer tokens via Supabase Auth (`app/auth.py`) | Live; OAuth providers still to enable in dashboard |
 | API | Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, httpx | `/health`, `/runs` step API, persona graph |
 | Agent models | Free pool: Groq `openai/gpt-oss-120b` primary, Gemini `gemini-3.1-flash-lite` fallback (`with_fallbacks`). Paid: Claude (Haiku 4.5 or Sonnet 5, T9 eval) once an Anthropic key exists; until then paid rides the free pool | Free pool live |
 | Extension | Chrome MV3, TypeScript, WXT, React side panel | Built: snapshot, redaction, executor, step loop. Not yet run in a real Chrome |
-| Data | Supabase Postgres (RLS on every table) + Storage (screenshots) | Project created; LangGraph checkpoint tables live in it. App schema not started |
+| Data | Supabase Postgres (RLS on every table) + Storage (screenshots) | `runs` table + RLS live (`apps/api/schema.sql`); LangGraph checkpoint tables in the same DB |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend | Not started |
 | Payments | Dodo Payments (test mode first) | Not started |
@@ -38,7 +38,9 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 5. **Plain code wherever possible.** SEO and security checks are deterministic code plus one LLM call to explain fixes. Only the persona session is an agent.
 6. **Passive security only, on verified domains** (meta tag, DNS TXT or well-known file).
 7. **Credits, not tokens,** for billing. One credit = one persona run. Tokens logged per run for margins.
-8. **No router yet.** `App.tsx` switches on `location.pathname`. Add react-router with the dashboard (T10). Production host must rewrite all paths to `index.html` (Vercel: `rewrites` in vercel.json).
+8. **react-router** for `/`, `/login`, `/app`, `/app/runs/:id`. Production host must rewrite all paths to `index.html` (Vercel: `rewrites` in vercel.json).
+9. **Reads bypass the API.** The web app reads `runs` straight from Supabase under RLS; only the API (postgres role) writes. Fewer endpoints, and the DB enforces ownership.
+10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 
 ## Agent graphs (planned)
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.

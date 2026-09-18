@@ -19,6 +19,8 @@ _Last updated: 2026-09-18_
 
 - **Extension (T3 + T4, 2026-09-18).** `apps/extension` (WXT 0.21, React 19, vitest). `lib/snapshot.ts` numbers visible interactive elements (open shadow roots included), collects page text and visible errors, flags CAPTCHA, tags elements with `data-walkthru-id`. `lib/redact.ts` masks emails, long numbers and key-like tokens before upload. `lib/execute.ts` runs one step (click, type via native setters, scroll, back) with a dry-run mode and the safe-mode filter. `entrypoints/sidepanel/run.ts` is the step loop: requests host access for the site's origin only, injects `inject.js` on demand, one `/runs` call per step, stops on leaving the origin or after 4 minutes, asks before any form submit on logged-in pages. Manifest permissions: activeTab, sidePanel, scripting, tabs, optional hosts. Build: `npm run build` in `apps/extension`, load unpacked from `apps/extension/.output/chrome-mv3`.
 
+- **Spine (T10 + parts of T11, T12, 2026-09-18).** Auth: the API checks `Authorization: Bearer` against Supabase Auth (`app/auth.py`, cached 5 min); every `/runs` route needs it and returns 404 for another user's run. Data: `apps/api/schema.sql` creates `public.runs` with RLS (owner select only); apply with `python -m app.db`. The API writes runs (`app/db.py`, psycopg pool); the web app reads them straight from Supabase. Web: react-router, `/app` dashboard (run list, empty/loading/error states, Connect extension button) and `/app/runs/:id` report (outcome, steps, confusion, think-aloud). `RequireAuth` redirects to `/login`; login redirects to `/app`. Extension: dashboard hands the session to the extension via `externally_connectable` (needs `VITE_EXTENSION_ID` in `apps/web/.env`); the panel sends a bearer token and refreshes it through Supabase. `scripts/test_user.py` creates a throwaway account and prints a session for local testing.
+
 ## In progress
 - **Checkpoint A pending:** the extension has not yet been loaded in a real Chrome. Load unpacked, open `http://127.0.0.1:8101`, click the toolbar icon, Start test.
 - Auth wiring: needs a Supabase project (founder).
@@ -28,10 +30,13 @@ _Last updated: 2026-09-18_
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
 2. Session handling: read the session after redirect, sign out, protect app routes.
 3. Add react-router and the dashboard shell (T10), then point `redirectTo` in Login.tsx at `/app`.
-4. Checkpoint A in the founder's Chrome (see In progress). Then Session 5: T6 first_impression + synthesize + report JSON.
+4. Checkpoint A in the founder's Chrome: load unpacked, copy the extension id into `apps/web/.env` as `VITE_EXTENSION_ID`, restart web, sign in at `/app`, click Connect extension, then run a test on `http://127.0.0.1:8101`.
+5. Session 5: T6 first_impression + synthesize + report JSON (add `report jsonb` to runs).
 
 ## Known issues and notes
 - Scan form and pricing buttons are front end only (T11, T14 wire them).
+- Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
+- `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
 - Privacy, Terms and Security pages do not exist yet (footer links are `#`). Required before launch.
 - Domain not bought yet (`brand.domain` is a placeholder). `agent-eye.jpg` is 735px wide, a bit soft on large screens.
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
@@ -40,6 +45,7 @@ _Last updated: 2026-09-18_
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
-- web: `npm run build` pass, lint 0 warnings. api: `pytest` 14 passed, `ruff` clean. extension: `vitest` 7 passed (+1 live contract test), `tsc` clean, `wxt build` pass, lint clean.
+- web: `npm run build` pass, lint 0 warnings. api: `pytest` 17 passed, `ruff` clean. extension: `vitest` 7 passed (+1 live contract test with `WALKTHRU_TOKEN`), `tsc` clean, `wxt build` pass, lint clean.
+- Live on 2026-09-18: authenticated run written to Supabase; anonymous REST read returns nothing, owner read returns the row; API without token is 401; dashboard and report render for the test account.
 - Landing: all 12 images load, no horizontal overflow at 375px and 1024px.
 - Login: invalid email error and not-configured message verified in the browser.

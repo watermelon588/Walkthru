@@ -31,9 +31,12 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] Checkpoint B: ≥ 60% traps found; cost measured
 
 ## Week 3 (Oct 5–11): product surface
-- [ ] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
-- [ ] T11 Dashboard: sites, runs, Instant Scan (no install) (M)
-- [ ] T12 Report page + share link + CSV/Sheet export + email (M)
+- [x] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
+  - Done 2026-09-18: `apps/api/schema.sql` (runs + RLS), `app/auth.py` (bearer check via Supabase Auth), `app/db.py`; web `lib/auth.ts`, `RequireAuth`; extension gets the session from the dashboard (externally_connectable) and refreshes it.
+- [~] T11 Dashboard: sites, runs, Instant Scan (no install) (M)
+  - 2026-09-18: `/app` lists runs from Supabase (RLS), connect-extension button. Sites and Instant Scan pending T7/T8.
+- [~] T12 Report page + share link + CSV/Sheet export + email (M)
+  - 2026-09-18: `/app/runs/:id` shows outcome, steps, peak confusion, think-aloud log. Share, export, email pending.
 - [ ] T13 Chrome Web Store submission (review can take days) (S)
 - [ ] Checkpoint C: 20 community sites tested, feedback collected
 
