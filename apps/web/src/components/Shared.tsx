@@ -1,6 +1,8 @@
-import { CheckCircleIcon, PlusIcon } from '@phosphor-icons/react'
+import { PlusIcon } from '@phosphor-icons/react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router'
+import { instantScan } from '../lib/runs'
 import { brand } from '../brand'
 import { faqs, footer, hero, plans } from '../content'
 
@@ -129,43 +131,50 @@ export function Faq() {
 
 /** Front end only: validates, then confirms. Wired to the Instant Scan API in task T11. */
 export function ScanForm() {
+  const navigate = useNavigate()
   const [error, setError] = useState('')
-  const [done, setDone] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const url = String(new FormData(e.currentTarget).get('url')).trim()
+    const data = new FormData(e.currentTarget)
+    const raw = String(data.get('url')).trim()
+    const email = String(data.get('email') ?? '').trim()
+    let site: string
     try {
-      if (!new URL(url.startsWith('http') ? url : `https://${url}`).hostname.includes('.')) throw new Error()
+      const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
+      if (!u.hostname.includes('.') && !u.hostname.startsWith('127.')) throw new Error()
+      site = u.href
     } catch {
       setError('Enter a full website address, like yoursite.com')
       return
     }
     setError('')
-    setDone(true)
+    setBusy(true)
+    try {
+      const { run_id } = await instantScan(site, email || undefined)
+      navigate(`/r/${run_id}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The scan failed. Try again in a minute.')
+      setBusy(false)
+    }
   }
 
-  if (done)
-    return (
-      <p role="status" className="flex items-center gap-3 text-ink">
-        <CheckCircleIcon weight="light" className="size-6 text-accent" />
-        You are on the list. Instant Scan opens on October 20 and your report arrives by email.
-      </p>
-    )
-
-  const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-ink focus:outline-none'
+  const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-ink focus:outline-none disabled:opacity-60'
   return (
-    <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <form onSubmit={submit} noValidate aria-busy={busy} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
       <div className="grid gap-2">
         <label htmlFor="url" className="text-sm text-muted">Website</label>
-        <input id="url" name="url" type="text" inputMode="url" placeholder="yoursite.com" className={input} aria-invalid={!!error} aria-describedby="url-error" />
+        <input id="url" name="url" type="text" inputMode="url" placeholder="yoursite.com" disabled={busy} className={input} aria-invalid={!!error} aria-describedby="url-error" />
       </div>
       <div className="grid gap-2">
-        <label htmlFor="email" className="text-sm text-muted">Email for the report</label>
-        <input id="email" name="email" type="email" placeholder="you@yoursite.com" className={input} />
+        <label htmlFor="email" className="text-sm text-muted">Email for the report (optional)</label>
+        <input id="email" name="email" type="email" placeholder="you@yoursite.com" disabled={busy} className={input} />
       </div>
-      <button type="submit" className={btnPrimary}>{hero.primary}</button>
-      <p id="url-error" className="text-sm text-danger sm:col-span-3">{error}</p>
+      <button type="submit" disabled={busy} className={`${btnPrimary} disabled:opacity-60`}>{busy ? 'Scanning...' : hero.primary}</button>
+      <p id="url-error" role="status" className="min-h-5 text-sm sm:col-span-3">
+        {error ? <span className="text-danger">{error}</span> : busy ? <span className="text-muted">Reading the homepage, checking SEO and headers, writing the report. About 20 seconds.</span> : ''}
+      </p>
     </form>
   )
 }

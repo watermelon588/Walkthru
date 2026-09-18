@@ -9,13 +9,34 @@ export type Step = {
   url: string
 }
 
+export type Finding = {
+  kind: 'ux' | 'seo' | 'security'
+  severity: 'high' | 'medium' | 'low'
+  title: string
+  detail: string
+  fix: string
+  evidence: string | null
+}
+
+export type Report = {
+  summary: string
+  first_impression: { what: string; who: string; first_click: string; trust: string[]; clarity: number } | null
+  findings: Finding[]
+  top_fixes: string[]
+  verified: boolean
+  tokens: number
+}
+
 export type Run = {
   id: string
   site: string
   goal: string
   persona: string
+  kind: 'test' | 'scan'
   status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha'
   steps: Step[]
+  report: Report | null
+  public: boolean
   created_at: string
   updated_at: string
 }
@@ -34,11 +55,15 @@ export const PERSONA_LABEL: Record<string, string> = {
   phone_user: 'Phone user',
   buyer: 'Small-business buyer',
   skeptic: 'Skeptical developer',
+  stranger: 'Stranger, five seconds',
 }
 
-const COLUMNS = 'id, site, goal, persona, status, steps, created_at, updated_at'
+export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', seo: 'SEO', security: 'Security' }
 
-/** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs. */
+const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at'
+
+/** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs (or public ones). */
 export async function listRuns(): Promise<Run[]> {
   if (!supabase) throw new Error('Supabase is not configured')
   const { data, error } = await supabase.from('runs').select(COLUMNS).order('created_at', { ascending: false }).limit(50)
@@ -51,6 +76,32 @@ export async function getRun(id: string): Promise<Run | null> {
   const { data, error } = await supabase.from('runs').select(COLUMNS).eq('id', id).maybeSingle()
   if (error) throw error
   return data as Run | null
+}
+
+/** Writes go through the API. */
+async function api<T>(path: string, body?: unknown, auth = true): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (auth) {
+    const token = (await supabase?.auth.getSession())?.data.session?.access_token
+    if (!token) throw new Error('Sign in first')
+    headers.Authorization = `Bearer ${token}`
+  }
+  const res = await fetch(API + path, { method: 'POST', headers, body: JSON.stringify(body ?? {}) })
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => ({}))) as { detail?: string }
+    throw new Error(detail.detail ?? `Request failed (${res.status})`)
+  }
+  return res.json()
+}
+
+export const instantScan = (site: string, email?: string) => api<{ run_id: string; url: string; report: Report }>('/scans', { site, email: email || null }, false)
+export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`)
+export const emailRun = (id: string) => api<{ sent: boolean; to: string | null }>(`/runs/${id}/email`)
+
+export function findingsCsv(run: Run): string {
+  const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`
+  const rows = (run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence].map(esc).join(','))
+  return ['kind,severity,title,detail,fix,evidence', ...rows].join('\n')
 }
 
 export function timeAgo(iso: string): string {

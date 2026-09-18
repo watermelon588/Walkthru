@@ -33,3 +33,41 @@ class PersonaStep(BaseModel):
     target_id: int | None = Field(default=None, description="Element id for click/type.")
     text: str | None = Field(default=None, description="Text to type, for type only.")
     confusion: int = Field(ge=0, le=3, description="0 clear, 1 hesitant, 2 confused, 3 stuck")
+
+
+class Finding(BaseModel):
+    """One problem in the report. Deterministic scans and the synthesis LLM both produce these."""
+
+    kind: Literal["ux", "seo", "security"]
+    severity: Literal["high", "medium", "low"]
+    title: str = Field(max_length=120)
+    detail: str = Field(max_length=600)
+    fix: str = Field(max_length=400)
+    evidence: str | None = Field(default=None, max_length=300, description="Step number, URL, header or snippet that shows it.")
+
+
+class FirstImpression(BaseModel):
+    """What a stranger takes from the homepage in five seconds."""
+
+    what: str = Field(description="What this site does, in one plain sentence, as a stranger would put it.")
+    who: str = Field(description="Who it seems to be for.")
+    first_click: str = Field(description="What they would click first and why.")
+    trust: list[str] = Field(description="Trust signals noticed, or notably missing.", max_length=5)
+    clarity: int = Field(ge=0, le=3, description="0 = instantly clear, 3 = no idea what this is.")
+
+
+class Synthesis(BaseModel):
+    """The LLM's half of the report; code merges it with scan findings."""
+
+    summary: str = Field(description="Three or four sentences: what happened, where it hurt, what to do first.")
+    ux_findings: list[Finding] = Field(description="Problems the test user hit, each citing the step number.", max_length=8)
+    top_fixes: list[str] = Field(description="Up to five fixes ranked by impact, across UX, SEO and security.", max_length=5)
+
+
+class Report(BaseModel):
+    summary: str
+    first_impression: FirstImpression | None = None
+    findings: list[Finding]
+    top_fixes: list[str]
+    verified: bool = False
+    tokens: int = 0

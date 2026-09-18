@@ -11,6 +11,7 @@ export type Progress = {
   steps: Step[];
   status?: string;
   message?: string;
+  runId?: string;
 };
 
 const SETTLE_MS = 1200;
@@ -57,10 +58,11 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
 
     let obs = await send<Observation>(tabId, { type: "snapshot" });
     let reply = await startRun({ ...opts, observation: obs });
+    const runId = reply.run_id;
 
     while (reply.status === "running") {
-      if (opts.signal.aborted) return onProgress({ phase: "finished", steps, status: "aborted" });
-      if (Date.now() > deadline) return onProgress({ phase: "finished", steps, status: "budget" });
+      if (opts.signal.aborted) return onProgress({ phase: "finished", steps, status: "aborted", runId });
+      if (Date.now() > deadline) return onProgress({ phase: "finished", steps, status: "budget", runId });
       const step = reply.action;
       steps.push(step);
       emit({ message: step.thought });
@@ -69,7 +71,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       await settled(tabId, opts.signal);
       const current = await chrome.tabs.get(tabId);
       if (current.url && !sameOrigin(current.url, origin)) {
-        return onProgress({ phase: "finished", steps, status: "gave_up", message: "Left the site" });
+        return onProgress({ phase: "finished", steps, status: "gave_up", message: "Left the site", runId });
       }
       obs = await send<Observation>(tabId, { type: "snapshot" });
       if (note) obs.note = obs.note ? `${obs.note}; ${note}` : note;
@@ -101,5 +103,5 @@ function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => voi
   if (reply.status === "running") return;
   const last = reply.steps.at(-1);
   if (last && (last.action === "done" || last.action === "give_up") && steps.at(-1) !== last) steps.push(last);
-  onProgress({ phase: "finished", steps, status: reply.status });
+  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id });
 }

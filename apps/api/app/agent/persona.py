@@ -36,8 +36,10 @@ class SessionState(TypedDict, total=False):
     logged_in: bool
     max_steps: int
     observation: dict  # latest Observation
+    first_text: str  # page text of the first observation, kept for the report
     steps: list[dict]  # PersonaStep dumps + url
     status: Status
+    tokens: int  # LLM tokens used so far
 
 
 def system_prompt(state: SessionState) -> str:
@@ -94,10 +96,12 @@ def build_graph(model: Any, checkpointer: Any):
             ("system", system_prompt(state)),
             ("human", f"What you did so far:\n{history}\n\nCurrent page:\n{page}"),
         ]
-        step: PersonaStep = model.invoke(messages)
+        from app.agent.runtime import unwrap  # local import: runtime imports this module
+
+        step, used = unwrap(model.invoke(messages))
         step = _enforce(step, state)
         record = step.model_dump() | {"url": state["observation"]["url"]}
-        return {"steps": state.get("steps", []) + [record]}
+        return {"steps": state.get("steps", []) + [record], "tokens": state.get("tokens", 0) + used}
 
     def act(state: SessionState) -> dict:
         obs = interrupt(state["steps"][-1])

@@ -105,6 +105,11 @@ export function App() {
         <section className="summary" aria-label="Result">
           <h2>{STATUS_COPY[progress.status ?? ""]}</h2>
           <p>{progress.steps.length} steps. Highest confusion: {Math.max(0, ...progress.steps.map((s) => s.confusion))} of 3.</p>
+          {progress.runId && (
+            <p>
+              <a href={`${WEB_URL}/app/runs/${progress.runId}`} target="_blank" rel="noreferrer">View the full report</a> (ready in about half a minute)
+            </p>
+          )}
         </section>
       )}
 

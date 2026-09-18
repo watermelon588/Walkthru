@@ -7,11 +7,11 @@ import httpx
 from fastapi import HTTPException, Request
 
 TTL = 300  # seconds a validated token is trusted before re-checking
-_cache: dict[str, tuple[str, float]] = {}
+_cache: dict[str, tuple[dict, float]] = {}
 
 
-def require_user(request: Request) -> str:
-    """FastAPI dependency. Returns the Supabase user id or raises 401."""
+def require_user(request: Request) -> dict:
+    """FastAPI dependency. Returns {"id", "email"} for the Supabase user or raises 401."""
     auth = request.headers.get("authorization", "")
     if not auth.lower().startswith("bearer "):
         raise HTTPException(401, "sign in required")
@@ -26,9 +26,10 @@ def require_user(request: Request) -> str:
     )
     if r.status_code != 200:
         raise HTTPException(401, "invalid or expired session")
-    uid = r.json()["id"]
+    data = r.json()
+    user = {"id": data["id"], "email": data.get("email")}
     if len(_cache) > 1000:  # ponytail: tokens rotate hourly, so dropping expired entries is enough
         for k in [k for k, v in _cache.items() if v[1] <= time.time()]:
             del _cache[k]
-    _cache[token] = (uid, time.time() + TTL)
-    return uid
+    _cache[token] = (user, time.time() + TTL)
+    return user

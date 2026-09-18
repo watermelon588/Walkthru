@@ -25,3 +25,18 @@ create policy "owner reads runs" on public.runs
   using (user_id = (select auth.uid()));
 
 grant select on public.runs to authenticated;
+
+-- Instant scans (no account) and reports. Added 2026-09-18.
+alter table public.runs alter column user_id drop not null;
+alter table public.runs add column if not exists kind text not null default 'test';      -- test | scan
+alter table public.runs add column if not exists report jsonb;
+alter table public.runs add column if not exists public boolean not null default false;
+alter table public.runs add column if not exists email text;
+alter table public.runs add column if not exists tokens integer not null default 0;
+
+drop policy if exists "anyone reads public runs" on public.runs;
+create policy "anyone reads public runs" on public.runs
+  for select to anon, authenticated
+  using (public = true);
+
+grant select on public.runs to anon;

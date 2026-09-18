@@ -21,7 +21,7 @@ def test_supabase_check_and_cache(signed_in, monkeypatch):
     def fake_get(url, headers, timeout):
         calls.append(headers["Authorization"])
         ok = headers["Authorization"] == "Bearer good"
-        return httpx.Response(200 if ok else 401, json={"id": USER} if ok else {})
+        return httpx.Response(200 if ok else 401, json={"id": USER, "email": "t@x.io"} if ok else {})
 
     monkeypatch.setattr(auth.httpx, "get", fake_get)
     monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")

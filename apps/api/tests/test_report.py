@@ -1,0 +1,88 @@
+"""Report graph with the LLM faked: parallel branches merge, findings sort by severity, tokens add up."""
+
+import os
+import sys
+
+import pytest
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "evals"))
+from serve import start
+
+from app import main
+from app.agent import report, runtime
+from app.agent.schema import Finding, FirstImpression, Synthesis
+from app.main import app
+
+HARD = "http://127.0.0.1:8132"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def server():
+    os.environ["ALLOW_LOCAL_SCANS"] = "1"
+    s = start("hard", 8132)
+    yield
+    s.shutdown()
+
+
+@pytest.fixture(autouse=True)
+def fake_llm(monkeypatch):
+    def call(schema, messages):
+        if schema is FirstImpression:
+            return FirstImpression(what="A vague platform for synergy.", who="Unclear, maybe enterprises.", first_click="Log in, since there is no sign-up.", trust=["no pricing shown"], clarity=3), 100
+        return Synthesis(
+            summary="The test user could not find sign-up and the page says nothing concrete.",
+            ux_findings=[Finding(kind="ux", severity="high", title="Sign-up is hidden in the footer", detail="The user looked for it in the nav first.", fix="Add a Sign up button to the nav.", evidence="step 2")],
+            top_fixes=["Add a Sign up button to the nav.", "Add a meta description.", "Send security headers."],
+        ), 200
+
+    monkeypatch.setattr(runtime, "call", call)
+
+
+def test_run_report_merges_branches():
+    steps = [{"thought": "Looking for sign up", "action": "scroll", "target_id": None, "text": None, "confusion": 2, "url": HARD + "/"}]
+    rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps)
+    kinds = {f.kind for f in rep.findings}
+    assert kinds == {"ux", "seo", "security"}
+    assert rep.findings[0].severity == "high" and rep.findings[-1].severity == "low"  # sorted
+    assert rep.first_impression and rep.first_impression.clarity == 3
+    assert rep.top_fixes[0].startswith("Add a Sign up")
+    assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
+    assert rep.verified is False and not any("publicly readable" in f.title for f in rep.findings)
+
+
+def test_instant_scan_endpoint_creates_public_run(fake_db):
+    c = TestClient(app)
+    r = c.post("/scans", json={"site": HARD + "/"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    row = fake_db[body["run_id"]]
+    assert row["kind"] == "scan" and row["public"] is True and row["user_id"] is None and row["status"] == "done"
+    assert body["url"].endswith(f"/r/{body['run_id']}")
+    assert body["report"]["first_impression"]["what"].startswith("A vague")
+    assert any(f["title"] == "Missing meta description" for f in body["report"]["findings"])
+
+
+def test_instant_scan_rejects_bad_input_and_rate_limits(fake_db, monkeypatch):
+    c = TestClient(app)
+    assert c.post("/scans", json={"site": "not a url"}).status_code == 422
+    monkeypatch.setattr(main, "SCAN_LIMIT", 1)
+    main._scan_hits.clear()
+    assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200
+    assert c.post("/scans", json={"site": HARD + "/"}).status_code == 429
+
+
+def test_share_and_email(fake_db, monkeypatch):
+    from tests.conftest import USER
+
+    fake_db["r1"] = {"id": "r1", "user_id": USER, "site": "https://x.io", "tier": "free", "status": "done", "steps": [], "report": None, "email": "tester@example.com", "public": False}
+    c = TestClient(app)
+    assert c.post("/runs/r1/share").json()["url"].endswith("/r/r1") and fake_db["r1"]["public"] is True
+    assert c.post("/runs/r1/email").status_code == 409  # no report yet
+    fake_db["r1"]["report"] = {"summary": "s", "top_fixes": [], "findings": []}
+    sent = []
+    monkeypatch.setattr(main.deliver, "send_report", lambda to, link, site, rep: sent.append((to, link)) or True)
+    assert c.post("/runs/r1/email").json() == {"sent": True, "to": "tester@example.com"}
+    assert sent[0][1].endswith("/app/runs/r1")
+    token = c.get("/verification").json()
+    assert token["token"].startswith("wt-") and token["token"] in token["meta"]

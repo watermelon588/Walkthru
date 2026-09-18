@@ -10,13 +10,17 @@ dependencies = [
   "langchain-anthropic>=1",
   "langchain-google-genai>=4",
   "httpx>=0.28",
+  "selectolax>=0.3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "email-validator>=2"]
 
 [tool.setuptools]
-packages = ["app", "app.agent"]
+packages = ["app", "app.agent", "app.scans"]
 
 [tool.ruff]
 line-length = 140
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]

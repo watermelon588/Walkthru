@@ -2,9 +2,10 @@ import { PlugsConnectedIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { AppShell } from '../components/AppShell'
-import { btnGhost } from '../components/Shared'
+import { StatusPill } from '../components/ReportView'
+import { btnGhost, ScanForm } from '../components/Shared'
 import { useSession } from '../lib/auth'
-import { listRuns, PERSONA_LABEL, STATUS_LABEL, timeAgo, type Run } from '../lib/runs'
+import { listRuns, PERSONA_LABEL, timeAgo, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
 
@@ -29,6 +30,12 @@ export default function Dashboard() {
         <ConnectExtension />
       </div>
 
+      <section aria-label="Instant Scan" className="mt-10 rounded-2xl border border-line px-5 py-5 md:px-6">
+        <h2 className="text-lg font-light">Instant Scan</h2>
+        <p className="mt-1 mb-4 text-sm text-muted">First impression, SEO basics and security headers for any homepage. No extension needed.</p>
+        <ScanForm />
+      </section>
+
       <section aria-label="Runs" className="mt-12">
         {runs.kind === 'loading' && (
           <div aria-busy="true" aria-label="Loading runs" className="grid gap-px overflow-hidden rounded-2xl bg-line">
@@ -52,12 +59,12 @@ export default function Dashboard() {
               <li key={r.id} className="bg-bg">
                 <Link to={`/app/runs/${r.id}`} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4">
                   <div className="min-w-0">
-                    <p className="truncate">{r.goal}</p>
+                    <p className="truncate">{r.kind === 'scan' ? 'Instant Scan' : r.goal}</p>
                     <p className="mt-0.5 truncate font-mono text-xs text-muted">{r.site}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:justify-end">
-                    <span>{PERSONA_LABEL[r.persona] ?? r.persona}</span>
-                    <StatusPill status={r.status} />
+                    <span>{r.kind === 'scan' ? 'Instant Scan' : PERSONA_LABEL[r.persona] ?? r.persona}</span>
+                    {r.kind === 'test' && <StatusPill status={r.status} />}
                     <time dateTime={r.created_at}>{timeAgo(r.created_at)}</time>
                   </div>
                 </Link>
@@ -70,10 +77,6 @@ export default function Dashboard() {
   )
 }
 
-export function StatusPill({ status }: { status: Run['status'] }) {
-  const tone = status === 'done' ? 'text-accent' : status === 'running' ? 'text-muted' : 'text-danger'
-  return <span className={`rounded-full border border-line px-2.5 py-0.5 ${tone}`}>{STATUS_LABEL[status]}</span>
-}
 
 /** Hands the current session to the extension so it can call the API as you. Only the extension we name receives it. */
 function ConnectExtension() {

@@ -21,6 +21,8 @@ _Last updated: 2026-09-18_
 
 - **Spine (T10 + parts of T11, T12, 2026-09-18).** Auth: the API checks `Authorization: Bearer` against Supabase Auth (`app/auth.py`, cached 5 min); every `/runs` route needs it and returns 404 for another user's run. Data: `apps/api/schema.sql` creates `public.runs` with RLS (owner select only); apply with `python -m app.db`. The API writes runs (`app/db.py`, psycopg pool); the web app reads them straight from Supabase. Web: react-router, `/app` dashboard (run list, empty/loading/error states, Connect extension button) and `/app/runs/:id` report (outcome, steps, confusion, think-aloud). `RequireAuth` redirects to `/login`; login redirects to `/app`. Extension: dashboard hands the session to the extension via `externally_connectable` (needs `VITE_EXTENSION_ID` in `apps/web/.env`); the panel sends a bearer token and refreshes it through Supabase. `scripts/test_user.py` creates a throwaway account and prints a session for local testing.
 
+- **Report pipeline, Instant Scan, share, export, email (T6, T7, T8, T11, T12, 2026-09-18).** `app/agent/report.py` is a LangGraph with three parallel branches (`first_impression` LLM, `seo_scan` code, `security_scan` code) joined by `synthesize` (LLM). It runs in the background when a persona run ends (`finish_run`) and synchronously for `POST /scans` (Instant Scan, no login, 5 per IP per hour, public report). Scans: `app/scans/seo.py`, `app/scans/security.py`, `app/scans/fetch.py` (SSRF guard, `ALLOW_LOCAL_SCANS=1` for fixtures). Full security scan only on verified domains (`GET /verification` gives the token; meta tag or `/.well-known/walkthru.txt`). Every LLM call goes through `runtime.call` and logs tokens into `runs.tokens`. Email via Resend (`app/deliver.py`, no-op without a key). Web: `ReportView`, `/r/:id` public page with a "Tested with Walkthru" header, Share / Export CSV / Email me on `/app/runs/:id`, Instant Scan form on the landing page and dashboard (navigates to the public report). Extension panel links to the report when a run ends.
+
 ## In progress
 - **Checkpoint A pending:** the extension has not yet been loaded in a real Chrome. Load unpacked, open `http://127.0.0.1:8101`, click the toolbar icon, Start test.
 - Auth wiring: needs a Supabase project (founder).
@@ -31,7 +33,7 @@ _Last updated: 2026-09-18_
 2. Session handling: read the session after redirect, sign out, protect app routes.
 3. Add react-router and the dashboard shell (T10), then point `redirectTo` in Login.tsx at `/app`.
 4. Checkpoint A in the founder's Chrome: load unpacked, copy the extension id into `apps/web/.env` as `VITE_EXTENSION_ID`, restart web, sign in at `/app`, click Connect extension, then run a test on `http://127.0.0.1:8101`.
-5. Session 5: T6 first_impression + synthesize + report JSON (add `report jsonb` to runs).
+5. Session 8: T9 eval runner (traps found, cost per run) with LangSmith. Then T13 store submission, T14 billing.
 
 ## Known issues and notes
 - Scan form and pricing buttons are front end only (T11, T14 wire them).
@@ -47,5 +49,6 @@ _Last updated: 2026-09-18_
 ## Checks (last run)
 - web: `npm run build` pass, lint 0 warnings. api: `pytest` 17 passed, `ruff` clean. extension: `vitest` 7 passed (+1 live contract test with `WALKTHRU_TOKEN`), `tsc` clean, `wxt build` pass, lint clean.
 - Live on 2026-09-18: authenticated run written to Supabase; anonymous REST read returns nothing, owner read returns the row; API without token is 401; dashboard and report render for the test account.
+- Live on 2026-09-18: Instant Scan of the hard fixture returned 15 findings in 15 s for 1,372 tokens; public page renders; persona run report generated in the background after the run ended.
 - Landing: all 12 images load, no horizontal overflow at 375px and 1024px.
 - Login: invalid email error and not-configured message verified in the browser.
