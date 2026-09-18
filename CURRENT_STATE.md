@@ -17,7 +17,10 @@ _Last updated: 2026-09-18_
 
 - **Fixture sites (T2, 2026-09-18).** `evals/fixtures/easy` (Acme Notes: clean signup flow, good SEO, security headers) and `evals/fixtures/hard` (Zentrix: 18 seeded traps, 6 UX, 6 SEO, 6 security, listed in `evals/traps.json`). `python evals/serve.py` serves both with per-site headers; `python -m pytest tests/test_fixtures.py` proves each trap is present on hard and absent on easy.
 
+- **Extension (T3 + T4, 2026-09-18).** `apps/extension` (WXT 0.21, React 19, vitest). `lib/snapshot.ts` numbers visible interactive elements (open shadow roots included), collects page text and visible errors, flags CAPTCHA, tags elements with `data-walkthru-id`. `lib/redact.ts` masks emails, long numbers and key-like tokens before upload. `lib/execute.ts` runs one step (click, type via native setters, scroll, back) with a dry-run mode and the safe-mode filter. `entrypoints/sidepanel/run.ts` is the step loop: requests host access for the site's origin only, injects `inject.js` on demand, one `/runs` call per step, stops on leaving the origin or after 4 minutes, asks before any form submit on logged-in pages. Manifest permissions: activeTab, sidePanel, scripting, tabs, optional hosts. Build: `npm run build` in `apps/extension`, load unpacked from `apps/extension/.output/chrome-mv3`.
+
 ## In progress
+- **Checkpoint A pending:** the extension has not yet been loaded in a real Chrome. Load unpacked, open `http://127.0.0.1:8101`, click the toolbar icon, Start test.
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
 
@@ -25,7 +28,7 @@ _Last updated: 2026-09-18_
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
 2. Session handling: read the session after redirect, sign out, protect app routes.
 3. Add react-router and the dashboard shell (T10), then point `redirectTo` in Login.tsx at `/app`.
-4. Session 3: T3 extension snapshot. Session 4: T4 executor + loop, Checkpoint A on the easy fixture with a real model.
+4. Checkpoint A in the founder's Chrome (see In progress). Then Session 5: T6 first_impression + synthesize + report JSON.
 
 ## Known issues and notes
 - Scan form and pricing buttons are front end only (T11, T14 wire them).
@@ -37,6 +40,6 @@ _Last updated: 2026-09-18_
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
-- `npm run build`: pass. `npm run lint`: 0 warnings. `pytest`: 14 passed. `ruff`: clean.
+- web: `npm run build` pass, lint 0 warnings. api: `pytest` 14 passed, `ruff` clean. extension: `vitest` 7 passed (+1 live contract test), `tsc` clean, `wxt build` pass, lint clean.
 - Landing: all 12 images load, no horizontal overflow at 375px and 1024px.
 - Login: invalid email error and not-configured message verified in the browser.

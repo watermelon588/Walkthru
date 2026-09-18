@@ -18,6 +18,12 @@
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
       "runtimeArgs": ["evals/serve.py"],
       "port": 8102
+    },
+    {
+      "name": "panel",
+      "runtimeExecutable": "apps/api/.venv/Scripts/python",
+      "runtimeArgs": ["-m", "http.server", "8103", "--directory", "apps/extension/.output/chrome-mv3"],
+      "port": 8103
     }
   ]
 }

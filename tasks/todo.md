@@ -15,10 +15,10 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [x] T1c Login page UI (Supabase: Google, GitHub, magic link). Needs Supabase keys to go live.
 - [x] T2 Fixture sites with seeded UX/SEO/security traps (M)
   - Done 2026-09-18: `evals/fixtures/{easy,hard}`, 18 traps in `evals/traps.json`, `python evals/serve.py` (easy :8101, hard :8102), `tests/test_fixtures.py` proves every trap.
-- [ ] T3 Extension skeleton: side panel + content script snapshot (numbered elements, text, errors) + redaction (M)
-  - Verify: vitest on snapshot/redaction; manual load unpacked
-- [ ] T4 Action executor + safe-mode filter + same-origin/step caps (S)
-  - Verify: vitest on safe-mode; manual click/type on fixture
+- [x] T3 Extension skeleton: side panel + content script snapshot (numbered elements, text, errors) + redaction (M)
+  - Done 2026-09-18: `apps/extension` (WXT, React 19). `lib/snapshot.ts`, `lib/redact.ts`, side panel UI. 7 vitest. Manual load unpacked pending (founder's Chrome).
+- [x] T4 Action executor + safe-mode filter + same-origin/step caps (S)
+  - Done 2026-09-18: `lib/execute.ts` (click/type/scroll/back, dry run, safe mode), `sidepanel/run.ts` loop (per-site permission, same-origin stop, 4 min cap, confirm before submit on logged-in pages). Manual run on fixture pending.
 - [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer (M)
   - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver is wired via `DATABASE_URL` but not yet run against a real DB; LangSmith trace pending keys.
 - [ ] Checkpoint A: extension completes the easy fixture flow end to end
