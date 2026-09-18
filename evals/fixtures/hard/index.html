@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">Zentrix</a>
+    <nav>
+      <a href="/plans.html">Pricing</a>
+      <a href="/login.html">Log in</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Zentrix</h1>
+    <h1>The platform for modern synergy</h1>
+    <p>Leverage next-generation workflows to unlock outcomes at scale.</p>
+    <img src="hero1.svg" width="320" height="160">
+    <img src="hero2.svg" width="320" height="160">
+    <div class="ctas">
+      <button type="button" class="btn" onclick="openModal()">Continue</button>
+      <button type="button" class="btn" onclick="location.href='/onboard.html'">Proceed</button>
+    </div>
+  </main>
+  <div id="modal" class="modal" hidden>
+    <div class="box">
+      <p>Subscribe to our newsletter for synergy tips.</p>
+      <input type="email" placeholder="Email">
+      <button type="button" class="btn" onclick="closeModal()">Subscribe</button>
+      <button type="button" class="link" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+  <footer>
+    <span>© Zentrix Inc.</span> · <a href="/legal.html">Legal</a> · <a href="/signup.html" class="tiny">Create account</a>
+  </footer>
+</body>
+</html>

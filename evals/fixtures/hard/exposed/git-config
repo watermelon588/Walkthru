@@ -1,0 +1,5 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+[remote "origin"]
+	url = https://github.com/zentrix-example/web.git

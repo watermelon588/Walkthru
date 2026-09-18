@@ -13,8 +13,8 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [x] T1 Monorepo scaffold
 - [x] T1b Landing page (final: Silver base + borrowed sections, see DESIGN.md)
 - [x] T1c Login page UI (Supabase: Google, GitHub, magic link). Needs Supabase keys to go live.
-- [ ] T2 Fixture sites with seeded UX/SEO/security traps (M)
-  - Verify: served locally; trap list in `evals/traps.json`
+- [x] T2 Fixture sites with seeded UX/SEO/security traps (M)
+  - Done 2026-09-18: `evals/fixtures/{easy,hard}`, 18 traps in `evals/traps.json`, `python evals/serve.py` (easy :8101, hard :8102), `tests/test_fixtures.py` proves every trap.
 - [ ] T3 Extension skeleton: side panel + content script snapshot (numbered elements, text, errors) + redaction (M)
   - Verify: vitest on snapshot/redaction; manual load unpacked
 - [ ] T4 Action executor + safe-mode filter + same-origin/step caps (S)

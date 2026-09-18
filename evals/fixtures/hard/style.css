@@ -1,0 +1,17 @@
+body{font:16px/1.5 system-ui,sans-serif;margin:0;color:#222;background:#fafafa}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #ddd}
+nav a{margin-left:16px}
+main{max-width:640px;margin:48px auto;padding:0 16px}
+.brand{font-weight:700;text-decoration:none;color:inherit}
+.btn{display:inline-block;background:#3b3b3b;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;border:0;font:inherit;cursor:pointer;margin-right:8px}
+.link{background:none;border:0;color:#3b3b3b;text-decoration:underline;cursor:pointer;font:inherit}
+input{display:block;width:100%;padding:10px;margin-top:12px;border:1px solid #bbb;border-radius:6px;font:inherit}
+.terms input{display:inline;width:auto}
+.terms{margin-top:12px}
+.tiny{font-size:10px;color:#aaa}
+.error{color:#b00020;margin-top:12px}
+.ctas{margin-top:24px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
+.modal[hidden]{display:none}
+.box{background:#fff;padding:24px;border-radius:8px;max-width:360px}
+footer{text-align:center;padding:32px;color:#777}

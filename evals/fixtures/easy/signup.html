@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create your account: Acme Notes</title>
+  <meta name="description" content="Create a free Acme Notes account in under a minute.">
+  <link rel="canonical" href="http://127.0.0.1:8101/signup.html">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="/" class="brand">Acme Notes</a></header>
+  <main>
+    <h1>Create your account</h1>
+    <form id="signup" action="https://127.0.0.1:8101/api/signup" method="post" novalidate>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <label for="password">Password (at least 8 characters)</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      <p id="error" role="alert" class="error" hidden></p>
+      <button type="submit" class="btn">Create account</button>
+    </form>
+    <p>Already have an account? <a href="/login.html">Log in</a></p>
+  </main>
+  <script>
+    document.getElementById('signup').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var email = this.email.value.trim(), pw = this.password.value, err = document.getElementById('error');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; err.hidden = false; return; }
+      if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.hidden = false; return; }
+      location.href = '/welcome.html';
+    });
+  </script>
+</body>
+</html>
