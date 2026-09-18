@@ -24,7 +24,7 @@ apps/web/        React 19 + Vite + TS + Tailwind v4 + GSAP. Landing, login, (soo
   public/assets/ Images. *.png screenshots are placeholders rendered from design/mocks.
   design/        mocks/ (HTML sources for placeholder screenshots), source-images/ (originals, not shipped)
 apps/api/        FastAPI + LangGraph (scaffold only so far)
-apps/extension/  Chrome MV3 extension (not started)
+apps/extension/  Chrome MV3 extension (WXT + React). entrypoints/ (background, inject, sidepanel), lib/ (snapshot, redact, execute, safety, api), tests/
 evals/           Fixture sites (fixtures/easy, fixtures/hard, traps.json, serve.py) + LangSmith evals (T9, not started)
 ```
 
@@ -41,6 +41,12 @@ bash design/mocks/render.sh   # re-render placeholder screenshots (uses local Ed
 cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"
 .venv/Scripts/python -m pytest -q
 .venv/Scripts/ruff check .
+
+# extension
+cd apps/extension && npm install
+npm run build      # then chrome://extensions > Load unpacked > apps/extension/.output/chrome-mv3
+npm test           # vitest
+npx tsc --noEmit && npm run lint
 
 # fixtures
 apps/api/.venv/Scripts/python evals/serve.py   # easy :8101, hard :8102

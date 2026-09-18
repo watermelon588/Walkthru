@@ -23,7 +23,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 | Auth | Supabase Auth: Google, GitHub, email magic link | UI built, keys not set |
 | API | Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, httpx | `/health`, `/runs` step API, persona graph |
 | Agent models | Free pool: Groq `openai/gpt-oss-120b` primary, Gemini `gemini-3.1-flash-lite` fallback (`with_fallbacks`). Paid: Claude (Haiku 4.5 or Sonnet 5, T9 eval) once an Anthropic key exists; until then paid rides the free pool | Free pool live |
-| Extension | Chrome MV3, TypeScript, WXT, React side panel | Not started |
+| Extension | Chrome MV3, TypeScript, WXT, React side panel | Built: snapshot, redaction, executor, step loop. Not yet run in a real Chrome |
 | Data | Supabase Postgres (RLS on every table) + Storage (screenshots) | Project created; LangGraph checkpoint tables live in it. App schema not started |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend | Not started |
