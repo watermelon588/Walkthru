@@ -1,0 +1,67 @@
+# Design
+
+Premium, light, minimal. Thin type, quiet colour, real photography, slow deliberate motion. Light mode only (founder decision).
+
+## Brand
+- Name **Walkthru**, tagline **"See where strangers get stuck."**, description, logo: all in `apps/web/src/brand.ts`. Import from there, never hardcode the name.
+- Logo: the walking bird (`src/assets/brand/walkthru-mark.png`, ink on transparent), rendered by `<Logo />` in Shared.tsx. Top nav shows the bird only (`<Logo withName={false} />`, 32px). Footer and login show bird + name. Favicon and touch icon are generated from the same mark (`public/favicon.png`, `public/apple-touch-icon.png`).
+- Other logo options the founder made (penguin, frog, face) are kept in `apps/web/design/brand-source/`.
+
+## Tokens
+Defined in `apps/web/src/index.css` as CSS variables, exposed as Tailwind colours.
+
+| Token | Value | Use |
+|---|---|---|
+| `bg` | #f4f4f5 | Page background |
+| `surface` | #e9e9eb | Bands, side panels, placeholder slots |
+| `ink` | #1b1b1f | Headings, body, primary button fill |
+| `muted` | #63636b | Secondary text (passes AA on bg) |
+| `line` | #dedee2 | Hairlines, borders |
+| `accent` | #4d7274 | Icons, small highlights only. Never large fills. |
+| `danger` | #a33b3b | Form errors |
+
+One accent only. No new colours without updating this file.
+
+## Typography
+- Geist Variable (sans) and Geist Mono Variable, self-hosted via @fontsource.
+- Headlines: `font-extralight` / `font-light`, tight tracking (`-0.035em` on h1). H1 up to `md:text-7xl`, h2 `text-3xl md:text-5xl`.
+- Body: regular weight, `text-muted`, `leading-relaxed`, max ~60ch.
+- Mono only for machine output (actions, URLs, file paths).
+
+## Shape and layout
+- Buttons: pills (`rounded-full`). Primary = `bg-ink text-bg`. Ghost = `border-line`.
+- Frames, cards, photos: `rounded-2xl`. Inputs: `rounded-xl`.
+- Container: `max-w-7xl`, gutters `px-5 md:px-10`. Sections `py-20` to `py-32`.
+- Hairline grids (`gap-px bg-line`) instead of heavy cards for pricing-style tables.
+
+## Motion (GSAP + @gsap/react)
+- Shared hook `useReveal` (`src/lib/motion.ts`): headline words rise (`.word`), hero blocks fade (`.hero-fade`), sections fade up on scroll (`.reveal`).
+- Landing: the "how it works" timeline line draws with scroll.
+- Every animation sits inside `gsap.matchMedia('(prefers-reduced-motion: no-preference)')`. Animate transform and opacity only.
+- Motion must explain something (order, attention, feedback). No decorative loops.
+
+## Imagery
+- Photos: real, muted, people in context. Test-user portraits are shown in grayscale.
+- Product screenshots (.png): keep their natural shape (no forced crop), `rounded-lg` to match the mock window corners, soft ink-tinted shadow. Rendered trimmed flush by `render.sh`, so edges line up with text columns.
+- Placeholders are rendered from `apps/web/design/mocks/*.html` (`bash design/mocks/render.sh`). Replace with real captures, same filenames, once the product exists.
+- `<Asset>` shows a labelled slot if a file is missing, so layout never breaks.
+
+## Copy rules
+No em dashes. Plain verbs. Button labels 1 to 4 words. One label per intent ("Scan my site" everywhere for the free scan).
+
+## Landing page composition (final)
+Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) on 2026-09-18:
+1. Hero (Silver): headline, subtext, CTAs, product screenshot
+2. How it works (Silver): drawing timeline + eye-with-desktop-icons graphic (`agent-eye.jpg`)
+3. Quote (Porcelain content): full-bleed band, reader photo fading into the surface colour behind the quote (breaks the run of split sections)
+4. Report (Silver): sticky list + screenshots
+5. Test users (Graphite): 5 grayscale portraits
+6. Safety (Mist band): "Tests your dashboard without your password."
+7. Pricing, FAQ, Closing with scan form
+8. Footer: brand + about line, Product / Get started / Legal columns, AI disclaimer
+
+## Pages
+| Page | Path | Notes |
+|---|---|---|
+| Landing | `/` | `src/pages/Landing.tsx` |
+| Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
