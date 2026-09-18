@@ -1,0 +1,45 @@
+# Walkthru v1 — Task List
+
+Definition of done: tests pass, lint clean, manual check done, SPEC updated if behavior changed.
+
+## Founder tasks
+- [ ] Accounts: ~~Supabase~~, ~~LangSmith~~, ~~Gemini key~~, ~~Groq key~~, Google PageSpeed Insights API key, Anthropic (deferred, free providers for now), Dodo (test mode), Resend, Vercel
+- [ ] Chrome Web Store developer account ($5 one-time)
+- [ ] Check Dodo payout KYC (fallback Lemon Squeezy / Polar)
+- [ ] Oracle Cloud Always Free VM (fallback $5 VPS)
+- [ ] 20 community sites lined up for week-3 beta
+
+## Week 1 (Sep 21–27): prove the loop
+- [x] T1 Monorepo scaffold
+- [x] T1b Landing page (final: Silver base + borrowed sections, see DESIGN.md)
+- [x] T1c Login page UI (Supabase: Google, GitHub, magic link). Needs Supabase keys to go live.
+- [ ] T2 Fixture sites with seeded UX/SEO/security traps (M)
+  - Verify: served locally; trap list in `evals/traps.json`
+- [ ] T3 Extension skeleton: side panel + content script snapshot (numbered elements, text, errors) + redaction (M)
+  - Verify: vitest on snapshot/redaction; manual load unpacked
+- [ ] T4 Action executor + safe-mode filter + same-origin/step caps (S)
+  - Verify: vitest on safe-mode; manual click/type on fixture
+- [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer (M)
+  - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver is wired via `DATABASE_URL` but not yet run against a real DB; LangSmith trace pending keys.
+- [ ] Checkpoint A: extension completes the easy fixture flow end to end
+
+## Week 2 (Sep 28–Oct 4): report + scans
+- [ ] T6 `first_impression` + `synthesize` + report JSON (M)
+- [ ] T7 `seo_scan` (plain checks + PSI API + LLM content review) (M)
+- [ ] T8 `security_scan` (headers, TLS, cookies, exposed files, JS secret patterns) + domain verification (M)
+- [ ] T9 Eval runner: % traps found, $ per run, free vs paid model → docs/decisions.md (S)
+- [ ] Checkpoint B: ≥ 60% traps found; cost measured
+
+## Week 3 (Oct 5–11): product surface
+- [ ] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
+- [ ] T11 Dashboard: sites, runs, Instant Scan (no install) (M)
+- [ ] T12 Report page + share link + CSV/Sheet export + email (M)
+- [ ] T13 Chrome Web Store submission (review can take days) (S)
+- [ ] Checkpoint C: 20 community sites tested, feedback collected
+
+## Week 4 (Oct 12–18): money + launch
+- [ ] T14 Plans + credits + Dodo checkout + webhook + limits (M)
+- [ ] T15 Deploy (Vercel + VM), rate limits, error logging (M)
+- [ ] T16 Landing page wired to real signup, pricing, demo report (S)
+- [ ] Checkpoint D: stranger installs → tests → pays, in production
+- [ ] Launch Tue Oct 20

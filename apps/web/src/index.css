@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+}
+
+/* Design tokens (see DESIGN.md). Utilities: bg-bg, text-ink, text-muted, border-line, bg-surface, text-accent, bg-accent. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+}
+
+/* Shape rule: buttons are pills, frames and images rounded-2xl, inputs rounded-xl. */
+
+/* Palette: Silver (neutral silver, smoke, grey teal accent). Contrast checked for AA. */
+:root { --bg: #f4f4f5; --surface: #e9e9eb; --ink: #1b1b1f; --muted: #63636b; --line: #dedee2; --accent: #4d7274; --danger: #a33b3b; }
+
+body {
+  @apply antialiased;
+}
