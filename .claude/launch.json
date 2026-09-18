@@ -12,6 +12,12 @@
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000", "--app-dir", "apps/api"],
       "port": 8000
+    },
+    {
+      "name": "fixtures",
+      "runtimeExecutable": "apps/api/.venv/Scripts/python",
+      "runtimeArgs": ["evals/serve.py"],
+      "port": 8102
     }
   ]
 }

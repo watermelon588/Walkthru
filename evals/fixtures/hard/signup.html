@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="/" class="brand">Zentrix</a></header>
+  <main>
+    <h2>Register</h2>
+    <form id="signup" action="http://127.0.0.1:8102/api/signup" method="post" novalidate>
+      <input name="email" type="email" placeholder="Email">
+      <input name="password" type="password" placeholder="Password">
+      <div class="terms"><input id="terms" name="terms" type="checkbox"> <span class="tiny">terms</span></div>
+      <p id="error" class="error" hidden>Invalid</p>
+      <button type="submit" class="btn">Submit</button>
+    </form>
+  </main>
+  <script>
+    document.getElementById('signup').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var pw = this.password.value, err = document.getElementById('error');
+      if (!this.terms.checked) { return; }            /* U2: silent failure */
+      if (pw.length < 12) { err.hidden = false; return; } /* U6: rule not stated */
+      location.href = '/welcome.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+[
+  {"id": "U1", "site": "hard", "kind": "ux", "page": "/", "trap": "Signup entry point hidden: only a tiny 'Create account' link in the footer; nav has Log in but no Sign up", "expect": "signup hard to find"},
+  {"id": "U2", "site": "hard", "kind": "ux", "page": "/signup.html", "trap": "Silent form error: submit does nothing unless the unlabeled 'terms' checkbox is ticked; no message shown", "expect": "form submit gives no feedback"},
+  {"id": "U3", "site": "hard", "kind": "ux", "page": "/", "trap": "Nav 'Pricing' links to /plans.html which is a 404", "expect": "broken pricing link"},
+  {"id": "U4", "site": "hard", "kind": "ux", "page": "/", "trap": "Two near-identical CTAs 'Continue' and 'Proceed'; 'Continue' opens a newsletter modal instead of the flow", "expect": "ambiguous call to action"},
+  {"id": "U5", "site": "hard", "kind": "ux", "page": "/pricing.html", "trap": "Pricing page shows no prices, only 'Contact sales'", "expect": "no pricing shown"},
+  {"id": "U6", "site": "hard", "kind": "ux", "page": "/signup.html", "trap": "Password must be 12+ chars but the rule is not stated; error just says 'Invalid'", "expect": "unhelpful password error"},
+  {"id": "S1", "site": "hard", "kind": "seo", "page": "/", "trap": "No meta description", "expect": "missing meta description"},
+  {"id": "S2", "site": "hard", "kind": "seo", "page": "/", "trap": "Two h1 elements on home; no h1 on signup", "expect": "heading structure"},
+  {"id": "S3", "site": "hard", "kind": "seo", "page": "/", "trap": "Hero images without alt text", "expect": "missing alt"},
+  {"id": "S4", "site": "hard", "kind": "seo", "page": "*", "trap": "Every page titled 'Home'; no canonical link", "expect": "duplicate titles / missing canonical"},
+  {"id": "S5", "site": "hard", "kind": "seo", "page": "/robots.txt", "trap": "robots.txt disallows everything", "expect": "robots blocks crawlers"},
+  {"id": "S6", "site": "hard", "kind": "seo", "page": "/sitemap.xml", "trap": "No sitemap", "expect": "missing sitemap"},
+  {"id": "X1", "site": "hard", "kind": "security", "page": "*", "trap": "No HSTS, CSP, X-Content-Type-Options or X-Frame-Options headers", "expect": "missing security headers"},
+  {"id": "X2", "site": "hard", "kind": "security", "page": "*", "trap": "Session cookie without Secure and HttpOnly", "expect": "insecure cookie flags"},
+  {"id": "X3", "site": "hard", "kind": "security", "page": "/.env", "trap": "/.env and /.git/config are publicly served", "expect": "exposed sensitive file"},
+  {"id": "X4", "site": "hard", "kind": "security", "page": "/app.js", "trap": "Live-looking Stripe secret key in the JS bundle", "expect": "secret in client bundle"},
+  {"id": "X5", "site": "hard", "kind": "security", "page": "/signup.html", "trap": "Signup form posts to plain http:// endpoint", "expect": "form submits over http"},
+  {"id": "X6", "site": "hard", "kind": "security", "page": "*", "trap": "Server header leaks Apache version", "expect": "server version disclosure"}
+]

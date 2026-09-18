@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in: Acme Notes</title>
+  <meta name="description" content="Log in to Acme Notes.">
+  <link rel="canonical" href="http://127.0.0.1:8101/login.html">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><a href="/" class="brand">Acme Notes</a></header>
+  <main>
+    <h1>Log in</h1>
+    <form action="https://127.0.0.1:8101/api/login" method="post">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit" class="btn">Log in</button>
+    </form>
+    <p>New here? <a href="/signup.html">Create an account</a></p>
+  </main>
+</body>
+</html>

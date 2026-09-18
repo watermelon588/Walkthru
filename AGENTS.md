@@ -25,7 +25,7 @@ apps/web/        React 19 + Vite + TS + Tailwind v4 + GSAP. Landing, login, (soo
   design/        mocks/ (HTML sources for placeholder screenshots), source-images/ (originals, not shipped)
 apps/api/        FastAPI + LangGraph (scaffold only so far)
 apps/extension/  Chrome MV3 extension (not started)
-evals/           Fixture sites + LangSmith evals (not started)
+evals/           Fixture sites (fixtures/easy, fixtures/hard, traps.json, serve.py) + LangSmith evals (T9, not started)
 ```
 
 ## Commands
@@ -41,6 +41,9 @@ bash design/mocks/render.sh   # re-render placeholder screenshots (uses local Ed
 cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"
 .venv/Scripts/python -m pytest -q
 .venv/Scripts/ruff check .
+
+# fixtures
+apps/api/.venv/Scripts/python evals/serve.py   # easy :8101, hard :8102
 ```
 
 ## Rules
