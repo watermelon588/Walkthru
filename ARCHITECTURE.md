@@ -19,7 +19,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 ## Components
 | Part | Tech | Status |
 |---|---|---|
-| Web (landing, login, dashboard, report) | React 19, Vite, TypeScript, Tailwind v4, GSAP + @gsap/react, Phosphor icons, Geist | Landing and login built |
+| Web (landing, login, dashboard, report) | React 19, Vite, TypeScript, Tailwind v4, GSAP + @gsap/react, Phosphor icons, Geist | Landing, login, dashboard, private report, and public report built |
 | Auth | Supabase Auth: Google, GitHub, email magic link. API validates bearer tokens via Supabase Auth (`app/auth.py`) | Live; OAuth providers still to enable in dashboard |
 | API | Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, httpx | `/health`, `/runs` step API, persona graph |
 | Agent models | Free pool: Groq `openai/gpt-oss-120b` primary, Gemini `gemini-3.1-flash-lite` fallback (`with_fallbacks`). Paid: Claude (Haiku 4.5 or Sonnet 5, T9 eval) once an Anthropic key exists; until then paid rides the free pool | Free pool live |

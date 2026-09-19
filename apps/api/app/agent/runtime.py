@@ -31,7 +31,9 @@ def free_pool(schema: type[BaseModel]):
     # On timeout or error the call falls through to Gemini instead of hanging the run.
     groq = ChatGroq(model=GROQ_MODEL, temperature=0, max_tokens=2048, reasoning_effort="low", timeout=45, max_retries=1)
     gemini = ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0, timeout=45, max_retries=1)
-    return groq.with_structured_output(schema, include_raw=True).with_fallbacks([gemini.with_structured_output(schema, include_raw=True)])
+    return groq.with_structured_output(schema, method="json_schema", strict=True, include_raw=True).with_fallbacks(
+        [gemini.with_structured_output(schema, include_raw=True)]
+    )
 
 
 def make_model(tier: str):
