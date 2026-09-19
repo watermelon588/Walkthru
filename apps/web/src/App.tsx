@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { RequireAuth } from './components/RequireAuth'
 import Dashboard from './pages/Dashboard'
+import AgentLab from './pages/AgentLab'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Public from './pages/Public'
@@ -11,6 +12,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/agent-lab" element={<AgentLab />} />
         <Route path="/login" element={<Login />} />
         <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />

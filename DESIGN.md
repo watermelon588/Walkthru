@@ -65,3 +65,11 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 |---|---|---|
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
+| Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
+
+## Agent identity exploration
+- The original walking-bird logo now has a lab-only vector source at `src/assets/brand/walkthru-mark.svg`. The production logo remains unchanged.
+- Two treatments live in `src/components/AgentBird.tsx`: Scout uses the solid mark and Trace uses the outline mark. The lab shows the original Scout plus three colour-only Scout copies, for five birds total.
+- The lab palette adds graphite, teal, cobalt, rust and plum as identity-study colours. These are isolated from the production page palette.
+- Every bird can be dragged directly with a pointer or moved with arrow keys. There is no visible container around the bird, name or activity.
+- All five birds use the confirmed GSAP Observe motion, which gently shifts the whole bird while it watches. Animated parts overlap beneath the body so joints stay visually connected. `prefers-reduced-motion` keeps every version static.
