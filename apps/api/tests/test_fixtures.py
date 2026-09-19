@@ -43,6 +43,14 @@ def test_easy_flow_is_reachable():
     assert get(EASY, "/pricing.html").text.count("$") >= 1
 
 
+def test_easy_signup_script_is_allowed_by_its_csp():
+    signup = get(EASY, "/signup.html")
+    assert signup.headers["content-security-policy"] == "default-src 'self'"
+    assert '<script src="/signup.js"></script>' in signup.text
+    assert "addEventListener('submit'" in get(EASY, "/signup.js").text
+    assert "<script>" not in signup.text
+
+
 def test_ux_traps():
     home = get(HARD, "/").text
     assert 'class="tiny"' in home and "Sign up" not in home  # U1 hidden signup

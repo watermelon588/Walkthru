@@ -55,7 +55,8 @@ One session = one focused sitting with the agent. Each ends with build, lint and
 | 5 | First impression + report | T6 | `first_impression` node (screenshot + page text), `synthesize` (dedupe, severity, evidence, top fixes), report JSON schema + one pytest per node with fake model | nothing |
 | 6 | SEO scan | T7 | plain checks (title, meta, h1, canonical, robots, sitemap, alt text, links) + PageSpeed Insights + one LLM content review; pytest against fixtures | `PAGESPEED_API_KEY` |
 | 7 | Security hygiene scan | T8 | headers, TLS, cookies, exposed files, JS secret patterns, domain verification (meta / DNS TXT / well-known); pytest against fixtures | nothing |
-| 8 | Evals + model choice | T9 | LangSmith eval: % traps found, $ per run, free vs Haiku 4.5 vs Sonnet 5 → `docs/decisions.md`. **Checkpoint B:** ≥ 60% traps found | `ANTHROPIC_API_KEY` (~$10 credit), decision on paid model |
+| 8A | Eval tooling | T9 | Score saved run/report JSON against `evals/traps.json`, report recall by kind and cost per run, optionally publish code-evaluator results to LangSmith | nothing |
+| 8B | Model benchmark | T9 | Capture real hard-fixture runs from the free and paid candidates, publish comparable LangSmith experiments, record the choice in `docs/decisions.md`. **Checkpoint B:** ≥ 80% traps found | `ANTHROPIC_API_KEY` (~$10 credit), founder Chrome for the full extension loop |
 | 9 | Data + auth | T10 | Supabase schema (users, sites, runs, reports, credits) + RLS, JWT verification on every API route, extension token handoff, session handling in web | Supabase project, keys in `.env`, Google + GitHub providers enabled |
 | 10 | Dashboard | T11 | react-router, `/app` shell, sites and runs lists, Instant Scan (no install), loading / empty / error states | nothing |
 | 11 | Report page | T12 | `/report/:id`, share link, CSV / Google Sheet export, email via Resend. **Checkpoint C:** 20 community sites tested | `RESEND_API_KEY`, 20 sites lined up |

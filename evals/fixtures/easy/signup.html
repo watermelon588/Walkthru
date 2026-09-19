@@ -22,14 +22,6 @@
     </form>
     <p>Already have an account? <a href="/login.html">Log in</a></p>
   </main>
-  <script>
-    document.getElementById('signup').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var email = this.email.value.trim(), pw = this.password.value, err = document.getElementById('error');
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Enter a valid email address.'; err.hidden = false; return; }
-      if (pw.length < 8) { err.textContent = 'Password must be at least 8 characters.'; err.hidden = false; return; }
-      location.href = '/welcome.html';
-    });
-  </script>
+  <script src="/signup.js"></script>
 </body>
 </html>

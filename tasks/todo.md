@@ -20,7 +20,7 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [x] T4 Action executor + safe-mode filter + same-origin/step caps (S)
   - Done 2026-09-18: `lib/execute.ts` (click/type/scroll/back, dry run, safe mode), `sidepanel/run.ts` loop (per-site permission, same-origin stop, 4 min cap, confirm before submit on logged-in pages). Manual run on fixture pending.
 - [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer (M)
-  - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver is wired via `DATABASE_URL` but not yet run against a real DB; LangSmith trace pending keys.
+  - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver and a real Groq model were verified against the signup flow; LangSmith tracing is configured.
 - [ ] Checkpoint A: extension completes the easy fixture flow end to end
 
 ## Week 2 (Sep 28–Oct 4): report + scans
@@ -31,7 +31,11 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [x] T8 `security_scan` (headers, TLS, cookies, exposed files, JS secret patterns) + domain verification (M)
   - Done 2026-09-18: `app/scans/security.py`; exposed files and bundle secrets only on verified domains (meta tag or /.well-known/walkthru.txt; `GET /verification`). SSRF guard in `scans/fetch.py`.
 - [ ] T9 Eval runner: % traps found, $ per run, free vs paid model → docs/decisions.md (S)
-- [ ] Checkpoint B: ≥ 60% traps found; cost measured
+  - [x] Session 8A: deterministic seeded-trap scorer, per-kind recall, token-price cost calculation, JSON/Markdown output, optional LangSmith experiment upload
+  - [ ] Session 8B: capture real hard-fixture reports from the free and paid models, compare against the quality/cost gates, record the model decision in `docs/decisions.md`
+  - Verify: `cd apps/api && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check .`
+  - Gate: at least 80% of all seeded traps found, free run at most $0.02, paid run at most $0.20
+- [ ] Checkpoint B: ≥ 80% traps found; cost measured
 
 ## Week 3 (Oct 5–11): product surface
 - [x] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
