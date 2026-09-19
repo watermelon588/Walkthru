@@ -26,3 +26,51 @@
 body {
   @apply antialiased;
 }
+
+/* Agent palette is intentionally isolated to the identity lab. */
+:root {
+  --agent-graphite: #292a30;
+  --agent-teal: #4d7274;
+  --agent-cobalt: #506f98;
+  --agent-rust: #a45f49;
+  --agent-plum: #775f78;
+}
+
+.bird-agent {
+  position: absolute;
+  display: flex;
+  width: 10rem;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  flex-direction: column;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--agent-color);
+  text-align: center;
+  will-change: translate;
+}
+
+.bird-agent[data-dragging="true"] { cursor: grabbing; z-index: 10; }
+.bird-agent:focus-visible { outline: 1px solid var(--ink); outline-offset: 8px; border-radius: 0.25rem; }
+.bird-agent__mark { width: 7.5rem; overflow: visible; filter: drop-shadow(0 16px 12px rgb(27 27 31 / 0.08)); }
+.bird-agent__name { margin-top: 0.6rem; color: var(--ink); font-size: 0.875rem; font-weight: 500; }
+.bird-agent__activity { margin-top: 0.15rem; color: var(--muted); font-size: 0.75rem; line-height: 1.3; }
+
+.bird-agent--scout { --agent-color: var(--agent-graphite); left: 7%; top: 53%; }
+.bird-agent--scout-teal { --agent-color: var(--agent-teal); left: 31%; top: 65%; }
+.bird-agent--trace { --agent-color: var(--agent-cobalt); left: 57%; top: 34%; }
+.bird-agent--scout-rust { --agent-color: var(--agent-rust); right: 5%; top: 58%; }
+.bird-agent--scout-plum { --agent-color: var(--agent-plum); left: 51%; top: 72%; }
+
+@media (max-width: 767px) {
+  .bird-agent { width: 8.5rem; }
+  .bird-agent__mark { width: 6.5rem; }
+  .bird-agent--scout { left: 4%; top: 33%; }
+  .bird-agent--scout-teal { left: 50%; top: 46%; }
+  .bird-agent--trace { left: 5%; top: 59%; }
+  .bird-agent--scout-rust { right: 3%; top: 72%; }
+  .bird-agent--scout-plum { left: 24%; top: 85%; }
+}
