@@ -66,6 +66,7 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
 | Dashboard | `/app` | Evidence-led command center. Lead with a plain-language launch-readiness promise, interactive Scout guidance, one run-to-report pipeline and recent runs with frame/finding counts. Keep controls in one clear column before history. |
+| Profile & settings | `/app/settings` | Authenticated personal or business profile stored in Supabase Auth metadata. Shows the signed-in identity, provider status and one focused profile form. |
 | Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
 | Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
 
