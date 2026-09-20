@@ -2,12 +2,19 @@ import { EnvelopeSimpleIcon, GithubLogoIcon, GoogleLogoIcon } from '@phosphor-ic
 import { useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { brand } from '../brand'
+import { AgentPresence, type AgentPresenceState } from '../components/AgentPresence'
 import { Asset, btnGhost, btnPrimary, Logo } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { useReveal } from '../lib/motion'
 import { supabase } from '../lib/supabase'
 
-type Status = { kind: 'idle' } | { kind: 'sending' } | { kind: 'sent'; email: string } | { kind: 'error'; message: string }
+type Provider = 'google' | 'github'
+type Status =
+  | { kind: 'idle' }
+  | { kind: 'sending' }
+  | { kind: 'oauth'; provider: Provider }
+  | { kind: 'sent'; email: string }
+  | { kind: 'error'; message: string }
 
 // Where Supabase sends people after they sign in.
 const redirectTo = `${location.origin}/app`
@@ -29,13 +36,30 @@ export default function Login() {
     setStatus(error ? { kind: 'error', message: error.message } : { kind: 'sent', email })
   }
 
-  async function oauth(provider: 'google' | 'github') {
+  async function oauth(provider: Provider) {
     if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is not configured yet. Add the Supabase keys to apps/web/.env.' })
+    setStatus({ kind: 'oauth', provider })
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
     if (error) setStatus({ kind: 'error', message: error.message })
   }
 
-  const busy = status.kind === 'sending'
+  const busy = status.kind === 'sending' || status.kind === 'oauth'
+  const agentState: AgentPresenceState = status.kind === 'error'
+    ? 'stopped'
+    : status.kind === 'sent'
+      ? 'complete'
+      : status.kind === 'sending' || status.kind === 'oauth'
+        ? 'observing'
+        : 'ready'
+  const agentActivity = status.kind === 'error'
+    ? 'Waiting for a valid sign-in'
+    : status.kind === 'sent'
+      ? 'Sign-in link sent'
+      : status.kind === 'sending'
+        ? 'Preparing your sign-in link'
+        : status.kind === 'oauth'
+          ? `Opening ${status.provider === 'google' ? 'Google' : 'GitHub'}`
+        : 'Ready when you are'
 
   return (
     <div ref={root} className="grid min-h-[100dvh] bg-bg text-ink lg:grid-cols-[1fr_1.1fr]">
@@ -43,6 +67,7 @@ export default function Login() {
         <Logo className="self-start" />
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-16">
+          <AgentPresence activity={agentActivity} state={agentState} className="mb-10" phase={0.16} />
           {status.kind === 'sent' ? (
             <div role="status" className="hero-fade">
               <EnvelopeSimpleIcon weight="light" className="size-8 text-accent" />
@@ -62,11 +87,11 @@ export default function Login() {
               <p className="hero-fade mt-4 leading-relaxed text-muted">New to {brand.name}? The same steps create your account.</p>
 
               <div className="hero-fade mt-10 grid gap-3">
-                <button type="button" onClick={() => oauth('google')} className={`${btnGhost} justify-center`}>
-                  <GoogleLogoIcon weight="light" className="size-4" /> Continue with Google
+                <button type="button" disabled={busy} onClick={() => oauth('google')} className={`${btnGhost} justify-center disabled:opacity-60`}>
+                  <GoogleLogoIcon weight="light" className="size-4" /> {status.kind === 'oauth' && status.provider === 'google' ? 'Opening Google...' : 'Continue with Google'}
                 </button>
-                <button type="button" onClick={() => oauth('github')} className={`${btnGhost} justify-center`}>
-                  <GithubLogoIcon weight="light" className="size-4" /> Continue with GitHub
+                <button type="button" disabled={busy} onClick={() => oauth('github')} className={`${btnGhost} justify-center disabled:opacity-60`}>
+                  <GithubLogoIcon weight="light" className="size-4" /> {status.kind === 'oauth' && status.provider === 'github' ? 'Opening GitHub...' : 'Continue with GitHub'}
                 </button>
               </div>
 

@@ -55,3 +55,24 @@ Jev cannot replace every current LLM call. Free-text form values that are not kn
 Add Jev as a third candidate in Session 8B, using the same easy and hard fixture captures and the existing 18-trap scorer. Do not replace the free pool unless the hybrid clears the same recall gate, completes the easy flow reliably, and materially improves median step latency and cost.
 
 Sources: [TypeSafe introduction](https://docs.typesafe.ai/introduction), [model and pricing](https://docs.typesafe.ai/models), [Jev 1.13 limitations](https://docs.typesafe.ai/model-jaggedness/jev-1.13), and [Browser Use Jev Ultrafast](https://github.com/browser-use/jev-ultrafast).
+
+### 2026-09-20 live API experiments
+
+The official TypeSafe skill was installed globally and Jev `jev-1.13.0` was called through the documented HTTP API. The key is stored only in ignored `apps/api/.env`.
+
+| Design | Easy decisions | Median latency | Mean input tokens | Mean operation confidence |
+|---|---:|---:|---:|---:|
+| One combined action-target Choice | 5/5 | 625 ms | 938 | 0.896 |
+| Speculative operation and compatible targets | 5/5 | 382 ms | 1,044 | 0.966 |
+
+The speculative fan-out shape is the implementation candidate. It completed homepage CTA selection, email, password, submit, and goal detection correctly. On the ambiguous hard homepage it selected the exact footer `Create account` link five times with confidence 1.0. That is efficient but may under-represent how a person reacts to the more prominent vague `Continue` and `Proceed` buttons, so persona fidelity remains unproven.
+
+Risk probes supported conservative fallback:
+
+- After a misleading action opened a newsletter modal, operation confidence fell to 0.38 and target confidence to 0.44.
+- Adversarial page text did not cause a destructive selection, but TypeSafe's documented adversarial-content limitation means code safety remains mandatory.
+- With 120 visible controls, Jev selected element 120 correctly in 638 ms using 6,809 input tokens.
+
+**Decision:** build an opt-in hybrid adapter with a 0.50 starting confidence floor, deterministic values for known identity fields, and LLM fallback for low confidence, provider errors, and open-ended typing. Keep the existing LLM as the default until the real hard-fixture benchmark clears the product recall gate. Pin `jev-1.13.0` during evaluation.
+
+Additional sources: [HTTP API](https://docs.typesafe.ai/api), [structured state](https://docs.typesafe.ai/concepts/state), [confidence routing](https://docs.typesafe.ai/confidence), and [speculative fan-out](https://docs.typesafe.ai/patterns/fan-out).

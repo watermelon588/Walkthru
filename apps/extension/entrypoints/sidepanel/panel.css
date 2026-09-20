@@ -9,9 +9,17 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5
 #root { min-height: 100vh; display: flex; flex-direction: column; }
 
 .panel { padding: 20px 16px 28px; display: flex; flex-direction: column; gap: 20px; }
-.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.brand > div:first-child { min-width: 0; }
 .brand h1 { font-size: 20px; font-weight: 300; letter-spacing: -0.02em; margin: 0; }
 .brand span { color: var(--muted); font-size: 12px; }
+.agent-status { display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink); min-width: 132px; }
+.agent-status svg { width: 42px; height: 42px; flex: 0 0 auto; overflow: visible; }
+.agent-copy { display: block; min-width: 0; line-height: 1.2; }
+.agent-copy strong { display: block; color: var(--ink); font: 600 9px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; }
+.agent-copy > span { display: flex; max-width: 110px; margin-top: 5px; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+.agent-copy > span > span { min-width: 0; }
+.agent-orb { width: 20px; height: 20px; flex: 0 0 auto; }
 
 form { display: flex; flex-direction: column; gap: 14px; }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -29,11 +37,6 @@ button.primary { background: var(--ink); color: var(--bg); border-color: var(--i
 button:disabled { opacity: 0.5; cursor: default; }
 .actions { display: flex; gap: 8px; }
 
-.status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.status .dot.live { animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: 0.3; } }
-@media (prefers-reduced-motion: reduce) { .status .dot.live { animation: none; } }
 .error { color: var(--danger); font-size: 13px; margin: 0; }
 .notice { background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 13px; margin: 0; }
 .notice a { color: var(--ink); }

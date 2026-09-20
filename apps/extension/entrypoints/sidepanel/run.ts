@@ -1,6 +1,8 @@
 /** The step loop. Lives here (side panel page) because Chrome suspends the MV3 worker. */
 
-import { observe, startRun, type RunReply } from "../../lib/api";
+import { observe, startRun, type RunReply, type StepEvidence } from "../../lib/api";
+import type { AgentState } from "../../lib/agent-bird";
+import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
@@ -12,9 +14,18 @@ export type Progress = {
   status?: string;
   message?: string;
   runId?: string;
+  evidenceWarning?: string;
 };
 
 const SETTLE_MS = 1200;
+const ACTION_ACTIVITY: Record<Step["action"], string> = {
+  click: "Clicking the next step",
+  type: "Filling in the form",
+  scroll: "Looking further down",
+  back: "Going back",
+  done: "Checking the result",
+  give_up: "Could not continue",
+};
 
 async function activeTab(): Promise<chrome.tabs.Tab> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -35,6 +46,22 @@ async function send<T>(tabId: number, msg: unknown): Promise<T> {
   return chrome.tabs.sendMessage(tabId, msg);
 }
 
+async function setAgentStatus(tabId: number, state: AgentState, activity: string) {
+  try {
+    await send(tabId, { type: "agent_status", state, activity });
+  } catch {
+    // A navigation can remove the overlay before the next page is available.
+  }
+}
+
+async function setEvidenceCapture(tabId: number, active: boolean) {
+  try {
+    await send(tabId, { type: "evidence_capture", active });
+  } catch {
+    // Navigation can replace the page between capture steps.
+  }
+}
+
 async function settled(tabId: number, signal: AbortSignal) {
   await new Promise((r) => setTimeout(r, SETTLE_MS));
   for (let i = 0; i < 20 && !signal.aborted; i++) {
@@ -46,40 +73,73 @@ async function settled(tabId: number, signal: AbortSignal) {
 
 export async function runTest(opts: RunOptions, onProgress: (p: Progress) => void) {
   const steps: Step[] = [];
-  const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], ...p });
+  let capturedCount = 0;
+  let evidenceWarning: string | undefined;
+  const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], evidenceWarning, ...p });
+  let tabId: number | undefined;
   try {
     emit({ phase: "starting" });
     const origin = new URL(opts.site).origin;
-    const granted = await chrome.permissions.request({ origins: [origin + "/*"] });
-    if (!granted) throw new Error("Walkthru needs access to this site to read pages. Allow it and start again.");
+    // Chrome's side panel does not grant activeTab to captureVisibleTab. The API only
+    // accepts activeTab or <all_urls>, so request the optional capture permission from
+    // this explicit Start Test gesture. Chrome prompts once and remembers the choice.
+    const granted = await chrome.permissions.request({ origins: ["<all_urls>"] });
+    if (!granted) throw new Error("Walkthru needs screenshot access to save visual evidence. Allow it and start again.");
     const tab = await activeTab();
-    const tabId = tab.id!;
+    tabId = tab.id!;
     const deadline = Date.now() + MAX_MINUTES * 60_000;
 
+    await setAgentStatus(tabId, "observing", "Reading the page");
     let obs = await send<Observation>(tabId, { type: "snapshot" });
     let reply = await startRun({ ...opts, observation: obs });
     const runId = reply.run_id;
 
     while (reply.status === "running") {
-      if (opts.signal.aborted) return onProgress({ phase: "finished", steps, status: "aborted", runId });
-      if (Date.now() > deadline) return onProgress({ phase: "finished", steps, status: "budget", runId });
+      if (opts.signal.aborted) {
+        await setAgentStatus(tabId, "stopped", "Test stopped");
+        return onProgress({ phase: "finished", steps, status: "aborted", runId });
+      }
+      if (Date.now() > deadline) {
+        await setAgentStatus(tabId, "stopped", "Ran out of test time");
+        return onProgress({ phase: "finished", steps, status: "budget", runId });
+      }
       const step = reply.action;
       steps.push(step);
       emit({ message: step.thought });
 
+      await setAgentStatus(tabId, step.action === "give_up" ? "stopped" : step.action === "done" ? "observing" : "acting", ACTION_ACTIVITY[step.action]);
       const note = await act(tabId, step, opts, origin);
       await settled(tabId, opts.signal);
       const current = await chrome.tabs.get(tabId);
       if (current.url && !sameOrigin(current.url, origin)) {
         return onProgress({ phase: "finished", steps, status: "gave_up", message: "Left the site", runId });
       }
+      await setAgentStatus(tabId, "observing", "Reading the updated page");
       obs = await send<Observation>(tabId, { type: "snapshot" });
       if (note) obs.note = obs.note ? `${obs.note}; ${note}` : note;
-      reply = await observe(reply.run_id, obs);
+      const stepIndex = steps.length - 1;
+      let evidence: StepEvidence | undefined;
+      if (shouldCaptureEvidence(step, obs, stepIndex, capturedCount)) {
+        const latestTab = await chrome.tabs.get(tabId);
+        await setEvidenceCapture(tabId, true);
+        try {
+          evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note);
+          capturedCount += 1;
+        } catch (error) {
+          // Evidence should enrich a journey, never stop it.
+          evidenceWarning = evidenceFailureMessage(error);
+          emit({ evidenceWarning });
+        } finally {
+          await setEvidenceCapture(tabId, false);
+        }
+      }
+      reply = await observe(reply.run_id, obs, evidence);
     }
-    finish(reply, steps, onProgress);
+    await setAgentStatus(tabId, reply.status === "done" ? "complete" : "stopped", reply.status === "done" ? "Goal reached" : "Test finished");
+    finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
-    onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e) });
+    if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
+    onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e), evidenceWarning });
   }
 }
 
@@ -99,9 +159,9 @@ async function act(tabId: number, step: Step, opts: RunOptions, origin: string):
   return result.note;
 }
 
-function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => void) {
+function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => void, evidenceWarning?: string) {
   if (reply.status === "running") return;
   const last = reply.steps.at(-1);
   if (last && (last.action === "done" || last.action === "give_up") && steps.at(-1) !== last) steps.push(last);
-  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id });
+  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id, evidenceWarning });
 }

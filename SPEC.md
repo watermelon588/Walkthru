@@ -1,10 +1,11 @@
 # Spec: Walkthru v1
 
 ## Objective
-Small teams ship websites without ever watching a stranger use them. Walkthru gives them three things in one report:
+Small teams ship websites without ever watching a stranger use them. Walkthru gives them one evidence report with:
 1. **AI test users** walk through real flows (landing → signup → dashboard) in the team's own browser, think aloud, and show where they get stuck.
 2. **SEO check** of the pages visited (and the whole site on paid plans).
-3. **Security hygiene check** (passive: headers, cookies, exposed files, leaked keys in JS). Not a pentest.
+3. **Accessibility and mobile performance checks** with concrete evidence and an explicit unavailable state when PageSpeed is not configured.
+4. **Security hygiene check** (passive: headers, cookies, exposed files, leaked keys in JS). Not a pentest.
 
 Plus a plain-English fix list, ranked by impact.
 
@@ -21,8 +22,7 @@ content script: snapshot page    ── observe ▶ persona agent decides next a
 executes action in the real tab   ── observe ▶ … loop until done/give_up/budget …
                                                synthesize report
                                   ◀─ report ── report page + email
-Server-only (no browser needed): SEO scan (fetch HTML, robots, sitemap, PageSpeed Insights API),
-security hygiene scan (headers, TLS, cookies, exposed files, secrets in JS bundles).
+Server-only (no browser needed): static accessibility checks, PageSpeed Insights mobile performance, SEO scan (HTML, robots, sitemap), and security hygiene (headers, TLS, cookies, exposed files, secrets in JS bundles).
 ```
 - The **loop runs in the extension side panel page** (not the MV3 service worker, which Chrome suspends).
 - Each step = one HTTP call. Server resumes the LangGraph thread with the observation (`interrupt` / `Command(resume=…)`), Postgres checkpointer holds state. Server is stateless between calls.
@@ -42,7 +42,7 @@ Credit = one persona run. Tokens logged per run for margin tracking.
 ## Agent design (LangGraph)
 - `test_run` graph: `preflight` (plan limits, site check) → `first_impression` (screenshot + page text: what is this, who is it for, what would you click, trust signals) → `persona_session` per persona → `synthesize` (dedupe, severity, evidence, top fixes, clarity & conversion review) → `deliver`.
 - `persona_session` (the agent): `decide` (in character, one action + think-aloud + confusion 0–3, with memory of tried paths) → `interrupt` for observation → `check` (goal reached? loop on same page 3×? budget?) → back to `decide`.
-- `site_scan` graph (server-only, parallel): `seo_scan` (plain code checks + one LLM call for content/intent review) and `security_scan` (plain code checks + one LLM call to explain fixes).
+- `site_scan` graph (server-only, parallel): `accessibility_scan`, `performance_scan`, `seo_scan` and `security_scan`. The synthesis LLM explains and prioritizes their deterministic evidence.
 
 ## Safety rules (non-negotiable)
 - **Safe mode on logged-in pages:** the agent never clicks elements whose text/aria matches delete/remove/cancel subscription/pay/purchase/send/invite/transfer; never submits payment forms; asks the user in the side panel before any form submit on logged-in pages.
@@ -74,7 +74,7 @@ evals/           fixture sites with seeded UX/SEO/security traps + runner
 ```
 
 ## Testing Strategy
-- pytest: SEO checks, security checks, redaction, plan limits, Dodo webhook signature, step API contract.
+- pytest: accessibility, performance, SEO and security checks, redaction, plan limits, Dodo webhook signature, step API contract.
 - Extension: unit tests for snapshot + safe-mode filter (vitest).
 - **Fixture sites with seeded traps** (hidden signup, silent form error, missing meta description, no HSTS, key in JS bundle) = quality evals in LangSmith: % traps found, $ per run.
 

@@ -10,6 +10,15 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefine
 
 export type Session = { access_token: string; refresh_token: string; expires_at?: number };
 
+export type StepEvidence = {
+  screenshot_path: string;
+  captured_at: string;
+  result_url: string;
+  width: number;
+  height: number;
+  note?: string;
+};
+
 export type RunReply =
   | { run_id: string; status: "running"; action: Step & { url: string } }
   | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha"; steps: (Step & { url: string })[] };
@@ -64,5 +73,22 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+export async function uploadEvidenceImage(path: string, dataUrl: string): Promise<void> {
+  const t = await token();
+  if (!t || !SUPABASE_URL || !SUPABASE_KEY) throw new Error("Screenshot storage is not configured");
+  const image = await (await fetch(dataUrl)).blob();
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/run-evidence/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${t}`,
+      "Content-Type": "image/jpeg",
+    },
+    body: image,
+  });
+  if (!res.ok) throw new Error(`Screenshot upload failed (${res.status})`);
+}
+
 export const startRun = (body: StartBody) => post<RunReply>("/runs", body);
-export const observe = (runId: string, observation: Observation) => post<RunReply>(`/runs/${runId}/observe`, { observation });
+export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
+  post<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });

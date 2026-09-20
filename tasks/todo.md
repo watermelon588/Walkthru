@@ -53,3 +53,39 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] T16 Landing page wired to real signup, pricing, demo report (S)
 - [ ] Checkpoint D: stranger installs → tests → pays, in production
 - [ ] Launch Tue Oct 20
+
+## Competitive quality roadmap
+
+- [x] T17A Opt-in TypeSafe Jev decision adapter with confidence and LLM fallback
+  - [x] Request construction and response mapping tests
+  - [x] Deterministic test identity for known form fields
+  - [x] Provider/confidence metadata saved per step
+  - [x] Default LLM behavior unchanged unless explicitly enabled
+- [ ] T17B Real easy/hard browser benchmark and final provider decision
+- [ ] T18 Step evidence contract: timestamps, execution result, transition, screenshot reference
+  - [x] API/extension contract, run-scoped path validation and backward-compatible report types
+  - [ ] Define and automate evidence retention, then verify one real stored run
+- [ ] T19 Bounded screenshot capture and private storage
+  - [x] Eight-frame cap, meaningful-action capture policy, private JWT upload, field masking and disclosure
+  - [ ] Apply the `run-evidence` bucket policy in Supabase and complete public plus logged-in manual checks
+- [ ] T20 Interactive three-pane evidence timeline
+  - [x] Responsive step list, evidence viewer, inspector, loading/unavailable/legacy states and keyboard-operable controls
+  - [ ] Link normalized findings to exact journey steps and complete desktop/phone visual QA with stored evidence
+- [ ] T21 Screenshot filmstrip replay and shareable PDF
+  - [x] Play, pause, previous, next and canonical print action
+  - [ ] Render and visually inspect a multi-page PDF with real evidence
+- [ ] T22 Optional continuous video only after filmstrip validation
+- [ ] T23 Accessibility and performance evidence
+  - [x] Static HTML accessibility checks for language, heading order, image alternatives and control names
+  - [x] PageSpeed-backed mobile performance findings with an explicit unavailable state
+  - [x] Accessibility and performance cards in private, public and PDF reports
+  - [ ] Add browser-level axe and Web Vitals evidence tied to exact journey steps
+- [ ] T24 Bounded full-site SEO and verified passive-security aggregation
+- [ ] T25 Rerun comparison, multi-persona synthesis, schedules, then integrations
+
+### Competitive quality checkpoints
+
+- [ ] Decision checkpoint: Jev hybrid clears the quality gate or is rejected with evidence
+- [ ] Evidence checkpoint: every meaningful step has reproducible visual proof
+- [ ] Experience checkpoint: timeline, replay, and PDF pass browser/PDF review
+- [ ] Launch-readiness checkpoint: UX, accessibility, SEO, performance, and passive security share one prioritized report

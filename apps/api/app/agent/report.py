@@ -1,4 +1,4 @@
-"""Report graph: first_impression, seo_scan and security_scan run in parallel, then synthesize.
+"""Report graph: first impression and deterministic launch checks run in parallel, then synthesize.
 
 Used for both a finished persona run (steps present) and an Instant Scan (no steps).
 Only first_impression and synthesize call the LLM; the scans are plain code.
@@ -12,7 +12,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.schema import Finding, FirstImpression, Report, Synthesis
-from app.scans import fetch, security, seo
+from app.scans import accessibility, fetch, performance, security, seo
 
 
 class ReportState(TypedDict, total=False):
@@ -26,6 +26,12 @@ class ReportState(TypedDict, total=False):
     first_impression: dict
     seo: list[dict]
     security: list[dict]
+    accessibility: list[dict]
+    performance: list[dict]
+    accessibility_measured: bool
+    performance_measured: bool
+    seo_measured: bool
+    security_measured: bool
     synthesis: dict
     tokens: Annotated[int, operator.add]
     notes: Annotated[list[str], operator.add]  # non-fatal problems, e.g. a scan that could not fetch
@@ -46,16 +52,21 @@ def _scan(state: ReportState, which: str) -> dict:
     try:
         fetch.assert_public(state["site"])
         with fetch.client() as c:
+            if which == "performance":
+                findings, measured = performance.scan(state["site"], c)
+                return {which: [f.model_dump() for f in findings], "performance_measured": measured}
             resp = fetch.get(c, state["site"])
             if resp is None:
-                return {which: [], "notes": [f"{which} scan: site did not respond"]}
+                return {which: [], f"{which}_measured": False, "notes": [f"{which} scan: site did not respond"]}
             if which == "seo":
                 findings = seo.scan(str(resp.url), c, html=resp.text)
-            else:
+            elif which == "security":
                 findings = security.scan(state["site"], c, state.get("verified", False), resp=resp)
-        return {which: [f.model_dump() for f in findings]}
+            elif which == "accessibility":
+                findings = accessibility.scan(resp.text, str(resp.url))
+        return {which: [f.model_dump() for f in findings], f"{which}_measured": True}
     except Exception as e:  # noqa: BLE001 - a failed scan must not sink the report
-        return {which: [], "notes": [f"{which} scan failed: {e}"]}
+        return {which: [], f"{which}_measured": False, "notes": [f"{which} scan failed: {e}"]}
 
 
 def seo_scan(state: ReportState) -> dict:
@@ -66,6 +77,14 @@ def security_scan(state: ReportState) -> dict:
     return _scan(state, "security")
 
 
+def accessibility_scan(state: ReportState) -> dict:
+    return _scan(state, "accessibility")
+
+
+def performance_scan(state: ReportState) -> dict:
+    return _scan(state, "performance")
+
+
 def render_steps(steps: list[dict]) -> str:
     return "\n".join(f"{i + 1}. [{s['action']}{' #' + str(s['target_id']) if s.get('target_id') is not None else ''}] confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}" for i, s in enumerate(steps))
 
@@ -73,7 +92,10 @@ def render_steps(steps: list[dict]) -> str:
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
 
-    code_findings = [Finding.model_validate(f) for f in state.get("seo", []) + state.get("security", [])]
+    code_findings = [
+        Finding.model_validate(f)
+        for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("security", [])
+    ]
     steps = state.get("steps", [])
     fi = state.get("first_impression") or {}
     context = [
@@ -102,6 +124,12 @@ def synthesize(state: ReportState) -> dict:
         top_fixes=syn.top_fixes[:5],
         verified=state.get("verified", False),
         tokens=state.get("tokens", 0) + used,
+        checks={
+            "accessibility": "complete" if state.get("accessibility_measured", False) else "unavailable",
+            "performance": "complete" if state.get("performance_measured", False) else "unavailable",
+            "seo": "complete" if state.get("seo_measured", False) else "unavailable",
+            "security": "complete" if state.get("security_measured", False) else "unavailable",
+        },
     )
     return {"synthesis": report.model_dump(), "tokens": used}
 
@@ -111,8 +139,10 @@ def build_graph():
     g.add_node("first_impression", first_impression)
     g.add_node("seo_scan", seo_scan)
     g.add_node("security_scan", security_scan)
+    g.add_node("accessibility_scan", accessibility_scan)
+    g.add_node("performance_scan", performance_scan)
     g.add_node("synthesize", synthesize)
-    for n in ("first_impression", "seo_scan", "security_scan"):
+    for n in ("first_impression", "accessibility_scan", "performance_scan", "seo_scan", "security_scan"):
         g.add_edge(START, n)
         g.add_edge(n, "synthesize")
     g.add_edge("synthesize", END)

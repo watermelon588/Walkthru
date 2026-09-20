@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getSession, WEB_URL } from "../../lib/api";
+import type { AgentState } from "../../lib/agent-bird";
+import { AgentStatus } from "./AgentStatus";
 import { runTest, type Progress, type RunOptions } from "./run";
 
 const PERSONAS = [
@@ -40,6 +42,22 @@ export function App() {
 
   const running = progress.phase === "running" || progress.phase === "starting";
   const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true;
+  const agentState: AgentState = progress.phase === "error"
+    ? "stopped"
+    : progress.phase === "finished"
+      ? progress.status === "done" ? "complete" : "stopped"
+      : running
+        ? "observing"
+        : "ready";
+  const agentActivity = progress.phase === "starting"
+    ? "Reading the page"
+    : progress.phase === "running"
+      ? `Testing step ${Math.max(1, progress.steps.length)}`
+      : progress.phase === "finished"
+        ? STATUS_COPY[progress.status ?? ""] ?? "Run finished"
+        : progress.phase === "error"
+          ? "The run needs attention"
+          : "Ready to test this tab";
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
@@ -52,8 +70,11 @@ export function App() {
   return (
     <main className="panel">
       <header className="brand">
-        <h1>Walkthru</h1>
-        <span>See where strangers get stuck.</span>
+        <div>
+          <h1>Walkthru</h1>
+          <span>See where strangers get stuck.</span>
+        </div>
+        <AgentStatus activity={agentActivity} state={agentState} />
       </header>
 
       {signedIn === false && (
@@ -83,23 +104,15 @@ export function App() {
           <input id="logged" type="checkbox" checked={loggedIn} onChange={(e) => setLoggedIn(e.target.checked)} disabled={running} />
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
         </label>
-        <p className="hint">Sends a text snapshot of each page. Emails, long numbers and typed values are masked first.</p>
+        <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames. Form values are masked before capture.</p>
         <div className="actions">
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
           {running && <button type="button" onClick={() => abort.current?.abort()}>Stop</button>}
         </div>
       </form>
 
-      {progress.phase !== "idle" && (
-        <div className="status" role="status">
-          <span className={`dot${running ? " live" : ""}`} aria-hidden="true" />
-          {progress.phase === "starting" && "Reading the page…"}
-          {progress.phase === "running" && `Step ${progress.steps.length}: ${progress.message ?? "thinking"}`}
-          {progress.phase === "finished" && STATUS_COPY[progress.status ?? ""]}
-          {progress.phase === "error" && "Something went wrong."}
-        </div>
-      )}
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
+      {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}
 
       {progress.phase === "finished" && (
         <section className="summary" aria-label="Result">
@@ -124,7 +137,7 @@ export function App() {
                 <div>
                   <p className="thought">{s.thought}</p>
                   <span className="act">
-                    {s.action}{s.target_id != null ? ` #${s.target_id}` : ""}{s.text ? ` "${s.text}"` : ""}
+                    {s.action}{s.target_id != null ? ` #${s.target_id}` : ""}{s.text ? " (value hidden)" : ""}
                     {s.confusion >= 2 && <span className="conf">confused</span>}
                   </span>
                 </div>

@@ -4,6 +4,7 @@
 it returns the parsed object plus the tokens used, so every run can log its cost.
 """
 
+import atexit
 import os
 from functools import lru_cache
 from typing import Any
@@ -14,12 +15,33 @@ from pydantic import BaseModel
 
 from app.agent.persona import build_graph
 from app.agent.schema import PersonaStep
+from app.agent.typesafe import DEFAULT_MODEL as DEFAULT_JEV_MODEL
+from app.agent.typesafe import JevDecision, JevDecisionClient, JevFallback
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
 PAID_MODEL = os.environ.get("PAID_MODEL", "claude-haiku-4-5")  # T9 eval decides haiku vs sonnet-5
+
+
+class HybridPersonaModel:
+    """Use Jev for bounded choices and the existing LLM whenever Jev abstains."""
+
+    def __init__(self, primary: JevDecisionClient, fallback: Any):
+        self.primary = primary
+        self.fallback = fallback
+
+    def decide(self, state: dict, messages: list) -> JevDecision:
+        try:
+            return self.primary.decide(state)
+        except JevFallback as error:
+            step, tokens = unwrap(self.fallback.invoke(messages))
+            return JevDecision(
+                step=step,
+                tokens=tokens,
+                metadata={"provider": "llm", "fallback_reason": str(error)},
+            )
 
 
 def free_pool(schema: type[BaseModel]):
@@ -37,6 +59,21 @@ def free_pool(schema: type[BaseModel]):
 
 
 def make_model(tier: str):
+    fallback = _llm_model(tier)
+    if os.environ.get("PERSONA_DECISION_MODEL", "llm").lower() != "jev":
+        return fallback
+    api_key = os.environ.get("TYPESAFE_API_KEY")
+    if not api_key:
+        raise RuntimeError("TYPESAFE_API_KEY is required when PERSONA_DECISION_MODEL=jev")
+    client = JevDecisionClient(
+        api_key,
+        model=os.environ.get("TYPESAFE_MODEL", DEFAULT_JEV_MODEL),
+        confidence_min=float(os.environ.get("TYPESAFE_CONFIDENCE_MIN", "0.5")),
+    )
+    return HybridPersonaModel(client, fallback)
+
+
+def _llm_model(tier: str):
     if tier == "paid" and os.environ.get("ANTHROPIC_API_KEY"):
         from langchain_anthropic import ChatAnthropic
 
@@ -73,11 +110,22 @@ def make_checkpointer():
     if not url:
         return MemorySaver()  # in-memory in dev, Postgres when DATABASE_URL is set
     from langgraph.checkpoint.postgres import PostgresSaver
-    from psycopg import Connection
     from psycopg.rows import dict_row
+    from psycopg_pool import ConnectionPool
 
-    conn = Connection.connect(url, autocommit=True, prepare_threshold=0, row_factory=dict_row)
-    saver = PostgresSaver(conn)
+    connections = ConnectionPool(
+        url,
+        min_size=0,
+        max_size=4,
+        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        check=ConnectionPool.check_connection,
+        max_lifetime=300,
+        max_idle=60,
+        reconnect_timeout=10,
+        open=True,
+    )
+    atexit.register(connections.close)
+    saver = PostgresSaver(connections)
     saver.setup()
     return saver
 
@@ -90,3 +138,29 @@ def checkpointer():
 @lru_cache(maxsize=2)
 def graph(tier: str):
     return build_graph(make_model(tier), checkpointer())
+
+
+def invoke(tier: str, value: Any, config: dict) -> dict:
+    """Retry one interrupted database-backed graph call on a fresh pooled connection."""
+    from psycopg import OperationalError
+
+    for attempt in range(2):
+        try:
+            return graph(tier).invoke(value, config)
+        except OperationalError:
+            if attempt:
+                raise
+    raise AssertionError("unreachable")
+
+
+def get_state(tier: str, config: dict):
+    """Read graph state with the same single reconnect allowance as writes."""
+    from psycopg import OperationalError
+
+    for attempt in range(2):
+        try:
+            return graph(tier).get_state(config)
+        except OperationalError:
+            if attempt:
+                raise
+    raise AssertionError("unreachable")

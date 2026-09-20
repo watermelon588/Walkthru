@@ -7,10 +7,23 @@ export type Step = {
   text: string | null
   confusion: number
   url: string
+  provider?: 'jev' | 'llm'
+  decision_confidence?: number
+  fallback_reason?: string
+  evidence?: StepEvidence
+}
+
+export type StepEvidence = {
+  screenshot_path: string
+  captured_at: string
+  result_url: string
+  width: number
+  height: number
+  note?: string
 }
 
 export type Finding = {
-  kind: 'ux' | 'seo' | 'security'
+  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security'
   severity: 'high' | 'medium' | 'low'
   title: string
   detail: string
@@ -25,6 +38,7 @@ export type Report = {
   top_fixes: string[]
   verified: boolean
   tokens: number
+  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
 }
 
 export type Run = {
@@ -58,7 +72,7 @@ export const PERSONA_LABEL: Record<string, string> = {
   stranger: 'Stranger, five seconds',
 }
 
-export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', seo: 'SEO', security: 'Security' }
+export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at'
@@ -76,6 +90,17 @@ export async function getRun(id: string): Promise<Run | null> {
   const { data, error } = await supabase.from('runs').select(COLUMNS).eq('id', id).maybeSingle()
   if (error) throw error
   return data as Run | null
+}
+
+export async function evidenceUrls(paths: string[]): Promise<Record<string, string>> {
+  const client = supabase
+  if (!client || paths.length === 0) return {}
+  const unique = [...new Set(paths)]
+  const entries = await Promise.all(unique.map(async (path) => {
+    const { data, error } = await client.storage.from('run-evidence').createSignedUrl(path, 60 * 60)
+    return [path, error ? '' : data.signedUrl] as const
+  }))
+  return Object.fromEntries(entries.filter((entry) => entry[1]))
 }
 
 /** Writes go through the API. */
