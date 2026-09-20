@@ -1,7 +1,12 @@
+import { openSidePanelForTab } from "../lib/side-panel";
+
 export default defineBackground(() => {
-  // Clicking the toolbar icon opens the side panel. The step loop lives in the panel, not here
-  // (Chrome suspends this worker after ~30 s idle).
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  // Opening explicitly inside action.onClicked grants activeTab to this tab. Chrome's
+  // openPanelOnActionClick shortcut opens the panel but does not reliably grant activeTab,
+  // which makes tabs.captureVisibleTab fail even though the user invoked the extension.
+  chrome.action.onClicked.addListener((tab) => {
+    void openSidePanelForTab(tab).catch((error) => console.error("Could not open Walkthru", error));
+  });
 
   // The dashboard (externally_connectable origins only) hands us the signed-in session.
   chrome.runtime.onMessageExternal.addListener((msg, _sender, reply) => {

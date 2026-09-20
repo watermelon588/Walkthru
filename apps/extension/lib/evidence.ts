@@ -4,6 +4,14 @@ import type { Observation } from "./snapshot";
 
 export const MAX_SCREENSHOTS = 8;
 
+export function evidenceFailureMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/activeTab|<all_urls>/i.test(message)) {
+    return "Screenshot permission is missing. Reopen Walkthru from its toolbar icon on this tab, then start the test again.";
+  }
+  return message || "Screenshot capture failed.";
+}
+
 export function evidencePath(runId: string, stepIndex: number): string {
   return `${runId}/step-${String(stepIndex + 1).padStart(2, "0")}.jpg`;
 }

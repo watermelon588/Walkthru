@@ -112,6 +112,7 @@ export function App() {
       </form>
 
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
+      {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}
 
       {progress.phase === "finished" && (
         <section className="summary" aria-label="Result">
