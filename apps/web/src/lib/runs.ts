@@ -7,6 +7,19 @@ export type Step = {
   text: string | null
   confusion: number
   url: string
+  provider?: 'jev' | 'llm'
+  decision_confidence?: number
+  fallback_reason?: string
+  evidence?: StepEvidence
+}
+
+export type StepEvidence = {
+  screenshot_path: string
+  captured_at: string
+  result_url: string
+  width: number
+  height: number
+  note?: string
 }
 
 export type Finding = {
@@ -76,6 +89,17 @@ export async function getRun(id: string): Promise<Run | null> {
   const { data, error } = await supabase.from('runs').select(COLUMNS).eq('id', id).maybeSingle()
   if (error) throw error
   return data as Run | null
+}
+
+export async function evidenceUrls(paths: string[]): Promise<Record<string, string>> {
+  const client = supabase
+  if (!client || paths.length === 0) return {}
+  const unique = [...new Set(paths)]
+  const entries = await Promise.all(unique.map(async (path) => {
+    const { data, error } = await client.storage.from('run-evidence').createSignedUrl(path, 60 * 60)
+    return [path, error ? '' : data.signedUrl] as const
+  }))
+  return Object.fromEntries(entries.filter((entry) => entry[1]))
 }
 
 /** Writes go through the API. */

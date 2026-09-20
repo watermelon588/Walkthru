@@ -1,5 +1,6 @@
 """Wire contracts between the extension and the persona agent."""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,17 @@ class Observation(BaseModel):
     text: str = ""  # visible text, trimmed client side
     errors: list[str] = Field(default_factory=list)  # visible error messages
     note: str | None = None  # executor feedback: "element not found", "captcha", ...
+
+
+class StepEvidence(BaseModel):
+    """Private visual proof captured after one browser action."""
+
+    screenshot_path: str = Field(pattern=r"^[a-f0-9]{32}/step-\d{2}\.jpg$", max_length=80)
+    captured_at: datetime
+    result_url: str = Field(pattern=r"^https?://", max_length=2000)
+    width: int = Field(ge=1, le=10000)
+    height: int = Field(ge=1, le=10000)
+    note: str | None = Field(default=None, max_length=300)
 
 
 class PersonaStep(BaseModel):

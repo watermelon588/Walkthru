@@ -46,6 +46,15 @@ test("reaches into open shadow roots", () => {
   expect(findById(document, 1)?.textContent).toBe("Inside shadow");
 });
 
+test("does not inspect a closed agent-overlay shadow root", () => {
+  document.body.innerHTML = `<button>Site action</button><walkthru-agent></walkthru-agent>`;
+  const host = document.querySelector("walkthru-agent")!;
+  host.attachShadow({ mode: "closed" }).innerHTML = `<button>Scout status</button>`;
+  const obs = snapshot(document, { geometry: false });
+  expect(obs.elements).toEqual([{ id: 1, tag: "button", text: "Site action" }]);
+  expect(obs.text).not.toContain("Scout status");
+});
+
 test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode", () => {
   page(`<form><input id="e" type="email"><button type="submit">Delete account</button></form><a href="#" id="a">Go</a>`);
   expect(execute({ thought: "", action: "type", target_id: 1, text: "a@b.co", confusion: 0 }, document)).toEqual({ ok: true });

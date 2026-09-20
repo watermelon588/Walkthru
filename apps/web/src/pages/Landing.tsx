@@ -2,6 +2,7 @@ import { useGSAP } from '@gsap/react'
 import { ArrowRightIcon } from '@phosphor-icons/react'
 import gsap from 'gsap'
 import { useRef } from 'react'
+import { AgentPresence } from '../components/AgentPresence'
 import { useReveal } from '../lib/motion'
 import { hero, personas, reportParts, run, safety, steps } from '../content'
 import { Asset, btnGhost, btnPrimary, Closing, Faq, Footer, h2, lead, Nav, Pricing, Words } from '../components/Shared'
@@ -39,6 +40,7 @@ export default function Landing() {
             </div>
             <div className="hero-fade">
               <Asset name="hero-product.png" eager ratio="2400 / 1373" label="Browser window: a site with the Walkthru side panel open mid-run" />
+              <AgentPresence activity="Watching the flow" state="observing" className="mt-5 justify-end sm:flex" phase={0.08} />
             </div>
           </div>
         </section>

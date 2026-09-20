@@ -1,4 +1,7 @@
 import { KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { AgentPresence, type AgentPresenceState } from './AgentPresence'
+import { EvidenceTimeline } from './EvidenceTimeline'
+import { LaunchChecks } from './LaunchChecks'
 
 /** The report body. Shared by the signed-in report page and the public share page. */
 export function ReportView({ run }: { run: Run }) {
@@ -9,17 +12,30 @@ export function ReportView({ run }: { run: Run }) {
   const isScan = run.kind === 'scan'
   const counts = { high: 0, medium: 0, low: 0 }
   for (const f of r?.findings ?? []) counts[f.severity]++
+  const stopped = ['gave_up', 'budget', 'stuck', 'captcha'].includes(run.status)
+  const agentState: AgentPresenceState = stopped ? 'stopped' : r ? 'complete' : 'observing'
+  const agentActivity = stopped
+    ? STATUS_LABEL[run.status]
+    : r
+      ? 'Report ready'
+      : isScan
+        ? 'Scanning this homepage'
+        : 'Testing this flow'
 
   return (
     <article>
-      <header>
-        <p className="font-mono text-xs text-muted">{run.site}</p>
-        <h1 className="mt-2 text-3xl font-extralight tracking-tight md:text-5xl">{isScan ? 'Instant Scan' : run.goal}</h1>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-          <span>{PERSONA_LABEL[run.persona] ?? run.persona}</span>
-          {!isScan && <StatusPill status={run.status} />}
-          <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+      <header className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Launch readiness report</p>
+          <p className="mt-3 font-mono text-xs text-muted">{run.site}</p>
+          <h1 className="mt-2 text-3xl font-extralight tracking-tight md:text-5xl">{isScan ? 'Instant Scan' : run.goal}</h1>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+            <span>{PERSONA_LABEL[run.persona] ?? run.persona}</span>
+            {!isScan && <StatusPill status={run.status} />}
+            <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+          </div>
         </div>
+        <AgentPresence activity={agentActivity} state={agentState} phase={0.32} />
       </header>
 
       {r ? (
@@ -36,6 +52,8 @@ export function ReportView({ run }: { run: Run }) {
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
           </section>
 
+          {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
+
           {r.first_impression && (
             <section aria-label="First impression" className="mt-12">
               <h2 className="text-xl font-light tracking-tight">First impression, five seconds in</h2>
@@ -48,13 +66,16 @@ export function ReportView({ run }: { run: Run }) {
             </section>
           )}
 
+          <LaunchChecks findings={r.findings} verified={r.verified} />
+
           {r.top_fixes.length > 0 && (
-            <section aria-label="Top fixes" className="mt-12 rounded-2xl bg-surface px-6 py-6">
-              <h2 className="text-xl font-light tracking-tight">Fix these first</h2>
-              <ol className="mt-4 grid gap-3">
+            <section aria-label="Top fixes" className="mt-14">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Prioritized fixes</p>
+              <h2 className="mt-2 text-2xl font-light tracking-tight">Fix these first</h2>
+              <ol className="mt-5 overflow-hidden rounded-2xl border border-line bg-line">
                 {r.top_fixes.map((f, i) => (
-                  <li key={i} className="grid grid-cols-[2rem_1fr] gap-2 leading-relaxed">
-                    <span className="font-mono text-xs text-muted pt-1">{i + 1}</span>
+                  <li key={i} className="grid grid-cols-[3rem_1fr] gap-3 border-b border-line bg-bg px-5 py-4 leading-relaxed last:border-b-0">
+                    <span className="font-mono text-xs text-muted pt-1">P{String(i + 1).padStart(2, '0')}</span>
                     <span>{f}</span>
                   </li>
                 ))}
@@ -74,29 +95,12 @@ export function ReportView({ run }: { run: Run }) {
           </section>
         </>
       ) : (
-        <p role="status" className="mt-8 text-muted">
-          {run.status === 'running' ? 'The test user is still working through the site.' : 'Writing the report. This takes about half a minute.'}
-        </p>
-      )}
-
-      {steps.length > 0 && (
-        <section aria-label="Think-aloud log" className="mt-12">
-          <h2 className="text-xl font-light tracking-tight">What the test user did</h2>
-          <ol className="mt-4 border-t border-line">
-            {steps.map((s, i) => (
-              <li key={i} className={`grid grid-cols-[2rem_1fr] gap-3 border-b border-line py-4 ${s.confusion >= 2 ? '-mx-3 rounded-xl bg-surface/60 px-3' : ''}`}>
-                <span className="pt-0.5 font-mono text-xs text-muted">{i + 1}</span>
-                <div className="min-w-0">
-                  <p className="leading-relaxed">{s.thought}</p>
-                  <p className="mt-1 truncate font-mono text-xs text-muted">
-                    {s.action}{s.target_id != null ? ` #${s.target_id}` : ''}{s.text ? ` "${s.text}"` : ''} · {s.url}
-                    {s.confusion >= 2 && <span className="ml-2 text-danger">confused ({s.confusion})</span>}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <>
+          <p role="status" className="mt-8 text-muted">
+            {run.status === 'running' ? 'The test user is still working through the site.' : 'Writing the report. This takes about half a minute.'}
+          </p>
+          {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
+        </>
       )}
     </article>
   )

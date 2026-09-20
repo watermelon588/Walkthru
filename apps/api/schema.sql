@@ -40,3 +40,35 @@ create policy "anyone reads public runs" on public.runs
   using (public = true);
 
 grant select on public.runs to anon;
+
+-- Private journey screenshots. Objects are scoped by run id: <run_id>/step-01.jpg.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('run-evidence', 'run-evidence', false, 1500000, array['image/jpeg'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "owners upload run evidence" on storage.objects;
+create policy "owners upload run evidence" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'run-evidence'
+    and exists (
+      select 1 from public.runs
+      where runs.id = split_part(name, '/', 1)
+        and runs.user_id = (select auth.uid())
+    )
+  );
+
+drop policy if exists "owners and public reports read run evidence" on storage.objects;
+create policy "owners and public reports read run evidence" on storage.objects
+  for select to anon, authenticated
+  using (
+    bucket_id = 'run-evidence'
+    and exists (
+      select 1 from public.runs
+      where runs.id = split_part(name, '/', 1)
+        and (runs.user_id = (select auth.uid()) or runs.public = true)
+    )
+  );
