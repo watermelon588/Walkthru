@@ -9,7 +9,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "evals"))
 from serve import start
 
-from app.scans import fetch, security, seo
+from app.scans import accessibility, fetch, performance, security, seo
 
 EASY, HARD = "http://127.0.0.1:8121", "http://127.0.0.1:8122"
 
@@ -93,3 +93,39 @@ def test_ssrf_guard_blocks_private_hosts(monkeypatch):
 
 def test_page_text_strips_scripts():
     assert fetch.page_text("<body><h1>Hi</h1><script>var x=1</script><p>there</p></body>") == "Hi there"
+
+
+def test_accessibility_scan_reports_static_html_failures():
+    html = """<html><body><h1>Account</h1><h3>Details</h3><img src="hero.png"><input type="email"><button></button></body></html>"""
+    found = titles(accessibility.scan(html, "https://site.test/account"))
+    assert "Page language is not declared" in found
+    assert "Heading levels are skipped" in found
+    assert "Image is missing text alternative" in found
+    assert "2 form controls have no accessible name" in found
+
+
+def test_accessibility_easy_homepage_is_clean():
+    with fetch.client() as c:
+        response = c.get(EASY + "/")
+    assert accessibility.scan(response.text, str(response.url)) == []
+
+
+def test_performance_scan_is_explicitly_unavailable_without_key(monkeypatch):
+    monkeypatch.delenv("PAGESPEED_API_KEY", raising=False)
+    with fetch.client() as c:
+        findings, measured = performance.scan("https://site.test", c)
+    assert findings == [] and measured is False
+
+
+def test_performance_scan_maps_pagespeed_evidence(monkeypatch):
+    monkeypatch.setenv("PAGESPEED_API_KEY", "test-key")
+
+    def handler(_: httpx.Request):
+        return httpx.Response(200, json={"lighthouseResult": {"categories": {"performance": {"score": 0.42}}, "audits": {"largest-contentful-paint": {"displayValue": "4.8 s"}}}})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as c:
+        findings, measured = performance.scan("https://site.test", c)
+    assert measured is True
+    assert findings[0].kind == "performance"
+    assert findings[0].title == "Mobile performance score 42/100"
+    assert findings[0].evidence == "PageSpeed Insights, mobile: 42"

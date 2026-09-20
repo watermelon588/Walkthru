@@ -23,7 +23,7 @@ export type StepEvidence = {
 }
 
 export type Finding = {
-  kind: 'ux' | 'seo' | 'security'
+  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security'
   severity: 'high' | 'medium' | 'low'
   title: string
   detail: string
@@ -38,6 +38,7 @@ export type Report = {
   top_fixes: string[]
   verified: boolean
   tokens: number
+  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
 }
 
 export type Run = {
@@ -71,7 +72,7 @@ export const PERSONA_LABEL: Record<string, string> = {
   stranger: 'Stranger, five seconds',
 }
 
-export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', seo: 'SEO', security: 'Security' }
+export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at'

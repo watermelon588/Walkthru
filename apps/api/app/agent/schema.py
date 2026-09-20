@@ -50,7 +50,7 @@ class PersonaStep(BaseModel):
 class Finding(BaseModel):
     """One problem in the report. Deterministic scans and the synthesis LLM both produce these."""
 
-    kind: Literal["ux", "seo", "security"]
+    kind: Literal["ux", "accessibility", "performance", "seo", "security"]
     severity: Literal["high", "medium", "low"]
     title: str = Field(max_length=120)
     detail: str = Field(max_length=600)
@@ -83,3 +83,4 @@ class Report(BaseModel):
     top_fixes: list[str]
     verified: bool = False
     tokens: int = 0
+    checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
