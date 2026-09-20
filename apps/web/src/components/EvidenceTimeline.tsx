@@ -1,6 +1,7 @@
 import { CameraIcon, CaretLeftIcon, CaretRightIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { evidenceUrls, type Step } from '../lib/runs'
+import { AgentBird } from './AgentBird'
 import { AgentPresence } from './AgentPresence'
 
 const ACTION_LABEL: Record<Step['action'], string> = {
@@ -57,7 +58,8 @@ export function EvidenceTimeline({ steps }: { steps: Step[] }) {
   }
 
   return (
-    <section aria-labelledby="journey-evidence-title" className="mt-14">
+    <>
+    <section aria-labelledby="journey-evidence-title" className="no-print mt-14">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Journey replay</p>
@@ -151,6 +153,54 @@ export function EvidenceTimeline({ steps }: { steps: Step[] }) {
           </aside>
         </div>
       </div>
+    </section>
+    <PrintEvidenceJourney steps={steps} images={images} />
+    </>
+  )
+}
+
+function PrintEvidenceJourney({ steps, images }: { steps: Step[]; images: Record<string, string> }) {
+  const frames = steps
+    .map((step, index) => ({ step, index, evidence: step.evidence }))
+    .filter((item): item is { step: Step; index: number; evidence: NonNullable<Step['evidence']> } => Boolean(item.evidence))
+
+  return (
+    <section aria-label="Visual journey evidence" className="print-only report-print-section print-break-before">
+      <header className="report-print-section-heading">
+        <div>
+          <p className="report-print-kicker">Visual evidence</p>
+          <h2>What Scout saw</h2>
+          <p>Each frame was captured after the action shown. Form values were masked before capture.</p>
+        </div>
+        <AgentBird variant="solid" className="report-print-bird" phase={0.4} title="Scout, the Walkthru test agent" />
+      </header>
+
+      {frames.length === 0 ? (
+        <p className="report-print-empty">No screenshot evidence was saved for this run.</p>
+      ) : (
+        <div className="report-print-frames">
+          {frames.map(({ step, index, evidence }) => {
+            const image = images[evidence.screenshot_path]
+            return (
+              <figure key={evidence.screenshot_path} className="report-print-frame">
+                {image ? (
+                  <img src={image} alt={`Page after step ${index + 1}: ${ACTION_LABEL[step.action]}`} loading="eager" />
+                ) : (
+                  <div className="report-print-frame-missing">Screenshot unavailable</div>
+                )}
+                <figcaption>
+                  <span className="report-print-step">{String(index + 1).padStart(2, '0')}</span>
+                  <span>
+                    <strong>{ACTION_LABEL[step.action]}</strong>
+                    <span>{step.thought}</span>
+                  </span>
+                  <span className="report-print-confusion">Confusion {step.confusion}/3</span>
+                </figcaption>
+              </figure>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

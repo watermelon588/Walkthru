@@ -1,6 +1,7 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useRef } from "react";
+import { ThinkingOrb, type OrbState } from "thinking-orbs";
 import { AGENT_BIRD, AGENT_TONE, type AgentState } from "../../lib/agent-bird";
 
 gsap.registerPlugin(useGSAP);
@@ -43,6 +44,9 @@ export function AgentStatus({ activity, state }: AgentStatusProps) {
     gsap.fromTo(activityRef.current, { autoAlpha: reduceMotion ? 1 : 0.35, y: reduceMotion ? 0 : 3 }, { autoAlpha: 1, y: 0, duration: reduceMotion ? 0 : 0.45, ease: "power2.out" });
   }, { dependencies: [activity, state], scope: root });
 
+  const active = state === "observing" || state === "acting";
+  const orbState: OrbState = state === "acting" ? "working" : "searching";
+
   return (
     <div ref={root} className="agent-status" aria-label={`Scout. ${activity}`}>
       <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -59,7 +63,10 @@ export function AgentStatus({ activity, state }: AgentStatusProps) {
       </svg>
       <span className="agent-copy">
         <strong>Scout</strong>
-        <span ref={activityRef} aria-live="polite">{activity}</span>
+        <span ref={activityRef} aria-live="polite">
+          {active && <ThinkingOrb className="agent-orb" state={orbState} size={20} theme="light" aria-hidden="true" />}
+          <span>{activity}</span>
+        </span>
       </span>
     </div>
   );

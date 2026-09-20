@@ -27,12 +27,39 @@ body {
   @apply antialiased;
 }
 
+.print-only { display: none; }
+
 @media print {
-  @page { margin: 14mm; }
+  @page { size: A4; margin: 12mm 13mm 14mm; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .no-print { display: none !important; }
-  body { background: white; }
+  .print-only { display: block !important; }
+  body { background: white; color: var(--ink); }
   main { max-width: none !important; padding: 0 !important; }
-  section, article, figure, li { break-inside: avoid; }
+  .report-root { font-size: 10.5pt; }
+  .report-cover { min-height: 102mm; align-content: end; border-bottom: 1px solid var(--line); padding: 24mm 0 10mm; }
+  .report-cover h1 { max-width: 150mm; font-size: 30pt; line-height: 1.03; }
+  .report-kicker, .report-print-kicker { color: var(--accent); font: 600 7.5pt/1.2 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; }
+  .report-summary { border: 1px solid var(--line); border-radius: 6mm; }
+  .report-print-section { margin-top: 12mm; }
+  .print-break-before { break-before: page; }
+  .report-print-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 12mm; margin-bottom: 7mm; border-bottom: 1px solid var(--line); padding-bottom: 5mm; }
+  .report-print-section-heading h2 { margin-top: 2mm; font-size: 20pt; font-weight: 350; letter-spacing: -.03em; }
+  .report-print-section-heading p:last-child { max-width: 115mm; margin-top: 2mm; color: var(--muted); font-size: 9pt; line-height: 1.45; }
+  .report-print-bird { width: 22mm; height: 22mm; flex: 0 0 auto; color: var(--accent); }
+  .report-print-frames { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7mm; }
+  .report-print-frame { break-inside: avoid; overflow: hidden; border: 1px solid var(--line); border-radius: 5mm; background: white; }
+  .report-print-frame img, .report-print-frame-missing { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: var(--surface); }
+  .report-print-frame-missing { display: grid; place-items: center; color: var(--muted); font-size: 9pt; }
+  .report-print-frame figcaption { display: grid; grid-template-columns: 8mm minmax(0, 1fr); gap: 3mm; padding: 4mm; border-top: 1px solid var(--line); }
+  .report-print-frame figcaption > span:nth-child(2) { min-width: 0; }
+  .report-print-frame figcaption strong, .report-print-frame figcaption span span { display: block; }
+  .report-print-frame figcaption span span { margin-top: 1mm; color: var(--muted); font-size: 8pt; line-height: 1.35; }
+  .report-print-step { color: var(--accent); font: 600 8pt/1.4 var(--font-mono); }
+  .report-print-confusion { grid-column: 2; margin-top: 1mm; color: var(--muted); font: 500 7pt/1.2 var(--font-mono); text-transform: uppercase; }
+  .report-print-empty { border: 1px solid var(--line); border-radius: 5mm; padding: 10mm; color: var(--muted); text-align: center; }
+  .report-print-section article, .report-print-section li, .report-summary > div { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
 }
 
 /* Agent palette is intentionally isolated to the identity lab. */
