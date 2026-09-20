@@ -87,6 +87,21 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
     })
   }
 
+  async function savePdf() {
+    setBusy('pdf')
+    setMsg('Preparing screenshots for the PDF.')
+    const expectedFrames = run.steps.filter((step) => step.evidence).length
+    const deadline = Date.now() + 8000
+    while (expectedFrames > 0 && document.querySelectorAll<HTMLImageElement>('.report-print-frame img').length < expectedFrames && Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
+    }
+    const images = [...document.querySelectorAll<HTMLImageElement>('.report-print-frame img')]
+    await Promise.all(images.map((image) => image.decode().catch(() => {})))
+    setMsg(null)
+    setBusy(null)
+    window.print()
+  }
+
   return (
     <div className="no-print mb-8 flex flex-wrap items-center gap-2">
       <button type="button" onClick={share} disabled={busy !== null} className={btnGhost}>
@@ -95,8 +110,8 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
       <button type="button" onClick={exportCsv} className={btnGhost}>
         <DownloadSimpleIcon weight="light" className="size-4" /> Export CSV
       </button>
-      <button type="button" onClick={() => window.print()} className={btnGhost}>
-        <PrinterIcon weight="light" className="size-4" /> Save PDF
+      <button type="button" onClick={savePdf} disabled={busy !== null} className={btnGhost}>
+        <PrinterIcon weight="light" className="size-4" /> {busy === 'pdf' ? 'Preparing PDF' : 'Save PDF'}
       </button>
       <button type="button" onClick={email} disabled={busy !== null} className={btnGhost}>
         <EnvelopeSimpleIcon weight="light" className="size-4" /> Email me

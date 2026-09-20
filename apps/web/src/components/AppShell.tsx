@@ -9,7 +9,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   return (
     <div className="min-h-[100dvh] bg-bg text-ink">
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
+      <header className="no-print mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
         <Logo withName={false} />
         <div className="flex items-center gap-4 text-sm">
           <span className="hidden text-muted sm:block">{session?.user.email}</span>

@@ -8,7 +8,7 @@ const checks = [
 
 export function LaunchChecks({ findings, verified }: { findings: Finding[]; verified: boolean }) {
   return (
-    <section aria-labelledby="launch-checks-title" className="mt-14">
+    <section aria-labelledby="launch-checks-title" className="report-print-section print-break-before mt-14">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Technical launch checks</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <h2 id="launch-checks-title" className="text-2xl font-light tracking-tight">Catch what the journey cannot see</h2>
