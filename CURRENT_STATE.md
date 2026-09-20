@@ -51,6 +51,7 @@ _Last updated: 2026-09-20_
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
+- Local extension testing must happen in regular Chrome with the unpacked build loaded and reloaded. The Codex in-app browser can render the web app and fixtures but does not host the user's Chrome extension, so its `/login` or `/app` tab cannot complete the session handoff.
 - Privacy, Terms and Security pages do not exist yet (footer links are `#`). Required before launch.
 - Domain not bought yet (`brand.domain` is a placeholder). `agent-eye.jpg` is 735px wide, a bit soft on large screens.
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
