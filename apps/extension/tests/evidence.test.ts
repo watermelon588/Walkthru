@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { evidencePath, shouldCaptureEvidence } from "../lib/evidence";
+import { evidenceFailureMessage, evidencePath, shouldCaptureEvidence } from "../lib/evidence";
 import type { Step } from "../lib/execute";
 import type { Observation } from "../lib/snapshot";
 
@@ -31,5 +31,15 @@ describe("screenshot evidence policy", () => {
     expect(shouldCaptureEvidence(step({ action: "scroll", confusion: 2 }), observation, 4, 2)).toBe(true);
     expect(shouldCaptureEvidence(step({ action: "scroll" }), { ...observation, errors: ["Email is required"] }, 4, 2)).toBe(true);
     expect(shouldCaptureEvidence(step(), observation, 8, 8)).toBe(false);
+  });
+
+  test("explains how to recover when Chrome has not granted activeTab", () => {
+    expect(evidenceFailureMessage(new Error("Either the '<all_urls>' or 'activeTab' permission is required."))).toBe(
+      "Screenshot permission is missing. Reopen Walkthru from its toolbar icon on this tab, then start the test again.",
+    );
+  });
+
+  test("keeps storage failures visible without exposing response bodies", () => {
+    expect(evidenceFailureMessage(new Error("Screenshot upload failed (403)"))).toBe("Screenshot upload failed (403)");
   });
 });

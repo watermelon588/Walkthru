@@ -2,7 +2,7 @@
 
 import { observe, startRun, type RunReply, type StepEvidence } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
-import { captureStepEvidence, shouldCaptureEvidence } from "../../lib/evidence";
+import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
@@ -14,6 +14,7 @@ export type Progress = {
   status?: string;
   message?: string;
   runId?: string;
+  evidenceWarning?: string;
 };
 
 const SETTLE_MS = 1200;
@@ -73,7 +74,8 @@ async function settled(tabId: number, signal: AbortSignal) {
 export async function runTest(opts: RunOptions, onProgress: (p: Progress) => void) {
   const steps: Step[] = [];
   let capturedCount = 0;
-  const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], ...p });
+  let evidenceWarning: string | undefined;
+  const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], evidenceWarning, ...p });
   let tabId: number | undefined;
   try {
     emit({ phase: "starting" });
@@ -120,8 +122,10 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         try {
           evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note);
           capturedCount += 1;
-        } catch {
+        } catch (error) {
           // Evidence should enrich a journey, never stop it.
+          evidenceWarning = evidenceFailureMessage(error);
+          emit({ evidenceWarning });
         } finally {
           await setEvidenceCapture(tabId, false);
         }
@@ -129,10 +133,10 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       reply = await observe(reply.run_id, obs, evidence);
     }
     await setAgentStatus(tabId, reply.status === "done" ? "complete" : "stopped", reply.status === "done" ? "Goal reached" : "Test finished");
-    finish(reply, steps, onProgress);
+    finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
     if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
-    onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e) });
+    onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e), evidenceWarning });
   }
 }
 
@@ -152,9 +156,9 @@ async function act(tabId: number, step: Step, opts: RunOptions, origin: string):
   return result.note;
 }
 
-function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => void) {
+function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => void, evidenceWarning?: string) {
   if (reply.status === "running") return;
   const last = reply.steps.at(-1);
   if (last && (last.action === "done" || last.action === "give_up") && steps.at(-1) !== last) steps.push(last);
-  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id });
+  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id, evidenceWarning });
 }
