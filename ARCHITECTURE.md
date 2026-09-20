@@ -12,7 +12,7 @@ executes the action in the real tab
 masks fields + captures bounded JPEG    ── private Storage object + evidence metadata ─▶ exact run step
                                         ... loop until done / give_up / step budget ...
                                                                synthesize report ─▶ Supabase ─▶ report page + email
-Server-only scans (no browser): SEO (HTML fetch, robots, sitemap, PageSpeed API), security hygiene (headers, TLS, cookies, public files, secrets in JS).
+Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
 
 Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call
 Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits table
@@ -37,7 +37,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 2. **Step loop lives in the extension side panel page**, not the MV3 service worker (Chrome suspends workers after ~30 s idle). Chrome does not reliably grant `activeTab` to side panels and `captureVisibleTab` only accepts `activeTab` or `<all_urls>`, so Start Test requests the optional broad host permission in a one-time Chrome prompt. It is used only for the active test tab.
 3. **One HTTP call per agent step.** LangGraph `interrupt()` emits the action; `Command(resume=observation)` continues. Postgres checkpointer holds state, so the API is stateless between calls.
 4. **Text snapshot first, screenshots rarely** (first impression and when stuck). Tokens are the main cost.
-5. **Plain code wherever possible.** SEO and security checks are deterministic code plus one LLM call to explain fixes. Only the persona session is an agent.
+5. **Plain code wherever possible.** Accessibility, performance, SEO and security checks are deterministic integrations. LLMs explain and prioritize the evidence; only the persona session is an agent.
 6. **Passive security only, on verified domains** (meta tag, DNS TXT or well-known file).
 7. **Credits, not tokens,** for billing. One credit = one persona run. Tokens logged per run for margins.
 8. **react-router** for `/`, `/login`, `/app`, `/app/runs/:id`. Production host must rewrite all paths to `index.html` (Vercel: `rewrites` in vercel.json).
@@ -72,7 +72,7 @@ or bounded action           |
 ## Agent graphs
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
-- `site_scan`: seo_scan and security_scan in parallel.
+- `site_scan`: accessibility_scan, performance_scan, seo_scan and security_scan in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
 
 ## Safety rules (enforced in code, not prompts)
 Safe mode on logged-in pages (never click delete / remove / cancel subscription / pay / send / invite / transfer; confirm before any form submit), same-origin only, 25-step and 4-minute caps, stop at CAPTCHA, client-side PII masking before snapshot upload, form-control masking before screenshot capture, fake test identity for signups. Evidence capture is best-effort and never blocks the journey.

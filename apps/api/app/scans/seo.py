@@ -1,7 +1,6 @@
 """SEO checks: deterministic code over the homepage, robots.txt and sitemap.xml, plus PageSpeed when a key exists.
 Content and intent review happens in the first-impression LLM call, not here."""
 
-import os
 import re
 
 import httpx
@@ -79,21 +78,6 @@ def check_sitemap(status: int | None, robots: str | None) -> list[Finding]:
     return [_f("low", "No sitemap.xml", "Search engines discover pages slower without a sitemap.", "Generate /sitemap.xml and reference it from robots.txt.")]
 
 
-def pagespeed(url: str, c: httpx.Client) -> list[Finding]:
-    key = os.environ.get("PAGESPEED_API_KEY")
-    if not key:
-        return []
-    r = get(c, f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile&category=performance&key={key}")
-    if r is None or r.status_code != 200:
-        return []
-    lh = r.json().get("lighthouseResult", {})
-    score = round((lh.get("categories", {}).get("performance", {}).get("score") or 0) * 100)
-    lcp = lh.get("audits", {}).get("largest-contentful-paint", {}).get("displayValue", "?")
-    if score >= 90:
-        return []
-    return [_f("medium" if score < 50 else "low", f"Mobile performance score {score}/100", f"Largest Contentful Paint: {lcp}. Slow pages lose visitors before the first click.", "Compress images, defer non-critical scripts, and serve static assets from a CDN.", f"PageSpeed Insights, mobile: {score}")]
-
-
 def scan(url: str, c: httpx.Client, html: str | None = None) -> list[Finding]:
     """All SEO findings for a homepage. `html` avoids a second fetch when the caller already has it."""
     if html is None:
@@ -105,4 +89,4 @@ def scan(url: str, c: httpx.Client, html: str | None = None) -> list[Finding]:
     robots = get(c, f"{base}/robots.txt")
     robots_text = robots.text if robots is not None and robots.status_code == 200 else None
     sitemap = get(c, f"{base}/sitemap.xml")
-    return check_html(html, url) + check_robots(robots_text) + check_sitemap(sitemap.status_code if sitemap else None, robots_text) + pagespeed(url, c)
+    return check_html(html, url) + check_robots(robots_text) + check_sitemap(sitemap.status_code if sitemap else None, robots_text)

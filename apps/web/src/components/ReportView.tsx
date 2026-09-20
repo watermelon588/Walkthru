@@ -66,7 +66,7 @@ export function ReportView({ run }: { run: Run }) {
             </section>
           )}
 
-          <LaunchChecks findings={r.findings} verified={r.verified} />
+          <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} />
 
           {r.top_fixes.length > 0 && (
             <section aria-label="Top fixes" className="report-print-section print-break-before mt-14">

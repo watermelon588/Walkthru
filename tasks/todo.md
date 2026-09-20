@@ -76,6 +76,10 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
   - [ ] Render and visually inspect a multi-page PDF with real evidence
 - [ ] T22 Optional continuous video only after filmstrip validation
 - [ ] T23 Accessibility and performance evidence
+  - [x] Static HTML accessibility checks for language, heading order, image alternatives and control names
+  - [x] PageSpeed-backed mobile performance findings with an explicit unavailable state
+  - [x] Accessibility and performance cards in private, public and PDF reports
+  - [ ] Add browser-level axe and Web Vitals evidence tied to exact journey steps
 - [ ] T24 Bounded full-site SEO and verified passive-security aggregation
 - [ ] T25 Rerun comparison, multi-persona synthesis, schedules, then integrations
 
