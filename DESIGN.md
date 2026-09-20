@@ -65,7 +65,17 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 |---|---|---|
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
+| Dashboard | `/app` | Evidence-led command center. Lead with a plain-language launch-readiness promise, interactive Scout guidance, one run-to-report pipeline and recent runs with frame/finding counts. Keep controls in one clear column before history. |
+| Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
 | Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
+
+## Evidence workspace
+- Desktop journey replay uses three panes: chronological steps, the selected evidence frame and a compact inspector. On smaller screens they stack in that order.
+- The image is evidence, not decoration. Use `object-contain`, preserve the captured viewport ratio and show explicit loading, unavailable and legacy-run states.
+- Replay controls are quiet circular buttons with accessible names. The selected step uses the existing surface token; do not add a timeline accent colour.
+- Never show typed values in activity logs or report inspectors. Captures temporarily hide Scout and visually mask form controls.
+- Technical checks stay separate from human-journey findings so the reader can tell observed behavior from deterministic SEO and security checks.
+- Priorities use ordered `P01`, `P02` labels. The report remains useful in print, with navigation/actions hidden and evidence blocks kept together where possible.
 
 ## Agent identity exploration
 - The original walking-bird logo now has a lab-only vector source at `src/assets/brand/walkthru-mark.svg`. The production logo remains unchanged.
@@ -73,3 +83,10 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 - The lab palette adds graphite, teal, cobalt, rust and plum as identity-study colours. These are isolated from the production page palette.
 - Every bird can be dragged directly with a pointer or moved with arrow keys. There is no visible container around the bird, name or activity.
 - All five birds use the confirmed GSAP Observe motion, which gently shifts the whole bird while it watches. Animated parts overlap beneath the body so joints stay visually connected. `prefers-reduced-motion` keeps every version static.
+
+## Agent identity in product
+- Production uses the solid Scout bird, its name and one short activity line. It has no card, border or decorative container.
+- Place Scout where its state clarifies the product: beside the landing hero product view, above sign-in, beside dashboard controls, in report headers, in the extension header and at the bottom-right of the page currently under test. Do not repeat it in global navigation or unrelated content sections.
+- The tested-page version lives in a closed shadow root so page styles cannot break it and the test agent cannot include its own status UI in a snapshot. Evaluation fixtures stay untouched; Scout appears there only while the extension runs an evaluation.
+- State colours reuse the core palette: ink for ready or acting, accent for observing or complete, danger for stopped or failed. Changes fade rather than snap.
+- GSAP Observe is the single motion language: slow body attention, a small connected tail counter-shift and an occasional blink. State text fades between actions. All motion stops under `prefers-reduced-motion`.

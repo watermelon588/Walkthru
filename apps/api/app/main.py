@@ -12,7 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 from app import db, deliver
 from app.agent import report, runtime
 from app.agent.safety import MAX_STEPS
-from app.agent.schema import Observation
+from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
@@ -49,6 +49,7 @@ class StartRun(BaseModel):
 
 class Observe(BaseModel):
     observation: Observation
+    evidence: StepEvidence | None = None
 
 
 def _cfg(run_id: str) -> dict:
@@ -87,7 +88,12 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     row = _owned(run_id, user)
     if row["status"] != "running":
         raise HTTPException(409, "run already finished")
-    result = runtime.graph(row["tier"]).invoke(Command(resume=body.observation.model_dump()), _cfg(run_id))
+    if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
+        raise HTTPException(422, "evidence path does not belong to this run")
+    resume = {"observation": body.observation.model_dump()}
+    if body.evidence:
+        resume["evidence"] = body.evidence.model_dump(mode="json")
+    result = runtime.graph(row["tier"]).invoke(Command(resume=resume), _cfg(run_id))
     return _reply(run_id, row["tier"], result, background)
 
 

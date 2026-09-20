@@ -27,6 +27,14 @@ body {
   @apply antialiased;
 }
 
+@media print {
+  @page { margin: 14mm; }
+  .no-print { display: none !important; }
+  body { background: white; }
+  main { max-width: none !important; padding: 0 !important; }
+  section, article, figure, li { break-inside: avoid; }
+}
+
 /* Agent palette is intentionally isolated to the identity lab. */
 :root {
   --agent-graphite: #292a30;

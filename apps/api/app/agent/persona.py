@@ -87,7 +87,7 @@ def render_history(steps: list[dict]) -> str:
 
 
 def build_graph(model: Any, checkpointer: Any):
-    """`model` must have .invoke(messages) -> PersonaStep (use with_structured_output)."""
+    """Build the loop around either a decision provider or a structured-output LLM."""
 
     def decide(state: SessionState) -> dict:
         history = render_history(state.get("steps", []))
@@ -98,14 +98,24 @@ def build_graph(model: Any, checkpointer: Any):
         ]
         from app.agent.runtime import unwrap  # local import: runtime imports this module
 
-        step, used = unwrap(model.invoke(messages))
+        if hasattr(model, "decide"):
+            decision = model.decide(state, messages)
+            step, used, metadata = decision.step, decision.tokens, decision.metadata
+        else:
+            step, used = unwrap(model.invoke(messages))
+            metadata = {"provider": "llm"}
         step = _enforce(step, state)
-        record = step.model_dump() | {"url": state["observation"]["url"]}
+        record = step.model_dump() | {"url": state["observation"]["url"]} | metadata
         return {"steps": state.get("steps", []) + [record], "tokens": state.get("tokens", 0) + used}
 
     def act(state: SessionState) -> dict:
-        obs = interrupt(state["steps"][-1])
-        return {"observation": obs}
+        resumed = interrupt(state["steps"][-1])
+        if "observation" not in resumed:  # old extension contract
+            return {"observation": resumed}
+        steps = list(state["steps"])
+        if resumed.get("evidence"):
+            steps[-1] = steps[-1] | {"evidence": resumed["evidence"]}
+        return {"observation": resumed["observation"], "steps": steps}
 
     def check(state: SessionState) -> dict:
         steps = state["steps"]

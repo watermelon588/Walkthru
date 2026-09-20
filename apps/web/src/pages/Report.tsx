@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, DownloadSimpleIcon, EnvelopeSimpleIcon, LinkIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, DownloadSimpleIcon, EnvelopeSimpleIcon, LinkIcon, PrinterIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
@@ -30,7 +30,7 @@ export default function Report() {
 
   return (
     <AppShell>
-      <Link to="/app" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+      <Link to="/app" className="no-print inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
         <ArrowLeftIcon className="size-4" /> All runs
       </Link>
 
@@ -88,12 +88,15 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
   }
 
   return (
-    <div className="mb-8 flex flex-wrap items-center gap-2">
+    <div className="no-print mb-8 flex flex-wrap items-center gap-2">
       <button type="button" onClick={share} disabled={busy !== null} className={btnGhost}>
         <LinkIcon weight="light" className="size-4" /> {run.public ? 'Copy public link' : 'Share'}
       </button>
       <button type="button" onClick={exportCsv} className={btnGhost}>
         <DownloadSimpleIcon weight="light" className="size-4" /> Export CSV
+      </button>
+      <button type="button" onClick={() => window.print()} className={btnGhost}>
+        <PrinterIcon weight="light" className="size-4" /> Save PDF
       </button>
       <button type="button" onClick={email} disabled={busy !== null} className={btnGhost}>
         <EnvelopeSimpleIcon weight="light" className="size-4" /> Email me

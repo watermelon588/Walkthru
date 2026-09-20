@@ -7,6 +7,7 @@ from app.agent import runtime
 from app.agent.persona import build_graph
 from app.agent.safety import is_dangerous
 from app.agent.schema import PersonaStep
+from app.agent.typesafe import JevDecision
 from app.main import app
 
 
@@ -18,6 +19,15 @@ class FakeModel:
     def invoke(self, messages):
         self.calls += 1
         return self.script.pop(0)
+
+
+class FakeDecisionModel:
+    def decide(self, state, messages):
+        return JevDecision(
+            step=PersonaStep(thought="Sign up is the next step", action="click", target_id=2, confusion=0),
+            tokens=321,
+            metadata={"provider": "jev", "decision_confidence": 0.91},
+        )
 
 
 def page(url, elements, note=None):
@@ -36,8 +46,11 @@ def start(client, obs, **kw):
     return client.post("/runs", json=body).json()
 
 
-def observe(client, run_id, obs):
-    return client.post(f"/runs/{run_id}/observe", json={"observation": obs})
+def observe(client, run_id, obs, evidence=None):
+    body = {"observation": obs}
+    if evidence:
+        body["evidence"] = evidence
+    return client.post(f"/runs/{run_id}/observe", json=body)
 
 
 def test_click_then_done(monkeypatch):
@@ -58,6 +71,65 @@ def test_click_then_done(monkeypatch):
     assert fake.calls == 2  # interrupt/resume never re-runs the LLM
     assert observe(c, r["run_id"], page("x", [])).status_code == 409
     assert c.get(f"/runs/{r['run_id']}").json()["status"] == "done"
+
+
+def test_observation_attaches_visual_evidence_to_previous_step(monkeypatch):
+    use(
+        [
+            PersonaStep(thought="Open signup", action="click", target_id=2, confusion=1),
+            PersonaStep(thought="Signup is open", action="done", confusion=0),
+        ],
+        monkeypatch,
+    )
+    client = TestClient(app)
+    first = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}]))
+    evidence = {
+        "screenshot_path": f"{first['run_id']}/step-01.jpg",
+        "captured_at": "2026-09-20T10:15:30Z",
+        "result_url": "https://fixture.test/signup",
+        "width": 1440,
+        "height": 900,
+        "note": "navigation completed",
+    }
+
+    result = observe(client, first["run_id"], page("https://fixture.test/signup", []), evidence).json()
+
+    assert result["steps"][0]["evidence"] == evidence
+
+
+def test_observation_rejects_evidence_from_another_run(monkeypatch):
+    use([PersonaStep(thought="Open signup", action="click", target_id=2, confusion=0)], monkeypatch)
+    client = TestClient(app)
+    first = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}]))
+
+    response = observe(
+        client,
+        first["run_id"],
+        page("https://fixture.test/signup", []),
+        {
+            "screenshot_path": "ffffffffffffffffffffffffffffffff/step-01.jpg",
+            "captured_at": "2026-09-20T10:15:30Z",
+            "result_url": "https://fixture.test/signup",
+            "width": 1440,
+            "height": 900,
+        },
+    )
+
+    assert response.status_code == 422
+
+
+def test_decision_provider_metadata_is_recorded(monkeypatch):
+    g = build_graph(FakeDecisionModel(), MemorySaver())
+    monkeypatch.setattr(runtime, "graph", lambda tier: g)
+    c = TestClient(app)
+    home = page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}])
+
+    result = start(c, home)
+
+    assert result["action"]["provider"] == "jev"
+    assert result["action"]["decision_confidence"] == 0.91
+    values = g.get_state({"configurable": {"thread_id": result["run_id"]}}).values
+    assert values["tokens"] == 321
 
 
 def test_step_budget(monkeypatch):

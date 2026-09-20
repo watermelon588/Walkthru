@@ -2,6 +2,7 @@ import { EnvelopeSimpleIcon, GithubLogoIcon, GoogleLogoIcon } from '@phosphor-ic
 import { useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { brand } from '../brand'
+import { AgentPresence, type AgentPresenceState } from '../components/AgentPresence'
 import { Asset, btnGhost, btnPrimary, Logo } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { useReveal } from '../lib/motion'
@@ -36,6 +37,20 @@ export default function Login() {
   }
 
   const busy = status.kind === 'sending'
+  const agentState: AgentPresenceState = status.kind === 'error'
+    ? 'stopped'
+    : status.kind === 'sent'
+      ? 'complete'
+      : status.kind === 'sending'
+        ? 'observing'
+        : 'ready'
+  const agentActivity = status.kind === 'error'
+    ? 'Waiting for a valid sign-in'
+    : status.kind === 'sent'
+      ? 'Sign-in link sent'
+      : status.kind === 'sending'
+        ? 'Preparing your sign-in link'
+        : 'Ready when you are'
 
   return (
     <div ref={root} className="grid min-h-[100dvh] bg-bg text-ink lg:grid-cols-[1fr_1.1fr]">
@@ -43,6 +58,7 @@ export default function Login() {
         <Logo className="self-start" />
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-16">
+          <AgentPresence activity={agentActivity} state={agentState} className="mb-10" phase={0.16} />
           {status.kind === 'sent' ? (
             <div role="status" className="hero-fade">
               <EnvelopeSimpleIcon weight="light" className="size-8 text-accent" />

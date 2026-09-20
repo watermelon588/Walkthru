@@ -1,12 +1,13 @@
 # Current State
 
-_Last updated: 2026-09-19_
+_Last updated: 2026-09-20_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
 - Monorepo scaffold: `apps/api` (FastAPI `/health` + test), `apps/web` (Vite React TS).
 - **Landing page final** (`apps/web/src/pages/Landing.tsx`): Silver base with sections borrowed from the explored variants. See DESIGN.md.
 - **Agent identity lab** (`/agent-lab`): Scout, Trace and three colour-only Scout variants rendered as draggable SVG birds, each with a name and current activity. All use the confirmed GSAP Observe motion with overlapped SVG joints. The prototype is intentionally not linked from production navigation yet.
+- **Scout identity rollout (2026-09-20).** The same bare SVG Scout, name and live activity now appear beside the landing hero, on sign-in, beside dashboard controls, in private/public report headers and in the extension side panel. During a run, the extension injects Scout at the bottom-right of the tested page with GSAP Observe motion, slow token-colour state fades and action-aware copy. The overlay uses a closed shadow root, cannot receive pointer input and stays out of the agent snapshot, including evaluation runs. Reduced-motion users get static state updates.
 - Placeholder product screenshots rendered from `apps/web/design/mocks/`. Founder photos picked and named in `public/assets/`.
 - **Login page** (`/login`, `apps/web/src/pages/Login.tsx`): Google, GitHub and email magic link via Supabase. Inline validation, sending, sent and error states. Shows "not configured" until keys are set.
 - Footer with tagline, about text and link columns.
@@ -29,17 +30,22 @@ _Last updated: 2026-09-19_
 - **Easy-fixture CSP fix (2026-09-19).** The signup handler moved from blocked inline JavaScript to `/signup.js`, so the fixture keeps `default-src 'self'` and the Create account flow can reach `/welcome.html`. A regression test verifies the CSP-compatible script setup; browser inspection showed no console warnings or errors.
 - **Groq structured-output fix (2026-09-19).** The live easy-fixture run reached `/welcome.html`, but Groq returned plain `done` while forced tool calling was enabled, causing a 400 `tool_use_failed` response and an extension-level `Failed to fetch`. The free pool now uses Groq's strict native JSON-schema output for `openai/gpt-oss-120b`; a regression test locks the model configuration and a live provider check returned a valid `PersonaStep` object.
 - **Jev feasibility review (2026-09-19).** Jev is a strong candidate for the browser loop's bounded action and target decisions, but it cannot replace generative calls for open-ended form text, persona narration, first impressions, summaries, or fixes. The proposed hybrid keeps LangGraph and the deterministic extension executor, uses Jev on the hot path, escalates uncertain or text-generating work to an LLM, and generates report prose after the run. It must pass the existing hard-fixture eval before adoption. Full rationale and sources are in [docs/decisions.md](docs/decisions.md).
+- **TypeSafe Jev adapter (T17A, 2026-09-20).** The official TypeSafe skill is installed globally. Live `jev-1.13.0` experiments favored parallel operation/target questions: 5/5 easy decisions, 382 ms median, 0.966 mean operation confidence. `app/agent/typesafe.py` now provides the opt-in `PERSONA_DECISION_MODEL=jev` path, deterministic identity fields, a 0.50 confidence gate, and LLM fallback for ambiguity, provider errors, and open-ended text. Steps retain provider/confidence metadata. The key is only in ignored `apps/api/.env`; the LLM remains the default until T17B passes the real hard-fixture gate.
+- **Evidence-led dashboard and report slice (T18-T21 implementation, 2026-09-20).** New runs can attach run-scoped screenshot evidence to exact persona steps. The extension captures at most eight JPEGs after meaningful actions, temporarily hides Scout, masks form controls, uploads with the user's JWT and continues if capture fails. The API validates evidence paths before LangGraph attaches them. The dashboard now explains the four-layer launch-readiness pipeline and shows frame/finding counts. Private and public reports share a responsive three-pane journey replay with play/pause/step controls, signed private images, explicit legacy/loading/failure states, technical SEO/security summaries, prioritized fixes and print-to-PDF styling. Typed values are hidden from the extension activity log and report inspector.
 
 ## In progress
 - **Checkpoint A final retry pending:** the extension is loaded in real Chrome and now completes the easy signup UI through `/welcome.html`. Rerun once against the restarted API to verify the Groq structured-output fix closes the run as `done` and produces the report.
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
+- T17B is pending: compare the Jev hybrid with the existing Groq/Gemini path on identical real-browser easy and hard runs before considering a default switch.
+- Evidence enablement is pending: `apps/api/schema.sql` declares the private `run-evidence` bucket and owner/public-run policies, but the remote schema could not be applied from this session because the command approval service hit its usage limit. One real screenshot-backed run and PDF visual check remain before T18-T21 can be closed.
 
 ## Next up
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
 2. Checkpoint A in the founder's Chrome: load unpacked, copy the extension id into `apps/web/.env` as `VITE_EXTENSION_ID`, restart web, sign in at `/app`, click Connect extension, then run a test on `http://127.0.0.1:8101`.
-3. Session 8B: capture the hard fixture through the real extension with the free, paid, and Jev-hybrid candidates, score with `evals/runner.py`, publish to LangSmith, and finalize `docs/decisions.md`.
-4. Then T13 store submission, T14 billing, T15 deployment, and T16 launch wiring.
+3. Apply `apps/api/schema.sql`, rebuild/reload the extension and run the easy fixture once to verify private capture, replay, public evidence access and PDF output.
+4. T17B is intentionally deferred per founder direction. When resumed, capture the hard fixture through the same extension build with the Groq/Gemini and Jev-hybrid candidates, score with `evals/runner.py`, publish to LangSmith, and finalize `docs/decisions.md`.
+5. Then T13 store submission, T14 billing, T15 deployment, and T16 launch wiring.
 
 ## Known issues and notes
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
@@ -50,14 +56,16 @@ _Last updated: 2026-09-19_
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
 - Production hosting must rewrite all paths to `index.html` for `/login` to work on refresh.
 - Client-side early stops such as leaving the tested origin do not yet close the API run, so that run can remain `running` in the dashboard. Add an authenticated stop endpoint and call it from the extension before T13.
+- Screenshot retention is not automated yet. Keep T18 open until a deletion window and cleanup path are implemented.
+- The production web and extension bundles both exceed the default 500 kB warning threshold. Builds pass; route/chunk splitting should be scheduled before launch.
 - Remote: https://github.com/watermelon588/Walkthru.git. Pushed 2026-09-18.
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
-- web: `npm run build` pass, lint 0 warnings. api: `pytest` 39 passed, `ruff` clean. extension: `vitest` 7 passed (+1 live contract test with `WALKTHRU_TOKEN`), `tsc` clean, `wxt build` pass, lint clean.
+- 2026-09-20 evidence slice: web TypeScript, Vite production build and oxlint pass; API 57 pytest pass and Ruff clean; extension 11 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and WXT verification build succeeds. Standard WXT output remains locked by the extension currently loaded in Chrome, so verification output is in `.output/chrome-mv3-verify`.
 - Live on 2026-09-18: authenticated run written to Supabase; anonymous REST read returns nothing, owner read returns the row; API without token is 401; dashboard and report render for the test account.
 - Live on 2026-09-18: Instant Scan of the hard fixture returned 15 findings in 15 s for 1,372 tokens; public page renders; persona run report generated in the background after the run ended.
 - Evals on 2026-09-19: scorer unit suite 9 passed; hard-fixture passive scan scored 11/18 with all SEO traps and five of six security traps found. Real free/paid browser-run comparison is still pending.
 - Landing: all 12 images load, no horizontal overflow at 375px and 1024px.
-- Agent lab: TypeScript, Vite build and oxlint pass; five birds and both GSAP motion modes verified in browser; arrow-key movement and position reset re-verified. `prefers-reduced-motion` keeps the SVG parts static.
+- Agent identity: TypeScript, Vite/WXT builds and oxlint pass. Landing and login Scout placements were verified in the browser with a clean console. Extension vitest now has 8 passing tests plus one skipped live contract test, including proof that the closed overlay is absent from snapshots. `prefers-reduced-motion` keeps the SVG parts static.
 - Login: invalid email error and not-configured message verified in the browser.
