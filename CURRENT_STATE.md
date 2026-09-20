@@ -38,7 +38,7 @@ _Last updated: 2026-09-20_
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
 - T17B is pending: compare the Jev hybrid with the existing Groq/Gemini path on identical real-browser easy and hard runs before considering a default switch.
-- Evidence enablement is pending: `apps/api/schema.sql` declares the private `run-evidence` bucket and owner/public-run policies, but applying remote database and storage policies requires explicit founder approval. One real screenshot-backed run and PDF visual check remain before T18-T21 can be closed.
+- **Supabase evidence storage enabled (2026-09-20).** The private `run-evidence` bucket and owner/public-run access policies from `apps/api/schema.sql` are applied successfully on the free-tier project. One fresh screenshot-backed run and PDF visual check remain before T18-T21 can be closed; earlier failed captures are not recoverable.
 
 ## Next up
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
