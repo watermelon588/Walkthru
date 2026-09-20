@@ -4,6 +4,7 @@
 it returns the parsed object plus the tokens used, so every run can log its cost.
 """
 
+import atexit
 import os
 from functools import lru_cache
 from typing import Any
@@ -109,11 +110,22 @@ def make_checkpointer():
     if not url:
         return MemorySaver()  # in-memory in dev, Postgres when DATABASE_URL is set
     from langgraph.checkpoint.postgres import PostgresSaver
-    from psycopg import Connection
     from psycopg.rows import dict_row
+    from psycopg_pool import ConnectionPool
 
-    conn = Connection.connect(url, autocommit=True, prepare_threshold=0, row_factory=dict_row)
-    saver = PostgresSaver(conn)
+    connections = ConnectionPool(
+        url,
+        min_size=0,
+        max_size=4,
+        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        check=ConnectionPool.check_connection,
+        max_lifetime=300,
+        max_idle=60,
+        reconnect_timeout=10,
+        open=True,
+    )
+    atexit.register(connections.close)
+    saver = PostgresSaver(connections)
     saver.setup()
     return saver
 
@@ -126,3 +138,29 @@ def checkpointer():
 @lru_cache(maxsize=2)
 def graph(tier: str):
     return build_graph(make_model(tier), checkpointer())
+
+
+def invoke(tier: str, value: Any, config: dict) -> dict:
+    """Retry one interrupted database-backed graph call on a fresh pooled connection."""
+    from psycopg import OperationalError
+
+    for attempt in range(2):
+        try:
+            return graph(tier).invoke(value, config)
+        except OperationalError:
+            if attempt:
+                raise
+    raise AssertionError("unreachable")
+
+
+def get_state(tier: str, config: dict):
+    """Read graph state with the same single reconnect allowance as writes."""
+    from psycopg import OperationalError
+
+    for attempt in range(2):
+        try:
+            return graph(tier).get_state(config)
+        except OperationalError:
+            if attempt:
+                raise
+    raise AssertionError("unreachable")

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
+from psycopg import OperationalError
 
 from app.agent import runtime
 from app.agent.schema import PersonaStep
@@ -89,3 +90,20 @@ def test_make_model_rejects_jev_without_key(monkeypatch):
 
     with pytest.raises(RuntimeError, match="TYPESAFE_API_KEY"):
         runtime.make_model("free")
+
+
+def test_graph_call_retries_one_interrupted_database_connection(monkeypatch):
+    class FlakyGraph:
+        calls = 0
+
+        def invoke(self, value, config):
+            self.calls += 1
+            if self.calls == 1:
+                raise OperationalError("connection closed")
+            return {"ok": True}
+
+    graph = FlakyGraph()
+    monkeypatch.setattr(runtime, "graph", lambda tier: graph)
+
+    assert runtime.invoke("free", {}, {"configurable": {"thread_id": "r1"}}) == {"ok": True}
+    assert graph.calls == 2
