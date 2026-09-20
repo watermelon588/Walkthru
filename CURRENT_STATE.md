@@ -38,7 +38,7 @@ _Last updated: 2026-09-20_
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
 - T17B is pending: compare the Jev hybrid with the existing Groq/Gemini path on identical real-browser easy and hard runs before considering a default switch.
-- Evidence enablement is pending: `apps/api/schema.sql` declares the private `run-evidence` bucket and owner/public-run policies, but the remote schema could not be applied from this session because the command approval service hit its usage limit. One real screenshot-backed run and PDF visual check remain before T18-T21 can be closed.
+- Evidence enablement is pending: `apps/api/schema.sql` declares the private `run-evidence` bucket and owner/public-run policies, but applying remote database and storage policies requires explicit founder approval. One real screenshot-backed run and PDF visual check remain before T18-T21 can be closed.
 
 ## Next up
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
@@ -62,7 +62,7 @@ _Last updated: 2026-09-20_
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
-- 2026-09-20 evidence slice: web TypeScript, Vite production build and oxlint pass; API 57 pytest pass and Ruff clean; extension 11 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and WXT verification build succeeds. Standard WXT output remains locked by the extension currently loaded in Chrome, so verification output is in `.output/chrome-mv3-verify`.
+- 2026-09-20 evidence slice: web TypeScript, Vite production build and oxlint pass; API 57 pytest pass and Ruff clean; extension 11 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the standard WXT production build succeeds in `.output/chrome-mv3`.
 - Live on 2026-09-18: authenticated run written to Supabase; anonymous REST read returns nothing, owner read returns the row; API without token is 401; dashboard and report render for the test account.
 - Live on 2026-09-18: Instant Scan of the hard fixture returned 15 findings in 15 s for 1,372 tokens; public page renders; persona run report generated in the background after the run ended.
 - Evals on 2026-09-19: scorer unit suite 9 passed; hard-fixture passive scan scored 11/18 with all SEO traps and five of six security traps found. Real free/paid browser-run comparison is still pending.
