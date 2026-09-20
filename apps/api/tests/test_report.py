@@ -43,12 +43,13 @@ def test_run_report_merges_branches():
     steps = [{"thought": "Looking for sign up", "action": "scroll", "target_id": None, "text": None, "confusion": 2, "url": HARD + "/"}]
     rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps)
     kinds = {f.kind for f in rep.findings}
-    assert kinds == {"ux", "seo", "security"}
+    assert kinds == {"ux", "accessibility", "seo", "security"}
     assert rep.findings[0].severity == "high" and rep.findings[-1].severity == "low"  # sorted
     assert rep.first_impression and rep.first_impression.clarity == 3
     assert rep.top_fixes[0].startswith("Add a Sign up")
     assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
     assert rep.verified is False and not any("publicly readable" in f.title for f in rep.findings)
+    assert rep.checks == {"accessibility": "complete", "performance": "unavailable", "seo": "complete", "security": "complete"}
 
 
 def test_instant_scan_endpoint_creates_public_run(fake_db):

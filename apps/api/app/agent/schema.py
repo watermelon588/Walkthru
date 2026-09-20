@@ -1,5 +1,6 @@
 """Wire contracts between the extension and the persona agent."""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -25,6 +26,17 @@ class Observation(BaseModel):
     note: str | None = None  # executor feedback: "element not found", "captcha", ...
 
 
+class StepEvidence(BaseModel):
+    """Private visual proof captured after one browser action."""
+
+    screenshot_path: str = Field(pattern=r"^[a-f0-9]{32}/step-\d{2}\.jpg$", max_length=80)
+    captured_at: datetime
+    result_url: str = Field(pattern=r"^https?://", max_length=2000)
+    width: int = Field(ge=1, le=10000)
+    height: int = Field(ge=1, le=10000)
+    note: str | None = Field(default=None, max_length=300)
+
+
 class PersonaStep(BaseModel):
     """What the test user thinks and does next. Exactly one action per step."""
 
@@ -38,7 +50,7 @@ class PersonaStep(BaseModel):
 class Finding(BaseModel):
     """One problem in the report. Deterministic scans and the synthesis LLM both produce these."""
 
-    kind: Literal["ux", "seo", "security"]
+    kind: Literal["ux", "accessibility", "performance", "seo", "security"]
     severity: Literal["high", "medium", "low"]
     title: str = Field(max_length=120)
     detail: str = Field(max_length=600)
@@ -71,3 +83,4 @@ class Report(BaseModel):
     top_fixes: list[str]
     verified: bool = False
     tokens: int = 0
+    checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)

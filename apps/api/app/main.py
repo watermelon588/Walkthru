@@ -6,13 +6,16 @@ from typing import Literal
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from langgraph.types import Command
+from psycopg import OperationalError
+from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
 from app import db, deliver
 from app.agent import report, runtime
 from app.agent.safety import MAX_STEPS
-from app.agent.schema import Observation
+from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
@@ -27,6 +30,15 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
+    log.warning("database temporarily unavailable: %s", error)
+    return JSONResponse(status_code=503, content={"detail": "Database connection was interrupted. Please retry."})
+
+
+app.add_exception_handler(OperationalError, _database_unavailable)
+app.add_exception_handler(PoolTimeout, _database_unavailable)
 
 
 @app.get("/health")
@@ -49,6 +61,7 @@ class StartRun(BaseModel):
 
 class Observe(BaseModel):
     observation: Observation
+    evidence: StepEvidence | None = None
 
 
 def _cfg(run_id: str) -> dict:
@@ -56,7 +69,7 @@ def _cfg(run_id: str) -> dict:
 
 
 def _reply(run_id: str, tier: str, result: dict, background: BackgroundTasks) -> dict:
-    values = runtime.graph(tier).get_state(_cfg(run_id)).values
+    values = runtime.get_state(tier, _cfg(run_id)).values
     running = "__interrupt__" in result
     status = "running" if running else values["status"]
     db.update_run(run_id, status, values.get("steps", []), values.get("tokens", 0))
@@ -78,7 +91,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
     state = body.model_dump(exclude={"tier"}) | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
-    result = runtime.graph(body.tier).invoke(state, _cfg(run_id))
+    result = runtime.invoke(body.tier, state, _cfg(run_id))
     return _reply(run_id, body.tier, result, background)
 
 
@@ -87,7 +100,12 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     row = _owned(run_id, user)
     if row["status"] != "running":
         raise HTTPException(409, "run already finished")
-    result = runtime.graph(row["tier"]).invoke(Command(resume=body.observation.model_dump()), _cfg(run_id))
+    if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
+        raise HTTPException(422, "evidence path does not belong to this run")
+    resume = {"observation": body.observation.model_dump()}
+    if body.evidence:
+        resume["evidence"] = body.evidence.model_dump(mode="json")
+    result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))
     return _reply(run_id, row["tier"], result, background)
 
 
