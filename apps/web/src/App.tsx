@@ -6,6 +6,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Public from './pages/Public'
 import Report from './pages/Report'
+import Settings from './pages/Settings'
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/agent-lab" element={<AgentLab />} />
         <Route path="/login" element={<Login />} />
         <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
         <Route path="/r/:id" element={<Public />} />
         <Route path="*" element={<Landing />} />
