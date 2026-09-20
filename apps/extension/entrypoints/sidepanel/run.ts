@@ -80,8 +80,11 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
   try {
     emit({ phase: "starting" });
     const origin = new URL(opts.site).origin;
-    const granted = await chrome.permissions.request({ origins: [origin + "/*"] });
-    if (!granted) throw new Error("Walkthru needs access to this site to read pages. Allow it and start again.");
+    // Chrome's side panel does not grant activeTab to captureVisibleTab. The API only
+    // accepts activeTab or <all_urls>, so request the optional capture permission from
+    // this explicit Start Test gesture. Chrome prompts once and remembers the choice.
+    const granted = await chrome.permissions.request({ origins: ["<all_urls>"] });
+    if (!granted) throw new Error("Walkthru needs screenshot access to save visual evidence. Allow it and start again.");
     const tab = await activeTab();
     tabId = tab.id!;
     const deadline = Date.now() + MAX_MINUTES * 60_000;

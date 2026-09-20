@@ -35,7 +35,7 @@ describe("screenshot evidence policy", () => {
 
   test("explains how to recover when Chrome has not granted activeTab", () => {
     expect(evidenceFailureMessage(new Error("Either the '<all_urls>' or 'activeTab' permission is required."))).toBe(
-      "Screenshot permission is missing. Reopen Walkthru from its toolbar icon on this tab, then start the test again.",
+      "Screenshot permission is missing. Reload Walkthru, start the test again, and approve Chrome's access prompt.",
     );
   });
 
