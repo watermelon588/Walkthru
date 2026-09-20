@@ -34,7 +34,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 
 ## Key decisions
 1. **Browser runs on the user's machine, brain on our server.** No Chromium on our server, hosting stays $0-5, logged-in pages work without sharing passwords.
-2. **Step loop lives in the extension side panel page**, not the MV3 service worker (Chrome suspends workers after ~30 s idle). The toolbar action explicitly opens the tab-scoped panel so Chrome grants `activeTab`; the built-in `openPanelOnActionClick` shortcut does not reliably grant it and breaks `captureVisibleTab`.
+2. **Step loop lives in the extension side panel page**, not the MV3 service worker (Chrome suspends workers after ~30 s idle). Chrome does not reliably grant `activeTab` to side panels and `captureVisibleTab` only accepts `activeTab` or `<all_urls>`, so Start Test requests the optional broad host permission in a one-time Chrome prompt. It is used only for the active test tab.
 3. **One HTTP call per agent step.** LangGraph `interrupt()` emits the action; `Command(resume=observation)` continues. Postgres checkpointer holds state, so the API is stateless between calls.
 4. **Text snapshot first, screenshots rarely** (first impression and when stuck). Tokens are the main cost.
 5. **Plain code wherever possible.** SEO and security checks are deterministic code plus one LLM call to explain fixes. Only the persona session is an agent.

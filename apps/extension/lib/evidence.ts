@@ -7,7 +7,7 @@ export const MAX_SCREENSHOTS = 8;
 export function evidenceFailureMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (/activeTab|<all_urls>/i.test(message)) {
-    return "Screenshot permission is missing. Reopen Walkthru from its toolbar icon on this tab, then start the test again.";
+    return "Screenshot permission is missing. Reload Walkthru, start the test again, and approve Chrome's access prompt.";
   }
   return message || "Screenshot capture failed.";
 }
