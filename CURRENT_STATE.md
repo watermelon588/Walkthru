@@ -32,9 +32,10 @@ _Last updated: 2026-09-20_
 - **Jev feasibility review (2026-09-19).** Jev is a strong candidate for the browser loop's bounded action and target decisions, but it cannot replace generative calls for open-ended form text, persona narration, first impressions, summaries, or fixes. The proposed hybrid keeps LangGraph and the deterministic extension executor, uses Jev on the hot path, escalates uncertain or text-generating work to an LLM, and generates report prose after the run. It must pass the existing hard-fixture eval before adoption. Full rationale and sources are in [docs/decisions.md](docs/decisions.md).
 - **TypeSafe Jev adapter (T17A, 2026-09-20).** The official TypeSafe skill is installed globally. Live `jev-1.13.0` experiments favored parallel operation/target questions: 5/5 easy decisions, 382 ms median, 0.966 mean operation confidence. `app/agent/typesafe.py` now provides the opt-in `PERSONA_DECISION_MODEL=jev` path, deterministic identity fields, a 0.50 confidence gate, and LLM fallback for ambiguity, provider errors, and open-ended text. Steps retain provider/confidence metadata. The key is only in ignored `apps/api/.env`; the LLM remains the default until T17B passes the real hard-fixture gate.
 - **Evidence-led dashboard and report slice (T18-T21 implementation, 2026-09-20).** New runs can attach run-scoped screenshot evidence to exact persona steps. The extension captures at most eight JPEGs after meaningful actions, temporarily hides Scout, masks form controls, uploads with the user's JWT and continues if capture fails. The API validates evidence paths before LangGraph attaches them. The dashboard now explains the four-layer launch-readiness pipeline and shows frame/finding counts. Private and public reports share a responsive three-pane journey replay with play/pause/step controls, signed private images, explicit legacy/loading/failure states, technical SEO/security summaries, prioritized fixes and print-to-PDF styling. Typed values are hidden from the extension activity log and report inspector.
+- **Supabase connection resilience (2026-09-20).** The runs store and LangGraph checkpointer now use short-lived, checkout-validated PostgreSQL pools instead of retaining stale Supabase SSL connections. Database and graph operations retry one interrupted connection, run creation is idempotent for that retry, and a sustained database outage returns a CORS-safe 503 instead of the extension's opaque `Failed to fetch`. A real Chrome extension run completed with five steps and a generated report after the fix.
 
 ## In progress
-- **Checkpoint A final retry pending:** the extension is loaded in real Chrome and now completes the easy signup UI through `/welcome.html`. Rerun once against the restarted API to verify the Groq structured-output fix closes the run as `done` and produces the report.
+- **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. The remaining evidence check is separate: that run used no attached screenshot frames.
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
 - T17B is pending: compare the Jev hybrid with the existing Groq/Gemini path on identical real-browser easy and hard runs before considering a default switch.
@@ -42,8 +43,8 @@ _Last updated: 2026-09-20_
 
 ## Next up
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
-2. Checkpoint A in the founder's Chrome: load unpacked, copy the extension id into `apps/web/.env` as `VITE_EXTENSION_ID`, restart web, sign in at `/app`, click Connect extension, then run a test on `http://127.0.0.1:8101`.
-3. Apply `apps/api/schema.sql`, rebuild/reload the extension and run the easy fixture once to verify private capture, replay, public evidence access and PDF output.
+2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture; the latest successful five-step run produced no attached frames.
+3. Inspect that run in the private replay, share it, verify public evidence access and print the report to PDF.
 4. T17B is intentionally deferred per founder direction. When resumed, capture the hard fixture through the same extension build with the Groq/Gemini and Jev-hybrid candidates, score with `evals/runner.py`, publish to LangSmith, and finalize `docs/decisions.md`.
 5. Then T13 store submission, T14 billing, T15 deployment, and T16 launch wiring.
 
@@ -63,7 +64,8 @@ _Last updated: 2026-09-20_
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
-- 2026-09-20 evidence slice: web TypeScript, Vite production build and oxlint pass; API 57 pytest pass and Ruff clean; extension 11 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the standard WXT production build succeeds in `.output/chrome-mv3`.
+- 2026-09-20 connection resilience: API 59 pytest pass and Ruff clean; five repeated live Supabase reads pass; the PostgresSaver initializes against the pooled connection; a real extension run completed all API calls, stored five steps with status `done`, and generated its report.
+- 2026-09-20 evidence slice: web TypeScript, Vite production build and oxlint pass; API 57 pytest passed before the resilience tests were added; extension 11 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the standard WXT production build succeeds in `.output/chrome-mv3`.
 - Live on 2026-09-18: authenticated run written to Supabase; anonymous REST read returns nothing, owner read returns the row; API without token is 401; dashboard and report render for the test account.
 - Live on 2026-09-18: Instant Scan of the hard fixture returned 15 findings in 15 s for 1,372 tokens; public page renders; persona run report generated in the background after the run ended.
 - Evals on 2026-09-19: scorer unit suite 9 passed; hard-fixture passive scan scored 11/18 with all SEO traps and five of six security traps found. Real free/paid browser-run comparison is still pending.

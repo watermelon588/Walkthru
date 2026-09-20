@@ -2,7 +2,9 @@
 
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
+from psycopg import OperationalError
 
+from app import db
 from app.agent import runtime
 from app.agent.persona import build_graph
 from app.agent.safety import is_dangerous
@@ -51,6 +53,22 @@ def observe(client, run_id, obs, evidence=None):
     if evidence:
         body["evidence"] = evidence
     return client.post(f"/runs/{run_id}/observe", json=body)
+
+
+def test_database_outage_returns_retryable_cors_response(monkeypatch):
+    def fail_insert(*args, **kwargs):
+        raise OperationalError("connection closed")
+
+    monkeypatch.setattr(db, "insert_run", fail_insert)
+    response = TestClient(app).post(
+        "/runs",
+        headers={"Origin": "chrome-extension://walkthru-test"},
+        json={"site": "https://fixture.test", "goal": "sign up", "observation": page("https://fixture.test", [])},
+    )
+
+    assert response.status_code == 503
+    assert response.headers["access-control-allow-origin"] == "chrome-extension://walkthru-test"
+    assert response.json()["detail"] == "Database connection was interrupted. Please retry."
 
 
 def test_click_then_done(monkeypatch):
