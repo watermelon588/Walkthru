@@ -10,6 +10,7 @@ export type Step = {
   provider?: 'jev' | 'llm'
   decision_confidence?: number
   fallback_reason?: string
+  interrupted?: boolean
   evidence?: StepEvidence
   diagnostics?: BrowserDiagnostics
 }
@@ -69,7 +70,7 @@ export type Run = {
   goal: string
   persona: string
   kind: 'test' | 'scan'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -84,6 +85,7 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   budget: 'Ran out of steps',
   stuck: 'Got stuck',
   captcha: 'Stopped at a CAPTCHA',
+  stopped: 'Ended early',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {
@@ -144,6 +146,7 @@ async function api<T>(path: string, body?: unknown, auth = true): Promise<T> {
 export const instantScan = (site: string, email?: string) => api<{ run_id: string; url: string; report: Report }>('/scans', { site, email: email || null }, false)
 export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`)
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
+export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
 
 export function findingsCsv(run: Run): string {
   const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`

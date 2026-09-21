@@ -121,6 +121,46 @@ def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
 
 
+@app.post("/runs/{run_id}/stop")
+def stop_run(run_id: str, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    """End an interrupted browser session and generate a truthful partial report."""
+    row = _owned(run_id, user)
+    if row["status"] == "stopped":
+        return {
+            "run_id": run_id,
+            "status": "stopped",
+            "steps": row["steps"],
+            "report_status": "ready" if row.get("report") else "generating",
+        }
+    if row["status"] != "running":
+        raise HTTPException(409, "run already finished")
+
+    steps = [dict(step) for step in row.get("steps", [])]
+    if steps and steps[-1].get("action") not in {"done", "give_up"}:
+        steps[-1] = steps[-1] | {"interrupted": True}
+    tokens = row.get("tokens", 0)
+    first_text = ""
+    try:
+        first_text = runtime.get_state(row["tier"], _cfg(run_id)).values.get("first_text", "")
+    except Exception:  # noqa: BLE001 - old or missing checkpoints still produce a partial report
+        log.info("checkpoint unavailable while stopping run %s", run_id)
+
+    if not db.mark_run_stopped(run_id, steps, tokens):
+        refreshed = _owned(run_id, user)
+        if refreshed["status"] != "stopped":
+            raise HTTPException(409, "run already finished")
+        return {
+            "run_id": run_id,
+            "status": "stopped",
+            "steps": refreshed["steps"],
+            "report_status": "ready" if refreshed.get("report") else "generating",
+        }
+
+    values = {"status": "stopped", "steps": steps, "tokens": tokens, "first_text": first_text}
+    background.add_task(finish_run, run_id, values)
+    return {"run_id": run_id, "status": "stopped", "steps": steps, "report_status": "generating"}
+
+
 def finish_run(run_id: str, values: dict) -> None:
     """After the persona session ends: scans + first impression + synthesis, saved as the report, then email."""
     row = db.get_run(run_id)

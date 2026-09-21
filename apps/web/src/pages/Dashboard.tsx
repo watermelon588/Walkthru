@@ -1,13 +1,13 @@
 import { PlugsConnectedIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { AgentPresence, type AgentPresenceState } from '../components/AgentPresence'
 import { AppShell } from '../components/AppShell'
 import { ReadinessPipeline } from '../components/ReadinessPipeline'
 import { StatusPill } from '../components/ReportView'
 import { btnGhost, ScanForm } from '../components/Shared'
 import { useSession } from '../lib/auth'
-import { listRuns, PERSONA_LABEL, timeAgo, type Run } from '../lib/runs'
+import { listRuns, PERSONA_LABEL, stopRun, timeAgo, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
 
@@ -16,6 +16,9 @@ const extensionId = import.meta.env.VITE_EXTENSION_ID as string | undefined
 export default function Dashboard() {
   const [runs, setRuns] = useState<Runs>({ kind: 'loading' })
   const [scoutOpen, setScoutOpen] = useState(false)
+  const [endingRun, setEndingRun] = useState<string | null>(null)
+  const [runActionError, setRunActionError] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     listRuns()
@@ -37,6 +40,22 @@ export default function Dashboard() {
       : runs.runs.length > 0
         ? 'Watching your recent runs'
         : 'Ready for your first test'
+
+  async function endRun(run: Run) {
+    setEndingRun(run.id)
+    setRunActionError(null)
+    try {
+      const stopped = await stopRun(run.id)
+      setRuns((state) => state.kind === 'ready'
+        ? { kind: 'ready', runs: state.runs.map((item) => item.id === run.id ? { ...item, status: 'stopped', steps: stopped.steps } : item) }
+        : state)
+      navigate(`/app/runs/${run.id}`)
+    } catch (error) {
+      setRunActionError(error instanceof Error ? error.message : 'Could not end this run.')
+    } finally {
+      setEndingRun(null)
+    }
+  }
 
   return (
     <AppShell>
@@ -101,25 +120,44 @@ export default function Dashboard() {
           </div>
         )}
         {runs.kind === 'ready' && runs.runs.length > 0 && (
+          <>
+          {runs.runs.some((run) => run.status === 'running') && (
+            <p className="mb-4 max-w-[64ch] text-sm leading-relaxed text-muted">
+              A run stays open when its browser tab or extension closes before the journey finishes. End it to preserve the completed steps and build a partial report.
+            </p>
+          )}
+          {runActionError && <p role="alert" className="mb-4 text-sm text-danger">Could not end the run: {runActionError}</p>}
           <ol className="grid gap-px overflow-hidden rounded-2xl bg-line">
             {runs.runs.map((r) => (
-              <li key={r.id} className="bg-bg">
-                <Link to={`/app/runs/${r.id}`} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface sm:grid-cols-[1fr_auto] sm:items-center sm:gap-4">
+              <li key={r.id} className="grid bg-bg transition-colors hover:bg-surface sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <Link to={`/app/runs/${r.id}`} className="min-w-0 px-5 pt-4 pb-2 focus-visible:outline-2 focus-visible:outline-accent sm:py-4">
                   <div className="min-w-0">
                     <p className="truncate">{r.kind === 'scan' ? 'Instant Scan' : r.goal}</p>
                     <p className="mt-0.5 truncate font-mono text-xs text-muted">{r.site}</p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted sm:justify-end">
+                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-4 text-xs text-muted sm:justify-end sm:py-4 sm:pl-0">
                     <span>{r.kind === 'scan' ? 'Instant Scan' : PERSONA_LABEL[r.persona] ?? r.persona}</span>
                     {r.steps.some((step) => step.evidence) && <span>{r.steps.filter((step) => step.evidence).length} frames</span>}
                     {r.report && <span>{r.report.findings.length} findings</span>}
                     {r.kind === 'test' && <StatusPill status={r.status} />}
                     <time dateTime={r.created_at}>{timeAgo(r.created_at)}</time>
-                  </div>
-                </Link>
+                    {r.status === 'running' && (
+                      <button
+                        type="button"
+                        onClick={() => endRun(r)}
+                        disabled={endingRun !== null}
+                        aria-label={`End ${r.goal} and build its partial report`}
+                        className="rounded-full border border-line px-3 py-1.5 text-xs text-ink transition-colors hover:bg-bg disabled:opacity-50"
+                      >
+                        {endingRun === r.id ? 'Ending...' : 'End and report'}
+                      </button>
+                    )}
+                </div>
               </li>
             ))}
           </ol>
+          </>
         )}
       </section>
     </AppShell>

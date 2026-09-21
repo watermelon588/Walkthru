@@ -19,7 +19,7 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
   - Done 2026-09-18: `apps/extension` (WXT, React 19). `lib/snapshot.ts`, `lib/redact.ts`, side panel UI. 7 vitest. Manual load unpacked pending (founder's Chrome).
 - [x] T4 Action executor + safe-mode filter + same-origin/step caps (S)
   - Done 2026-09-18: `lib/execute.ts` (click/type/scroll/back, dry run, safe mode), `sidepanel/run.ts` loop (per-site permission, same-origin stop, 4 min cap, confirm before submit on logged-in pages). Manual run on fixture pending.
-- [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer (M)
+- [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer + interrupted-run stop/report recovery (M)
   - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver and a real Groq model were verified against the signup flow; LangSmith tracing is configured.
 - [ ] Checkpoint A: extension completes the easy fixture flow end to end
 
