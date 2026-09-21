@@ -34,6 +34,19 @@ def test_supabase_check_and_cache(signed_in, monkeypatch):
     assert calls.count("Bearer good") == 1  # second call served from cache
 
 
+def test_supabase_outage_is_503(signed_in, monkeypatch):
+    app.dependency_overrides.clear()
+    monkeypatch.setattr(auth.httpx, "get", lambda *args, **kwargs: (_ for _ in ()).throw(httpx.ConnectError("offline")))
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "pk")
+    auth._cache.clear()
+
+    response = TestClient(app).get("/runs/nope", headers={"Authorization": "Bearer valid-looking"})
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "authentication service temporarily unavailable"}
+
+
 def test_other_users_run_is_404(fake_db):
     fake_db["r1"] = {"id": "r1", "user_id": "someone-else", "tier": "free", "status": "running", "steps": []}
     fake_db["r2"] = {"id": "r2", "user_id": USER, "tier": "free", "status": "done", "steps": [{"action": "done"}]}

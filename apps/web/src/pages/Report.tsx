@@ -10,6 +10,27 @@ type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missin
 
 const POLL_MS = 5000
 
+async function copyText(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // Clipboard permission can be unavailable in embedded and local contexts.
+    }
+  }
+  const input = document.createElement('textarea')
+  input.value = text
+  input.setAttribute('readonly', '')
+  input.style.position = 'fixed'
+  input.style.opacity = '0'
+  document.body.appendChild(input)
+  input.select()
+  const copied = document.execCommand('copy')
+  input.remove()
+  return copied
+}
+
 export default function Report() {
   const { id = '' } = useParams()
   const [state, setState] = useState<State>({ kind: 'loading' })
@@ -67,8 +88,8 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
     return act('share', async () => {
       const { url } = await shareRun(run.id)
       onShared()
-      await navigator.clipboard?.writeText(url).catch(() => {})
-      return `Public link copied: ${url}`
+      const copied = await copyText(url)
+      return copied ? `Public link copied: ${url}` : `Public link ready: ${url}`
     })
   }
 
@@ -83,7 +104,11 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
   function email() {
     return act('email', async () => {
       const { sent, to } = await emailRun(run.id)
-      return sent ? `Sent to ${to}.` : 'Email is not configured on the server yet.'
+      if (sent) return `Sent to ${to}.`
+      const subject = `Walkthru report: ${run.site}`
+      const body = `Your Walkthru report is ready:\n\n${location.origin}/app/runs/${run.id}`
+      location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      return `Email delivery is not configured, so a ready-to-send draft was opened for ${to}.`
     })
   }
 
