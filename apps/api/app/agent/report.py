@@ -89,10 +89,79 @@ def render_steps(steps: list[dict]) -> str:
     return "\n".join(f"{i + 1}. [{s['action']}{' #' + str(s['target_id']) if s.get('target_id') is not None else ''}] confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}" for i, s in enumerate(steps))
 
 
+def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
+    """Turn real-browser diagnostics into bounded, step-specific report findings."""
+    findings: list[Finding] = []
+    seen_accessibility: set[tuple[str, str]] = set()
+    accessibility_measured = False
+    performance_measured = False
+    worst: dict[str, tuple[float, int, str]] = {}
+
+    for index, step in enumerate(steps, start=1):
+        diagnostics = step.get("diagnostics") or {}
+        accessibility = diagnostics.get("accessibility") or {}
+        if accessibility.get("status") == "complete":
+            accessibility_measured = True
+        for issue in accessibility.get("issues", []):
+            key = (issue.get("rule", "browser-audit"), issue.get("target", ""))
+            if key in seen_accessibility:
+                continue
+            seen_accessibility.add(key)
+            target = issue.get("target") or "the affected element"
+            issue_severity = issue.get("severity")
+            if issue_severity not in ("high", "medium", "low"):
+                issue_severity = "medium"
+            findings.append(
+                Finding(
+                    kind="accessibility",
+                    severity=issue_severity,
+                    title=(issue.get("message") or f"Accessibility rule {key[0]} failed")[:120],
+                    detail=f"The real-browser audit found the {key[0]} rule on {target} after this journey action.",
+                    fix=f"Fix {target} so it passes the {key[0]} rule, then rerun this journey.",
+                    evidence=f"step {index}: {step.get('url', '?')}"[:300],
+                )
+            )
+
+        vitals = diagnostics.get("web_vitals") or {}
+        for metric in ("lcp_ms", "cls", "inp_ms"):
+            value = vitals.get(metric)
+            if value is None:
+                continue
+            performance_measured = True
+            if metric not in worst or value > worst[metric][0]:
+                worst[metric] = (float(value), index, step.get("url", "?"))
+
+    performance_rules = {
+        "lcp_ms": (2500, 4000, "Largest Contentful Paint is slow", "Reduce render-blocking work and optimize the largest above-the-fold element."),
+        "cls": (0.1, 0.25, "Layout shifts exceed the Core Web Vitals target", "Reserve space for images, embeds and dynamic content before they load."),
+        "inp_ms": (200, 500, "Interaction latency is high", "Break up long main-thread tasks and shorten the slow interaction handler."),
+    }
+    labels = {"lcp_ms": "LCP", "cls": "CLS", "inp_ms": "INP"}
+    for metric, (value, index, url) in worst.items():
+        good, poor, title, fix = performance_rules[metric]
+        if value <= good:
+            continue
+        severity = "high" if value > poor else "medium"
+        shown = f"{round(value):.0f} ms" if metric != "cls" else f"{value:.3f}"
+        findings.append(
+            Finding(
+                kind="performance",
+                severity=severity,
+                title=title,
+                detail=f"The browser observed {labels[metric]} at {shown}; the good threshold is {good} {'ms' if metric != 'cls' else ''}.".strip(),
+                fix=fix,
+                evidence=f"step {index}: {url}"[:300],
+            )
+        )
+
+    return findings, accessibility_measured, performance_measured
+
+
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
 
-    code_findings = [
+    journey_findings, browser_accessibility, browser_performance = browser_findings(state.get("steps", []))
+    code_findings = journey_findings + [
         Finding.model_validate(f)
         for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("security", [])
     ]
@@ -125,8 +194,8 @@ def synthesize(state: ReportState) -> dict:
         verified=state.get("verified", False),
         tokens=state.get("tokens", 0) + used,
         checks={
-            "accessibility": "complete" if state.get("accessibility_measured", False) else "unavailable",
-            "performance": "complete" if state.get("performance_measured", False) else "unavailable",
+            "accessibility": "complete" if state.get("accessibility_measured", False) or browser_accessibility else "unavailable",
+            "performance": "complete" if state.get("performance_measured", False) or browser_performance else "unavailable",
             "seo": "complete" if state.get("seo_measured", False) else "unavailable",
             "security": "complete" if state.get("security_measured", False) else "unavailable",
         },

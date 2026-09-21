@@ -115,6 +115,9 @@ def build_graph(model: Any, checkpointer: Any):
         steps = list(state["steps"])
         if resumed.get("evidence"):
             steps[-1] = steps[-1] | {"evidence": resumed["evidence"]}
+        diagnostics = resumed["observation"].get("diagnostics")
+        if diagnostics:
+            steps[-1] = steps[-1] | {"diagnostics": diagnostics}
         return {"observation": resumed["observation"], "steps": steps}
 
     def check(state: SessionState) -> dict:

@@ -6,6 +6,7 @@ import { snapshot } from "../lib/snapshot";
 import { execute, type ExecOptions, type Step } from "../lib/execute";
 import { AGENT_BIRD, AGENT_TONE, type AgentState } from "../lib/agent-bird";
 import gsap from "gsap";
+import { collectBrowserDiagnostics, observeWebVitals } from "../lib/diagnostics";
 
 export type ContentRequest =
   | { type: "snapshot" }
@@ -23,9 +24,13 @@ export default defineUnlistedScript(() => {
   if (window.__walkthru) return; // already injected on this page
   window.__walkthru = true;
   const agent = mountAgent();
+  const readWebVitals = observeWebVitals();
   chrome.runtime.onMessage.addListener((msg: ContentRequest, _sender, reply) => {
     if (msg.type === "ping") reply({ ok: true });
-    else if (msg.type === "snapshot") reply(snapshot());
+    else if (msg.type === "snapshot") {
+      const observation = snapshot();
+      collectBrowserDiagnostics(document, readWebVitals()).then((diagnostics) => reply({ ...observation, diagnostics }));
+    }
     else if (msg.type === "act") reply(execute(msg.step, document, msg.opts));
     else if (msg.type === "agent_status") {
       agent.update(msg.state, msg.activity);

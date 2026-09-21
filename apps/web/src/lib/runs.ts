@@ -11,6 +11,28 @@ export type Step = {
   decision_confidence?: number
   fallback_reason?: string
   evidence?: StepEvidence
+  diagnostics?: BrowserDiagnostics
+}
+
+export type AccessibilityIssue = {
+  rule: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  target?: string
+}
+
+export type BrowserDiagnostics = {
+  captured_at: string
+  accessibility: {
+    status: 'complete' | 'unavailable'
+    total: number
+    issues: AccessibilityIssue[]
+  }
+  web_vitals: {
+    lcp_ms?: number
+    cls?: number
+    inp_ms?: number
+  }
 }
 
 export type StepEvidence = {
