@@ -1,6 +1,7 @@
 /** Page snapshot: what the persona agent sees. Mirrors app/agent/schema.py Observation. */
 
 import { redact } from "./redact";
+import type { BrowserDiagnostics } from "./diagnostics";
 
 export type Element = { id: number; tag: string; text: string; type?: string };
 export type Observation = {
@@ -10,6 +11,7 @@ export type Observation = {
   text: string;
   errors: string[];
   note?: string;
+  diagnostics?: BrowserDiagnostics;
 };
 
 export const ID_ATTR = "data-walkthru-id";

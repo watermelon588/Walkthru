@@ -131,6 +131,39 @@ def test_observation_attaches_visual_evidence_to_previous_step(monkeypatch):
     assert result["steps"][0]["evidence"] == evidence
 
 
+def test_observation_attaches_browser_diagnostics_to_previous_step(monkeypatch):
+    use(
+        [
+            PersonaStep(thought="Open signup", action="click", target_id=2, confusion=1),
+            PersonaStep(thought="Signup is open", action="done", confusion=0),
+        ],
+        monkeypatch,
+    )
+    client = TestClient(app)
+    first = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}]))
+    observed = page("https://fixture.test/signup", [])
+    observed["diagnostics"] = {
+        "captured_at": "2026-09-21T10:15:30Z",
+        "accessibility": {
+            "status": "complete",
+            "total": 1,
+            "issues": [
+                {
+                    "rule": "label",
+                    "severity": "high",
+                    "message": "Form elements must have labels",
+                    "target": "#email",
+                }
+            ],
+        },
+        "web_vitals": {"lcp_ms": 1840, "cls": 0.031, "inp_ms": 72},
+    }
+
+    result = observe(client, first["run_id"], observed).json()
+
+    assert result["steps"][0]["diagnostics"] == observed["diagnostics"]
+
+
 def test_observation_rejects_evidence_from_another_run(monkeypatch):
     use([PersonaStep(thought="Open signup", action="click", target_id=2, confusion=0)], monkeypatch)
     client = TestClient(app)

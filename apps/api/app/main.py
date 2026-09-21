@@ -96,7 +96,7 @@ def _owned(run_id: str, user: dict) -> dict:
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
-    state = body.model_dump(exclude={"tier"}) | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
+    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
     result = runtime.invoke(body.tier, state, _cfg(run_id))
     return _reply(run_id, body.tier, result, background)
 
@@ -108,7 +108,7 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
         raise HTTPException(409, "run already finished")
     if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
         raise HTTPException(422, "evidence path does not belong to this run")
-    resume = {"observation": body.observation.model_dump()}
+    resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
     result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))

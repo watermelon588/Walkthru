@@ -5,7 +5,7 @@
 Chrome extension (user's browser)               Walkthru API (FastAPI + LangGraph)
 ────────────────────────────────                ───────────────────────────────────
 side panel: pick site, goal, test user ── POST /runs ──────▶ create run + LangGraph thread
-content script: page snapshot           ── POST /runs/{id}/observe ─▶ persona agent decides
+content script: snapshot + axe + vitals ── POST /runs/{id}/observe ─▶ persona agent decides
   (URL, numbered buttons/links/inputs,  ◀── next action ──── click #12 | type #4 "..." | scroll | done | give_up
    visible text, errors; PII masked)
 executes the action in the real tab
@@ -25,7 +25,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 | Auth | Supabase Auth: Google, GitHub, email magic link. API validates bearer tokens via Supabase Auth (`app/auth.py`) | Live; OAuth providers still to enable in dashboard |
 | API | Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, httpx | `/health`, `/runs` step API, persona graph |
 | Agent models | Default: Groq `openai/gpt-oss-120b` primary, Gemini `gemini-3.1-flash-lite` fallback. Experimental: TypeSafe Jev `jev-1.13.0` for bounded browser decisions with confidence-gated LLM fallback. Paid: Claude candidate after T9 eval | Free pool live; Jev adapter built and opt-in |
-| Extension | Chrome MV3, TypeScript, WXT, React side panel | Built: snapshot, redaction, executor, step loop, Scout status and bounded evidence capture. Real easy-fixture run works; evidence rerun pending Storage policy application |
+| Extension | Chrome MV3, TypeScript, WXT, React side panel, axe-core | Built: snapshot, redaction, executor, step loop, Scout status, bounded screenshot evidence, WCAG A/AA checks and Core Web Vitals. Real easy-fixture run works; diagnostics rerun pending rebuilt-extension verification |
 | Data | Supabase Postgres (RLS on every table) + private Storage (screenshots) | `runs` table + RLS live; `run-evidence` bucket and owner/public-report policies are declared in `apps/api/schema.sql` but still need applying to the project |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
@@ -45,6 +45,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 11. **Decision providers are replaceable, LangGraph is not.** The persona graph owns state, interrupts, budgets, and termination. A Jev provider may choose bounded operations and targets; the existing LLM remains responsible for open-ended generation and fallback. Safety stays in deterministic code.
 12. **Step evidence is private and bounded.** The extension captures at most eight JPEG frames per run after meaningful actions, hides Scout and masks form controls for the captured paint, then uploads directly to the private `run-evidence` bucket with the user's JWT. The API only accepts a screenshot path beneath the current run id. Reports request one-hour signed URLs; public reports can read evidence only when the owning run is public.
+13. **Browser diagnostics belong to journey steps.** The injected script runs bounded axe WCAG A/AA checks and observes LCP, CLS and INP in the tested tab. Each post-action observation is validated by the API and attached to the exact LangGraph step. Deterministic report code turns failing thresholds into prioritized findings; the LLM explains and ranks but does not invent these measurements.
 
 ## Experimental TypeSafe decision path
 
