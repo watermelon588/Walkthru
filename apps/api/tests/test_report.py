@@ -85,5 +85,7 @@ def test_share_and_email(fake_db, monkeypatch):
     monkeypatch.setattr(main.deliver, "send_report", lambda to, link, site, rep: sent.append((to, link)) or True)
     assert c.post("/runs/r1/email").json() == {"sent": True, "to": "tester@example.com"}
     assert sent[0][1].endswith("/app/runs/r1")
+    monkeypatch.setattr(main.deliver, "send_report", lambda *args: False)
+    assert c.post("/runs/r1/email").json() == {"sent": False, "to": "tester@example.com"}
     token = c.get("/verification").json()
     assert token["token"].startswith("wt-") and token["token"] in token["meta"]
