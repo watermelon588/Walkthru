@@ -1,5 +1,6 @@
 """Drives persona_session with a scripted fake model through the HTTP step API."""
 
+import pytest
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 from psycopg import OperationalError
@@ -69,6 +70,21 @@ def test_database_outage_returns_retryable_cors_response(monkeypatch):
     assert response.status_code == 503
     assert response.headers["access-control-allow-origin"] == "chrome-extension://walkthru-test"
     assert response.json()["detail"] == "Database connection was interrupted. Please retry."
+
+
+@pytest.mark.parametrize("origin", ["http://localhost:5173", "http://127.0.0.1:5173"])
+def test_local_web_origins_pass_cors_preflight(origin):
+    response = TestClient(app).options(
+        "/runs/example/share",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
 
 
 def test_click_then_done(monkeypatch):
