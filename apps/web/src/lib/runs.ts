@@ -121,7 +121,7 @@ async function api<T>(path: string, body?: unknown, auth = true): Promise<T> {
 
 export const instantScan = (site: string, email?: string) => api<{ run_id: string; url: string; report: Report }>('/scans', { site, email: email || null }, false)
 export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`)
-export const emailRun = (id: string) => api<{ sent: boolean; to: string | null }>(`/runs/${id}/email`)
+export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
 
 export function findingsCsv(run: Run): string {
   const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`

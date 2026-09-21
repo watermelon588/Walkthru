@@ -3,6 +3,7 @@ import os
 import time
 import uuid
 from typing import Literal
+from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,11 +22,16 @@ from app.scans import fetch, security
 
 log = logging.getLogger("walkthru")
 WEB_URL = os.environ.get("WEB_URL", "http://localhost:5173")
+WEB_ORIGINS = {WEB_URL.rstrip("/")}
+_web = urlsplit(WEB_URL)
+if _web.hostname in {"localhost", "127.0.0.1"}:
+    _port = f":{_web.port}" if _web.port else ""
+    WEB_ORIGINS.update({f"{_web.scheme}://localhost{_port}", f"{_web.scheme}://127.0.0.1{_port}"})
 
 app = FastAPI(title="Walkthru API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[WEB_URL],
+    allow_origins=sorted(WEB_ORIGINS),
     allow_origin_regex=r"chrome-extension://.*",
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
@@ -206,7 +212,9 @@ def email_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     if not row.get("report") or not to:
         raise HTTPException(409, "report not ready")
     sent = deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], row["report"])
-    return {"sent": sent, "to": to if sent else None}
+    # Keep the destination in the response when delivery is not configured so
+    # the web app can offer a truthful, ready-to-send mail-client fallback.
+    return {"sent": sent, "to": to}
 
 
 @app.get("/verification")

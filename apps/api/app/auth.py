@@ -19,11 +19,14 @@ def require_user(request: Request) -> dict:
     hit = _cache.get(token)
     if hit and hit[1] > time.time():
         return hit[0]
-    r = httpx.get(
-        f"{os.environ['SUPABASE_URL']}/auth/v1/user",
-        headers={"apikey": os.environ["SUPABASE_PUBLISHABLE_KEY"], "Authorization": f"Bearer {token}"},
-        timeout=10,
-    )
+    try:
+        r = httpx.get(
+            f"{os.environ['SUPABASE_URL']}/auth/v1/user",
+            headers={"apikey": os.environ["SUPABASE_PUBLISHABLE_KEY"], "Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(503, "authentication service temporarily unavailable") from exc
     if r.status_code != 200:
         raise HTTPException(401, "invalid or expired session")
     data = r.json()
