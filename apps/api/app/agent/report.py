@@ -86,7 +86,12 @@ def performance_scan(state: ReportState) -> dict:
 
 
 def render_steps(steps: list[dict]) -> str:
-    return "\n".join(f"{i + 1}. [{s['action']}{' #' + str(s['target_id']) if s.get('target_id') is not None else ''}] confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}" for i, s in enumerate(steps))
+    return "\n".join(
+        f"{i + 1}. [{s['action']}{' #' + str(s['target_id']) if s.get('target_id') is not None else ''}] "
+        f"confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}"
+        f"{' (interrupted before confirmation)' if s.get('interrupted') else ''}"
+        for i, s in enumerate(steps)
+    )
 
 
 def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:

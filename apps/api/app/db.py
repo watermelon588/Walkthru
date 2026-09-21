@@ -60,6 +60,17 @@ def update_run(run_id: str, status: str, steps: list[dict], tokens: int = 0) -> 
     _execute("update runs set status = %s, steps = %s, tokens = %s, updated_at = now() where id = %s", (status, Jsonb(steps), tokens, run_id))
 
 
+def mark_run_stopped(run_id: str, steps: list[dict], tokens: int = 0) -> bool:
+    """Atomically close a running row. False means another request already closed it."""
+    row = _execute(
+        "update runs set status = 'stopped', steps = %s, tokens = %s, updated_at = now() "
+        "where id = %s and status = 'running' returning id",
+        (Jsonb(steps), tokens, run_id),
+        fetchone=True,
+    )
+    return row is not None
+
+
 def set_report(run_id: str, report: dict, status: str | None = None) -> None:
     _execute(
         "update runs set report = %s, tokens = %s, status = coalesce(%s, status), updated_at = now() where id = %s",

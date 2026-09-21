@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 from psycopg import OperationalError
 
-from app import db
+from app import db, main
 from app.agent import runtime
 from app.agent.persona import build_graph
 from app.agent.safety import is_dangerous
@@ -183,6 +183,28 @@ def test_observation_rejects_evidence_from_another_run(monkeypatch):
     )
 
     assert response.status_code == 422
+
+
+def test_owner_can_end_running_run_and_generate_partial_report_once(monkeypatch, fake_db):
+    use([PersonaStep(thought="Open signup", action="click", target_id=2, confusion=1)], monkeypatch)
+    finished = []
+    monkeypatch.setattr(main, "finish_run", lambda run_id, values: finished.append((run_id, values)))
+    client = TestClient(app)
+    first = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}]))
+
+    response = client.post(f"/runs/{first['run_id']}/stop")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "stopped"
+    assert response.json()["report_status"] == "generating"
+    assert response.json()["steps"][-1]["interrupted"] is True
+    assert fake_db[first["run_id"]]["status"] == "stopped"
+    assert finished[0][1]["status"] == "stopped"
+
+    repeated = client.post(f"/runs/{first['run_id']}/stop")
+    assert repeated.status_code == 200
+    assert repeated.json()["status"] == "stopped"
+    assert len(finished) == 1
 
 
 def test_decision_provider_metadata_is_recorded(monkeypatch):

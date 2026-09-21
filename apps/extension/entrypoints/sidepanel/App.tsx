@@ -17,7 +17,7 @@ const STATUS_COPY: Record<string, string> = {
   budget: "Ran out of steps before reaching the goal.",
   stuck: "Kept trying the same thing and got stuck.",
   captcha: "Stopped at a CAPTCHA.",
-  aborted: "Stopped.",
+  stopped: "Ended early. A partial report is being prepared.",
 };
 
 export function App() {

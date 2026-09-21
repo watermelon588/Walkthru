@@ -12,7 +12,7 @@ export function ReportView({ run }: { run: Run }) {
   const isScan = run.kind === 'scan'
   const counts = { high: 0, medium: 0, low: 0 }
   for (const f of r?.findings ?? []) counts[f.severity]++
-  const stopped = ['gave_up', 'budget', 'stuck', 'captcha'].includes(run.status)
+  const stopped = ['gave_up', 'budget', 'stuck', 'captcha', 'stopped'].includes(run.status)
   const agentState: AgentPresenceState = stopped ? 'stopped' : r ? 'complete' : 'observing'
   const agentActivity = stopped
     ? STATUS_LABEL[run.status]
