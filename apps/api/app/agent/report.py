@@ -12,7 +12,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.schema import Finding, FirstImpression, Report, Synthesis
-from app.scans import accessibility, fetch, performance, security, seo
+from app.scans import accessibility, fetch, performance, security, seo, site
 
 
 class ReportState(TypedDict, total=False):
@@ -32,6 +32,7 @@ class ReportState(TypedDict, total=False):
     performance_measured: bool
     seo_measured: bool
     security_measured: bool
+    site_audit: dict
     synthesis: dict
     tokens: Annotated[int, operator.add]
     notes: Annotated[list[str], operator.add]  # non-fatal problems, e.g. a scan that could not fetch
@@ -83,6 +84,36 @@ def accessibility_scan(state: ReportState) -> dict:
 
 def performance_scan(state: ReportState) -> dict:
     return _scan(state, "performance")
+
+
+def site_scan(state: ReportState) -> dict:
+    """Crawl once, then feed both SEO and passive-security report branches."""
+    try:
+        fetch.assert_public(state["site"])
+        with fetch.client() as c:
+            result = site.audit(state["site"], c, verified=state.get("verified", False))
+        return {
+            "seo": [finding.model_dump() for finding in result.seo],
+            "security": [finding.model_dump() for finding in result.security],
+            "seo_measured": result.coverage.pages_scanned > 0,
+            "security_measured": result.coverage.pages_scanned > 0,
+            "site_audit": {
+                "pages_scanned": result.coverage.pages_scanned,
+                "page_limit": result.coverage.page_limit,
+                "duration_ms": result.coverage.duration_ms,
+                "truncated": result.coverage.truncated,
+                "urls": result.coverage.urls,
+                "robots_respected": True,
+            },
+        }
+    except Exception as error:  # noqa: BLE001 - a failed audit must not sink the report
+        return {
+            "seo": [],
+            "security": [],
+            "seo_measured": False,
+            "security_measured": False,
+            "notes": [f"site audit failed: {error}"],
+        }
 
 
 def render_steps(steps: list[dict]) -> str:
@@ -177,6 +208,9 @@ def synthesize(state: ReportState) -> dict:
         f"First impression: {fi.get('what', '?')} For: {fi.get('who', '?')} Clarity {fi.get('clarity', '?')}/3. Trust: {', '.join(fi.get('trust', []))}",
         "Scan findings (already in the report, do not repeat them as UX findings):\n" + "\n".join(f"- [{f.kind}/{f.severity}] {f.title}" for f in code_findings),
     ]
+    audit = state.get("site_audit")
+    if audit:
+        context.append(f"Site audit coverage: {audit.get('pages_scanned', 0)} pages scanned, limit {audit.get('page_limit', 0)}, truncated: {audit.get('truncated', False)}.")
     if steps:
         context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}. Outcome: {state.get('status')}.\nSteps:\n{render_steps(steps)}")
         task = "Write UX findings for where the test user hesitated, looped, hit errors or gave up; cite the step number as evidence. Then a summary and the top fixes across everything."
@@ -204,6 +238,7 @@ def synthesize(state: ReportState) -> dict:
             "seo": "complete" if state.get("seo_measured", False) else "unavailable",
             "security": "complete" if state.get("security_measured", False) else "unavailable",
         },
+        site_audit=state.get("site_audit"),
     )
     return {"synthesis": report.model_dump(), "tokens": used}
 
@@ -211,12 +246,11 @@ def synthesize(state: ReportState) -> dict:
 def build_graph():
     g = StateGraph(ReportState)
     g.add_node("first_impression", first_impression)
-    g.add_node("seo_scan", seo_scan)
-    g.add_node("security_scan", security_scan)
+    g.add_node("site_scan", site_scan)
     g.add_node("accessibility_scan", accessibility_scan)
     g.add_node("performance_scan", performance_scan)
     g.add_node("synthesize", synthesize)
-    for n in ("first_impression", "accessibility_scan", "performance_scan", "seo_scan", "security_scan"):
+    for n in ("first_impression", "accessibility_scan", "performance_scan", "site_scan"):
         g.add_edge(START, n)
         g.add_edge(n, "synthesize")
     g.add_edge("synthesize", END)
