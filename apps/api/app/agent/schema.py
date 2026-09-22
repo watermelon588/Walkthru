@@ -104,6 +104,17 @@ class Synthesis(BaseModel):
     top_fixes: list[str] = Field(description="Up to five fixes ranked by impact, across UX, SEO and security.", max_length=5)
 
 
+class SiteAuditSummary(BaseModel):
+    """Bounded crawl coverage included with new reports. Absent on legacy reports."""
+
+    pages_scanned: int = Field(ge=0, le=20)
+    page_limit: int = Field(ge=1, le=20)
+    duration_ms: int = Field(ge=0)
+    truncated: bool
+    urls: list[str] = Field(default_factory=list, max_length=20)
+    robots_respected: bool = True
+
+
 class Report(BaseModel):
     summary: str
     first_impression: FirstImpression | None = None
@@ -112,3 +123,4 @@ class Report(BaseModel):
     verified: bool = False
     tokens: int = 0
     checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
+    site_audit: SiteAuditSummary | None = None
