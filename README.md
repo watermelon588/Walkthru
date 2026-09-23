@@ -6,7 +6,17 @@ AI personas test your website in a real browser and tell you where first-time us
 - Product spec: [SPEC.md](SPEC.md) · Architecture: [ARCHITECTURE.md](ARCHITECTURE.md) · Design: [DESIGN.md](DESIGN.md) · Skills: [SKILLS.md](SKILLS.md)
 - Plan: [tasks/plan.md](tasks/plan.md) · Tasks: [tasks/todo.md](tasks/todo.md)
 
-## Run locally on Windows
+## Run everything with one command (development only)
+
+From the repository root in PowerShell or cmd:
+
+```powershell
+.\dev
+```
+
+This builds the extension and starts the API (:8000), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
+
+## Run locally on Windows, one process per terminal
 
 Copy each block into a separate PowerShell terminal from the repository root. Copy `apps/api/.env.example` and `apps/web/.env.example` to `.env` and fill in the required keys first.
 
