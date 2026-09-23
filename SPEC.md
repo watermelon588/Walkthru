@@ -1,91 +1,128 @@
-# Spec: Walkthru v1
+# Spec: Walkthru v1.1, the launch check
+
+_Updated 2026-09-24 after the competitor, pricing and validation review in `founder/`. Replaces the v1 spec. Build order and weak points: [ROADMAP.md](ROADMAP.md). System design: [ARCHITECTURE.md](ARCHITECTURE.md)._
 
 ## Objective
-Small teams ship websites without ever watching a stranger use them. Walkthru gives them one evidence report with:
-1. **AI test users** walk through real flows (landing → signup → dashboard) in the team's own browser, think aloud, and show where they get stuck.
-2. **SEO check** of the pages visited (and the whole site on paid plans).
-3. **Accessibility and mobile performance checks** with concrete evidence and an explicit unavailable state when PageSpeed is not configured.
-4. **Security hygiene check** (passive: headers, cookies, exposed files, leaked keys in JS). Not a pentest.
 
-Plus a plain-English fix list, ranked by impact.
+**Positioning:** the launch check for apps built with AI. One report answers three questions before and after every launch:
 
-**Users:** indie devs and students (free, community), small startups and agencies (paid).
+1. **Can a stranger get in?** AI test users walk through real flows (landing, signup, onboarding, dashboard, checkout up to payment) in the owner's own Chrome, think aloud, and show where they got stuck. Logged-in pages work without sharing a password.
+2. **Can Google and AI search read you?** SEO plus **GEO (AI search readiness)**: whether ChatGPT, Claude, Perplexity and Google's AI answers can fetch, understand and quote the site.
+3. **Are you leaking anything?** Passive security hygiene: headers, cookies, exposed files, keys in JavaScript. Never an attack.
 
-## How it works (architecture)
+Plus accessibility and mobile performance evidence, and one fix list ranked by impact.
+
+**Why this position:** "AI users test your site" is a crowded category ([Meerkat](https://runmeerkat.com/pricing), [CanaryUsers](https://www.canaryusers.ai/), [Swarm](https://www.useswarm.co/), [Uxia](https://www.uxia.app/), checked 2026-09-24). None of them lists SEO, GEO or security. GEO tools ([Otterly](https://www.frase.io/blog/the-10-best-ai-visibility-tools-in-2026)) never try a flow. Walkthru is the only one report that covers all of it, and the only one that tests logged-in pages inside the owner's own browser session. Details: `founder/competitor-matrix.md`.
+
+**Users:**
+- **Primary:** solo founders and two-person teams shipping apps built with Cursor, Lovable, Bolt or v0.
+- **Secondary:** agencies handing sites to clients.
+
+**Product rules:**
+- **Free reports are exactly as good as paid ones.** Plans unlock where a test can go and what happens over time, never a better answer.
+- **Every claim is grounded.** Findings cite a step, a URL, a header or a snippet. Walkthru never blames the site for its own stops.
+- **GEO claims are honest.** Walkthru measures readiness (can AI search fetch and understand you). It does not promise citations or rankings, and it labels low-evidence checks such as `llms.txt` as low impact.
+
+## Plans
+
+The founder asked for this finalized plan on 2026-09-24. Prices: list price, with the founding price in brackets for the first 50 customers, locked for 12 months. V1 paid access follows [payment.md](payment.md): founder-approved 30-day passes through Dodo, no auto-renewal until the V2 gate.
+
+| | Free | Launch Pack | Pro | Plus |
+|---|---|---|---|---|
+| Price | $0 | $9 once | $19/mo ($15 founding) | $49/mo ($39 founding) |
+| Instant Scan (no install) | 5 an hour per address, 10 pages | Included | Included | Included |
+| **AI readiness score (GEO)** | Homepage score and top 3 fixes | Full site | Full site, up to 50 pages | Full site, up to 50 pages, every site |
+| **"What AI search sees"** | Yes | Yes | Yes | Yes |
+| **GEO fix pack** (robots.txt rules, JSON-LD, llms.txt draft, rendering fix for your framework) | Preview of 1 fix | Yes | Yes | Yes |
+| **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
+| Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
+| Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
+| Test users | First-time visitor | All 4 | All 4 | All 4 + custom test users |
+| Steps per run | 12 | 30 | 30 | 30 |
+| Rerun and compare (fixed, still broken, new) | No | Yes | Yes | Yes |
+| SEO | 10 pages | 50 pages | 50 pages | 50 pages |
+| Security hygiene | Headers, TLS, cookies | + exposed files and leaked keys on verified domains | Same as Launch Pack | Same as Launch Pack |
+| One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
+| Evidence report with screenshots, PDF | Web report | PDF | PDF | PDF with your own logo, no Walkthru branding |
+| Verified sites | 1 | 1 | 2 | 5 |
+| Shareable public report with AI readiness badge | Yes | Yes | Yes | Yes |
+
+**GEO in every plan.** GEO checks are deterministic, so they cost nothing in model calls:
+- **Free:** the hook. "Can ChatGPT read your site?"
+- **Pro:** full-site readiness plus the fix pack.
+- **Plus:** keeps it working, with alerts when a deploy blocks an AI crawler, drops structured data or empties the HTML sent before JavaScript runs.
+
+**Not sold in V1:** AI citation tracking ("does ChatGPT mention you for this prompt"). It costs model and search calls on every check and needs its own evaluation. Candidate Plus add-on after launch.
+
+**Plus launches as a waitlist** until weekly watch and branded PDFs ship (ROADMAP phase E). Nothing is sold before it exists.
+
+## How it works
+
 ```
-Chrome extension (client)                    Walkthru server (FastAPI + LangGraph)
-─────────────────────────                    ──────────────────────────────────────
-side panel: pick goal + persona  ── start ─▶ create run, LangGraph thread
-content script: snapshot page    ── observe ▶ persona agent decides next action
-  (URL, numbered buttons/links/    ◀─ action ── {click #12 | type #4 "…" | scroll | done | give_up}
-   inputs, visible text, errors)
-executes action in the real tab   ── observe ▶ … loop until done/give_up/budget …
-                                               synthesize report
-                                  ◀─ report ── report page + email
-Server-only (no browser needed): static accessibility checks, PageSpeed Insights mobile performance, SEO scan (HTML, robots, sitemap), and security hygiene (headers, TLS, cookies, exposed files, secrets in JS bundles).
-```
-- The **loop runs in the extension side panel page** (not the MV3 service worker, which Chrome suspends).
-- Each step = one HTTP call. Server resumes the LangGraph thread with the observation (`interrupt` / `Command(resume=…)`), Postgres checkpointer holds state. Server is stateless between calls.
-- **Logged-in pages work without sharing passwords**: the agent uses the session already open in the user's browser.
-- Text snapshot by default; screenshots (`captureVisibleTab`, JPEG) only for the first impression and when the agent is stuck. Keeps tokens low.
+Chrome extension (client)                    Walkthru API (FastAPI + LangGraph)
+side panel: goal + test user     ── start ─▶ entitlement check (plan, runs left, steps, logged-in, site)
+content script: snapshot page    ── observe ▶ persona agent decides the next action
+executes the action in the tab   ◀─ action ── click | type | scroll | done | give_up
+                                  ... loop until done / give_up / safe stop / budget ...
+                                              report: journey + SEO + GEO + security + a11y + performance
+                                              compare with the previous run of the same site and goal
 
-## Plans (Dodo Payments)
-| Plan | Price | Includes |
+Server only (no browser): Instant Scan, site audit, GEO readiness, security hygiene,
+weekly watch (Plus), deploy webhook (Plus).
+```
+
+The step loop, safety model, redaction, evidence and grounding are unchanged from v1. See ARCHITECTURE.md.
+
+## GEO readiness (new)
+
+Deterministic scanner in `apps/api/app/scans/geo.py`. It reuses the pages, `robots.txt` and homepage the site audit already fetched. The only extra requests are `GET /llms.txt` and one homepage GET with a citation-bot user agent. Scored 0 to 100:
+
+| Category | Points | Checks |
 |---|---|---|
-| Free | $0 | Instant Scan of your homepage (first impression, SEO basics, security headers), no install. Extension: 3 AI test runs/month, public pages only, 1 persona, 12 steps per run |
-| Launch Pack | $9 one-time | 20 runs within 30 days, all Pro features |
-| Pro | $15/month | 60 runs, logged-in pages (dashboard, settings, checkout-up-to-payment), all personas, 30 steps, full-site SEO (up to 50 pages), full security hygiene, re-run compare, CSV/Google Sheet export, email reports |
-| Team | $39/month | 250 runs, 5 sites, custom personas, weekly scheduled scans by email, shared reports |
+| AI crawler access | 25 | `robots.txt` allows the citation bots (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, ClaudeBot, PerplexityBot, Googlebot, Bingbot, Applebot) (15). The homepage answers a citation-bot user agent with 200 rather than 403 or a challenge page (10). Blocking training-only bots (GPTBot, Google-Extended, CCBot) is reported as a choice, not a fault. |
+| Content without JavaScript | 20 | Homepage HTML contains the main text before JavaScript runs (15). Key pages (pricing, about, docs, features) are not empty shells (5). Most AI crawlers do not run JavaScript, and many AI-built apps are single-page apps. |
+| Structured data | 15 | Valid JSON-LD (5). Organization or WebSite (4). A page-type schema: SoftwareApplication, Product, FAQPage or Article (4). Schema with 5 or more useful properties (2). |
+| Answerability | 15 | One H1 (3). Descriptive H2s (3). A plain paragraph early on the page (3). Lists or tables (3). Concrete numbers (3). |
+| Entity and trust | 10 | Same name in title, og:site_name, schema and H1 (4). About, contact and privacy or pricing pages linked (4). sameAs links to public profiles (2). |
+| Meta | 10 | Title, description, canonical, Open Graph. The score reuses SEO signals; findings stay in the SEO section so nothing is reported twice. |
+| llms.txt | 5 | Present and well formed. Labeled "low measured impact" ([Otterly study](https://otterly.ai/blog/the-llms-txt-experiment/)). |
 
-Credit = one persona run. Tokens logged per run for margin tracking.
+- **Score bands:** 0 to 35 critical, 36 to 67 foundation, 68 to 85 good, 86 to 100 excellent.
+- **Reference:** the category model adapts [geo-optimizer-skill](https://github.com/auriti-labs/geo-optimizer-skill) (MIT). It is re-weighted toward checks with evidence, and implemented on Walkthru's SSRF-safe fetcher rather than added as a dependency.
+- **"What AI search sees":** the existing first-impression call already reads the HTML before JavaScript. The report labels it that way. On a JavaScript shell it says plainly that AI search sees an empty page.
+- **Fix pack:** deterministic templates filled from the audited pages. They cover robots.txt rules, JSON-LD blocks, an llms.txt draft, and a rendering fix for the detected framework (Vite single-page app, Next.js, Lovable, Astro).
 
-## Agent design (LangGraph)
-- `test_run` graph: `preflight` (plan limits, site check) → `first_impression` (screenshot + page text: what is this, who is it for, what would you click, trust signals) → `persona_session` per persona → `synthesize` (dedupe, severity, evidence, top fixes, clarity & conversion review) → `deliver`.
-- `persona_session` (the agent): `decide` (in character, one action + think-aloud + confusion 0–3, with memory of tried paths) → `interrupt` for observation → `check` (goal reached? loop on same page 3×? budget?) → back to `decide`.
-- `site_scan` graph (server-only, parallel): `accessibility_scan`, `performance_scan`, `seo_scan` and `security_scan`. The synthesis LLM explains and prioritizes their deterministic evidence.
+## Agent design, safety, tech stack
 
-## Safety rules (non-negotiable)
-- **Safe mode on logged-in pages:** the agent never clicks elements whose text/aria matches delete/remove/cancel subscription/pay/purchase/send/invite/transfer; never submits payment forms; asks the user in the side panel before any form submit on logged-in pages.
-- Same-origin only; step and time caps; stops at CAPTCHA and reports it.
-- **Redaction before upload:** emails, long numbers, and input values are masked in the snapshot; user is told what is sent.
-- **Server security scans only on verified domains** (meta tag / DNS TXT / well-known file). Passive checks only: no fuzzing, no injection payloads, no brute force.
-- Fake test identity for signups.
-
-## Tech Stack
-- **Extension:** Chrome MV3, TypeScript, WXT, React side panel.
-- **Web:** React + Vite + TypeScript, Tailwind v4, Motion, Phosphor icons, Geist font. Supabase auth.
-- **Server:** Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, `langchain-google-genai` (free tier model) and `langchain-anthropic` (paid tier), httpx, selectolax, Resend, Dodo SDK.
-- **Data:** Supabase (Postgres, Auth, Storage for screenshots). **Evals:** LangSmith. **Hosting:** Vercel (web), Oracle Always Free VM or ~$5 VPS (server).
+Unchanged from v1: `persona_session` graph (decide, interrupt, check); destructive actions never run; sends only on verified domains after the owner confirms, once per run; same-origin; CAPTCHA stop; redaction before upload; passive security only on verified domains; fake test identity. Stack: Chrome MV3 + WXT + React; React 19 + Vite + Tailwind v4 web; FastAPI + LangGraph API; Supabase; free model chain (Groq, OpenRouter writer, Gemini); Dodo; Resend. See ARCHITECTURE.md.
 
 ## Commands
 ```
-cd apps/api && .venv/Scripts/python -m pip install -e ".[dev]" && .venv/Scripts/uvicorn app.main:app --reload
-.venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check .
-cd apps/web && npm install && npm run dev | npm run build
-cd apps/extension && npm install && npm run dev | npm run build   # loads unpacked in Chrome
+.\dev                                                    # whole local stack (dev only)
+cd apps/api && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check .
+cd apps/web && npm run build && npm run lint
+cd apps/extension && npm test && npx tsc --noEmit && npm run lint && npm run build
 ```
 
-## Project Structure
-```
-apps/api/        FastAPI + LangGraph (graphs/, scans/, billing/, routes/)
-apps/web/        landing + dashboard + report pages
-apps/extension/  MV3 extension (sidepanel/, content/ snapshot + executor)
-evals/           fixture sites with seeded UX/SEO/security traps + runner
-```
-
-## Testing Strategy
-- pytest: accessibility, performance, SEO and security checks, redaction, plan limits, Dodo webhook signature, step API contract.
-- Extension: unit tests for snapshot + safe-mode filter (vitest).
-- **Fixture sites with seeded traps** (hidden signup, silent form error, missing meta description, no HSTS, key in JS bundle) = quality evals in LangSmith: % traps found, $ per run.
+## Testing strategy
+- **pytest** for every deterministic check, including each GEO category on fixture HTML: an SPA shell, blocked bots, valid and broken JSON-LD. Also entitlement limits (a free user cannot start a logged-in run or exceed 12 steps, whatever the client sends), finding fingerprints for rerun comparison, and the watch diff.
+- **Hard fixture:** gains GEO traps: `robots.txt` blocking OAI-SearchBot, a JavaScript-only pricing page, missing Organization schema. They are counted in the trap scorer.
+- **Extension:** vitest for snapshot, redaction and safety. **Evals:** trap recall and cost per run in LangSmith.
 
 ## Boundaries
-- **Always:** safe mode, redaction, verified domain for security scan, log tokens per run.
-- **Ask first:** new deps beyond this spec, paid-tier model change, schema changes after launch.
-- **Never:** active attacks, CAPTCHA solving, payment submission, storing page content longer than the report needs, committing secrets.
+- **Always:** server decides the plan and limits; safe mode; redaction; verified domain for deep security checks; honest labels on low-evidence GEO checks; log tokens per run.
+- **Ask first:** new dependencies, paid-tier model, schema changes after launch, price changes after this spec.
+- **Never:** active attacks, CAPTCHA solving, payment submission, promising AI citations or rankings, a weaker free report, committing secrets.
 
-## Success Criteria
-- 3-page public flow test finishes in ≤ 3 min; report ≤ 30 s after run.
-- ≥ 80% of seeded traps found on fixture sites.
-- Paid run cost ≤ $0.20; free run ≤ $0.02.
-- Chrome Web Store listing approved before launch.
-- 50 community sites tested, 5 paying by 2026-11-30.
+## Success criteria
+- Instant Scan returns SEO, GEO score, "what AI search sees" and security headers in 20 s or less for a 10-page site.
+- GEO scanner flags every GEO trap on the hard fixture; overall trap recall is 80% or more (Checkpoint B).
+- A free account cannot start a logged-in run, a 13th step or a 4th monthly run, whatever the client sends.
+- A rerun marks every prior finding fixed, still broken or new, and matches a hand check on 3 fixture reruns.
+- Paid run cost is $0.20 or less; free run is $0.02 or less.
+- Validation (founder/validate-idea.md): 5 of the first 100 Instant Scans convert to a $9 Launch Pack, and 25% of beta users who click "Run a test" finish a run.
+- Chrome Web Store listing approved before launch (Oct 20). 50 community sites tested and 5 paying by 2026-11-30.
+
+## Open questions
+- Keep the exact list prices ($19 and $49) or adjust after experiment 1?
+- Cloud runner (public journeys without installing the extension): build only if experiment 2 shows fewer than 25% of beta users finish a run after clicking "Run a test".

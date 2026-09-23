@@ -12,10 +12,10 @@ executes the action in the real tab
 masks fields + captures bounded JPEG    ── private Storage object + evidence metadata ─▶ exact run step
                                         ... loop until done / give_up / step budget ...
                                                                synthesize report ─▶ Supabase ─▶ report page + email
-Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
+Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), GEO readiness (AI crawler access, content before JavaScript, structured data, answerability), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
 
-Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call
-Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits table
+Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call; the API decides the plan
+Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webhook ─▶ API ─▶ entitlements table
 ```
 
 ## Components
@@ -39,13 +39,95 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 4. **Text snapshot first, screenshots rarely** (first impression and when stuck). Tokens are the main cost.
 5. **Plain code wherever possible.** Accessibility, performance, SEO and security checks are deterministic integrations. LLMs explain and prioritize the evidence; only the persona session is an agent.
 6. **Passive security only, on verified domains** (meta tag, DNS TXT or well-known file).
-7. **Credits, not tokens,** for billing. One credit = one persona run. Tokens logged per run for margins.
+7. **Runs, not tokens,** for billing. One run = one persona journey; plans include a run allowance (SPEC.md). Tokens logged per run for margins.
 8. **react-router** for `/`, `/login`, `/app`, `/app/runs/:id`. Production host must rewrite all paths to `index.html` (Vercel: `rewrites` in vercel.json).
 9. **Reads bypass the API.** The web app reads `runs` straight from Supabase under RLS; only the API (postgres role) writes. Fewer endpoints, and the DB enforces ownership.
 10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 11. **Decision providers are replaceable, LangGraph is not.** The persona graph owns state, interrupts, budgets, and termination. A Jev provider may choose bounded operations and targets; the existing LLM remains responsible for open-ended generation and fallback. Safety stays in deterministic code.
 12. **Step evidence is private and bounded.** The extension captures at most eight JPEG frames per run after meaningful actions, hides Scout and masks form controls for the captured paint, then uploads directly to the private `run-evidence` bucket with the user's JWT. The API only accepts a screenshot path beneath the current run id. Reports request one-hour signed URLs; public reports can read evidence only when the owning run is public.
 13. **Browser diagnostics belong to journey steps.** The injected script runs bounded axe WCAG A/AA checks and observes LCP, CLS and INP in the tested tab. Each post-action observation is validated by the API and attached to the exact LangGraph step. Deterministic report code turns failing thresholds into prioritized findings; the LLM explains and ranks but does not invent these measurements.
+
+14. **The server owns the plan.** The client never says which tier it is. `POST /runs` reads the caller's entitlement and clamps steps, logged-in access, test user, site and monthly runs before a LangGraph thread exists.
+15. **GEO is deterministic and reuses the site audit.** No new crawler, no LLM calls for the score. The SSRF-safe fetcher and the audited page set are shared by SEO, security and GEO.
+16. **Over time means comparison, not more runs.** Reruns and weekly watch compare finding fingerprints against the previous result for the same site. Only changes are reported and emailed.
+
+## v1.1 capability map
+
+Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.md).
+
+| Module id | Responsibility | Depends on | Status |
+|---|---|---|---|
+| `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Planned |
+| `geo-scan` | AI readiness score, GEO findings, "what AI search sees" label | site audit (live) | Planned |
+| `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
+| `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
+| `share-loop` | Public report with AI readiness score in page meta, "Checked by Walkthru" badge with backlink | `geo-scan` | Planned |
+| `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
+| `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
+| `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
+| `personas-plus` | Custom test users and several test users per report | `entitlements` | Planned, post-launch |
+| `cloud-runner` | Headless Chrome on the API VM driving the same `inject.js` for public journeys without an install | `entitlements` | Conditional on the extension funnel experiment |
+
+Dependency direction is one way. `entitlements` comes first because every paid promise depends on it.
+
+### `entitlements`
+- `app/plans.py`: one dict of plans (free, launch, pro, plus) with limits: runs per period, max steps, logged-in allowed, test users, verified sites, SEO and GEO pages, compare, watch, pdf, white label. No config classes.
+- Table `entitlements(id, user_id, plan, starts_at, expires_at, runs_granted, source, created_at)`.
+  - `source` is `founder`, `dodo` or `promo`.
+  - V1 rows are inserted by the founder (payment.md concierge flow). Later a verified Dodo webhook writes them.
+  - Balances follow payment.md's append-only ledger when billing lands.
+- `effective_plan(user_id)`: the active, unexpired row, otherwise free.
+- Monthly usage: count of the user's `runs` rows with `kind='test'` since the period start, through PostgREST `Prefer: count=exact`. No counter table.
+- `POST /runs` ignores client `tier`.
+  - Rejects `logged_in` on free.
+  - Clamps `max_steps` to the plan.
+  - Rejects a persona outside the plan.
+  - Rejects a site beyond the verified-site count.
+  - Returns 402 with a plain message when runs are used up.
+- `GET /me/plan` returns the plan, its limits and runs left, so the side panel and dashboard show them.
+- Global free-capacity guard: `FREE_RUNS_PER_DAY` (default 90, about 80% of the Groq free budget of 3 models × 1,000 requests a day ÷ about 27 calls per run). Past it, free runs get "Free test capacity is used up for today"; paid runs continue on the full chain.
+
+### `geo-scan`
+- `app/scans/geo.py`: `audit(root, pages, robots_text, llms, bot_probe) -> GeoResult(score, categories, findings)`. It uses pages the site audit already fetched.
+  - `Finding.kind` gains `"geo"`.
+  - The report gains `geo: {score, band, categories}`.
+  - The report is stored as JSON in `runs.report`, so no SQL migration is needed.
+- **Two extra passive requests:**
+  - `GET /llms.txt`.
+  - One homepage `GET` with the `OAI-SearchBot` user agent, compared with the normal response. A 403 or challenge page becomes "blocked for AI search user agents".
+  - A 200 is reported as "not blocked by user agent". Edge networks verify real bots by IP, so the probe cannot prove access.
+- **Free:** homepage and `robots.txt` categories only. **Paid:** every audited page.
+- **Pro's 50-page promise:**
+  - Today the crawler caps at 20 pages and 20 s.
+  - Pro scans run in a background task with `max_pages=50` and a 60 s budget.
+  - The result is written to the report when done.
+  - Instant Scan keeps 10 pages and 20 s.
+
+### `fix-pack`
+- `app/scans/geo_fixes.py`: pure functions from `GeoResult` and the audited pages to text blocks:
+  - a `robots.txt` section allowing citation bots;
+  - `Organization`, `WebSite` and `SoftwareApplication` JSON-LD filled from title, description and Open Graph tags;
+  - an `llms.txt` draft listing audited pages;
+  - a rendering fix picked by framework markers: `id="root"` plus `/assets/index-*.js` means a Vite SPA (prerender or SSG); `__NEXT_DATA__` means Next.js (keep pages server-rendered); Lovable and Astro have their own markers.
+- No model calls. Shown in the report with copy buttons.
+
+### `rerun-compare`
+- **Data:** column `runs.parent_run_id text`. `POST /runs` and `POST /scans` accept `rerun_of`; the API checks the parent belongs to the caller and has the same origin.
+- **Fingerprint:** `kind | normalized title | URL path` of each finding. Evidence text is not part of it, so reworded evidence still matches.
+- **Comparison:** `report.comparison = {fixed, still_broken, new}` is computed in code after synthesis, never by the LLM.
+- **Report page:** shows the three lists above the findings.
+
+### `watch` (post-launch)
+- Table `sites(id, user_id, origin, verified_at, watch boolean, deploy_token_hash, last_watch_run_id)`.
+- A weekly job thread, the same pattern as `app/retention.py`, runs a server-side scan for due sites (`kind='watch'`). It is compared with `last_watch_run_id` via `rerun-compare`, and an email goes through Resend only when something is new or fixed.
+- `POST /hooks/deploy/{token}` (Vercel or Netlify deploy hook) triggers the same scan. It is rate limited to one scan every 10 minutes per site.
+- Journeys on deploy need `cloud-runner`, so watch covers the server-side checks only.
+
+### `cloud-runner` (conditional)
+- **Why:** removes the install step for public-page journeys.
+- **Built only if** fewer than 25% of beta users who click "Run a test" finish a run.
+- **How:** the Oracle ARM VM runs headless Chrome. A worker drives the built `inject.js` over CDP, the same way `evals/e2e_extension.py` already does, and calls the same `/runs` step API.
+- **Limits:** public pages only, one concurrent run, and the same safety code. Logged-in journeys always stay in the owner's browser.
 
 ## Experimental TypeSafe decision path
 
