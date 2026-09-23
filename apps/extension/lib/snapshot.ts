@@ -3,13 +3,15 @@
 import { redact } from "./redact";
 import type { BrowserDiagnostics } from "./diagnostics";
 
-export type Element = { id: number; tag: string; text: string; type?: string };
+export type FieldState = "filled" | "empty" | "checked" | "unchecked";
+export type Element = { id: number; tag: string; text: string; type?: string; state?: FieldState };
 export type Observation = {
   url: string;
   title: string;
   elements: Element[];
   text: string;
   errors: string[];
+  notices?: string[];
   note?: string;
   diagnostics?: BrowserDiagnostics;
 };
@@ -37,6 +39,19 @@ function visible(el: globalThis.Element, geometry: boolean): boolean {
   if (!geometry) return true;
   const r = el.getBoundingClientRect();
   return r.width > 0 && r.height > 0;
+}
+
+/** Whether a form field holds something, never what it holds (values are private). */
+function fieldState(el: globalThis.Element): FieldState | undefined {
+  if (el.tagName === "INPUT") {
+    const input = el as HTMLInputElement;
+    if (input.type === "checkbox" || input.type === "radio") return input.checked ? "checked" : "unchecked";
+    if (["submit", "button", "image", "reset", "hidden", "file"].includes(input.type)) return undefined;
+    return input.value.trim() ? "filled" : "empty";
+  }
+  if (el.tagName === "TEXTAREA") return (el as HTMLTextAreaElement).value.trim() ? "filled" : "empty";
+  if (el.tagName === "SELECT") return (el as HTMLSelectElement).value ? "filled" : "empty";
+  return undefined;
 }
 
 function label(el: globalThis.Element): string {
@@ -72,6 +87,18 @@ function errors(doc: Document, geometry: boolean): string[] {
   return [...out].slice(0, 10);
 }
 
+/** Visible confirmations ("Thanks! Your message was sent"), so the agent knows an action succeeded. */
+function notices(doc: Document, geometry: boolean, errorsSeen: string[]): string[] {
+  const sel = '[role="status"], [aria-live="polite"], .success, [class*="success"], [class*="toast"]';
+  const out = new Set<string>();
+  for (const el of doc.querySelectorAll(sel)) {
+    if (!visible(el, geometry)) continue;
+    const t = ((el as HTMLElement).innerText ?? el.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (t && t.length <= 200 && !errorsSeen.includes(t)) out.add(t);
+  }
+  return [...out].slice(0, 5);
+}
+
 function captcha(doc: Document): boolean {
   if (doc.querySelector('iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="turnstile"], .g-recaptcha, .h-captcha')) return true;
   return /\bcaptcha\b/i.test(doc.body?.textContent ?? "");
@@ -88,7 +115,8 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     el.setAttribute(ID_ATTR, String(id));
     const tag = el.tagName === "INPUT" ? "input" : el.tagName.toLowerCase();
     const type = el.tagName === "INPUT" ? (el as HTMLInputElement).type : undefined;
-    elements.push({ id, tag, text: redact(label(el)), ...(type ? { type } : {}) });
+    const state = fieldState(el);
+    elements.push({ id, tag, text: redact(label(el)), ...(type ? { type } : {}), ...(state ? { state } : {}) });
     if (elements.length >= MAX_ELEMENTS) break;
   }
   const body = doc.body as HTMLElement | null;
@@ -100,6 +128,8 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     text,
     errors: errors(doc, geometry).map(redact),
   };
+  const confirmations = notices(doc, geometry, obs.errors).map(redact);
+  if (confirmations.length) obs.notices = confirmations;
   if (captcha(doc)) obs.note = "captcha detected";
   return obs;
 }

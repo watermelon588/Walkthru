@@ -211,6 +211,10 @@ def main() -> int:
         reply = reply.json()
         timing["api"] = time.time() - t
         run_id, steps, captured = reply["run_id"], [], 0
+        verified = bool(reply.get("verified"))
+        auto_confirm = os.environ.get("AUTO_CONFIRM") == "1"  # stands in for the owner's confirm dialog
+        sent_once = False
+        print(f"{clock()} domain verified: {verified}; owner approves sends: {auto_confirm}")
         while reply["status"] == "running":
             step = reply["action"]
             steps.append(step)
@@ -219,16 +223,28 @@ def main() -> int:
             )
             note = None
             if step["action"] not in ("done", "give_up"):
-                result = tab.message(
-                    {"type": "act", "step": step, "opts": {"logged_in": False}}
-                )
-                note = result.get("note") if isinstance(result, dict) else None
+                base = {"logged_in": False, "verified": verified}
+                confirmed, note = False, None
+                if step["action"] == "click" and verified:  # mirrors act() in sidepanel/run.ts
+                    probe = tab.message({"type": "act", "step": step, "opts": base | {"dryRun": True}})
+                    note = probe.get("note")
+                    if not note and probe.get("confirm") == "send" and sent_once:
+                        note = "a message was already sent in this run; Walkthru never sends twice"
+                    elif not note and probe.get("confirm") == "send":
+                        confirmed = sent_once = auto_confirm
+                        note = None if confirmed else "the site owner declined this submit"
+                        print(f"{clock()}   owner asked to approve a real send: {'approved' if confirmed else 'declined'}")
+                if note is None:
+                    result = tab.message({"type": "act", "step": step, "opts": base | {"confirmed": confirmed}})
+                    note = result.get("note") if isinstance(result, dict) else None
+                if note:
+                    print(f"{clock()}   executor: {note}")
                 time.sleep(SETTLE_S)
                 tab.wait_loaded()
             url = tab.js("location.href")
             if not url.startswith(origin):
                 print(f"{clock()} left the site ({url}); closing run")
-                api.post(f"/runs/{run_id}/stop").raise_for_status()
+                api.post(f"/runs/{run_id}/stop", json={"reason": f"the last click led away from the site, to {url}"}).raise_for_status()
                 break
             t = time.time()
             obs = tab.message({"type": "snapshot"})

@@ -40,6 +40,8 @@ class Handler(SimpleHTTPRequestHandler):
         return HEADERS[self.site].get("Server") or "fixture"
 
     def end_headers(self):
+        # Tells Walkthru to judge these local fixtures like production sites (headers, transport, speed).
+        self.send_header("X-Walkthru-Fixture", "production")
         for k, v in HEADERS[self.site].items():
             if k != "Server":
                 self.send_header(k, v)
@@ -53,7 +55,23 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = EXPOSED[self.path]
         if self.site == "hard" and self.path == "/app.js":
             return self._send_bundle()
+        if self.site == "easy" and self.path == "/.well-known/walkthru.txt":
+            return self._send_verification()
         return super().send_head()
+
+    def _send_verification(self):
+        """Domain-verification file for local owner tests. Token lives in evals/.walkthru-token (git-ignored)."""
+        token_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".walkthru-token")
+        if not os.path.exists(token_file):
+            self.send_error(404)
+            return None
+        with open(token_file, encoding="utf-8") as f:
+            data = f.read().strip().encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        return io.BytesIO(data)
 
     def _send_bundle(self):
         # X4: fake secrets assembled here so the literal patterns never sit in git.

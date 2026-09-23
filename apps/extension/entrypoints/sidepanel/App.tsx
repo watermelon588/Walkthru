@@ -18,6 +18,7 @@ const STATUS_COPY: Record<string, string> = {
   stuck: "Kept trying the same thing and got stuck.",
   captcha: "Stopped at a CAPTCHA.",
   stopped: "Ended early. A partial report is being prepared.",
+  safe_stop: "Everything worked up to the send button. Walkthru only sends on verified domains, after you approve.",
 };
 
 export function App() {
@@ -45,7 +46,7 @@ export function App() {
   const agentState: AgentState = progress.phase === "error"
     ? "stopped"
     : progress.phase === "finished"
-      ? progress.status === "done" ? "complete" : "stopped"
+      ? progress.status === "done" || progress.status === "safe_stop" ? "complete" : "stopped"
       : running
         ? "observing"
         : "ready";

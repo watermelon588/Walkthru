@@ -34,6 +34,7 @@ class SiteAudit:
     seo: list[Finding]
     security: list[Finding]
     coverage: AuditCoverage
+    production_like: bool = False  # a local host that deliberately serves production headers (the eval fixtures)
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -155,6 +156,13 @@ def audit(
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
 
     if shell:
+        # Page-level checks read the served HTML. On a JavaScript-built page that is not what visitors or
+        # screen readers get, so say exactly what was checked.
+        seo_records = [
+            (f.model_copy(update={"detail": ("In the HTML sent before JavaScript runs: " + f.detail.replace(" and screen readers", ""))[:600]}), page)
+            if page == root_url else (f, page)
+            for f, page in seo_records
+        ]
         seo_records.append((Finding(
             kind="seo",
             severity="medium",
@@ -173,4 +181,5 @@ def audit(
     duration_ms = round((time.monotonic() - started) * 1000)
     truncated = bool(queue) or (time.monotonic() >= deadline and len(pages) < len(queued))
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])
-    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage)
+    production_like = root.headers.get("x-walkthru-fixture") == "production"
+    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage, production_like)

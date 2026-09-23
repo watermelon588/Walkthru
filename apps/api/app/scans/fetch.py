@@ -31,9 +31,9 @@ def assert_public(url: str) -> None:
             raise ValueError("site resolves to a private address")
 
 
-def client() -> httpx.Client:
+def client(timeout: float = 15) -> httpx.Client:
     # Ask for HTML like a browser: some hosts (Vercel "markdown for agents") serve Markdown to clients that do not.
-    return httpx.Client(follow_redirects=False, timeout=15, headers={"User-Agent": UA, "Accept": ACCEPT})
+    return httpx.Client(follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
 def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.Response | None:

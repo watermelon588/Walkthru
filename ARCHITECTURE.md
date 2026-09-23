@@ -81,6 +81,11 @@ or bounded action           |
 - **Agent state:** LangGraph uses an in-memory checkpointer unless `CHECKPOINTER=postgres`. Use Postgres when the API runs next to the database or on more than one instance.
 - **Models:** free chain of Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite (`GROQ_MODELS`, `GEMINI_MODELS`). Each Groq model has its own 8k tokens/min budget; zero retries so a 429 moves on instantly.
 
+## Journey safety and grounding
+- **Destructive** (pay, buy, checkout, delete, remove, cancel subscription, transfer, unsubscribe): never clicked as a button on any page; on logged-in pages not even typed into. **Sending** (send, invite): only on a domain the signed-in owner verified (meta tag or `/.well-known/walkthru.txt`), only after the owner confirms in the side panel, at most once per run. Plain links may navigate. Enforced in both `app/agent/persona.py::_enforce` and `apps/extension/lib/execute.ts`.
+- A run ended at such a button has status `safe_stop`. `mailto:`/`tel:` links are reported as contact methods and never opened.
+- Report grounding (`app/agent/report.py`): `problem_steps` defines where something went wrong; `grounded_ux` drops UX findings that cite no such step or restate a scan finding; the writer sees step outcomes, the final page's controls and a local-dev note, and the system prompt forbids unsupported claims.
+
 ## Data lifecycle
 - Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
 - `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.

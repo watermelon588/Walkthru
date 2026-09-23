@@ -43,6 +43,12 @@ def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": "Walkthru could not reach its database just now. Please try again in a few seconds."})
 
 
+if os.environ.get("WARMUP", "1") == "1":
+    # Import model clients and build the agent graph in the background so the first run after a start is not slow.
+    import threading
+
+    threading.Thread(target=lambda: runtime.graph("free"), name="warmup", daemon=True).start()
+
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
 
@@ -84,7 +90,7 @@ def _reply(run_id: str, tier: str, result: dict, background: BackgroundTasks) ->
     status = "running" if running else values["status"]
     db.update_run(run_id, status, values.get("steps", []), values.get("tokens", 0))
     if running:
-        return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value}
+        return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value, "verified": bool(values.get("verified"))}
     background.add_task(finish_run, run_id, values)
     return {"run_id": run_id, "status": status, "steps": values["steps"]}
 
@@ -100,7 +106,8 @@ def _owned(run_id: str, user: dict) -> dict:
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
-    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
+    verified = _verified(body.site, user["id"])  # owner-verified domains may send real messages after confirmation
+    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000], "verified": verified}
     result = runtime.invoke(body.tier, state, _cfg(run_id))
     return _reply(run_id, body.tier, result, background)
 
@@ -115,7 +122,7 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     if not runtime.get_state(row["tier"], _cfg(run_id)).next:
         # The live agent state is gone (API restarted with the in-memory checkpointer). Close the run
         # truthfully with its saved steps instead of failing; the extension shows "Ended early".
-        return stop_run(run_id, background, user)
+        return stop_run(run_id, background, StopRequest(reason="the Walkthru server restarted and lost the live test"), user=user)
     resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
@@ -129,8 +136,12 @@ def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
 
 
+class StopRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=300)  # why the browser ended early, shown to the report
+
+
 @app.post("/runs/{run_id}/stop")
-def stop_run(run_id: str, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def stop_run(run_id: str, background: BackgroundTasks, body: StopRequest | None = None, user: dict = Depends(require_user)) -> dict:
     """End an interrupted browser session and generate a truthful partial report."""
     row = _owned(run_id, user)
     if row["status"] == "stopped":
@@ -146,6 +157,8 @@ def stop_run(run_id: str, background: BackgroundTasks, user: dict = Depends(requ
     steps = [dict(step) for step in row.get("steps", [])]
     if steps and steps[-1].get("action") not in {"done", "give_up"}:
         steps[-1] = steps[-1] | {"interrupted": True}
+    if steps and body and body.reason:
+        steps[-1] = steps[-1] | {"note_after": body.reason}
     tokens = row.get("tokens", 0)
     first_text = ""
     try:
@@ -184,6 +197,7 @@ def finish_run(run_id: str, values: dict) -> None:
             status=values.get("status", row["status"]),
             steps=values.get("steps", []),
             verified=verified,
+            final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
         )
         rep.tokens += values.get("tokens", 0)
         db.set_report(run_id, rep.model_dump())
@@ -196,7 +210,7 @@ def finish_run(run_id: str, values: dict) -> None:
 def _verified(site: str, user_id: str) -> bool:
     try:
         fetch.assert_public(site)
-        with fetch.client() as c:
+        with fetch.client(timeout=5) as c:
             return security.verify_domain(site, security.verification_token(user_id), c)
     except Exception:  # noqa: BLE001 - unverified is the safe default
         return False

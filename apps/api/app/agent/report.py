@@ -34,6 +34,8 @@ class ReportState(TypedDict, total=False):
     seo_measured: bool
     security_measured: bool
     site_audit: dict
+    production_like: bool
+    final_controls: list[str]  # labels of the buttons, links and fields on the page where the journey ended
     synthesis: dict
     tokens: Annotated[int, operator.add]
     notes: Annotated[list[str], operator.add]  # non-fatal problems, e.g. a scan that could not fetch
@@ -106,6 +108,7 @@ def site_scan(state: ReportState) -> dict:
             "security": [finding.model_dump() for finding in result.security],
             "seo_measured": result.coverage.pages_scanned > 0,
             "security_measured": result.coverage.pages_scanned > 0,
+            "production_like": result.production_like,
             "site_audit": {
                 "pages_scanned": result.coverage.pages_scanned,
                 "page_limit": result.coverage.page_limit,
@@ -126,12 +129,26 @@ def site_scan(state: ReportState) -> dict:
 
 
 def render_steps(steps: list[dict]) -> str:
-    return "\n".join(
-        f"{i + 1}. [{s['action']}{' #' + str(s['target_id']) if s.get('target_id') is not None else ''}] "
-        f"confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}"
-        f"{' (interrupted before confirmation)' if s.get('interrupted') else ''}"
-        for i, s in enumerate(steps)
-    )
+    """Each step with where it started, where it ended and what the page showed afterwards."""
+    lines = []
+    for i, s in enumerate(steps):
+        target = f" #{s['target_id']}" if s.get("target_id") is not None else ""
+        line = f"{i + 1}. [{s['action']}{target}] confusion {s.get('confusion', 0)}/3 at {s.get('url', '?')}: {s['thought']}"
+        if s.get("interrupted"):
+            line += " (interrupted before confirmation)"
+        if s.get("result_url"):
+            moved = s["result_url"] != s.get("url")
+            line += f" -> ended on {s['result_url']}{' (navigation worked)' if moved else ''}"
+        if s.get("errors_after"):
+            line += f"; page then showed: {' | '.join(s['errors_after'])}"
+        if s.get("notices_after"):
+            line += f"; page then confirmed: {' | '.join(s['notices_after'])}"
+        if s.get("note_after"):
+            line += f"; executor: {s['note_after']}"
+        if s.get("safe_stop"):
+            line += " [Walkthru stopped here on purpose; not a site problem]"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
@@ -212,12 +229,34 @@ def _words(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 3}  # crude stem: "framed" ~ "frame"
 
 
-def grounded_ux(ux: list[Finding], code: list[Finding], has_steps: bool) -> list[Finding]:
-    """Keep only UX findings the journey supports: they must cite a step and must not restate a scan finding."""
+NOT_A_SITE_PROBLEM = ("working contact method", "not sent:", "safe mode", "never sends twice", "owner declined", "owner pressed stop")
+
+
+def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
+    """1-based numbers of steps where something observably went wrong. UX findings must cite one of these."""
+    out = set()
+    for i, s in enumerate(steps, start=1):
+        note = (s.get("note_after") or "").lower()
+        if s.get("safe_stop"):
+            continue
+        if (s.get("confusion", 0) >= 2 or s.get("errors_after") or s.get("interrupted") or s.get("action") == "give_up"
+                or (note and not any(k in note for k in NOT_A_SITE_PROBLEM))):
+            out.add(i)
+    if status in ("stuck", "budget"):
+        out |= set(range(max(1, len(steps) - 2), len(steps) + 1))
+    return out
+
+
+def grounded_ux(ux: list[Finding], code: list[Finding], steps: list[dict], status: str | None = None) -> list[Finding]:
+    """Keep only UX findings the journey supports: they must cite a step where something went wrong
+    and must not restate a scan finding. A journey where every step worked yields no UX findings."""
+    problems = problem_steps(steps, status)
     kept = []
     for f in ux:
-        if has_steps and not re.search(r"step\s*\d", f.evidence or "", re.IGNORECASE):
-            continue
+        if steps:
+            cited = {int(n) for n in re.findall(r"\d+", " ".join(re.findall(r"steps?\s*[\d,\s and]+", f.evidence or "", re.IGNORECASE)))}
+            if not cited & problems:
+                continue
         words = _words(f.title)
         if any(words and len(words & _words(c.title)) / len(words | _words(c.title)) >= 0.5 for c in code):
             continue
@@ -225,6 +264,33 @@ def grounded_ux(ux: list[Finding], code: list[Finding], has_steps: bool) -> list
             continue
         kept.append(f)
     return kept
+
+
+def is_local_site(url: str) -> bool:
+    """Local development servers: production transport, headers and speed cannot be judged there."""
+    import ipaddress
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(url).hostname or "").lower()
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False
+
+
+SYNTHESIS_SYSTEM = (
+    "You write short, concrete website reports for busy developers. Plain words, no jargon, no em dashes, no praise padding. "
+    "Every fix is one actionable sentence. The summary and fixes may only use facts given below: the scan findings, the journey steps and "
+    "their outcomes, and the first impression. Never add claims about content, links, testimonials or features you were not shown."
+)
+LOCAL_NOTE = (
+    "This is a local development server. Do not mention HTTPS, security headers, cookies or page speed; "
+    "those are judged on the deployed site."
+)
+# Only these security checks mean something on a dev server (they describe the code, not the host).
+CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle")
 
 
 def synthesize(state: ReportState) -> dict:
@@ -235,9 +301,16 @@ def synthesize(state: ReportState) -> dict:
         Finding.model_validate(f)
         for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("security", [])
     ]
+    local = is_local_site(state["site"]) and not state.get("production_like")
+    if local:
+        code_findings = [
+            f for f in code_findings
+            if f.kind != "performance" and (f.kind != "security" or any(k in f.title for k in CODE_LEVEL_SECURITY))
+        ]
     steps = state.get("steps", [])
     fi = state.get("first_impression") or {}
     context = [
+        *([LOCAL_NOTE] if local else []),
         f"Site: {state['site']}",
         (f"First impression: {fi.get('what', '?')} For: {fi.get('who', '?')} Clarity {fi.get('clarity', '?')}/3. Trust: {', '.join(fi.get('trust', []))}"
          if fi else "First impression: not available, the page had no readable text without JavaScript. Do not guess what the site looks like or contains."),
@@ -250,18 +323,27 @@ def synthesize(state: ReportState) -> dict:
         context.append("Context: the homepage is rendered by JavaScript. Google and screen readers do run JavaScript and see the content; "
                        "link previews (WhatsApp, LinkedIn, Slack), most AI crawlers and simpler search crawlers see an empty page. Do not overstate the impact.")
     if steps:
-        context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}. Outcome: {state.get('status')}.\nSteps:\n{render_steps(steps)}")
-        context.append("Steps that mention safe mode were stopped by Walkthru on purpose (it never sends, pays or deletes). They are not site problems; never report them as findings.")
+        context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}. Outcome: {'stopped by Walkthru at the send button (by design)' if state.get('status') == 'safe_stop' else state.get('status')}.\nSteps:\n{render_steps(steps)}")
+        context.append("Steps marked as stopped on purpose, or mentioning safe mode, were Walkthru's own choice. They are not site problems; never report them as findings.")
+        if state.get("final_controls"):
+            context.append("Controls visible on the page where the journey ended: " + "; ".join(state["final_controls"]) +
+                           ". Never claim a button, link or option is missing if it appears in this list, even if the test user said so.")
+        problems = sorted(problem_steps(steps, state.get("status")))
+        context.append(f"Steps where something went wrong: {', '.join(map(str, problems))}. Only these may support UX findings." if problems
+                       else "No step went wrong: every action worked. Write no UX findings and do not describe UX problems in the summary.")
+        context.append("Judge each step by its outcome: 'ended on' shows where it led and 'page then showed' is the exact error text the user saw. "
+                       "Only call something broken or missing when an outcome proves it, and quote that outcome as evidence. "
+                       "A step that ended on a new page worked. A field typed and then shown as filled worked.")
         task = "Write UX findings for where the test user hesitated, looped, hit errors or gave up; cite the step number as evidence. Then a summary and the top fixes across everything."
     else:
         context.append("No test user run; this is an Instant Scan of the homepage only.")
         task = "No UX findings from steps (leave ux_findings empty unless the first impression reveals a clarity problem). Write the summary and the top fixes across the first impression and scan findings."
     messages = [
-        ("system", "You write short, concrete website reports for busy developers. Plain words, no jargon, no em dashes, no praise padding. Every fix is one actionable sentence."),
+        ("system", SYNTHESIS_SYSTEM),
         ("human", "\n\n".join(context) + "\n\n" + task),
     ]
     syn, used = runtime.call(Synthesis, messages)
-    findings = [f.model_copy(update={"kind": "ux"}) for f in grounded_ux(syn.ux_findings, code_findings, bool(steps))] + code_findings
+    findings = [f.model_copy(update={"kind": "ux"}) for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))] + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])
     report = Report(
@@ -273,9 +355,9 @@ def synthesize(state: ReportState) -> dict:
         tokens=state.get("tokens", 0) + used,
         checks={
             "accessibility": "complete" if state.get("accessibility_measured", False) or browser_accessibility else "unavailable",
-            "performance": "complete" if state.get("performance_measured", False) or browser_performance else "unavailable",
+            "performance": "unavailable" if local else "complete" if state.get("performance_measured", False) or browser_performance else "unavailable",
             "seo": "complete" if state.get("seo_measured", False) else "unavailable",
-            "security": "complete" if state.get("security_measured", False) else "unavailable",
+            "security": "unavailable" if local else "complete" if state.get("security_measured", False) else "unavailable",
         },
         site_audit=state.get("site_audit"),
     )
@@ -299,10 +381,10 @@ def build_graph():
 _graph = None
 
 
-def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False) -> Report:
+def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None) -> Report:
     global _graph
     _graph = _graph or build_graph()
-    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "tokens": 0, "notes": []})
+    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "tokens": 0, "notes": []})
     report = Report.model_validate(out["synthesis"])
     report.tokens = out["tokens"]
     return report

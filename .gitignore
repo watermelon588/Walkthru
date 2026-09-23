@@ -10,3 +10,4 @@ node_modules/
 dist/
 graphify-out/
 .DS_Store
+evals/.walkthru-token
