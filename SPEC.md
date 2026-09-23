@@ -35,6 +35,13 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | **"What AI search sees"** | Yes | Yes | Yes | Yes |
 | **GEO fix pack** (robots.txt rules, JSON-LD, llms.txt draft, rendering fix for your framework) | Preview of 1 fix | Yes | Yes | Yes |
 | **Agent fix prompt**: one prompt for Cursor, Claude Code, Lovable or Bolt that fixes every finding in the report | Locked, shows how many fixes it holds | Yes | Yes | Yes |
+| **Launch Ready score**: UX, GEO, SEO, security and speed in one number, with a live badge for your site | Yes | Yes | Yes | Yes |
+| **Signup email check**: SPF, DMARC and MX records, plus auth-mailer limits spotted in journeys | SPF and DMARC | Full | Full | Full |
+| **Ignore a finding** ("won't fix", with a reason) | No | Yes | Yes | Yes |
+| **Signup funnel numbers**: steps, fields, errors and time to the first useful screen, across reruns | No | Yes | Yes | Yes |
+| **Landing copy review**: headline, call to action, pricing clarity, rewrite options | No | Yes | Yes | Yes |
+| **Competitor side by side** (passive scans) | No | 3 competitors | 3 competitors | 3 competitors per site |
+| **Walkthru MCP server**: Claude Code, Cursor and other agents scan, read the fix prompt and rerun from the editor | No | No | No | Yes |
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
 | Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
 | Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
@@ -59,6 +66,8 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 - **Last step:** "rerun Walkthru to verify", with the list of findings expected to flip to fixed.
 - **Formats:** a full Markdown version (Cursor, Claude Code, Codex), a short chat version for Lovable and Bolt, and a `walkthru-fixes.md` download.
 - **Privacy:** leaked key values are masked. Journey text never includes personal data. The API serves it only to paid plans; it is not stored in the report, so the free tier cannot read it through the report row.
+
+**Next versions, not in v1.1:** the preview-deploy check (GitHub Action with a PR comment), exporting findings to GitHub Issues or Linear, and AI citation tracking.
 
 **Not sold in V1:** AI citation tracking ("does ChatGPT mention you for this prompt"). It costs model and search calls on every check and needs its own evaluation. Candidate Plus add-on after launch.
 

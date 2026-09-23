@@ -88,17 +88,25 @@ _Last updated: 2026-09-24_
 - **Fresh T23 browser verification pending.** Rebuild and reload the extension, run the easy fixture once, then confirm the selected journey step shows axe status and any available LCP, CLS or INP values in the report inspector and PDF.
 
 ## Next up
-The v1.1 plan (2026-09-24) replaces the old list. See ROADMAP.md for the 22 weak points and their fixes, and tasks/todo.md for tasks V1 to V14.
-1. **Founder:**
-   - Prices confirmed 2026-09-24: $19 Pro and $49 Plus, founding $15 and $39.
-   - Start experiment A1: 30 free Instant Scans with a $9 founding Launch Pack line.
-   - Buy the domain, register for the Chrome Web Store, set up the Oracle VM and Dodo test mode, enable OAuth, rotate Supabase secrets.
-2. **Build, phase B:**
-   - V1 server-owned entitlements. Today the client picks its own tier, so no plan limit is real.
-   - V2 GEO readiness scanner.
-   - V3 GEO traps and Checkpoint B trap recall.
-3. **Phase C:** V4 rerun and compare, V5 GEO fix pack, V15 agent fix prompt, V6 50-page paid audit, V7 evidence and PDF close-out (includes the pending fresh screenshot run), V8 share loop.
-4. **Phase D, in parallel:** V9 landing copy, V10 concierge billing, V11 deploy and store submission by 2026-10-08. Launch 2026-10-20 with Free, Launch Pack and Pro; Plus is a waitlist.
+Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
+- **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
+- **Plus opens:** 2026-11-22 at the latest.
+
+1. **Next session (1):** V1 server-owned plans with the dev grant script. Today the client picks its own tier, so no plan limit is real.
+2. **Then:**
+   - Session 2: V2 GEO scanner.
+   - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.
+   - Session 4: V4 rerun and compare, plus V17 ignore a finding.
+   - Session 5: V5 fix pack, plus V15 agent fix prompt.
+   - Session 6: deploy, and store submission on 10-08.
+3. **Founder, now:**
+   - Start Dodo live-mode verification.
+   - Buy the domain by 10-05.
+   - Chrome Web Store account.
+   - Oracle VM.
+   - Experiments A1 to A3.
+   - Enable OAuth.
+   - Rotate Supabase secrets before session 6.
 
 ## Known issues and notes
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.

@@ -62,7 +62,13 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
 | `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Planned |
-| `share-loop` | Public report with AI readiness score in page meta, "Checked by Walkthru" badge with backlink | `geo-scan` | Planned |
+| `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Planned |
+| `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Planned |
+| `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Planned |
+| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
+| `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
+| `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
+| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Planned, post-launch |
 | `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
@@ -126,6 +132,69 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - **Fingerprint:** `kind | normalized title | URL path` of each finding. Evidence text is not part of it, so reworded evidence still matches.
 - **Comparison:** `report.comparison = {fixed, still_broken, new}` is computed in code after synthesis, never by the LLM.
 - **Report page:** shows the three lists above the findings.
+
+### `share-loop` (Launch Ready score and badge)
+- The score is computed in code from categories the report actually measured:
+
+  | Area | Weight | Basis |
+  |---|---:|---|
+  | UX | 30 | Journey outcome and UX finding severity |
+  | Security | 20 | Security findings |
+  | GEO | 20 | The GEO score |
+  | SEO | 15 | SEO findings |
+  | Speed and accessibility | 15 | Performance and accessibility findings |
+
+  An area that was not measured is shown as "not measured" and its weight is shared among the others. An Instant Scan has no UX area.
+- **Ignored findings still count** in the score, so the badge cannot be gamed. They only stop repeating in lists.
+- `GET /badge/{site_id}.svg` is an SVG with the latest score, cached for one hour. It is served only when the owner turned the badge on. It links to the public report.
+
+### `email-check`
+- `app/scans/email.py` reads DNS over HTTPS with the existing httpx client, from a fixed trusted resolver (`https://cloudflare-dns.com/dns-query`, `accept: application/dns-json`). No new dependency.
+- **Checks:** MX, SPF (`v=spf1`), DMARC (`_dmarc.<domain>`, policy). DKIM is only checked when the user names a selector, because selectors cannot be listed.
+- **Journey errors map to causes:**
+  - "email rate limit exceeded" is Supabase's built-in mailer limit. The fix is your own SMTP.
+  - Similar patterns for Firebase and Clerk are added only after one is seen in a real run.
+- **Free:** SPF and DMARC. **Paid:** everything above.
+
+### `finding-states`
+- Table `finding_states(user_id, origin, fingerprint, state, reason, created_at)`. `state` is `ignored` for now.
+- **Report:** shows "ignored" with the reason.
+- **Where ignored items are left out:** the fix prompt, rerun "new" and "still broken" lists, and watch emails. They are always kept in the score (see `share-loop`).
+
+### `funnel-metrics`
+- A pure function over stored steps: number of steps to reach the goal, fields typed, errors seen, safe stops, and time to the first useful screen from step timestamps.
+- Stored in `report.funnel` on paid runs. Compared across reruns through `rerun-compare`.
+
+### `copy-review`
+- One `runtime.call(CopyReview, ...)` on the homepage and pricing-page text, using the same free writer chain as the report.
+- **Output:** a verdict on the headline, call to action and pricing clarity, plus up to 3 rewrite options, labeled as suggestions.
+- Generated only when the run's plan includes it, so free reports never contain it.
+
+### `competitor-compare` (post-launch)
+- `POST /compare {site, competitors[<=3]}` runs the Instant Scan pipeline on each URL: 10-page audit, GEO, first impression, and public headers only. Deep security checks never run on sites the user has not verified.
+- **Storage:** a `kind='compare'` run with side-by-side categories.
+- **Cost:** one model call per URL (first impression). Rate limited per plan.
+
+### `mcp` (post-launch)
+- **Server:** a remote MCP server at `/mcp` over streamable HTTP, mounted in the FastAPI app with the official `mcp` Python SDK. The founder approved the MCP feature on 2026-09-24, and with it this new dependency. Nothing to install on the user's side: they paste the URL and key into Claude Code or Cursor.
+- **Auth:** a personal API key in a bearer header.
+  - Table `api_keys(id, user_id, name, key_hash, created_at, last_used_at, revoked_at)`.
+  - The key is shown once and stored as SHA-256.
+  - Plus plan only.
+- **Tools:**
+  - `scan_site(url)`.
+  - `get_report(run_id)`.
+  - `get_fix_prompt(run_id)`.
+  - `rerun(run_id)`: server-side checks. Journeys rerun in the extension until the cloud runner exists.
+  - `list_runs(site)`.
+- **Limits:** every tool goes through the same entitlement and rate-limit checks as the web API.
+
+### Testing paid plans in development (no spend)
+- **Plans are data.** `apps/api/scripts/grant_plan.py EMAIL PLAN DAYS` inserts an `entitlements` row with `source='dev'` for a test account. Expiring the row reverts the account to free. The dev stack has a test account for each plan.
+- **No plan uses a paid model.** Paid features are deterministic code, or use the same free chain as free reports. Testing Pro and Plus costs $0 in model calls.
+- **pytest** fakes every model call (existing pattern). Plan limits are tested with crafted requests.
+- **Dodo test mode:** test products and test cards, no real money. Webhooks fire for test payments like live ones. Locally they reach the API through a tunnel (cloudflared or ngrok); after deploy, through the VM URL. Sources: [Dodo testing process](https://docs.dodopayments.com/miscellaneous/testing-process).
+- **Live model checks stay small:** a few runs a day on the free chain. The bakeoff and trap scorer replay saved runs.
 
 ### `watch` (post-launch)
 - Table `sites(id, user_id, origin, verified_at, watch boolean, deploy_token_hash, last_watch_run_id)`.
