@@ -1,6 +1,6 @@
 # Current State
 
-_Last updated: 2026-09-23_
+_Last updated: 2026-09-24_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
@@ -66,6 +66,7 @@ _Last updated: 2026-09-23_
   - Reports: UX findings must cite a step where something went wrong (confusion 2+, a visible error, an executor problem, an interruption, giving up, a loop); a journey where everything worked has no UX findings. The writer sees each step's outcome and the final page's controls, and may not add unsupported claims. Local dev servers skip HTTPS, header and speed findings (fixtures opt out with `X-Walkthru-Fixture: production`). JavaScript-built pages label page checks as "before JavaScript runs".
   - Live results: portfolio contact goal fills all 5 fields once and stops at the send button with a fully grounded report; Tripverse signup quotes the real "email rate limit exceeded" error with no localhost noise; the verified fixture contact form sends exactly once after approval and sees the confirmation. 96 API tests, 27 extension tests.
   - The API pre-builds the agent at start so the first run is not slow. `dev.py` no longer refuses to start when another app holds 127.0.0.1:5173.
+- **Report writer model chosen by measurement (2026-09-24).** `evals/model_bakeoff.py` replayed the production report prompt on five saved runs across seven free models (table in `docs/decisions.md`). Report calls now go Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (free, 90 s budget), then the fast chain; persona steps are unchanged. Grounding already removed invented findings from every model; Ultra wrote the most careful summaries (it never blamed the site for a Walkthru safety stop, gpt-oss-20b once did). Cost: reports can take about a minute longer when Groq is rate-limited.
 
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -96,9 +97,10 @@ _Last updated: 2026-09-23_
 - The production web and extension bundles both exceed the default 500 kB warning threshold. Builds pass; route/chunk splitting should be scheduled before launch.
 - Automatic report email delivery still requires a non-empty `RESEND_API_KEY` and a verified `RESEND_FROM`; local development falls back to the user's email client.
 - Remote: https://github.com/watermelon588/Walkthru.git. Pushed 2026-09-18.
-- No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
+- No Anthropic budget for now: everything runs on free providers (Groq, Gemini, OpenRouter free models for the report writer). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
+- 2026-09-24 report writer: API 99 pytest pass and Ruff is clean. A live Tripverse report through the new chain with 120b disabled fell through an overloaded Ultra in 0.7 s and still produced a grounded report quoting the real error.
 - 2026-09-21 interrupted-run recovery: API 69 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 19 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. Live API health and extension-origin stop preflight return 200. The remaining stale run was converted to `stopped` and its report is ready.
 - 2026-09-21 T23 browser evidence: API 68 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 18 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. `axe-core` 4.13.0 reports no audited dependency vulnerabilities; the new wire and report mappings have direct regression coverage.
 - 2026-09-21 local CORS closure: API 66 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 15 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. Live preflights for `localhost:5173`, `127.0.0.1:5173` and the configured extension origin all return 200 with the exact allow-origin header.

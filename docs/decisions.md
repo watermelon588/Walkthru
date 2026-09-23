@@ -76,3 +76,27 @@ Risk probes supported conservative fallback:
 **Decision:** build an opt-in hybrid adapter with a 0.50 starting confidence floor, deterministic values for known identity fields, and LLM fallback for low confidence, provider errors, and open-ended typing. Keep the existing LLM as the default until the real hard-fixture benchmark clears the product recall gate. Pin `jev-1.13.0` during evaluation.
 
 Additional sources: [HTTP API](https://docs.typesafe.ai/api), [structured state](https://docs.typesafe.ai/concepts/state), [confidence routing](https://docs.typesafe.ai/confidence), and [speculative fan-out](https://docs.typesafe.ai/patterns/fan-out).
+
+## 2026-09-24 Report writer model
+
+**Question:** would a stronger free model stop the report inventing problems?
+
+**Method:** `evals/model_bakeoff.py` replays the exact production report prompt for five saved runs: three where nothing went wrong (portfolio contact twice, verified fixture send) and two Tripverse signups that hit a real "email rate limit exceeded" error. "Invented" means a UX finding the production filter (`grounded_ux`) would drop. "Summary invents" means problem words in the summary of a run with no problem.
+
+| Model | Answered | Invented (filtered) | Caught the real error | Summary invents | Median |
+|---|---:|---:|---:|---:|---:|
+| Groq gpt-oss-120b | 2/5 (rest 429) | 0 | not reached | 0/2 | 2.9 s |
+| Groq gpt-oss-20b | 4/5 (one schema 400) | 0 | 2/2 | 1/2 | 2.4 s |
+| OpenRouter Nemotron 3 Ultra (free) | 4/5 (one empty reply) | 1 | 2/2 | 0/2 | 58 s |
+| OpenRouter Nemotron 3 Super (free) | 5/5 | 2 | 1/2 | 1/3 | 6 to 53 s |
+| OpenRouter Gemma 4 31B (free) | 0/5, rate-limited upstream | | | | |
+| Gemini 3.5 Flash | 0/5, 503 | | | | |
+| OpenRouter Nex N2.5 Pro (free) | cut off after 355 s | | | | |
+
+gpt-oss-20b's flagged summary said the portfolio form "cannot be submitted because the domain is not verified", blaming the site for Walkthru's own safety stop. Nemotron Ultra wrote "the walkthrough stopped at the submit button by design" for the same run.
+
+**Finding:** the grounding code already removes invented findings from every model. The model mostly changes the summary and the fixes, and there Nemotron Ultra and gpt-oss-120b were the most careful.
+
+**Decision:** report writing goes Groq gpt-oss-120b, then Nemotron 3 Ultra through OpenRouter (90 s budget), then the fast chain. Persona steps stay on the fast chain, because a step cannot wait 60 s. The persona steps usually use up 120b's per-minute budget, so in practice Ultra writes most reports. That adds about a minute to report time and costs nothing. A 503 or 429 from OpenRouter falls through in under a second.
+
+**Revisit when:** a paid tier exists (the T9 eval decides the paid writer), or OpenRouter's free Ultra becomes unreliable. Rerun the bakeoff with `MODELS=... python evals/model_bakeoff.py`.

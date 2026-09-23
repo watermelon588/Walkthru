@@ -7,6 +7,7 @@ it returns the parsed object plus the tokens used, so every run can log its cost
 import atexit
 import os
 from functools import lru_cache
+from types import SimpleNamespace
 from typing import Any
 
 from dotenv import load_dotenv
@@ -52,24 +53,55 @@ def _models(env: str, first: str | None, default: str) -> list[str]:
 # Several free models, each with its own rate budget (Groq free tier: 8k tokens/min per model).
 GROQ_MODELS = _models("GROQ_MODELS", os.environ.get("GROQ_MODEL"), "openai/gpt-oss-120b,openai/gpt-oss-20b,qwen/qwen3.8-27b")
 GEMINI_MODELS = _models("GEMINI_MODELS", None, "gemini-3.5-flash,gemini-3.1-flash-lite")
+# Slow (median about 60 s) but the most careful free report writer we measured; see docs/decisions.md.
+OPENROUTER_MODELS = _models("OPENROUTER_MODELS", None, "nvidia/nemotron-3-ultra-550b-a55b:free")
 
 
-def free_pool(schema: type[BaseModel]):
+def openrouter(schema: type[BaseModel], model: str, timeout: float = 90):
+    """One OpenRouter model as a runnable, over plain httpx. A forced tool call returns the schema's JSON."""
+    import httpx
+    from langchain_core.runnables import RunnableLambda
+
+    tool = {"type": "function", "function": {"name": "answer", "description": "Return the answer.", "parameters": schema.model_json_schema()}}
+
+    def run(messages: list) -> dict:
+        body = {
+            "model": model, "temperature": 0, "tools": [tool], "tool_choice": {"type": "function", "function": {"name": "answer"}},
+            "messages": [{"role": "user" if role == "human" else role, "content": text} for role, text in messages],
+        }
+        headers = {"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"}
+        r = httpx.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body, timeout=httpx.Timeout(timeout, connect=5.0))
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("choices"):  # free providers sometimes answer 200 with only an error body
+            raise RuntimeError(f"OpenRouter {model}: {str(data.get('error'))[:200]}")
+        args = data["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+        raw = SimpleNamespace(usage_metadata={"total_tokens": (data.get("usage") or {}).get("total_tokens", 0)})
+        return {"raw": raw, "parsed": schema.model_validate_json(args), "parsing_error": None}
+
+    return RunnableLambda(run, name=f"openrouter:{model}")
+
+
+def free_pool(schema: type[BaseModel], writer: bool = False):
     """Try each free model in order and move on instantly when one is rate-limited, overloaded or slow.
 
     max_retries=0 everywhere: a 429 or 503 falls through to the next model in milliseconds instead of
     sleeping on retry-after. reasoning_effort=low keeps gpt-oss from long reasoning spirals.
+    writer=True (report text, one call per run): truth beats speed, so the careful OpenRouter writer comes
+    right after the first Groq model (which the persona steps have usually rate-limited by report time).
+    Persona steps stay on the fast models only.
     """
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_groq import ChatGroq
 
-    chain = []
+    groq = []
     for name in GROQ_MODELS:
         gpt_oss = name.startswith("openai/gpt-oss")
         llm = ChatGroq(model=name, temperature=0, max_tokens=2048, timeout=8, max_retries=0, **({"reasoning_effort": "low"} if gpt_oss else {}))
-        chain.append(llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {})))
-    for name in GEMINI_MODELS:
-        chain.append(ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True))
+        groq.append(llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {})))
+    gemini = [ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True) for name in GEMINI_MODELS]
+    slow = [openrouter(schema, name) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
+    chain = groq[:1] + slow + groq[1:] + gemini
     return chain[0].with_fallbacks(chain[1:])
 
 
@@ -112,7 +144,7 @@ def unwrap(result: Any) -> tuple[Any, int]:
 
 @lru_cache(maxsize=8)
 def structured(schema: type[BaseModel]):
-    return free_pool(schema)
+    return free_pool(schema, writer=True)  # only the report calls come through here
 
 
 def call(schema: type[BaseModel], messages: list) -> tuple[Any, int]:
