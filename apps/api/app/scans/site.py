@@ -153,6 +153,10 @@ def audit(
         security_records.extend((finding, None) for finding in security.check_exposed(base, client))
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
 
+    if not pages:  # never report a clean audit when nothing was actually checked
+        kind = root.headers.get("content-type", "unknown")
+        seo_records.append((Finding(kind="seo", severity="medium", title="No HTML pages could be audited", detail=f"The homepage answered with {kind} instead of HTML, so page-level SEO and security checks did not run.", fix="Serve text/html to browsers and crawlers that request it.", evidence=root_url), root_url))
+
     duration_ms = round((time.monotonic() - started) * 1000)
     truncated = bool(queue) or (time.monotonic() >= deadline and len(pages) < len(queued))
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])

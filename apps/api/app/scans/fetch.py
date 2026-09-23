@@ -9,6 +9,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 UA = "Mozilla/5.0 (compatible; WalkthruBot/0.1; +https://walkthru.dev/bot)"
+ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"
 MAX_TEXT = 300_000
 MAX_REDIRECTS = 5
 
@@ -31,7 +32,8 @@ def assert_public(url: str) -> None:
 
 
 def client() -> httpx.Client:
-    return httpx.Client(follow_redirects=False, timeout=15, headers={"User-Agent": UA})
+    # Ask for HTML like a browser: some hosts (Vercel "markdown for agents") serve Markdown to clients that do not.
+    return httpx.Client(follow_redirects=False, timeout=15, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
 def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.Response | None:
