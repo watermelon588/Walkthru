@@ -21,7 +21,7 @@ This builds the extension and starts the API (:8000), web app (:5173), easy fixt
 With `.\dev` running, this drives the built extension's page script in headless Chrome through the real API and model, then prints the report:
 
 ```powershell
-appspi\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
+apps\api\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
 ```
 
 ## Run locally on Windows, one process per terminal
