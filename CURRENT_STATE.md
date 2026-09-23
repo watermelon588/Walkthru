@@ -68,6 +68,16 @@ _Last updated: 2026-09-24_
   - The API pre-builds the agent at start so the first run is not slow. `dev.py` no longer refuses to start when another app holds 127.0.0.1:5173.
 - **Report writer model chosen by measurement (2026-09-24).** `evals/model_bakeoff.py` replayed the production report prompt on five saved runs across seven free models (table in `docs/decisions.md`). Report calls now go Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (free, 90 s budget), then the fast chain; persona steps are unchanged. Grounding already removed invented findings from every model; Ultra wrote the most careful summaries (it never blamed the site for a Walkthru safety stop, gpt-oss-20b once did). Cost: reports can take about a minute longer when Groq is rate-limited.
 
+- **UI/UX production pass (2026-09-24, front end only).** Nothing removed; additions on the existing backend:
+  - New pages: `/docs` (getting started, extension, test users, goals, safe mode, domain verification, reports, data, troubleshooting), `/privacy`, `/terms`, `/security` (extension permissions, scanner scope, vulnerability disclosure) and a real 404. They share `DocLayout` (sticky "On this page" index with active section, collapsible on phones) and `.prose-doc` styles. Copy is drawn from the code; legal text still needs founder or lawyer review, and contact addresses use the placeholder domain (`contact` in `content.ts`).
+  - App shell: left sidebar on desktop (Runs, Settings, Documentation, Install the extension, account, sign out); phones get a top bar with a native `<dialog>` drawer (focus trap, Esc, backdrop close, scroll lock, closes on navigation, reduced-motion aware).
+  - Settings: "Verify your domain" shows the account's meta tag and `/.well-known/walkthru.txt` token from `GET /verification`, with copy buttons, loading and retry states. Empty dashboard: three-step first-run checklist linking into the docs.
+  - Marketing nav: mobile menu, Docs link, absolute `/#` anchors so nav works from every page. Footer and login legal links now point at the real pages.
+  - Production polish: skip links and `#main` landmarks, per-route `<title>` (React 19), themed selection/focus/scrollbar, `theme-color` matches `bg`, scroll-to-top and hash scrolling on route change. Routes are lazy-loaded and the landing page no longer bundles Supabase: main chunk 682 kB to 415 kB, no size warning.
+  - Extension panel: hover/active/disabled states, the disabled Start button says why, steps fade in, footer links to Dashboard, Help and Privacy.
+  - Runs that end as `safe_stop` now point the owner to `/docs#verify`, in the report (screen only) and in the side-panel result. Not seen rendered yet: needs a real safe_stop run.
+  - Verified: web build and oxlint clean, extension tsc/oxlint/27 vitest/WXT build clean, Impeccable detector clean, browser check of docs, privacy, 404, landing menu, app shell (phone drawer and desktop sidebar via a temporary unguarded route, since removed) and the extension panel. Not verified live: the verification panel's ready state (needs a signed-in session; error state checked).
+
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
@@ -87,14 +97,14 @@ _Last updated: 2026-09-24_
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
 - Local extension testing must happen in regular Chrome with the unpacked build loaded and reloaded. The Codex in-app browser can render the web app and fixtures but does not host the user's Chrome extension, so its `/login` or `/app` tab cannot complete the session handoff.
-- Privacy, Terms and Security pages do not exist yet (footer links are `#`). Required before launch.
+- Privacy, Terms and Security pages exist (2026-09-24) but are drafts: review the legal copy and replace the placeholder contact domain before launch.
 - Domain not bought yet (`brand.domain` is a placeholder). `agent-eye.jpg` is 735px wide, a bit soft on large screens.
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
 - Production hosting must rewrite all paths to `index.html` for `/login` to work on refresh.
 - Resume-in-browser is intentionally not implemented yet. A safe resume needs to revalidate the current tab, origin, pending action and checkpoint before executing anything. The shipped recovery path ends the run truthfully and generates a partial report in one click.
 - The retention job runs one thread per API process. Move it to a scheduled job when the API runs on more than one instance.
 - Local network to the Supabase database is intermittent on this machine; requests can take 5 to 15 s or briefly fail with a 503, then recover on their own.
-- The production web and extension bundles both exceed the default 500 kB warning threshold. Builds pass; route/chunk splitting should be scheduled before launch.
+- The web bundle is route-split (main chunk 415 kB). The extension bundle still exceeds the 500 kB warning threshold.
 - Automatic report email delivery still requires a non-empty `RESEND_API_KEY` and a verified `RESEND_FROM`; local development falls back to the user's email client.
 - Remote: https://github.com/watermelon588/Walkthru.git. Pushed 2026-09-18.
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini, OpenRouter free models for the report writer). Fallback chain lives in `apps/api/app/agent/runtime.py`.

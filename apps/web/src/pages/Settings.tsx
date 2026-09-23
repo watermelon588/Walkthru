@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useState, type FormEvent } from 'react'
 import { AccountAvatar } from '../components/AccountAvatar'
 import { AppShell } from '../components/AppShell'
+import { DomainVerification } from '../components/DomainVerification'
 import { YourData } from '../components/YourData'
 import { AgentPresence } from '../components/AgentPresence'
 import { btnPrimary } from '../components/Shared'
@@ -21,7 +22,7 @@ export default function Settings() {
   }
 
   return (
-    <AppShell>
+    <AppShell title="Settings">
       <SettingsContent key={session.user.id} session={session} />
     </AppShell>
   )
@@ -166,6 +167,7 @@ function SettingsContent({ session }: { session: Session }) {
           </div>
         </aside>
       </div>
+      <DomainVerification />
       <YourData email={session.user.email ?? ''} />
     </>
   )
