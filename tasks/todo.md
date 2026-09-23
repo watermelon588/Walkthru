@@ -1,86 +1,180 @@
 # Walkthru Task List
 
-Definition of done: see ROADMAP.md. The v1.1 plan (2026-09-24) comes first; the v1 history below it stays for reference.
+Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order (ROADMAP.md "Session plan"). The v1 history below stays for reference. Sizes: S = 1-2 files, M = 3-5 files.
 
-## v1.1 plan (2026-09-24)
+## v1.1 plan (updated 2026-09-24)
 
-Order: A runs alongside B. Then C, with D in parallel from 10-01. Launch 10-20, then E and F. Sizes: S = 1-2 files, M = 3-5 files.
+### Founder track (in parallel with sessions 1 to 6)
+- [x] Confirm prices: Pro $19 and Plus $49, founding $15 and $39 (2026-09-24)
+- [ ] A1: 30 free Instant Scans with a "$9 founding Launch Pack" line. Gate: 5 paid of the first 100 scans.
+- [ ] A2: 20 beta users on the unpacked extension. Gate: 5 or more finish a run within 48 hours.
+- [ ] A3: headline test, "Can ChatGPT read your site?" against "Find where users get stuck". Gate: 1.5x scan starts.
+- [ ] Buy the domain by 10-05; Chrome Web Store account ($5); Oracle VM; Dodo account, with live-mode verification started now
+- [ ] Enable Google and GitHub sign-in; rotate Supabase secrets before session 6
 
-### Founder
-- [ ] A1 Post 30 free Instant Scans with a "$9 founding Launch Pack" line. Gate: 5 paid of the first 100 scans.
-- [ ] A2 Recruit 20 beta users for the unpacked extension. Gate: 5 or more finish a run within 48 hours.
-- [ ] A3 Headline test: "Can ChatGPT read your site?" against "Find where users get stuck". Gate: 1.5x or more scan starts.
-- [x] Confirm list prices: $19 Pro and $49 Plus, founding $15 and $39 (confirmed 2026-09-24).
-- [ ] Buy the domain; Chrome Web Store account ($5); Oracle VM; Dodo test mode; enable Google and GitHub sign-in; rotate Supabase secrets.
+### Session 1 (09-25 to 09-26)
+- [ ] **V1 Server-owned plans** (M)
+  - Accept:
+    - `app/plans.py` holds the plan limits from SPEC.md; table `entitlements`.
+    - `POST /runs` ignores the client's `tier`.
+    - A free user gets 403 on `logged_in`, 12 steps at most, first-time visitor only, and 402 after 3 runs this month.
+    - An active `entitlements` row lifts the limits to its plan.
+    - `GET /me/plan` returns plan, limits and runs left.
+    - `FREE_RUNS_PER_DAY` stops free runs with a clear message.
+    - `scripts/grant_plan.py EMAIL PLAN DAYS` grants a dev pass; `--revoke` expires it.
+  - Verify: pytest per limit with crafted requests; the side panel and dashboard show runs left; the grant script switches the test account to Pro and back.
+  - Files: `apps/api/app/plans.py` (new), `app/main.py`, `app/db.py`, `schema.sql`, `scripts/grant_plan.py` (new), side panel `App.tsx`.
 
-### Phase B: foundation
-- [ ] **V1 Server-owned entitlements** (M)
-  - Accept: `POST /runs` ignores client `tier`; a free user gets 403 on `logged_in`, 12 steps at most, first-time visitor only, 402 after 3 runs this month; an active `entitlements` row lifts the limits to its plan; `GET /me/plan` returns plan, limits and runs left; `FREE_RUNS_PER_DAY` stops free runs with a clear message.
-  - Verify: pytest for each limit with a crafted request; the side panel shows runs left.
-  - Files: `apps/api/app/plans.py` (new), `app/main.py`, `app/db.py`, `schema.sql`, `apps/extension/entrypoints/sidepanel/App.tsx`.
+### Session 2 (09-27 to 09-29)
 - [ ] **V2 GEO readiness scanner** (M)
-  - Accept: `app/scans/geo.py` scores the 7 categories in SPEC.md from pages the audit already fetched, plus `GET /llms.txt` and one citation-bot user-agent probe; findings use `kind="geo"`; `report.geo` has score, band and categories; free scans score the homepage only; the first-impression block is labeled "What AI search sees"; llms.txt is labeled low impact; the probe is worded as a user-agent check.
-  - Verify: pytest per category on fixture HTML (SPA shell, blocked OAI-SearchBot, valid and broken JSON-LD, missing H1); live Instant Scan of the portfolio returns a score in 20 s or less.
-  - Files: `app/scans/geo.py` (new), `app/agent/schema.py`, `app/agent/report.py`, `apps/web/src/components/ReportView.tsx`, `tests/test_geo.py` (new).
+  - Accept:
+    - `app/scans/geo.py` scores the 7 categories in SPEC.md from pages the audit already fetched, plus `GET /llms.txt` and one citation-bot user-agent probe.
+    - Findings use `kind="geo"`; `report.geo` has score, band and categories.
+    - Free scans score the homepage only.
+    - The first-impression block is labeled "What AI search sees".
+    - llms.txt is labeled low impact; the probe is worded as a user-agent check.
+  - Verify: pytest per category on fixture HTML (SPA shell, blocked OAI-SearchBot, valid and broken JSON-LD, missing H1); a live Instant Scan of the portfolio returns a score in 20 s or less.
+  - Files: `app/scans/geo.py` (new), `app/agent/schema.py`, `app/agent/report.py`, `ReportView.tsx`, `tests/test_geo.py` (new).
+
+### Session 3 (09-30 to 10-01)
 - [ ] **V3 GEO traps and Checkpoint B** (S)
-  - Accept: the hard fixture gains 3 GEO traps (robots blocks OAI-SearchBot, a JavaScript-only pricing page, no Organization schema) in `traps.json`; the scorer runs on today's code; misses fixed until recall is 80% or more.
-  - Verify: scorer output saved in `docs/decisions.md`.
-  - Files: `evals/fixtures/hard/*`, `evals/traps.json`, scan fixes as needed.
+  - Accept:
+    - The hard fixture gains 3 GEO traps in `traps.json`: robots.txt blocks OAI-SearchBot, a JavaScript-only pricing page, no Organization schema.
+    - The scorer runs on today's code, and misses are fixed until recall is 80% or more.
+  - Verify: scorer output recorded in `docs/decisions.md`.
+- [ ] **V16 Signup email check** (S)
+  - Accept:
+    - `app/scans/email.py` reads MX, SPF and DMARC over DNS-over-HTTPS (Cloudflare JSON endpoint, existing httpx client).
+    - Free shows SPF and DMARC; paid shows all.
+    - The journey error "email rate limit exceeded" maps to "Supabase's built-in mailer limit: set up your own SMTP".
+  - Verify: pytest with recorded DNS answers; the Tripverse run's report shows the SMTP fix.
+  - Files: `app/scans/email.py` (new), `app/agent/report.py`, `tests/test_email_check.py` (new).
 
 #### Checkpoint B
-- [ ] pytest, Ruff, web and extension builds green
-- [ ] Crafted free request cannot exceed limits
-- [ ] Recall is 80% or more; founder reviews one GEO report
+- [ ] Tests, lint and builds green; crafted free requests cannot exceed limits; recall 80% or more; founder reviews one GEO report
 
-### Phase C: paid value
+### Session 4 (10-02 to 10-03)
 - [ ] **V4 Rerun and compare** (M)
-  - Accept: `runs.parent_run_id`; `rerun_of` on `/runs` and `/scans`, owner and same origin checked; `report.comparison` lists fixed, still broken and new by fingerprint (kind, normalized title, URL path), computed in code; report page shows the three lists and a "Rerun" button.
+  - Accept:
+    - New column `runs.parent_run_id`.
+    - `rerun_of` on `/runs` and `/scans`, with owner and same origin checked.
+    - `report.comparison` lists fixed, still broken and new by fingerprint (kind, normalized title, URL path), computed in code.
+    - The report shows the three lists and a Rerun button.
   - Verify: pytest for fingerprint and diff; 3 fixture reruns match a hand check.
   - Files: `schema.sql`, `app/main.py`, `app/agent/report.py`, `ReportView.tsx`, `Report.tsx`.
-- [ ] **V5 GEO fix pack** (S)
-  - Accept: `app/scans/geo_fixes.py` returns a robots.txt block, JSON-LD (Organization, WebSite, SoftwareApplication), an llms.txt draft and a framework rendering fix (Vite SPA, Next.js, Lovable, Astro); paid plans see all, free sees one; copy buttons.
-  - Verify: pytest that generated JSON-LD parses and robots rules allow the citation bots; SPA fixture gets the Vite fix.
-  - Files: `app/scans/geo_fixes.py` (new), `app/agent/report.py`, `ReportView.tsx`, `tests/test_geo_fixes.py` (new).
-- [ ] **V6 50-page paid site audit** (S)
-  - Accept: paid scans use `max_pages=50` and a 60 s budget in a background task; Instant Scan stays at 10 pages and 20 s; coverage shows what was checked.
-  - Verify: pytest with a fake 60-page site; free stays 10.
-  - Files: `app/scans/site.py`, `app/main.py`.
-- [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S)
-  - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
-  - Verify: manual browser and print check, recorded in CURRENT_STATE.md.
-- [ ] **V8 Share loop** (S)
-  - Accept: public report `<title>` and description carry the AI readiness score; a "Checked by Walkthru" badge snippet with a backlink on shared reports; the owner can turn it off on paid plans.
-  - Verify: page meta checked in the browser; badge links to the landing page.
-  - Files: `apps/web/src/pages/Public.tsx`, `ReportView.tsx`, `content.ts`.
+- [ ] **V17 Ignore a finding** (S)
+  - Accept:
+    - Table `finding_states`. The owner marks a finding ignored, with a reason. Paid plans only.
+    - Ignored items leave the fix prompt, the "new" and "still broken" lists and watch emails.
+    - They stay in the Launch Ready score.
+  - Verify: pytest; the report shows "ignored" with the reason.
 
+### Session 5 (10-04 to 10-05)
+- [ ] **V5 GEO fix pack** (S)
+  - Accept:
+    - `app/scans/geo_fixes.py` returns a robots.txt block, JSON-LD (Organization, WebSite, SoftwareApplication), an llms.txt draft, and a rendering fix for the framework (Vite SPA, Next.js, Lovable, Astro).
+    - Paid plans see all of it; free sees one fix.
+    - Copy buttons.
+  - Verify: pytest that the JSON-LD parses and the robots rules allow citation bots; the SPA fixture gets the Vite fix.
 - [ ] **V15 Agent fix prompt** (S)
-  - Accept: `app/agent/fix_prompt.py` builds `full` and `chat` prompts from a stored report and the fix pack, with no model call; `GET /runs/{id}/fix-prompt` returns 402 on free, text for paid owners, a `walkthru-fixes.md` file with `download=1`; key values masked; ends with the fingerprints a rerun should mark fixed; report page has Copy and Download buttons, locked with a count on free.
-  - Verify: pytest that every finding appears once, no unmasked secret appears, the free plan gets 402; the chat style stays under 4,000 characters (Estimate: the Lovable and Bolt chat input limit, confirm before shipping).
-  - Files: `apps/api/app/agent/fix_prompt.py` (new), `app/main.py`, `apps/web/src/components/ReportView.tsx`, `tests/test_fix_prompt.py` (new).
+  - Accept:
+    - `app/agent/fix_prompt.py` builds `full` and `chat` prompts from a stored report and the fix pack, with no model call, skipping ignored findings.
+    - `GET /runs/{id}/fix-prompt` returns 402 on free, text for paid owners, and `walkthru-fixes.md` with `download=1`.
+    - Key values are masked.
+    - It ends with the fingerprints a rerun should mark fixed.
+    - Copy and Download buttons; on free it is locked and shows a count.
+  - Verify: pytest that every finding appears once, no unmasked secret appears, and free gets 402. The chat style stays under 4,000 characters (Estimate: the Lovable and Bolt chat limit; confirm before shipping).
+
+### Session 6 (10-06 to 10-08)
+- [ ] **V11 Production and store** (M)
+  - Accept:
+    - Domain and HTTPS.
+    - Vercel with SPA rewrites.
+    - API on the VM under process supervision, with `CHECKPOINTER=postgres`.
+    - Postgres-backed scan limiter.
+    - Production CORS and extension origin.
+    - Secrets rotated.
+    - Error logging and a health check.
+    - Store listing submitted on 10-08.
+  - Verify: a clean Chrome profile runs the production build end to end.
+
+### Session 7 (10-09 to 10-10)
+- [ ] **V8 Launch Ready score, badge and share loop** (S)
+  - Accept:
+    - The score counts measured areas only: UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15. An unmeasured area's weight is shared among the others.
+    - `GET /badge/{site_id}.svg` shows the latest score, cached one hour, only when the owner turned it on. It links to the public report.
+    - Public report meta carries the score.
+  - Verify: pytest for the weighting; the badge renders and updates after a rerun.
+- [ ] **V6 50-page paid audit** (S)
+  - Accept: paid scans use 50 pages and a 60 s budget in a background task; Instant Scan stays at 10 pages and 20 s; coverage shows what was checked.
+  - Verify: pytest with a fake 60-page site.
+
+### Session 8 (10-11 to 10-13)
+- [ ] **V10 Billing with Dodo** (M)
+  - Accept, all per payment.md:
+    - Access request.
+    - Founder approval creates an offer.
+    - A one-use private Dodo checkout (test mode).
+    - A signed, idempotent `POST /webhooks/dodo` inserts the `entitlements` row.
+    - Refunds suspend the pass.
+  - Verify: a test-mode payment grants exactly one pass; duplicate, forged and out-of-order webhooks change nothing; a checkout redirect without a webhook grants nothing.
 
 #### Checkpoint C
-- [ ] Rerun, fix pack and PDF verified on fixtures
-- [ ] Founder reviews one full Pro report before launch copy is written
+- [ ] Rerun, fix prompt, fix pack, badge and test-mode billing verified; founder reviews one full Pro report
 
-### Phase D: ship (from 10-01, parallel)
-- [ ] **V9 Landing and pricing copy** (S): "launch check for apps built with AI" hero, the SPEC.md plans table, Plus as a waitlist, GEO in every plan; `content.ts` only. Verify: web build, lint, phone and desktop check.
-- [ ] **V10 Concierge billing** (M): founder inserts `entitlements` rows; then a Dodo test-mode checkout and a signed, idempotent webhook that inserts the row (payment.md). Verify: duplicate webhook grants once; forged signature rejected.
-- [ ] **V11 Production and store** (M): domain, Vercel with SPA rewrites, API on the VM under supervision, `CHECKPOINTER=postgres`, Postgres-backed scan limiter, production CORS and extension origin, secrets rotated, store listing submitted by 10-08. Verify: clean-profile store build completes a run in production.
+### Session 9 (10-14 to 10-15)
+- [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S)
+  - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
+- [ ] **V18 Signup funnel numbers** (S)
+  - Accept: `report.funnel` on paid runs holds steps to the goal, fields typed, errors seen, safe stops and time to the first useful screen; compared across reruns.
+  - Verify: pytest over stored steps.
+- [ ] **V19 Landing copy review** (S)
+  - Accept: one free-chain model call on homepage and pricing text; verdicts and up to 3 rewrite options, labeled as suggestions; paid runs only.
+  - Verify: pytest with a fake model.
+
+### Session 10 (10-16 to 10-18)
+- [ ] **V9 Landing, pricing and onboarding copy** (S)
+  - Accept: the "launch check for apps built with AI" hero; the SPEC.md plans table; Plus as a waitlist; onboarding for install, permissions and domain verification.
+  - Verify: web build and lint; phone and desktop check.
+- [ ] Switch Dodo to live once verification clears
 
 #### Checkpoint D (launch gate)
-- [ ] Stranger path: scan, install, run, report, share, pass granted, all in production
-- [ ] Launch Tue 2026-10-20: Free, Launch Pack, Pro; Plus waitlist
+- [ ] Stranger path in production: scan, install, run, report, share, paid pass
+- [ ] Launch Tue 2026-10-20, 2026-10-27 at the latest
 
-### Phase E: retention (after launch)
-- [ ] **V12 Watch** (M)
-  - Accept: `sites` table; weekly job scans due sites (`kind='watch'`), compares with the last watch run, emails only on change; `POST /hooks/deploy/{token}` triggers it, at most once per 10 minutes; branded PDF for Plus.
-  - Verify: fixture deploy that blocks OAI-SearchBot sends exactly one email; an unchanged week sends none.
-  - Then: open Plus to the waitlist.
+### Session 11 (10-21 to 11-01)
+- [ ] Fix what real users hit in launch week
+- [ ] **V12 Weekly watch and deploy webhook** (M)
+  - Accept: `sites` table; a weekly job scans due sites and emails only on change; `POST /hooks/deploy/{token}` at most once per 10 minutes.
+  - Verify: a blocked AI crawler on the fixture sends exactly one email; an unchanged week sends none.
 
-### Phase F: depth (November)
+### Session 12 (11-02 to 11-08)
+- [ ] **V20 Walkthru MCP server** (M)
+  - Accept:
+    - A remote MCP server at `/mcp` (streamable HTTP, official `mcp` Python SDK).
+    - Personal API keys in `api_keys`: shown once, stored as SHA-256, revocable. Plus only.
+    - Tools: `scan_site`, `get_report`, `get_fix_prompt`, `rerun`, `list_runs`.
+    - The same limits as the web API.
+  - Verify: Claude Code connects with a Plus key, scans the fixture, reads the fix prompt and reruns; a revoked or non-Plus key is refused.
+
+### Session 13 (11-09 to 11-15)
+- [ ] **V21 Competitor side by side** (M)
+  - Accept: `POST /compare` with up to 3 URLs; passive scans only, no deep security on unverified sites; side-by-side report.
+  - Verify: pytest and one live comparison.
+- [ ] Branded PDF for Plus (your logo, no Walkthru branding)
+- [ ] Open Plus to the waitlist
+
+### Session 14 (11-16 to 11-22)
 - [ ] **V13 Custom test users and several test users per report** (M, Plus)
-- [ ] **V14 Cloud runner** (M): only if A2 misses its gate. Headless Chrome on the VM drives the built `inject.js` over CDP (as `evals/e2e_extension.py` does), public pages only, one concurrent run, same safety code.
-- [ ] Evaluate an AI citation-tracking add-on for Plus; paid model funded from revenue within payment.md caps.
+
+### Session 15 (late November, conditional)
+- [ ] **V14 Cloud runner**, only if A2 missed its gate: headless Chrome on the VM drives the built `inject.js` over CDP; public pages only, one run at a time, same safety code.
+
+### Next versions (not scheduled)
+- [ ] Preview-deploy check (GitHub Action with a PR comment)
+- [ ] Findings to GitHub Issues or Linear
+- [ ] AI citation tracking add-on
+- [ ] Self-serve checkout after payment.md's V2 gate
 
 ## v1 history
 

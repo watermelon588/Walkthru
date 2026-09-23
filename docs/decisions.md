@@ -129,3 +129,28 @@ gpt-oss-20b's flagged summary said the portfolio form "cannot be submitted becau
 **Revisit when:**
 - Experiment A1 (5 of 100 scans convert at $9) fails.
 - A2 shows fewer than 25% of beta users finish a run. That triggers the cloud runner.
+
+## 2026-09-24 Scope, dates and dev testing of paid plans
+
+**Scope accepted by the founder:**
+- Agent fix prompt.
+- Ignore a finding.
+- Launch Ready score and badge.
+- Signup email check.
+- Signup funnel numbers.
+- Landing copy review.
+- Competitor side by side.
+- Walkthru MCP server (Plus).
+
+This approves the official `mcp` Python SDK when V20 is built.
+
+**Deferred to next versions:** the preview-deploy check, and exporting findings to GitHub Issues or Linear.
+
+**Dates:**
+- Launch target 2026-10-20, 2026-10-27 at the latest. The two outside waits are Chrome Web Store review and Dodo live-mode verification.
+- Plus opens by 2026-11-22.
+
+**Dev testing:** paid plans are tested at no cost.
+- Plans are `entitlements` rows granted by `scripts/grant_plan.py`.
+- No plan uses a paid model.
+- Payments run in Dodo test mode.

@@ -37,103 +37,101 @@ Found in the 2026-09-24 review. Each fix has a task in `tasks/todo.md`.
 | 16 | Not deployed, no domain | Phase 6 open | Domain, Vercel, Oracle VM, production CORS and extension origin | V11 |
 | 17 | Chrome Web Store not submitted; review takes days | T13 open | Legal pages are done; submit by 2026-10-08 | V11 |
 | 18 | Billing not built; founder has no credit card | payment.md | Concierge passes: founder-granted `entitlements` rows first, then Dodo test-mode checkout and webhook | V10 |
-| 19 | No growth loop | Reports are private by default and carry no mark | Public report shows the AI readiness score in its page meta, plus a "Checked by Walkthru" badge with a backlink | V8 |
+| 19 | No growth loop | Reports are private by default and carry no mark | Launch Ready score, live badge with a backlink, score in public report meta | V8 |
 | 20 | No proof anyone will pay | 0 paying users | Experiment 1 before billing code: 5 of 100 Instant Scans convert to the $9 pack | A1 |
 | 21 | GEO can overpromise | llms.txt has weak evidence; a user-agent probe cannot prove real bot access | Weight llms.txt at 5 of 100 and label it; phrase the probe as "blocked for AI search user agents"; never promise citations | V2 |
 | 22 | Plus sold before it exists | Weekly scans not built | Launch Plus as a waitlist; open it when watch and branded PDF ship | V9, V12 |
 
-## Build order
+## Scope (decided 2026-09-24)
 
-```text
-A  Validate demand (founder, no code) ─────────────────────────────┐
-B  V1 entitlements ─▶ V2 geo-scan ─▶ V3 GEO traps + Checkpoint B      │
-C  V4 rerun-compare, V5 fix-pack, V15 agent fix prompt,              │
-   V6 50-page audit, V7 evidence and PDF, V8 share loop               ├─▶ Launch Oct 20
-D  V9 landing and pricing copy, V10 concierge billing,               │   (Free, Launch Pack, Pro;
-   V11 deploy + store submission (starts in parallel with B)         │    Plus waitlist)
-E  V12 watch + deploy webhook + branded PDF ─▶ open Plus ───────────┘
-F  V13 custom and multiple test users; V14 cloud runner (conditional)
-G  V2 billing: self-serve checkout after payment.md's gate
-```
+- **Prices:** confirmed. Pro $19 (founding $15), Plus $49 (founding $39), Launch Pack $9, Free.
+- **Features by plan:** SPEC.md has the table.
+- **Accepted:**
+  - GEO readiness.
+  - The agent fix prompt.
+  - Rerun and compare.
+  - Ignore a finding.
+  - The Launch Ready score and badge.
+  - The signup email check.
+  - Signup funnel numbers.
+  - The landing copy review.
+  - Competitor side by side.
+  - The Walkthru MCP server (Plus).
+  - Weekly watch with a deploy webhook (Plus).
+  - Custom test users (Plus).
+- **Next versions, not in this roadmap:**
+  - The preview-deploy check (GitHub Action).
+  - Findings to GitHub Issues or Linear.
+  - AI citation tracking.
 
-## Phases
+## Deadlines
 
-### Done
-- **Phase 0 to 2** (2026-09-18 to 2026-09-23): the agent loop, report, site audit, evidence capture, retention, export and delete.
-- **2026-09-24 additions:**
-  - Truthful journeys: field state, step outcomes, safe sends, grounding.
-  - The report-writer model bakeoff.
-  - Privacy, Terms, Security and Docs pages.
-  - Domain verification UI.
+| Milestone | Target | Realistic | Depends on |
+|---|---|---|---|
+| **Launch:** Free, Launch Pack and Pro, live Dodo payments through founder-approved passes | Tue 2026-10-20 | **Tue 2026-10-27** | Chrome Web Store review, Dodo live-mode verification, domain and VM ready by 10-06 |
+| **Plus opens** (watch, MCP, competitor compare, branded PDF) | 2026-11-15 | **2026-11-22** | Launch stable; watch email tested |
+| **Self-serve checkout** (no founder approval) | 2026-12 | After the payment.md gate | 10 reconciled passes, 30 days of cost data, a tested spend cap |
 
-### A: Validate demand (2026-09-25 to 10-04, founder, runs alongside B)
-- **A1:** post 30 free Instant Scans of real launches in Indie Hackers, r/SaaS and r/SideProject, with a "$9 founding Launch Pack" line. **Gate:** 5 paid out of the first 100 scans.
+**Why the buffer week:**
+- **Chrome Web Store review** can take days, longer for a new developer account. The extension needs the production API address, so it cannot be submitted before deploy (session 6).
+- **Dodo live mode** needs the business verified. That timeline is on Dodo's side, so start it now.
+- **All build work** fits inside 10-20; the buffer only covers those two outside waits.
+
+## Session plan
+
+One session is one focused working block with Claude. Every session:
+- Ends green (tests, lint, builds).
+- Updates CURRENT_STATE.md and this file.
+- Is pushed to branch `1`.
+
+Task details and acceptance criteria are in `tasks/todo.md`.
+
+| # | Dates | Tasks | Done when |
+|---|---|---|---|
+| 1 | 09-25 to 09-26 | V1 server-owned plans, dev grant script, `GET /me/plan`, runs left in side panel and dashboard | A crafted free request cannot exceed any limit; `grant_plan.py` switches a test account to Pro and back |
+| 2 | 09-27 to 09-29 | V2 GEO readiness scanner and report section | The portfolio's Instant Scan shows a GEO score and "What AI search sees" in 20 s or less |
+| 3 | 09-30 to 10-01 | V3 GEO traps and Checkpoint B; V16 signup email check | Trap recall 80% or more; Tripverse's email error maps to "use your own SMTP" |
+| 4 | 10-02 to 10-03 | V4 rerun and compare; V17 ignore a finding | 3 fixture reruns match a hand check; ignored items leave lists but stay in the score |
+| 5 | 10-04 to 10-05 | V5 GEO fix pack; V15 agent fix prompt | Fix prompt for the SPA fixture lists every finding once, secrets masked; free gets 402 |
+| 6 | 10-06 to 10-08 | V11 production: domain, Vercel, API on the VM, `CHECKPOINTER=postgres`, shared scan limiter, CORS and extension origin, secrets rotated; **store submission on 10-08** | A clean Chrome profile runs the production build end to end |
+| 7 | 10-09 to 10-10 | V8 Launch Ready score, badge and share loop; V6 50-page paid audit | Badge SVG shows the latest score; Pro audit covers 50 pages in 60 s or less |
+| 8 | 10-11 to 10-13 | V10 billing: access request, founder approval, Dodo test checkout, signed idempotent webhook, entitlement grant | Test-mode payment grants exactly one pass; duplicate and forged webhooks do nothing |
+| 9 | 10-14 to 10-15 | V7 evidence and PDF close-out; V18 signup funnel numbers; V19 landing copy review | PDF with screenshots prints; funnel numbers compare across a rerun |
+| 10 | 10-16 to 10-18 | V9 landing page, pricing and onboarding copy; Checkpoint D; switch Dodo to live after verification | A stranger goes from scan to install to report to paid pass, in production |
+| Launch | 10-20 (10-27 at the latest) | Show HN, Product Hunt, Indie Hackers, r/SaaS, r/SideProject | |
+| 11 | 10-21 to 11-01 | Fixes from real users; V12 weekly watch and deploy webhook | A blocked AI crawler on the fixture sends exactly one email |
+| 12 | 11-02 to 11-08 | V20 Walkthru MCP server and API keys | Claude Code scans, reads the fix prompt and reruns through MCP with a Plus key |
+| 13 | 11-09 to 11-15 | V21 competitor side by side; branded PDF; **open Plus** | Side-by-side report for 3 URLs; PDF without Walkthru branding |
+| 14 | 11-16 to 11-22 | V13 custom test users and several test users per report | Plus user defines a test user and gets one merged report |
+| 15 | late 11 | V14 cloud runner, only if experiment A2 missed its gate | Public journey runs without the extension |
+
+**Founder track, in parallel with sessions 1 to 6:**
+- Experiments A1 to A3 (below).
+- Buy the domain.
+- Chrome Web Store account ($5).
+- Oracle VM.
+- Dodo account: start live-mode verification now.
+- Enable Google and GitHub sign-in.
+- Rotate the Supabase secrets.
+
+### Demand experiments (founder, 2026-09-25 to 10-04)
+- **A1:** 30 free Instant Scans of real launches in Indie Hackers, r/SaaS and r/SideProject, with a "$9 founding Launch Pack" line. **Gate:** 5 paid out of the first 100 scans.
 - **A2:** 20 beta users load the extension unpacked. **Gate:** 5 or more finish a run within 48 hours. Below that, V14 moves up.
-- **A3:** headline test, "Can ChatGPT read your site?" against "Find where users get stuck". **Gate:** the GEO headline gets 1.5x or more scan starts. If it wins, it leads the landing page (V9).
+- **A3:** headline test, "Can ChatGPT read your site?" against "Find where users get stuck". **Gate:** 1.5x or more scan starts for the GEO headline, which then leads the landing page.
 
-### B: Foundation (2026-09-25 to 10-02)
-- **Outcome:** the server owns the plan, and GEO appears in every report.
-- **Tasks:** V1 entitlements, V2 geo-scan, V3 GEO traps and Checkpoint B.
-- **Gate:**
-  - A free account cannot exceed its limits through a crafted request.
-  - Instant Scan shows the AI readiness score in 20 s or less.
-  - Hard-fixture trap recall is 80% or more.
+## Testing Pro and Plus without spending money
 
-### C: Paid value (2026-10-03 to 10-11)
-- **Outcome:** Pro is worth $19 without counting runs.
-- **Tasks:** V4 rerun-compare, V5 fix-pack, V15 agent fix prompt, V6 50-page paid audit, V7 evidence and PDF, V8 share loop.
-- **Gate:**
-  - A rerun on the fixture shows correct fixed, still broken and new lists.
-  - The fix pack produces valid JSON-LD and robots rules for the SPA fixture.
-  - A PDF with screenshots prints correctly.
-
-### D: Ship (2026-10-01 to 10-18, parallel)
-- **Outcome:** strangers can install, pay and use it in production.
-- **Tasks:** V9 landing and pricing copy, V10 concierge billing, V11 deploy, security hardening and store submission (by 10-08).
-- **Gate:** a clean Chrome profile installs the store build, signs in, runs a test, gets the report, shares it and receives a founder-approved Dodo test-mode pass.
-
-### Launch: Tuesday 2026-10-20
-- **Sold:** Free, Launch Pack and Pro. Plus is a waitlist.
-- **Channels:** Show HN, Product Hunt, Indie Hackers, r/SaaS, r/SideProject, and build-in-public posts. Every post offers a free AI readiness score.
-
-### E: Retention (2026-10-21 to 11-15)
-- **Tasks:** V12 weekly watch, deploy webhook and branded PDF. Then open Plus to the waitlist.
-- **Gate:**
-  - A deploy that blocks OAI-SearchBot on the fixture sends exactly one alert email.
-  - An unchanged week sends none.
-
-### F: Depth (2026-11)
-- **V13:** custom test users and several test users per report.
-- **V14:** cloud runner, only if A2 failed.
-- **Also:** evaluate an AI citation-tracking add-on for Plus, and a paid model funded by revenue (payment.md caps).
-
-### G: Self-serve billing
-- Replace founder approval with instant checkout only after payment.md's V2 gate: 10 reconciled passes, 30 days of cost data, and a tested spend cap.
-
-## Candidate features (proposed 2026-09-24, founder picks)
-
-| Feature | Plan | Why an indie founder pays for it | Size | When |
-|---|---|---|---|---|
-| **Ignore a finding** ("won't fix" with a reason) | Pro | Reruns, the fix prompt and watch alerts stop repeating accepted items. Without it, Plus alerts become noise | S | Before launch |
-| **Launch Ready score and live badge** | Free | One number across UX, GEO, SEO, security and speed. The badge is an embeddable image showing the latest score: a backlink on every site that shows it | S | Before launch |
-| **Signup email check** | Free: SPF and DMARC. Paid: full | Signups die when confirmation emails fail. Checks the domain's email DNS records passively over DNS-over-HTTPS, with no new dependency. Recognizes auth-provider email limits, such as Tripverse's "email rate limit exceeded" from Supabase's built-in mailer, and gives the fix (your own SMTP) | S | Before launch |
-| **Walkthru for coding agents** (MCP server plus personal API key) | Plus | Claude Code or Cursor can run a scan, read the fix prompt, fix the code, and rerun to verify, without leaving the editor | M | After launch, with Plus |
-| **Competitor side by side** (up to 3 URLs) | Pro | "How does my landing page, GEO and SEO compare to theirs?" Passive scans only; deep security stays owner-only | M | After launch |
-| **Signup funnel numbers** | Pro | Steps to sign up, form fields, errors seen, time to the first useful screen, compared across reruns. Deterministic from the journey | S | After launch |
-| **Preview-deploy check** (GitHub Action with a PR comment) | Plus | Catches a GEO, SEO or security regression before merge. Journeys join once the cloud runner exists | M | After watch |
-| **Findings to GitHub Issues or Linear** | Plus | One click per finding, with evidence | M | After Plus has users |
-| **Landing copy review** | Launch Pack and up | Headline, call-to-action and pricing clarity with rewrite options. One model call, labeled as suggestions | S | Optional |
-
-**Not planned:**
-- **Uptime monitoring:** free tools already do it.
-- **Active checks such as database or RLS probing:** these break the passive-only rule.
-- **Heatmaps and analytics:** a different product.
+- **No plan uses a paid model.** Every paid feature is deterministic code or the same free model chain as free reports. Paid plans sell reach and follow-up, not a better model.
+- **Plans are rows in a table.** `grant_plan.py EMAIL pro 30` makes a test account Pro for 30 days. One account per plan covers Free, Launch Pack, Pro and Plus.
+- **Payments:** Dodo test mode, test cards, no real money. Webhooks reach the local API through a tunnel, then the VM.
+- **Unit tests** fake every model call. Live checks use a few free-chain runs a day.
+- **Only cost before launch:** the $5 store fee and the domain. A paid model is added only after revenue, within payment.md's caps.
 
 ## Deferred on purpose
 - T17B Jev benchmark.
 - T22 continuous video.
 - Browser-session resume.
-- Slack, Linear and GitHub integrations: after Plus has paying users.
+- Preview-deploy check, GitHub Issues and Linear export, Slack: next versions.
 
 ## Definition of done for every task
 - Acceptance criteria have deterministic tests; API pytest and Ruff green; web and extension type check, lint, tests and builds green when touched.
