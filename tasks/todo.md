@@ -10,7 +10,7 @@ Order: A runs alongside B. Then C, with D in parallel from 10-01. Launch 10-20, 
 - [ ] A1 Post 30 free Instant Scans with a "$9 founding Launch Pack" line. Gate: 5 paid of the first 100 scans.
 - [ ] A2 Recruit 20 beta users for the unpacked extension. Gate: 5 or more finish a run within 48 hours.
 - [ ] A3 Headline test: "Can ChatGPT read your site?" against "Find where users get stuck". Gate: 1.5x or more scan starts.
-- [ ] Confirm list prices $19 and $49 (founding $15 and $39), or name others, before V9 changes the landing page.
+- [x] Confirm list prices: $19 Pro and $49 Plus, founding $15 and $39 (confirmed 2026-09-24).
 - [ ] Buy the domain; Chrome Web Store account ($5); Oracle VM; Dodo test mode; enable Google and GitHub sign-in; rotate Supabase secrets.
 
 ### Phase B: foundation
@@ -52,6 +52,11 @@ Order: A runs alongside B. Then C, with D in parallel from 10-01. Launch 10-20, 
   - Accept: public report `<title>` and description carry the AI readiness score; a "Checked by Walkthru" badge snippet with a backlink on shared reports; the owner can turn it off on paid plans.
   - Verify: page meta checked in the browser; badge links to the landing page.
   - Files: `apps/web/src/pages/Public.tsx`, `ReportView.tsx`, `content.ts`.
+
+- [ ] **V15 Agent fix prompt** (S)
+  - Accept: `app/agent/fix_prompt.py` builds `full` and `chat` prompts from a stored report and the fix pack, with no model call; `GET /runs/{id}/fix-prompt` returns 402 on free, text for paid owners, a `walkthru-fixes.md` file with `download=1`; key values masked; ends with the fingerprints a rerun should mark fixed; report page has Copy and Download buttons, locked with a count on free.
+  - Verify: pytest that every finding appears once, no unmasked secret appears, the free plan gets 402; the chat style stays under 4,000 characters (Estimate: the Lovable and Bolt chat input limit, confirm before shipping).
+  - Files: `apps/api/app/agent/fix_prompt.py` (new), `app/main.py`, `apps/web/src/components/ReportView.tsx`, `tests/test_fix_prompt.py` (new).
 
 #### Checkpoint C
 - [ ] Rerun, fix pack and PDF verified on fixtures

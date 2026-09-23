@@ -47,8 +47,8 @@ Found in the 2026-09-24 review. Each fix has a task in `tasks/todo.md`.
 ```text
 A  Validate demand (founder, no code) ─────────────────────────────┐
 B  V1 entitlements ─▶ V2 geo-scan ─▶ V3 GEO traps + Checkpoint B      │
-C  V4 rerun-compare, V5 fix-pack, V6 50-page paid audit,             │
-   V7 evidence and PDF, V8 share loop                                ├─▶ Launch Oct 20
+C  V4 rerun-compare, V5 fix-pack, V15 agent fix prompt,              │
+   V6 50-page audit, V7 evidence and PDF, V8 share loop               ├─▶ Launch Oct 20
 D  V9 landing and pricing copy, V10 concierge billing,               │   (Free, Launch Pack, Pro;
    V11 deploy + store submission (starts in parallel with B)         │    Plus waitlist)
 E  V12 watch + deploy webhook + branded PDF ─▶ open Plus ───────────┘
@@ -81,7 +81,7 @@ G  V2 billing: self-serve checkout after payment.md's gate
 
 ### C: Paid value (2026-10-03 to 10-11)
 - **Outcome:** Pro is worth $19 without counting runs.
-- **Tasks:** V4 rerun-compare, V5 fix-pack, V6 50-page paid audit, V7 evidence and PDF, V8 share loop.
+- **Tasks:** V4 rerun-compare, V5 fix-pack, V15 agent fix prompt, V6 50-page paid audit, V7 evidence and PDF, V8 share loop.
 - **Gate:**
   - A rerun on the fixture shows correct fixed, still broken and new lists.
   - The fix pack produces valid JSON-LD and robots rules for the SPA fixture.
@@ -109,6 +109,25 @@ G  V2 billing: self-serve checkout after payment.md's gate
 
 ### G: Self-serve billing
 - Replace founder approval with instant checkout only after payment.md's V2 gate: 10 reconciled passes, 30 days of cost data, and a tested spend cap.
+
+## Candidate features (proposed 2026-09-24, founder picks)
+
+| Feature | Plan | Why an indie founder pays for it | Size | When |
+|---|---|---|---|---|
+| **Ignore a finding** ("won't fix" with a reason) | Pro | Reruns, the fix prompt and watch alerts stop repeating accepted items. Without it, Plus alerts become noise | S | Before launch |
+| **Launch Ready score and live badge** | Free | One number across UX, GEO, SEO, security and speed. The badge is an embeddable image showing the latest score: a backlink on every site that shows it | S | Before launch |
+| **Signup email check** | Free: SPF and DMARC. Paid: full | Signups die when confirmation emails fail. Checks the domain's email DNS records passively over DNS-over-HTTPS, with no new dependency. Recognizes auth-provider email limits, such as Tripverse's "email rate limit exceeded" from Supabase's built-in mailer, and gives the fix (your own SMTP) | S | Before launch |
+| **Walkthru for coding agents** (MCP server plus personal API key) | Plus | Claude Code or Cursor can run a scan, read the fix prompt, fix the code, and rerun to verify, without leaving the editor | M | After launch, with Plus |
+| **Competitor side by side** (up to 3 URLs) | Pro | "How does my landing page, GEO and SEO compare to theirs?" Passive scans only; deep security stays owner-only | M | After launch |
+| **Signup funnel numbers** | Pro | Steps to sign up, form fields, errors seen, time to the first useful screen, compared across reruns. Deterministic from the journey | S | After launch |
+| **Preview-deploy check** (GitHub Action with a PR comment) | Plus | Catches a GEO, SEO or security regression before merge. Journeys join once the cloud runner exists | M | After watch |
+| **Findings to GitHub Issues or Linear** | Plus | One click per finding, with evidence | M | After Plus has users |
+| **Landing copy review** | Launch Pack and up | Headline, call-to-action and pricing clarity with rewrite options. One model call, labeled as suggestions | S | Optional |
+
+**Not planned:**
+- **Uptime monitoring:** free tools already do it.
+- **Active checks such as database or RLS probing:** these break the passive-only rule.
+- **Heatmaps and analytics:** a different product.
 
 ## Deferred on purpose
 - T17B Jev benchmark.
