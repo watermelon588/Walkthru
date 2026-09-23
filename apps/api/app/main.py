@@ -13,7 +13,7 @@ from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
-from app import db, deliver
+from app import auth, db, deliver, retention
 from app.agent import report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -33,7 +33,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(WEB_ORIGINS),
     allow_origin_regex=r"chrome-extension://.*",
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -42,6 +42,9 @@ def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
     log.warning("database temporarily unavailable: %s", error)
     return JSONResponse(status_code=503, content={"detail": "Database connection was interrupted. Please retry."})
 
+
+if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("DATABASE_URL"):
+    retention.start_background()
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
@@ -255,6 +258,40 @@ def email_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     # Keep the destination in the response when delivery is not configured so
     # the web app can offer a truthful, ready-to-send mail-client fallback.
     return {"sent": sent, "to": to}
+
+
+@app.delete("/runs/{run_id}")
+def delete_run(run_id: str, user: dict = Depends(require_user)) -> dict:
+    """Owner deletes one run: screenshots, checkpoint, report and row."""
+    _owned(run_id, user)
+    retention.delete_runs([run_id])
+    return {"deleted": run_id}
+
+
+@app.get("/account/export")
+def export_account(user: dict = Depends(require_user)) -> dict:
+    """Everything stored about the signed-in user's runs, as one JSON document."""
+    return {
+        "user": {"id": user["id"], "email": user.get("email")},
+        "evidence_retention_days": retention.RETENTION_DAYS,
+        "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
+        "runs": db.runs_for_user(user["id"]),
+    }
+
+
+class DeleteAccount(BaseModel):
+    confirm: str = Field(max_length=320)
+
+
+@app.post("/account/delete")
+def delete_account(body: DeleteAccount, user: dict = Depends(require_user)) -> dict:
+    """Permanent. The caller must type their account email to confirm."""
+    if not user.get("email") or body.confirm.strip().lower() != user["email"].lower():
+        raise HTTPException(422, "Type your account email exactly to confirm deletion.")
+    retention.delete_account(user["id"])
+    for token in [t for t, (u, _) in auth._cache.items() if u["id"] == user["id"]]:
+        auth._cache.pop(token, None)
+    return {"deleted": True}
 
 
 @app.get("/verification")

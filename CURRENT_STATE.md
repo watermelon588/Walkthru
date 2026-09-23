@@ -1,6 +1,6 @@
 # Current State
 
-_Last updated: 2026-09-22_
+_Last updated: 2026-09-23_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
@@ -40,8 +40,11 @@ _Last updated: 2026-09-22_
 - **Report actions, local CORS and auth-outage recovery (2026-09-21).** Share now verifies clipboard success and falls back to a legacy copy path instead of claiming an unavailable copy succeeded. When Resend is not configured, Email me opens a prepared local email draft addressed to the signed-in user. Supabase Auth transport failures now return a CORS-safe 503 rather than an unhandled 500, and the local API must be launched with network access so extension session validation can reach Supabase. Development CORS accepts both `localhost` and `127.0.0.1` for the configured web port, while production still accepts only its configured web origin; both local aliases and the Chrome extension origin pass live preflight checks.
 - **Interrupted-run recovery (2026-09-21).** Authenticated `POST /runs/{id}/stop` atomically changes an open run to `stopped`, marks its unconfirmed final action as interrupted and starts the normal partial-report pipeline. The dashboard explains why an open run can remain, offers **End and report** on each running row and redirects to the polling report page. The report page offers the same recovery action. Extension Stop, time limit, origin exit and post-creation errors now call the endpoint automatically. The one stale three-step founder run was closed and its partial report generated successfully.
 - **Local runbook (2026-09-20).** `README.md` now contains copy-paste Windows PowerShell commands for the API, web app, fixture servers, extension build/load flow, end-to-end manual test and every automated verification suite.
+- **V1 billing and cost-safety decision (2026-09-23).** [payment.md](payment.md) accepts founder-gated paid access for V1: users request access, receive a private checkout only after approval, and get a non-renewing 30-day entitlement with hard credit and provider-cost limits. It records current Dodo fee math, payout timing, initial cash needs, unit-economics risks, the proposed T14 ledger/reservation architecture, abuse controls and the release gates for later self-serve billing. Pricing and the paid model still require separate explicit founder approval.
 
 - **T24 full-site launch audit closed (2026-09-23).** `app/scans/site.py` crawls up to 10 same-origin HTML pages (hard cap 20, 20 s budget) with robots.txt honoured and every redirect SSRF-checked before the request. One shared branch feeds SEO and passive-security findings; repeated issues collapse into one finding that names how many pages and which URLs. Exposed-file and bundle-secret checks still run only on verified domains. Reports carry optional `site_audit` coverage, shown by `SiteAuditCoverage` in private, public and PDF views. Verified: 71 API tests, web build and lint, a live Instant Scan of the easy fixture (4 pages, 336 ms), a passive three-page smoke of python.org, and no overflow at four widths. The `web` launch config now starts Vite through Node because this machine's `npm` launcher is broken.
+
+- **Phase 2 data lifecycle (2026-09-23).** Journey screenshots expire after `EVIDENCE_RETENTION_DAYS` (30). `app/retention.py` deletes expired objects through the Storage API, strips the dead links from steps, stamps `runs.evidence_purged_at` and erases Instant Scan emails after the same window. It runs inside the API one minute after boot and every six hours, or manually with `python -m app.retention`. Owners can `DELETE /runs/{id}`, download everything with `GET /account/export`, and delete their account with `POST /account/delete` (they must type their email). Deletion always removes storage files first, then LangGraph checkpoints, then rows, then the Supabase user, so a failed storage call never strands unreachable files. Web: a "Your data" section in Settings (policy, Export my data, Delete account), a Delete run action on reports, and a retention date under the evidence timeline. The extension panel states the 30-day policy. Verified: 76 API tests, web build and lint, real Storage listing and deletion calls, live export, and the settings and report UI in the browser.
 
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -55,7 +58,7 @@ _Last updated: 2026-09-22_
 1. Founder: in the Supabase dashboard enable Google and GitHub providers and add the local and future production redirect URLs. Rotate the DB password and secret key before launch.
 2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture plus per-step axe and Web Vitals evidence.
 3. Inspect that run privately and publicly, then print the real evidence report to PDF and close T18-T21.
-4. Follow `ROADMAP.md` Phase 2 (evidence retention, data export and deletion), then: T13 store/legal, T14 billing, T15 production reliability, then T16 launch wiring. T17B remains intentionally deferred.
+4. Test Phase 2 in the browser (export, delete a run, delete a throwaway account). Then follow `ROADMAP.md`: T13 store/legal, T14 billing, T15 production reliability, then T16 launch wiring. T17B remains intentionally deferred.
 
 ## Known issues and notes
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
@@ -67,7 +70,8 @@ _Last updated: 2026-09-22_
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
 - Production hosting must rewrite all paths to `index.html` for `/login` to work on refresh.
 - Resume-in-browser is intentionally not implemented yet. A safe resume needs to revalidate the current tab, origin, pending action and checkpoint before executing anything. The shipped recovery path ends the run truthfully and generates a partial report in one click.
-- Screenshot retention is not automated yet. Keep T18 open until a deletion window and cleanup path are implemented.
+- The retention job runs one thread per API process. Move it to a scheduled job when the API runs on more than one instance.
+- Local network to the Supabase database is intermittent on this machine; requests can take 5 to 15 s or briefly fail with a 503, then recover on their own.
 - The production web and extension bundles both exceed the default 500 kB warning threshold. Builds pass; route/chunk splitting should be scheduled before launch.
 - Automatic report email delivery still requires a non-empty `RESEND_API_KEY` and a verified `RESEND_FROM`; local development falls back to the user's email client.
 - Remote: https://github.com/watermelon588/Walkthru.git. Pushed 2026-09-18.

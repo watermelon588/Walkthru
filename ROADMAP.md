@@ -55,7 +55,7 @@ Store/legal readiness   Production infrastructure
 
 **Gate:** launch-readiness checkpoint passes for UX, accessibility, performance, SEO and passive security in one report.
 
-## Phase 2: Close evidence and privacy gaps
+## Phase 2: Close evidence and privacy gaps (built 2026-09-23; founder browser run pending)
 
 **Outcome:** screenshot evidence is reliable, reviewable and automatically expires.
 

@@ -64,7 +64,7 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] T17B Real easy/hard browser benchmark and final provider decision
 - [ ] T18 Step evidence contract: timestamps, execution result, transition, screenshot reference
   - [x] API/extension contract, run-scoped path validation and backward-compatible report types
-  - [ ] Define and automate evidence retention, then verify one real stored run
+  - [x] Define and automate evidence retention (30 days, `app/retention.py`); real stored-run verification is the founder's fresh extension run
 - [ ] T19 Bounded screenshot capture and private storage
   - [x] Eight-frame cap, meaningful-action capture policy, private JWT upload, field masking and disclosure
   - [ ] Apply the `run-evidence` bucket policy in Supabase and complete public plus logged-in manual checks
@@ -104,8 +104,8 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] Run a fresh screenshot-backed easy fixture journey with axe and Web Vitals
 - [ ] Verify private evidence, public sharing and a multi-page PDF in a real browser
 - [ ] Link report findings to exact journey steps where evidence exists
-- [ ] Define and automate screenshot retention and cleanup
-- [ ] Add user data export and deletion for runs, reports and evidence
+- [x] Define and automate screenshot retention and cleanup (2026-09-23)
+- [x] Add user data export and deletion for runs, reports and evidence (2026-09-23)
 
 ### Store and legal
 

@@ -104,7 +104,7 @@ export function App() {
           <input id="logged" type="checkbox" checked={loggedIn} onChange={(e) => setLoggedIn(e.target.checked)} disabled={running} />
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
         </label>
-        <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames. Form values are masked before capture.</p>
+        <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
           {running && <button type="button" onClick={() => abort.current?.abort()}>Stop</button>}

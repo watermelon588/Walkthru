@@ -76,6 +76,11 @@ or bounded action           |
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
 - Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
+## Data lifecycle
+- Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
+- `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.
+- Routes: `DELETE /runs/{id}` (owner only), `GET /account/export` (JSON of every run the user owns), `POST /account/delete` (body must repeat the account email).
+
 ## Safety rules (enforced in code, not prompts)
 Safe mode on logged-in pages (never click delete / remove / cancel subscription / pay / send / invite / transfer; confirm before any form submit), same-origin only, 25-step and 4-minute caps, stop at CAPTCHA, client-side PII masking before snapshot upload, form-control masking before screenshot capture, fake test identity for signups. Evidence capture is best-effort and never blocks the journey. Owner stop, time-limit, origin-exit and post-creation extension errors close the API run and preserve a partial report.
 
