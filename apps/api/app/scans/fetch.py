@@ -66,6 +66,15 @@ def page_text(html: str, limit: int = 6000) -> str:
     return " ".join(text.split())[:limit]
 
 
+MIN_TEXT = 20  # JS-only shells serve ~0 visible characters (noscript is stripped); real pages serve more
+
+
+def is_js_shell(html: str) -> bool:
+    """True for single-page apps whose served HTML is an empty shell filled in by JavaScript."""
+    tree = HTMLParser(html)
+    return len(page_text(html)) < MIN_TEXT and tree.css_first("script[src]") is not None
+
+
 def origin(url: str) -> str:
     p = urlsplit(url)
     return f"{p.scheme}://{p.netloc}"

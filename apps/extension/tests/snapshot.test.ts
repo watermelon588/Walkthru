@@ -61,6 +61,8 @@ test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode",
   expect((document.getElementById("e") as HTMLInputElement).value).toBe("a@b.co");
   const click2 = { thought: "", action: "click" as const, target_id: 2, text: null, confusion: 0 };
   expect(execute(click2, document, { logged_in: true }).note).toMatch(/safe mode/);
+  expect(execute(click2, document).note).toMatch(/safe mode/); // public page: a destructive button never fires either
+  document.querySelector("button")!.textContent = "Create account";
   let clicked = 0;
   document.querySelector("button")!.addEventListener("click", (e) => { clicked++; e.preventDefault(); });
   expect(execute(click2, document, { dryRun: true })).toEqual({ ok: true, submits: true });
@@ -68,4 +70,23 @@ test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode",
   expect(execute(click2, document)).toEqual({ ok: true, submits: true });
   expect(clicked).toBe(1);
   expect(execute({ ...click2, target_id: 9 }, document).note).toBe("element #9 not found");
+});
+
+test("execute: public pages block send buttons (including input values) but allow plain links", () => {
+  page(`<form><input type="submit" value="Send message"></form><a href="#pricing">Buy now</a>`);
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  expect(execute(click(1), document).note).toMatch(/safe mode: "Send message"/);
+  expect(execute(click(2), document)).toEqual({ ok: true, submits: false });
+});
+
+test("execute: mailto and tel links are reported as contact methods, never opened", () => {
+  page(`<a href="mailto:owner@site.dev">Email me</a><a href="tel:+15550100">Call</a>`);
+  let opened = 0;
+  document.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => { opened++; e.preventDefault(); }));
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  const email = execute(click(1), document);
+  expect(email.note).toMatch(/opens an email app/);
+  expect(email.note).not.toContain("owner@site.dev");
+  expect(execute(click(2), document).note).toMatch(/phone call/);
+  expect(opened).toBe(0);
 });

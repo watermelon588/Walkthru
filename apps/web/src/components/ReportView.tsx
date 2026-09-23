@@ -46,7 +46,7 @@ export function ReportView({ run }: { run: Run }) {
           <section aria-label="Summary" className="report-summary mt-8 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3">
             <Stat label="Findings" value={String(r.findings.length)} note={`${counts.high} high / ${counts.medium} medium / ${counts.low} low`} />
             {isScan ? (
-              <Stat label="First impression clarity" value={r.first_impression ? `${3 - r.first_impression.clarity} of 3` : '?'} note="3 = instantly clear" />
+              <Stat label="First impression clarity" value={r.first_impression ? `${3 - r.first_impression.clarity} of 3` : 'Not judged'} note={r.first_impression ? '3 = instantly clear' : 'no readable text before JavaScript runs'} />
             ) : (
               <Stat label="Outcome" value={STATUS_LABEL[run.status]} note={`${steps.length} steps`} />
             )}

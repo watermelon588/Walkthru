@@ -15,7 +15,9 @@ export function SiteAuditCoverage({ audit }: { audit: Audit }) {
           <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted">
             {audit.truncated
               ? `The audit reached its safe ${audit.page_limit}-page or time limit. The report covers the pages listed below, not the entire site.`
-              : 'The audit checked every same-origin HTML page it discovered within this run.'}
+              : audit.pages_scanned <= 1
+                ? 'Only this page was found. The HTML the server sends links to no other pages on this site, which is typical when navigation is built by JavaScript.'
+                : 'The audit checked every same-origin HTML page it discovered within this run.'}
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-x-8 gap-y-3 text-xs md:min-w-64">

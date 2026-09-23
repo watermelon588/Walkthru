@@ -7,6 +7,7 @@ Only first_impression and synthesize call the LLM; the scans are plain code.
 from __future__ import annotations
 
 import operator
+import re
 from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -41,8 +42,13 @@ class ReportState(TypedDict, total=False):
 def first_impression(state: ReportState) -> dict:
     from app.agent import runtime
 
+    text = state.get("page_text", "")
+    if len(text.strip()) < fetch.MIN_TEXT:
+        # Nothing readable (usually a JavaScript-only page seen without a browser). Asking a model here
+        # only produces invented detail, so the report says what it could not judge instead.
+        return {"first_impression": {}, "notes": ["first impression skipped: no readable page text"]}
     messages = [
-        ("system", "You are a stranger landing on a website for the first time. You have five seconds. Answer plainly, in the second person about the site owner ('your site'). Do not invent features that are not on the page."),
+        ("system", "You are a stranger landing on a website for the first time. You have five seconds and you only see the page text below, not its design. Answer plainly, in the second person about the site owner ('your site'). Only mention things present in the text; never describe visuals, layout, colours or typography."),
         ("human", f"Homepage text of {state['site']}:\n\n{state.get('page_text', '')[:5000]}"),
     ]
     fi, used = runtime.call(FirstImpression, messages)
@@ -64,6 +70,9 @@ def _scan(state: ReportState, which: str) -> dict:
             elif which == "security":
                 findings = security.scan(state["site"], c, state.get("verified", False), resp=resp)
             elif which == "accessibility":
+                if fetch.is_js_shell(resp.text):
+                    # An empty shell always "passes"; only the extension's real-browser audit can measure it.
+                    return {which: [], f"{which}_measured": False, "notes": ["accessibility: page is rendered by JavaScript"]}
                 findings = accessibility.scan(resp.text, str(resp.url))
         return {which: [f.model_dump() for f in findings], f"{which}_measured": True}
     except Exception as e:  # noqa: BLE001 - a failed scan must not sink the report
@@ -128,10 +137,11 @@ def render_steps(steps: list[dict]) -> str:
 def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
     """Turn real-browser diagnostics into bounded, step-specific report findings."""
     findings: list[Finding] = []
-    seen_accessibility: set[tuple[str, str]] = set()
+    rules: dict[str, dict] = {}  # one finding per failing rule, listing every element and step it hit
     accessibility_measured = False
     performance_measured = False
     worst: dict[str, tuple[float, int, str]] = {}
+    rank = {"low": 0, "medium": 1, "high": 2}
 
     for index, step in enumerate(steps, start=1):
         diagnostics = step.get("diagnostics") or {}
@@ -139,24 +149,15 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
         if accessibility.get("status") == "complete":
             accessibility_measured = True
         for issue in accessibility.get("issues", []):
-            key = (issue.get("rule", "browser-audit"), issue.get("target", ""))
-            if key in seen_accessibility:
-                continue
-            seen_accessibility.add(key)
-            target = issue.get("target") or "the affected element"
-            issue_severity = issue.get("severity")
-            if issue_severity not in ("high", "medium", "low"):
-                issue_severity = "medium"
-            findings.append(
-                Finding(
-                    kind="accessibility",
-                    severity=issue_severity,
-                    title=(issue.get("message") or f"Accessibility rule {key[0]} failed")[:120],
-                    detail=f"The real-browser audit found the {key[0]} rule on {target} after this journey action.",
-                    fix=f"Fix {target} so it passes the {key[0]} rule, then rerun this journey.",
-                    evidence=f"step {index}: {step.get('url', '?')}"[:300],
-                )
-            )
+            rule = issue.get("rule", "browser-audit")
+            severity = issue.get("severity") if issue.get("severity") in rank else "medium"
+            entry = rules.setdefault(rule, {"message": issue.get("message"), "severity": severity, "targets": [], "steps": [], "url": step.get("url", "?")})
+            if rank[severity] > rank[entry["severity"]]:
+                entry["severity"] = severity
+            if issue.get("target") and issue["target"] not in entry["targets"]:
+                entry["targets"].append(issue["target"])
+            if index not in entry["steps"]:
+                entry["steps"].append(index)
 
         vitals = diagnostics.get("web_vitals") or {}
         for metric in ("lcp_ms", "cls", "inp_ms"):
@@ -166,6 +167,20 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
             performance_measured = True
             if metric not in worst or value > worst[metric][0]:
                 worst[metric] = (float(value), index, step.get("url", "?"))
+
+    for rule, e in rules.items():
+        targets = e["targets"] or ["the affected element"]
+        shown = ", ".join(targets[:3]) + (f" +{len(targets) - 3} more" if len(targets) > 3 else "")
+        findings.append(
+            Finding(
+                kind="accessibility",
+                severity=e["severity"],
+                title=(e["message"] or f"Accessibility rule {rule} failed")[:120],
+                detail=f"The real-browser audit found the {rule} rule failing on {len(targets)} element{'s' if len(targets) != 1 else ''}: {shown}."[:600],
+                fix=f"Fix each listed element so it passes the {rule} rule, then rerun this journey.",
+                evidence=f"step {', '.join(map(str, e['steps'][:5]))}: {e['url']}"[:300],
+            )
+        )
 
     performance_rules = {
         "lcp_ms": (2500, 4000, "Largest Contentful Paint is slow", "Reduce render-blocking work and optimize the largest above-the-fold element."),
@@ -193,6 +208,25 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
     return findings, accessibility_measured, performance_measured
 
 
+def _words(text: str) -> set[str]:
+    return {w[:5] for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 3}  # crude stem: "framed" ~ "frame"
+
+
+def grounded_ux(ux: list[Finding], code: list[Finding], has_steps: bool) -> list[Finding]:
+    """Keep only UX findings the journey supports: they must cite a step and must not restate a scan finding."""
+    kept = []
+    for f in ux:
+        if has_steps and not re.search(r"step\s*\d", f.evidence or "", re.IGNORECASE):
+            continue
+        words = _words(f.title)
+        if any(words and len(words & _words(c.title)) / len(words | _words(c.title)) >= 0.5 for c in code):
+            continue
+        if "safe mode" in f"{f.title} {f.detail}".lower():
+            continue
+        kept.append(f)
+    return kept
+
+
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
 
@@ -205,14 +239,19 @@ def synthesize(state: ReportState) -> dict:
     fi = state.get("first_impression") or {}
     context = [
         f"Site: {state['site']}",
-        f"First impression: {fi.get('what', '?')} For: {fi.get('who', '?')} Clarity {fi.get('clarity', '?')}/3. Trust: {', '.join(fi.get('trust', []))}",
+        (f"First impression: {fi.get('what', '?')} For: {fi.get('who', '?')} Clarity {fi.get('clarity', '?')}/3. Trust: {', '.join(fi.get('trust', []))}"
+         if fi else "First impression: not available, the page had no readable text without JavaScript. Do not guess what the site looks like or contains."),
         "Scan findings (already in the report, do not repeat them as UX findings):\n" + "\n".join(f"- [{f.kind}/{f.severity}] {f.title}" for f in code_findings),
     ]
     audit = state.get("site_audit")
     if audit:
         context.append(f"Site audit coverage: {audit.get('pages_scanned', 0)} pages scanned, limit {audit.get('page_limit', 0)}, truncated: {audit.get('truncated', False)}.")
+    if any(f.title == "Homepage content only appears after JavaScript runs" for f in code_findings):
+        context.append("Context: the homepage is rendered by JavaScript. Google and screen readers do run JavaScript and see the content; "
+                       "link previews (WhatsApp, LinkedIn, Slack), most AI crawlers and simpler search crawlers see an empty page. Do not overstate the impact.")
     if steps:
         context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}. Outcome: {state.get('status')}.\nSteps:\n{render_steps(steps)}")
+        context.append("Steps that mention safe mode were stopped by Walkthru on purpose (it never sends, pays or deletes). They are not site problems; never report them as findings.")
         task = "Write UX findings for where the test user hesitated, looped, hit errors or gave up; cite the step number as evidence. Then a summary and the top fixes across everything."
     else:
         context.append("No test user run; this is an Instant Scan of the homepage only.")
@@ -222,7 +261,7 @@ def synthesize(state: ReportState) -> dict:
         ("human", "\n\n".join(context) + "\n\n" + task),
     ]
     syn, used = runtime.call(Synthesis, messages)
-    findings = [f.model_copy(update={"kind": "ux"}) for f in syn.ux_findings] + code_findings
+    findings = [f.model_copy(update={"kind": "ux"}) for f in grounded_ux(syn.ux_findings, code_findings, bool(steps))] + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])
     report = Report(

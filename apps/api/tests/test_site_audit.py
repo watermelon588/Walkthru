@@ -88,3 +88,18 @@ def test_site_audit_asks_for_html_and_reports_when_none_is_served(monkeypatch):
 def test_client_requests_html():
     with fetch.client() as c:
         assert c.headers["accept"].startswith("text/html")
+
+
+def test_js_only_shell_is_reported_not_judged(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    shell = '<!doctype html><html lang="en"><head><title>Me</title></head><body><div id="root"></div><script type="module" src="/assets/index.js"></script></body></html>'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path in ("/robots.txt", "/sitemap.xml"):
+            return httpx.Response(404, request=request)
+        return httpx.Response(200, text=shell, headers={"content-type": "text/html"}, request=request)
+
+    assert fetch.is_js_shell(shell) and not fetch.is_js_shell("<p>Small but real page with a sentence.</p><script src='a.js'></script>")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = site.audit("https://spa.test/", client, verified=False, max_pages=2, time_limit=2)
+    assert any(f.title == "Homepage content only appears after JavaScript runs" for f in result.seo)

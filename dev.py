@@ -23,12 +23,24 @@ EXT = os.path.join(ROOT, "apps", "extension")
 
 SERVERS = {
     # name: (command, cwd, port, url to check)
-    "api": ([PY, "-m", "uvicorn", "app.main:app", "--reload", "--reload-dir", "app", "--port", "8000", "--timeout-graceful-shutdown", "5"], os.path.join(ROOT, "apps", "api"), 8000, "http://127.0.0.1:8000/health"),
+    # No --reload: uvicorn's Windows reload uses console Ctrl+C events and hangs under a supervisor.
+    # This script restarts the API itself when apps/api/app changes (see api_changed).
+    "api": ([PY, "-m", "uvicorn", "app.main:app", "--port", "8000", "--timeout-graceful-shutdown", "3"], os.path.join(ROOT, "apps", "api"), 8000, "http://127.0.0.1:8000/health"),
     "web": ([NODE, "node_modules/vite/bin/vite.js", "--port", "5173", "--strictPort"], os.path.join(ROOT, "apps", "web"), 5173, "http://localhost:5173/"),
     "fixtures": ([PY, "evals/serve.py"], ROOT, 8101, "http://127.0.0.1:8102/"),
 }
 COLORS = {"api": "36", "web": "35", "fixtures": "33", "ext": "32", "dev": "1"}
 procs: list[subprocess.Popen] = []
+API_SRC = os.path.join(ROOT, "apps", "api", "app")
+
+
+def api_mtime() -> float:
+    newest = 0.0
+    for folder, _, files in os.walk(API_SRC):
+        for f in files:
+            if f.endswith(".py"):
+                newest = max(newest, os.path.getmtime(os.path.join(folder, f)))
+    return newest
 
 
 def say(name: str, line: str) -> None:
@@ -43,7 +55,9 @@ def pipe(name: str, proc: subprocess.Popen) -> None:
 
 
 def start(name: str, cmd: list[str], cwd: str) -> subprocess.Popen:
-    flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    # Windows: each server gets its own hidden console. uvicorn --reload stops its worker with a console
+    # Ctrl+C event, and in a shared console that event would also kill this script and the whole stack.
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     env = os.environ | {"PYTHONUNBUFFERED": "1", "FORCE_COLOR": "1"}
     proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, creationflags=flags)
     procs.append(proc)
@@ -64,13 +78,18 @@ def up(url: str) -> bool:
         return False
 
 
+def kill(proc: subprocess.Popen) -> None:
+    if proc.poll() is None:
+        if os.name == "nt":  # kill the whole tree: vite and uvicorn spawn children
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True, check=False)
+        else:
+            proc.terminate()
+        proc.wait(timeout=10)
+
+
 def stop_all() -> None:
     for proc in procs:
-        if proc.poll() is None:
-            if os.name == "nt":  # kill the whole tree: uvicorn --reload and vite spawn children
-                subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True, check=False)
-            else:
-                proc.terminate()
+        kill(proc)
 
 
 def main() -> int:
@@ -81,15 +100,14 @@ def main() -> int:
 
     say("ext", "building extension ...")
     ext = start("ext", [NODE, "node_modules/wxt/bin/wxt.mjs", "build"], EXT)
-    for name, (cmd, cwd, _, _) in SERVERS.items():
-        start(name, cmd, cwd)
+    running = {name: start(name, cmd, cwd) for name, (cmd, cwd, _, _) in SERVERS.items()}
 
     ext_ok = ext.wait() == 0
     deadline = time.time() + 90
     pending = {n: u for n, (_, _, _, u) in SERVERS.items()}
     while pending and time.time() < deadline:
         pending = {n: u for n, u in pending.items() if not up(u)}
-        if any(p.poll() is not None for p in procs[1:]):
+        if any(p.poll() is not None for p in running.values()):
             say("dev", "a server exited during startup; see its output above")
             stop_all()
             return 1
@@ -107,9 +125,19 @@ def main() -> int:
         + (f"  Still starting: {', '.join(pending)}\n" if pending else ""),
         flush=True,
     )
+    seen = api_mtime()
     try:
-        while all(p.poll() is None for p in procs[1:]):
+        while all(p.poll() is None for p in running.values()):
             time.sleep(1)
+            now = api_mtime()
+            if now != seen:  # API source changed: restart it cleanly
+                seen = now
+                say("api", "source changed, restarting API ...")
+                old = running["api"]
+                kill(old)
+                procs.remove(old)
+                cmd, cwd, _, _ = SERVERS["api"]
+                running["api"] = start("api", cmd, cwd)
         say("dev", "a server stopped; shutting down the rest")
     except KeyboardInterrupt:
         say("dev", "stopping ...")

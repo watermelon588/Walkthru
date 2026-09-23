@@ -164,7 +164,14 @@ def _enforce(step: PersonaStep, state: SessionState) -> PersonaStep:
             thought = f"{step.thought} (element #{step.target_id} does not exist)"
             return PersonaStep(thought=thought, action="scroll", confusion=max(step.confusion, 2))
         label = el.get("text", "")
-        if state.get("logged_in") and is_dangerous(label):
+        # Logged-in pages: never touch anything dangerous. Public pages: plain links may navigate
+        # ("Buy now" to pricing), but buttons and submits that pay, delete or send never fire.
+        public_action = step.action == "click" and el.get("tag") != "a"
+        if is_dangerous(label) and (state.get("logged_in") or public_action):
+            if not state.get("logged_in"):
+                # The journey worked up to the final button; Walkthru never sends, pays or deletes for real.
+                thought = f"{step.thought} (Walkthru stopped at '{label}' by design: safe mode never sends, pays or deletes. The flow worked up to this point.)"
+                return PersonaStep(thought=thought, action="done", confusion=step.confusion)
             thought = f"{step.thought} (blocked by safe mode: '{label}')"
             return PersonaStep(thought=thought, action="give_up", confusion=step.confusion)
     return step

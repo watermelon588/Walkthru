@@ -69,7 +69,7 @@ def test_database_outage_returns_retryable_cors_response(monkeypatch):
 
     assert response.status_code == 503
     assert response.headers["access-control-allow-origin"] == "chrome-extension://walkthru-test"
-    assert response.json()["detail"] == "Database connection was interrupted. Please retry."
+    assert response.json()["detail"].startswith("Walkthru could not reach its database")
 
 
 @pytest.mark.parametrize("origin", ["http://localhost:5173", "http://127.0.0.1:5173"])
@@ -270,3 +270,14 @@ def test_unknown_run():
 
 def test_danger_words():
     assert is_dangerous("Cancel subscription") and not is_dangerous("Continue")
+
+
+def test_public_page_blocks_send_button_but_allows_links(monkeypatch):
+    use([PersonaStep(thought="send it", action="click", target_id=1, confusion=0)], monkeypatch)
+    c = TestClient(app)
+    contact = page("https://fixture.test/contact", [{"id": 1, "tag": "button", "text": "Send message"}, {"id": 2, "tag": "a", "text": "Buy now"}])
+    r = start(c, contact)
+    assert r["status"] == "done" and "safe mode never sends" in r["steps"][0]["thought"]
+    use([PersonaStep(thought="see pricing", action="click", target_id=2, confusion=0)], monkeypatch)
+    r = start(c, contact)
+    assert r["status"] == "running" and r["action"]["target_id"] == 2

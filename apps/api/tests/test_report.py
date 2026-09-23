@@ -92,3 +92,25 @@ def test_share_and_email(fake_db, monkeypatch):
     assert c.post("/runs/r1/email").json() == {"sent": False, "to": "tester@example.com"}
     token = c.get("/verification").json()
     assert token["token"].startswith("wt-") and token["token"] in token["meta"]
+
+
+def test_empty_page_text_skips_first_impression(monkeypatch):
+    from app.agent import report as report_module
+
+    called = []
+    monkeypatch.setattr(runtime, "call", lambda schema, messages: called.append(schema) or (None, 0))
+    out = report_module.first_impression({"site": "https://spa.test/", "page_text": "  "})
+    assert out["first_impression"] == {} and called == []
+
+
+def test_grounded_ux_drops_unsupported_and_restated_findings():
+    from app.agent.report import grounded_ux
+
+    code = [Finding(kind="security", severity="medium", title="Page can be framed", detail="d", fix="f")]
+    ux = [
+        Finding(kind="ux", severity="high", title="Email link did nothing", detail="d", fix="f", evidence="step 2"),
+        Finding(kind="ux", severity="medium", title="Page can be embedded in a frame", detail="d", fix="f", evidence="step 1"),
+        Finding(kind="ux", severity="medium", title="Unclear navigation", detail="d", fix="f", evidence=None),
+        Finding(kind="ux", severity="high", title="Contact form cannot be submitted", detail="blocked by safe mode", fix="f", evidence="step 7"),
+    ]
+    assert [f.title for f in grounded_ux(ux, code, has_steps=True)] == ["Email link did nothing"]
