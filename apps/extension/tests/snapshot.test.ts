@@ -1,5 +1,5 @@
 import { findById, ID_ATTR, snapshot } from "../lib/snapshot";
-import { execute } from "../lib/execute";
+import { execute, submits } from "../lib/execute";
 
 function page(html: string) {
   document.body.innerHTML = html;
@@ -18,7 +18,7 @@ test("numbers visible interactive elements with labels", () => {
     <div role="button" aria-label="Open menu"></div>`);
   expect(obs.elements).toEqual([
     { id: 1, tag: "a", text: "Pricing" },
-    { id: 2, tag: "input", text: "Email address", type: "email" },
+    { id: 2, tag: "input", text: "Email address", type: "email", state: "filled" },
     { id: 3, tag: "button", text: "Create account" },
     { id: 4, tag: "div", text: "Open menu" },
   ]);
@@ -61,6 +61,8 @@ test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode",
   expect((document.getElementById("e") as HTMLInputElement).value).toBe("a@b.co");
   const click2 = { thought: "", action: "click" as const, target_id: 2, text: null, confusion: 0 };
   expect(execute(click2, document, { logged_in: true }).note).toMatch(/safe mode/);
+  expect(execute(click2, document).note).toMatch(/safe mode/); // public page: a destructive button never fires either
+  document.querySelector("button")!.textContent = "Create account";
   let clicked = 0;
   document.querySelector("button")!.addEventListener("click", (e) => { clicked++; e.preventDefault(); });
   expect(execute(click2, document, { dryRun: true })).toEqual({ ok: true, submits: true });
@@ -68,4 +70,64 @@ test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode",
   expect(execute(click2, document)).toEqual({ ok: true, submits: true });
   expect(clicked).toBe(1);
   expect(execute({ ...click2, target_id: 9 }, document).note).toBe("element #9 not found");
+});
+
+test("execute: public pages block send buttons (including input values) but allow plain links", () => {
+  page(`<form><input type="submit" value="Send message"></form><a href="#pricing">Buy now</a>`);
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  expect(execute(click(1), document).note).toMatch(/not sent: "Send message" only fires on a domain the owner has verified/);
+  expect(execute(click(2), document)).toEqual({ ok: true, submits: false });
+});
+
+test("execute: mailto and tel links are reported as contact methods, never opened", () => {
+  page(`<a href="mailto:owner@site.dev">Email me</a><a href="tel:+15550100">Call</a>`);
+  let opened = 0;
+  document.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => { opened++; e.preventDefault(); }));
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  const email = execute(click(1), document);
+  expect(email.note).toMatch(/opens an email app/);
+  expect(email.note).not.toContain("owner@site.dev");
+  expect(execute(click(2), document).note).toMatch(/phone call/);
+  expect(opened).toBe(0);
+});
+
+test("snapshot reports whether fields are filled, never their values", () => {
+  const obs = page(`<form>
+    <label for="n">Name</label><input id="n" value="Test Walker">
+    <label for="m">Message</label><textarea id="m"></textarea>
+    <label><input type="checkbox" checked> Agree</label>
+  </form>`);
+  expect(obs.elements.map((e) => e.state)).toEqual(["filled", "empty", "checked"]);
+  expect(JSON.stringify(obs)).not.toContain("Test Walker");
+});
+
+test("submit detection follows the form attribute (button outside the form)", () => {
+  page(`<form id="contact"><input name="name"></form><aside><button type="submit" form="contact" aria-label="Submit contact form">ping</button></aside>`);
+  expect(submits(document.querySelector("button")!)).toBe(true);
+});
+
+test("sending needs a verified domain and the owner's approval; destroying is never allowed", () => {
+  page(`<form id="c"></form><button type="submit" form="c" aria-label="Submit contact form and send email">ping</button><button>Delete account</button>`);
+  let sent = 0;
+  document.querySelector("button")!.addEventListener("click", (e) => { sent++; e.preventDefault(); });
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  expect(execute(click(1), document).note).toMatch(/only fires on a domain the owner has verified/);
+  expect(execute(click(1), document, { verified: true, dryRun: true })).toEqual({ ok: true, submits: true, confirm: "send" });
+  expect(execute(click(1), document, { verified: true }).note).toMatch(/owner has not approved/);
+  expect(sent).toBe(0);
+  expect(execute(click(1), document, { verified: true, confirmed: true })).toEqual({ ok: true, submits: true });
+  expect(sent).toBe(1);
+  expect(execute(click(2), document, { verified: true, confirmed: true }).note).toMatch(/safe mode/);
+});
+
+test("typing reports when a field rejects the text", () => {
+  page(`<select id="s"><option value="">Pick</option><option value="a">A</option></select>`);
+  const r = execute({ thought: "", action: "type", target_id: 1, text: "Z", confusion: 0 }, document);
+  expect(r).toEqual({ ok: false, note: "the field did not keep the typed text" });
+});
+
+test("snapshot reports visible confirmations separately from errors", () => {
+  const obs = page(`<p role="alert">Email is required</p><p role="status">Thanks! Your message was sent to owner@site.dev.</p><p role="status" hidden>Old</p>`);
+  expect(obs.errors).toEqual(["Email is required"]);
+  expect(obs.notices).toEqual(["Thanks! Your message was sent to [email]."]);
 });

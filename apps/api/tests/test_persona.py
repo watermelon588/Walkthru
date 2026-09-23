@@ -69,7 +69,7 @@ def test_database_outage_returns_retryable_cors_response(monkeypatch):
 
     assert response.status_code == 503
     assert response.headers["access-control-allow-origin"] == "chrome-extension://walkthru-test"
-    assert response.json()["detail"] == "Database connection was interrupted. Please retry."
+    assert response.json()["detail"].startswith("Walkthru could not reach its database")
 
 
 @pytest.mark.parametrize("origin", ["http://localhost:5173", "http://127.0.0.1:5173"])
@@ -270,3 +270,92 @@ def test_unknown_run():
 
 def test_danger_words():
     assert is_dangerous("Cancel subscription") and not is_dangerous("Continue")
+
+
+def test_public_page_blocks_send_button_but_allows_links(monkeypatch):
+    use([PersonaStep(thought="send it", action="click", target_id=1, confusion=0)], monkeypatch)
+    c = TestClient(app)
+    contact = page("https://fixture.test/contact", [{"id": 1, "tag": "button", "text": "Send message"}, {"id": 2, "tag": "a", "text": "Buy now"}])
+    r = start(c, contact)
+    assert r["status"] == "safe_stop" and "only sends real messages on a domain the owner" in r["steps"][0]["thought"]
+    assert r["steps"][0]["safe_stop"] is True
+    use([PersonaStep(thought="see pricing", action="click", target_id=2, confusion=0)], monkeypatch)
+    r = start(c, contact)
+    assert r["status"] == "running" and r["action"]["target_id"] == 2
+
+
+def test_verified_owner_may_send_but_never_destroy(monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)
+    contact = page("https://fixture.test/contact", [{"id": 1, "tag": "button", "text": "Submit contact form and send email"}, {"id": 2, "tag": "button", "text": "Delete account"}])
+    c = TestClient(app)
+    use([PersonaStep(thought="send it", action="click", target_id=1, confusion=0)], monkeypatch)
+    r = start(c, contact)
+    assert r["status"] == "running" and r["action"]["target_id"] == 1 and r["verified"] is True  # extension asks the owner first
+    use([PersonaStep(thought="delete", action="click", target_id=2, confusion=0)], monkeypatch)
+    r = start(c, contact)
+    assert r["status"] == "safe_stop" and "never pays, deletes or cancels" in r["steps"][0]["thought"]
+
+
+def test_field_state_is_shown_and_step_outcomes_are_recorded(monkeypatch):
+    from app.agent.persona import render_observation
+    from app.agent.report import render_steps
+
+    shown = render_observation(page("https://fixture.test/contact", [{"id": 1, "tag": "input", "type": "text", "state": "filled", "text": "What's your name?"}]))
+    assert "[1] input (text) [filled]: What's your name?" in shown
+
+    use([PersonaStep(thought="contact", action="click", target_id=1, confusion=0), PersonaStep(thought="type", action="type", target_id=2, text="Test Walker", confusion=0), PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)
+    c = TestClient(app)
+    home = page("https://fixture.test/", [{"id": 1, "tag": "a", "text": "Contact"}])
+    contact = page("https://fixture.test/contact", [{"id": 2, "tag": "input", "type": "text", "state": "empty", "text": "Name"}])
+    r = start(c, home)
+    r = observe(c, r["run_id"], contact).json()
+    after = contact | {"errors": ["Failed to fetch"], "elements": [{"id": 2, "tag": "input", "type": "text", "state": "filled", "text": "Name"}]}
+    r = observe(c, r["run_id"], after).json()
+    steps = r["steps"]
+    assert steps[0]["result_url"] == "https://fixture.test/contact"
+    assert steps[1]["errors_after"] == ["Failed to fetch"]
+    text = render_steps(steps)
+    assert "ended on https://fixture.test/contact (navigation worked)" in text and "page then showed: Failed to fetch" in text
+
+
+def test_stop_reason_is_recorded_for_the_report(monkeypatch, fake_db):
+    from tests.conftest import USER
+
+    fake_db["r9"] = {"id": "r9", "user_id": USER, "status": "running", "tier": "free", "tokens": 0,
+                     "steps": [{"thought": "send", "action": "click", "target_id": 5, "text": None, "confusion": 0, "url": "https://fixture.test/contact"}]}
+    from app import db
+    monkeypatch.setattr(db, "mark_run_stopped", lambda run_id, steps, tokens=0: fake_db[run_id].update(status="stopped", steps=steps) or True)
+    r = TestClient(app).post("/runs/r9/stop", json={"reason": "the last click led away from the site, to https://fixture.test/api"})
+    last = r.json()["steps"][-1]
+    assert last["interrupted"] is True and last["note_after"].startswith("the last click led away")
+    assert TestClient(app).post("/runs/r9/stop").status_code == 200  # no body still works (web app)
+
+
+def test_confirmations_reach_the_agent_and_a_second_send_is_refused(monkeypatch):
+    from app import main
+    from app.agent.persona import render_observation
+    from app.agent.report import render_steps
+
+    obs = page("https://fixture.test/contact", []) | {"notices": ["Thanks! Your message was sent."]}
+    assert "Visible confirmations: Thanks! Your message was sent." in render_observation(obs)
+
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)
+    send = PersonaStep(thought="send", action="click", target_id=5, confusion=0)
+    use([send, send], monkeypatch)
+    c = TestClient(app)
+    form = page("https://fixture.test/contact", [{"id": 5, "tag": "button", "text": "Send message"}])
+    r = start(c, form)
+    assert r["status"] == "running"  # first send allowed (owner confirms in the panel)
+    r = observe(c, r["run_id"], form | {"notices": ["Thanks! Your message was sent."]}).json()
+    assert r["status"] == "done" and "never sends twice" in r["steps"][-1]["thought"]
+    assert r["steps"][0]["sent"] is True
+    assert "page then confirmed: Thanks! Your message was sent." in render_steps(r["steps"])
+
+
+def test_type_without_text_uses_the_test_identity(monkeypatch):
+    use([PersonaStep(thought="email", action="type", target_id=4, text=None, confusion=0)], monkeypatch)
+    form = page("https://fixture.test/signup", [{"id": 4, "tag": "input", "type": "email", "state": "empty", "text": "Email"}])
+    r = start(TestClient(app), form)
+    assert r["action"]["text"].startswith("walkthru.tester+") and r["action"]["text"].endswith("@example.com")

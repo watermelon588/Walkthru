@@ -13,6 +13,7 @@ class Element(BaseModel):
     tag: str  # a, button, input, select, textarea
     text: str = ""  # visible text or aria-label, already redacted client side
     type: str | None = None  # input type
+    state: Literal["filled", "empty", "checked", "unchecked"] | None = None  # form fields only; never the value
 
 
 class WebVitals(BaseModel):
@@ -50,6 +51,7 @@ class Observation(BaseModel):
     elements: list[Element] = Field(default_factory=list)
     text: str = ""  # visible text, trimmed client side
     errors: list[str] = Field(default_factory=list)  # visible error messages
+    notices: list[str] = Field(default_factory=list)  # visible confirmations, e.g. 'Message sent'
     note: str | None = None  # executor feedback: "element not found", "captcha", ...
     diagnostics: BrowserDiagnostics | None = None
 

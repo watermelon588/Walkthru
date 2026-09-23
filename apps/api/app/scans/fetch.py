@@ -9,6 +9,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 UA = "Mozilla/5.0 (compatible; WalkthruBot/0.1; +https://walkthru.dev/bot)"
+ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"
 MAX_TEXT = 300_000
 MAX_REDIRECTS = 5
 
@@ -30,8 +31,9 @@ def assert_public(url: str) -> None:
             raise ValueError("site resolves to a private address")
 
 
-def client() -> httpx.Client:
-    return httpx.Client(follow_redirects=False, timeout=15, headers={"User-Agent": UA})
+def client(timeout: float = 15) -> httpx.Client:
+    # Ask for HTML like a browser: some hosts (Vercel "markdown for agents") serve Markdown to clients that do not.
+    return httpx.Client(follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
 def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.Response | None:
@@ -62,6 +64,15 @@ def page_text(html: str, limit: int = 6000) -> str:
     body = tree.body
     text = body.text(separator=" ") if body is not None else ""
     return " ".join(text.split())[:limit]
+
+
+MIN_TEXT = 20  # JS-only shells serve ~0 visible characters (noscript is stripped); real pages serve more
+
+
+def is_js_shell(html: str) -> bool:
+    """True for single-page apps whose served HTML is an empty shell filled in by JavaScript."""
+    tree = HTMLParser(html)
+    return len(page_text(html)) < MIN_TEXT and tree.css_first("script[src]") is not None
 
 
 def origin(url: str) -> str:

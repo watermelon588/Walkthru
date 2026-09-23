@@ -65,9 +65,12 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 |---|---|---|
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
+| App shell | `/app/*` | Desktop: 15rem left sidebar on `bg` with a hairline, active item on `surface`. Phones: sticky top bar and a native `<dialog>` drawer with the same navigation. |
 | Dashboard | `/app` | Evidence-led command center. Lead with a plain-language launch-readiness promise, interactive Scout guidance, one run-to-report pipeline and recent runs with frame/finding counts. Keep controls in one clear column before history. |
 | Profile & settings | `/app/settings` | Authenticated personal or business profile stored in Supabase Auth metadata. Shows the signed-in identity, provider status and one focused profile form. |
 | Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
+| Docs | `/docs` | Read mode. `DocLayout`: title, lead, sticky "On this page" index (collapsible on phones), `.prose-doc` body at ~68ch. Same layout for `/privacy`, `/terms`, `/security`. |
+| Not found | `*` | Scout in its stopped state, one line of copy, Home and Docs actions. |
 | Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
 
 ## Evidence workspace

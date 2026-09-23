@@ -76,6 +76,17 @@ or bounded action           |
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
 - Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
+## Runtime choices for this deployment stage
+- **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.
+- **Agent state:** LangGraph uses an in-memory checkpointer unless `CHECKPOINTER=postgres`. Use Postgres when the API runs next to the database or on more than one instance.
+- **Models:** free chain of Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite (`GROQ_MODELS`, `GEMINI_MODELS`). Each Groq model has its own 8k tokens/min budget; zero retries so a 429 moves on instantly.
+- **Report writer:** the report calls (`runtime.call`, first impression and synthesis) try Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (`OPENROUTER_MODELS`, 90 s budget, plain httpx), then the rest of the chain. Persona steps never wait on OpenRouter. Chosen by `evals/model_bakeoff.py`; see docs/decisions.md.
+
+## Journey safety and grounding
+- **Destructive** (pay, buy, checkout, delete, remove, cancel subscription, transfer, unsubscribe): never clicked as a button on any page; on logged-in pages not even typed into. **Sending** (send, invite): only on a domain the signed-in owner verified (meta tag or `/.well-known/walkthru.txt`), only after the owner confirms in the side panel, at most once per run. Plain links may navigate. Enforced in both `app/agent/persona.py::_enforce` and `apps/extension/lib/execute.ts`.
+- A run ended at such a button has status `safe_stop`. `mailto:`/`tel:` links are reported as contact methods and never opened.
+- Report grounding (`app/agent/report.py`): `problem_steps` defines where something went wrong; `grounded_ux` drops UX findings that cite no such step or restate a scan finding; the writer sees step outcomes, the final page's controls and a local-dev note, and the system prompt forbids unsupported claims.
+
 ## Data lifecycle
 - Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
 - `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.

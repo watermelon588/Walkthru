@@ -63,7 +63,8 @@ export default function Login() {
 
   return (
     <div ref={root} className="grid min-h-[100dvh] bg-bg text-ink lg:grid-cols-[1fr_1.1fr]">
-      <main className="flex flex-col px-5 py-8 md:px-10">
+      <title>{`Sign in · ${brand.name}`}</title>
+      <main id="main" className="flex flex-col px-5 py-8 md:px-10">
         <Logo className="self-start" />
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-16">
@@ -118,8 +119,8 @@ export default function Login() {
               </form>
 
               <p className="hero-fade mt-10 text-xs leading-relaxed text-muted">
-                By continuing you agree to our <a href="#" className="underline underline-offset-2 hover:text-ink">Terms</a> and{' '}
-                <a href="#" className="underline underline-offset-2 hover:text-ink">Privacy Policy</a>.
+                By continuing you agree to our <a href="/terms" className="underline underline-offset-2 hover:text-ink">Terms</a> and{' '}
+                <a href="/privacy" className="underline underline-offset-2 hover:text-ink">Privacy Policy</a>.
               </p>
             </>
           )}

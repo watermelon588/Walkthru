@@ -25,7 +25,7 @@ export default function Landing() {
   return (
     <div ref={root} className="min-h-[100dvh] bg-bg text-ink">
       <Nav />
-      <main>
+      <main id="main">
         <section className="mx-auto max-w-7xl px-5 pt-20 md:px-10 md:pt-24">
           <h1 className="max-w-[23ch] text-5xl leading-[1.04] font-extralight tracking-[-0.035em] md:text-7xl">
             <Words text={hero.title} />

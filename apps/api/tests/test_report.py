@@ -32,7 +32,7 @@ def fake_llm(monkeypatch):
             return FirstImpression(what="A vague platform for synergy.", who="Unclear, maybe enterprises.", first_click="Log in, since there is no sign-up.", trust=["no pricing shown"], clarity=3), 100
         return Synthesis(
             summary="The test user could not find sign-up and the page says nothing concrete.",
-            ux_findings=[Finding(kind="ux", severity="high", title="Sign-up is hidden in the footer", detail="The user looked for it in the nav first.", fix="Add a Sign up button to the nav.", evidence="step 2")],
+            ux_findings=[Finding(kind="ux", severity="high", title="Sign-up is hidden in the footer", detail="The user looked for it in the nav first.", fix="Add a Sign up button to the nav.", evidence="step 1")],
             top_fixes=["Add a Sign up button to the nav.", "Add a meta description.", "Send security headers."],
         ), 200
 
@@ -92,3 +92,63 @@ def test_share_and_email(fake_db, monkeypatch):
     assert c.post("/runs/r1/email").json() == {"sent": False, "to": "tester@example.com"}
     token = c.get("/verification").json()
     assert token["token"].startswith("wt-") and token["token"] in token["meta"]
+
+
+def test_empty_page_text_skips_first_impression(monkeypatch):
+    from app.agent import report as report_module
+
+    called = []
+    monkeypatch.setattr(runtime, "call", lambda schema, messages: called.append(schema) or (None, 0))
+    out = report_module.first_impression({"site": "https://spa.test/", "page_text": "  "})
+    assert out["first_impression"] == {} and called == []
+
+
+def test_grounded_ux_drops_unsupported_and_restated_findings():
+    from app.agent.report import grounded_ux
+
+    code = [Finding(kind="security", severity="medium", title="Page can be framed", detail="d", fix="f")]
+    ux = [
+        Finding(kind="ux", severity="high", title="Email link did nothing", detail="d", fix="f", evidence="step 2"),
+        Finding(kind="ux", severity="medium", title="Page can be embedded in a frame", detail="d", fix="f", evidence="step 1"),
+        Finding(kind="ux", severity="medium", title="Unclear navigation", detail="d", fix="f", evidence=None),
+        Finding(kind="ux", severity="high", title="Contact form cannot be submitted", detail="blocked by safe mode", fix="f", evidence="step 7"),
+    ]
+    ok = {"thought": "t", "action": "click", "confusion": 0, "url": "u"}
+    steps = [ok, ok | {"errors_after": ["Network error"]}] + [ok] * 5
+    assert [f.title for f in grounded_ux(ux, code, steps)] == ["Email link did nothing"]
+
+
+def test_a_journey_where_everything_worked_keeps_no_ux_findings():
+    from app.agent.report import grounded_ux, problem_steps
+
+    ok = {"thought": "t", "action": "type", "confusion": 0, "url": "u"}
+    steps = [ok] * 6 + [ok | {"action": "done", "safe_stop": True}]
+    invented = [Finding(kind="ux", severity="medium", title="Contact form fields lack placeholders", detail="d", fix="f", evidence="Step 2, 3, 4, 5, 6")]
+    assert problem_steps(steps, "safe_stop") == set() and grounded_ux(invented, [], steps, "safe_stop") == []
+    mailto = [ok | {"note_after": "this link opens an email app; it is a working contact method, so Walkthru did not open it"}]
+    assert problem_steps(mailto) == set()
+    looping = [ok] * 5
+    assert problem_steps(looping, "stuck") == {3, 4, 5}
+
+
+def test_local_dev_server_skips_host_level_findings():
+    from app.agent.report import CODE_LEVEL_SECURITY, is_local_site
+
+    assert is_local_site("http://127.0.0.1:5173/") and is_local_site("http://localhost:3000") and is_local_site("http://192.168.1.4/")
+    assert not is_local_site("https://portfolio-web-six-psi-43.vercel.app/")
+    assert any(k in "/.env is publicly readable" for k in CODE_LEVEL_SECURITY)
+
+
+def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
+    seen = []
+
+    def call(schema, messages):
+        seen.append(messages[-1][1])
+        if schema is FirstImpression:
+            return FirstImpression(what="w", who="w", first_click="c", trust=[], clarity=0), 0
+        return Synthesis(summary="s", ux_findings=[], top_fixes=[]), 0
+
+    monkeypatch.setattr(runtime, "call", call)
+    steps = [{"thought": "no other way to sign up", "action": "give_up", "target_id": None, "text": None, "confusion": 3, "url": HARD + "/"}]
+    report.run_report(HARD + "/", "Some page text that is long enough.", goal="sign up", status="gave_up", steps=steps, final_controls=["button: Continue with Google"])
+    assert any("Continue with Google" in m and "Never claim a button" in m for m in seen)

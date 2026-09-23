@@ -53,3 +53,30 @@ button:disabled { opacity: 0.5; cursor: default; }
 .summary p { margin: 0; color: var(--muted); font-size: 13px; }
 .summary p + p { margin-top: 6px; }
 .summary a { color: var(--ink); }
+
+/* Interaction states and browser surfaces. */
+html { color-scheme: light; scrollbar-color: var(--line) transparent; }
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+input[type="text"], input[type="url"], select, textarea { transition: border-color .15s ease; }
+input[type="text"]:hover, input[type="url"]:hover, select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color: color-mix(in srgb, var(--ink) 25%, var(--line)); }
+select:disabled, textarea:disabled { background: var(--surface); color: var(--muted); }
+input[type="checkbox"] { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; accent-color: var(--ink); }
+label.row { align-items: flex-start; line-height: 1.4; }
+label.row input { margin-top: 2px; }
+button { transition: background-color .15s ease, opacity .15s ease, transform .1s ease; }
+button:not(:disabled):hover { background: var(--surface); }
+button.primary:not(:disabled):hover { background: var(--ink); opacity: .85; }
+button:not(:disabled):active { transform: scale(.98); }
+.actions button { min-height: 40px; }
+.notice a, .summary a, .panel-footer a { text-underline-offset: 3px; text-decoration-color: var(--line); }
+.notice a:hover, .summary a:hover, .panel-footer a:hover { text-decoration-color: var(--ink); }
+.step { animation: step-in .35s cubic-bezier(.16, 1, .3, 1); }
+@keyframes step-in { from { opacity: 0; transform: translateY(4px); } }
+.panel-footer { margin-top: auto; display: flex; gap: 16px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 12px; }
+.panel-footer a { color: var(--muted); }
+.panel-footer a:hover { color: var(--ink); }
+.panel { min-height: 100vh; }
+@media (prefers-reduced-motion: reduce) {
+  .step { animation: none; }
+  button { transition: none; }
+}

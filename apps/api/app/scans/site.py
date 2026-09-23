@@ -34,6 +34,7 @@ class SiteAudit:
     seo: list[Finding]
     security: list[Finding]
     coverage: AuditCoverage
+    production_like: bool = False  # a local host that deliberately serves production headers (the eval fixtures)
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -112,6 +113,7 @@ def audit(
         return SiteAudit([failure], [], coverage)
 
     root_url = str(root.url)
+    shell = fetch.is_js_shell(root.text)
     base = fetch.origin(root_url)
     robots_response = fetch.get(client, f"{base}/robots.txt", same_origin=base)
     robots_text = robots_response.text if robots_response is not None and robots_response.status_code == 200 else None
@@ -153,7 +155,31 @@ def audit(
         security_records.extend((finding, None) for finding in security.check_exposed(base, client))
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
 
+    if shell:
+        # Page-level checks read the served HTML. On a JavaScript-built page that is not what visitors or
+        # screen readers get, so say exactly what was checked.
+        seo_records = [
+            (f.model_copy(update={"detail": ("In the HTML sent before JavaScript runs: " + f.detail.replace(" and screen readers", ""))[:600]}), page)
+            if page == root_url else (f, page)
+            for f, page in seo_records
+        ]
+        seo_records.append((Finding(
+            kind="seo",
+            severity="medium",
+            title="Homepage content only appears after JavaScript runs",
+            detail=f"The server sends {len(root.text)} bytes of HTML with {len(fetch.page_text(root.text))} characters of visible text. "
+            "Link previews on WhatsApp, LinkedIn and Slack, most AI crawlers and slower search crawlers see an empty page, "
+            "and the other page checks in this report describe that pre-JavaScript HTML.",
+            fix="Prerender the homepage (static generation or server rendering), or at least put a real h1, description and Open Graph tags in index.html.",
+            evidence=root_url,
+        ), root_url))
+
+    if not pages:  # never report a clean audit when nothing was actually checked
+        kind = root.headers.get("content-type", "unknown")
+        seo_records.append((Finding(kind="seo", severity="medium", title="No HTML pages could be audited", detail=f"The homepage answered with {kind} instead of HTML, so page-level SEO and security checks did not run.", fix="Serve text/html to browsers and crawlers that request it.", evidence=root_url), root_url))
+
     duration_ms = round((time.monotonic() - started) * 1000)
     truncated = bool(queue) or (time.monotonic() >= deadline and len(pages) < len(queued))
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])
-    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage)
+    production_like = root.headers.get("x-walkthru-fixture") == "production"
+    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage, production_like)

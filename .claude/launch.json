@@ -2,27 +2,70 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "stack",
+      "runtimeExecutable": "apps/api/.venv/Scripts/python",
+      "runtimeArgs": [
+        "dev.py"
+      ],
+      "port": 8000
+    },
+    {
       "name": "web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["apps/web/node_modules/vite/bin/vite.js", "apps/web", "--port", "5173", "--strictPort"],
+      "runtimeArgs": [
+        "apps/web/node_modules/vite/bin/vite.js",
+        "apps/web",
+        "--port",
+        "5173",
+        "--strictPort"
+      ],
       "port": 5173
+    },
+    {
+      "name": "web-ui",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "apps/web/node_modules/vite/bin/vite.js",
+        "apps/web",
+        "--port",
+        "5174",
+        "--strictPort"
+      ],
+      "port": 5174
     },
     {
       "name": "api",
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
-      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000", "--app-dir", "apps/api"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--reload",
+        "--port",
+        "8000",
+        "--app-dir",
+        "apps/api"
+      ],
       "port": 8000
     },
     {
       "name": "fixtures",
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
-      "runtimeArgs": ["evals/serve.py"],
+      "runtimeArgs": [
+        "evals/serve.py"
+      ],
       "port": 8102
     },
     {
       "name": "panel",
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
-      "runtimeArgs": ["-m", "http.server", "8103", "--directory", "apps/extension/.output/chrome-mv3"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8103",
+        "--directory",
+        "apps/extension/.output/chrome-mv3"
+      ],
       "port": 8103
     }
   ]

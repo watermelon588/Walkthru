@@ -23,27 +23,48 @@ declare global {
 export default defineUnlistedScript(() => {
   if (window.__walkthru) return; // already injected on this page
   window.__walkthru = true;
-  const agent = mountAgent();
   const readWebVitals = observeWebVitals();
+  // Injection can land mid-navigation, before the new page has a <body>. The listener registers now
+  // (so pings succeed), but everything that touches the page waits for the body to exist.
+  const ready = whenBody().then(() => mountAgent());
   chrome.runtime.onMessage.addListener((msg: ContentRequest, _sender, reply) => {
-    if (msg.type === "ping") reply({ ok: true });
-    else if (msg.type === "snapshot") {
-      const observation = snapshot();
-      collectBrowserDiagnostics(document, readWebVitals()).then((diagnostics) => reply({ ...observation, diagnostics }));
-    }
-    else if (msg.type === "act") reply(execute(msg.step, document, msg.opts));
-    else if (msg.type === "agent_status") {
-      agent.update(msg.state, msg.activity);
+    if (msg.type === "ping") {
       reply({ ok: true });
-    } else if (msg.type === "agent_visibility") {
-      agent.setVisible(msg.visible);
-      reply({ ok: true });
-    } else if (msg.type === "evidence_capture") {
-      agent.setCaptureMode(msg.active).then(() => reply({ ok: true }));
+      return true;
     }
+    ready.then(async (agent) => {
+      if (msg.type === "snapshot") {
+        const observation = snapshot();
+        reply({ ...observation, diagnostics: await collectBrowserDiagnostics(document, readWebVitals()) });
+      } else if (msg.type === "act") reply(execute(msg.step, document, msg.opts));
+      else if (msg.type === "agent_status") {
+        agent.update(msg.state, msg.activity);
+        reply({ ok: true });
+      } else if (msg.type === "agent_visibility") {
+        agent.setVisible(msg.visible);
+        reply({ ok: true });
+      } else if (msg.type === "evidence_capture") {
+        await agent.setCaptureMode(msg.active);
+        reply({ ok: true });
+      }
+    });
     return true;
   });
 });
+
+function whenBody(): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => (document.body ? resolve() : requestAnimationFrame(check));
+    check();
+  });
+}
+
+/** Injection can land while a navigation is swapping documents (no root element yet). Wait for it. */
+function appendWhenReady(node: Node) {
+  const root = document.documentElement;
+  if (root) root.append(node);
+  else requestAnimationFrame(() => appendWhenReady(node));
+}
 
 /** A closed shadow root keeps Scout visible to the site owner but absent from agent snapshots. */
 function mountAgent() {
@@ -95,7 +116,7 @@ function mountAgent() {
       </svg>
       <span class="copy"><strong>Scout</strong><span class="activity">Reading the page</span></span>
     </div>`;
-  document.documentElement.append(host);
+  appendWhenReady(host);
 
   const rig = shadow.querySelector<SVGGElement>(".agent-bird__rig")!;
   const eye = shadow.querySelector<SVGGElement>(".agent-bird__eye")!;
@@ -143,7 +164,7 @@ function mountAgent() {
               filter: blur(5px) !important;
             }
           `;
-          document.documentElement.append(evidenceStyle);
+          appendWhenReady(evidenceStyle);
         }
         await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         return;

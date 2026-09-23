@@ -40,6 +40,43 @@ def test_free_pool_uses_constrained_json_schema_for_groq(monkeypatch):
     assert groq_options == {"method": "json_schema", "strict": True, "include_raw": True}
 
 
+class Tagged:
+    def __init__(self, tag):
+        self.tag = tag
+
+    def with_structured_output(self, schema, **kwargs):
+        return self
+
+    def with_fallbacks(self, rest):
+        return [self.tag, *(r.tag for r in rest)]
+
+
+@pytest.mark.parametrize(("writer", "order"), [
+    (True, ["groq-a", "or-x", "groq-b", "gem"]),  # report text: careful OpenRouter writer right after the first Groq model
+    (False, ["groq-a", "groq-b", "gem"]),  # persona steps: fast models only
+])
+def test_free_pool_orders_models_for_writer_and_persona(monkeypatch, writer, order):
+    monkeypatch.setitem(sys.modules, "langchain_groq", SimpleNamespace(ChatGroq=lambda model, **kw: Tagged(model)))
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", SimpleNamespace(ChatGoogleGenerativeAI=lambda model, **kw: Tagged(model)))
+    monkeypatch.setattr(runtime, "GROQ_MODELS", ["groq-a", "groq-b"])
+    monkeypatch.setattr(runtime, "GEMINI_MODELS", ["gem"])
+    monkeypatch.setattr(runtime, "OPENROUTER_MODELS", ["or-x"])
+    monkeypatch.setattr(runtime, "openrouter", lambda schema, name: Tagged(name))
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test")
+
+    assert runtime.free_pool(PersonaStep, writer=writer) == order
+
+
+def test_free_pool_skips_openrouter_without_a_key(monkeypatch):
+    monkeypatch.setitem(sys.modules, "langchain_groq", SimpleNamespace(ChatGroq=lambda model, **kw: Tagged(model)))
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", SimpleNamespace(ChatGoogleGenerativeAI=lambda model, **kw: Tagged(model)))
+    monkeypatch.setattr(runtime, "GROQ_MODELS", ["groq-a"])
+    monkeypatch.setattr(runtime, "GEMINI_MODELS", ["gem"])
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
+    assert runtime.free_pool(PersonaStep, writer=True) == ["groq-a", "gem"]
+
+
 class FakeFallback:
     def invoke(self, messages):
         return PersonaStep(thought="fallback", action="scroll", confusion=1)

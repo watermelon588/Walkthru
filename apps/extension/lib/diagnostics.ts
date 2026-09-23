@@ -63,25 +63,27 @@ export function summarizeAxeResults(violations: AxeViolation[]) {
 }
 
 /** Runs WCAG A/AA checks in the actual rendered page, including open shadow roots. */
-export async function collectBrowserDiagnostics(doc: Document, webVitals: VitalState): Promise<BrowserDiagnostics> {
+type Accessibility = BrowserDiagnostics["accessibility"];
+const UNAVAILABLE: Accessibility = { status: "unavailable", total: 0, issues: [] };
+/** A heavy page must never stall the journey: past this budget the step reports "unavailable". */
+export const AXE_BUDGET_MS = 3000;
+/** One audit per page address per injected script: typing into a form should not re-audit the page. */
+const audited = new Map<string, Accessibility>();
+
+export async function collectBrowserDiagnostics(doc: Document, webVitals: VitalState, budgetMs = AXE_BUDGET_MS): Promise<BrowserDiagnostics> {
   const capturedAt = new Date().toISOString();
-  try {
-    const result = await axe.run(doc.documentElement, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
-      resultTypes: ["violations"],
-    });
-    return {
-      captured_at: capturedAt,
-      accessibility: { status: "complete", ...summarizeAxeResults(result.violations) },
-      web_vitals: webVitals,
-    };
-  } catch {
-    return {
-      captured_at: capturedAt,
-      accessibility: { status: "unavailable", total: 0, issues: [] },
-      web_vitals: webVitals,
-    };
+  const key = doc.location?.href ?? "";
+  let accessibility = audited.get(key);
+  if (!accessibility) {
+    const audit = axe
+      .run(doc.documentElement, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] })
+      .then((result): Accessibility => ({ status: "complete", ...summarizeAxeResults(result.violations) }))
+      .catch(() => UNAVAILABLE);
+    const timeout = new Promise<Accessibility>((resolve) => setTimeout(() => resolve(UNAVAILABLE), budgetMs));
+    accessibility = await Promise.race([audit, timeout]);
+    if (accessibility.status === "complete") audited.set(key, accessibility);
   }
+  return { captured_at: capturedAt, accessibility, web_vitals: webVitals };
 }
 
 type LayoutShiftEntry = PerformanceEntry & { value: number; hadRecentInput: boolean };
