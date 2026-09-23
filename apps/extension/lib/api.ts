@@ -20,8 +20,8 @@ export type StepEvidence = {
 };
 
 export type RunReply =
-  | { run_id: string; status: "running"; action: Step & { url: string } }
-  | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "stopped"; steps: (Step & { url: string })[] };
+  | { run_id: string; status: "running"; action: Step & { url: string }; verified?: boolean }
+  | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "stopped" | "safe_stop"; steps: (Step & { url: string })[] };
 
 export type StopReply = {
   run_id: string;
@@ -99,4 +99,4 @@ export async function uploadEvidenceImage(path: string, dataUrl: string): Promis
 export const startRun = (body: StartBody) => post<RunReply>("/runs", body);
 export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
   post<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });
-export const stopRun = (runId: string) => post<StopReply>(`/runs/${runId}/stop`, {});
+export const stopRun = (runId: string, reason?: string) => post<StopReply>(`/runs/${runId}/stop`, reason ? { reason } : {});

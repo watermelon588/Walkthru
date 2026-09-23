@@ -5,6 +5,7 @@ import os
 import pytest
 
 os.environ["RETENTION_JOB"] = "0"  # before app.main is imported
+os.environ["WARMUP"] = "0"
 
 from app import db
 from app.auth import require_user
@@ -47,6 +48,7 @@ def no_background(monkeypatch):
     from app import main
 
     monkeypatch.setattr(main, "finish_run", lambda run_id, values: None)
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: False)  # no network in tests
 
 
 @pytest.fixture(autouse=True)

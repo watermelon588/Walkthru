@@ -24,6 +24,8 @@ With `.\dev` running, this drives the built extension's page script in headless 
 apps\api\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
 ```
 
+To test a real send on the easy fixture as a verified owner, write your account's verification token to `evals/.walkthru-token` (git-ignored; see `GET /verification`) and run with `AUTO_CONFIRM=1`, which stands in for approving the side-panel prompt. Without it the run stops at the send button.
+
 ## Run locally on Windows, one process per terminal
 
 Copy each block into a separate PowerShell terminal from the repository root. Copy `apps/api/.env.example` and `apps/web/.env.example` to `.env` and fill in the required keys first.

@@ -65,9 +65,15 @@ def start(name: str, cmd: list[str], cwd: str) -> subprocess.Popen:
     return proc
 
 
-def port_busy(port: int) -> bool:
-    with socket.socket() as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
+def port_busy(port: int, host: str = "127.0.0.1") -> bool:
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family) as s:
+        return s.connect_ex((host, port)) == 0
+
+
+def localhost_address() -> str:
+    """Vite binds to the first address "localhost" resolves to (::1 on Windows). Another app on 127.0.0.1 does not clash."""
+    return socket.getaddrinfo("localhost", None)[0][4][0]
 
 
 def up(url: str) -> bool:
@@ -93,7 +99,8 @@ def stop_all() -> None:
 
 
 def main() -> int:
-    busy = [f"{n} :{p}" for n, (_, _, p, _) in SERVERS.items() if port_busy(p)] + (["fixtures :8102"] if port_busy(8102) else [])
+    busy = [f"{n} :{p}" for n, (_, _, p, _) in SERVERS.items() if port_busy(p, localhost_address() if n == "web" else "127.0.0.1")]
+    busy += ["fixtures :8102"] if port_busy(8102) else []
     if busy:
         say("dev", f"Already in use: {', '.join(busy)}. Stop those servers first (or close the other terminal).")
         return 1

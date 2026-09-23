@@ -7,7 +7,7 @@ import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
 
-export type RunOptions = { site: string; goal: string; persona: string; logged_in: boolean; max_steps: number; signal: AbortSignal };
+export type RunOptions = { site: string; goal: string; persona: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean };
 export type Progress = {
   phase: "idle" | "starting" | "running" | "finished" | "error";
   steps: Step[];
@@ -94,18 +94,20 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     let obs = await send<Observation>(tabId, { type: "snapshot" });
     let reply = await startRun({ ...opts, observation: obs });
     runId = reply.run_id;
+    // Owner-verified domains may send real messages, but only after the owner approves each one.
+    opts = { ...opts, verified: reply.status === "running" && reply.verified === true };
 
     while (reply.status === "running") {
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop")) {
           onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
       }
       if (Date.now() > deadline) {
         await setAgentStatus(tabId, "stopped", "Ran out of test time");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the 4-minute time limit ended the test")) {
           onProgress({ phase: "error", steps, message: "The time limit ended, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -119,7 +121,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       await settled(tabId, opts.signal);
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop")) {
           onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -127,7 +129,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       const current = await chrome.tabs.get(tabId);
       if (current.url && !sameOrigin(current.url, origin)) {
         await setAgentStatus(tabId, "stopped", "Left the site");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, `the last click led away from the site, to ${current.url}`)) {
           onProgress({ phase: "error", steps, message: "The test left the site, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -153,11 +155,12 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       }
       reply = await observe(reply.run_id, obs, evidence);
     }
-    await setAgentStatus(tabId, reply.status === "done" ? "complete" : "stopped", reply.status === "done" ? "Goal reached" : "Test finished");
+    const finished = reply.status === "done" || reply.status === "safe_stop";
+    await setAgentStatus(tabId, finished ? "complete" : "stopped", reply.status === "safe_stop" ? "Stopped before sending" : finished ? "Goal reached" : "Test finished");
     finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
     if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
-    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning)) return;
+    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning, `the browser run failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 280))) return;
     onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e), evidenceWarning });
   }
 }
@@ -167,9 +170,10 @@ async function closeRun(
   steps: Step[],
   onProgress: (p: Progress) => void,
   evidenceWarning?: string,
+  reason?: string,
 ): Promise<boolean> {
   try {
-    const stopped = await stopRun(runId);
+    const stopped = await stopRun(runId, reason);
     onProgress({ phase: "finished", steps: stopped.steps, status: "stopped", runId, evidenceWarning });
     return true;
   } catch {
@@ -180,16 +184,25 @@ async function closeRun(
 /** Executes one step in the tab and returns a note for the agent, if any. */
 async function act(tabId: number, step: Step, opts: RunOptions, origin: string): Promise<string | undefined> {
   if (step.action === "done" || step.action === "give_up") return;
-  const base = { logged_in: opts.logged_in };
-  if (opts.logged_in && step.action === "click") {
-    // SPEC safety rule: confirm before anything that submits a form on a logged-in page. Dry-run first.
+  const base = { logged_in: opts.logged_in, verified: opts.verified };
+  let confirmed = false;
+  if (opts.sentOnce && step.action === "click") {
+    const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } });
+    if (probe.confirm === "send") return "a message was already sent in this run; Walkthru never sends twice";
+  }
+  if (step.action === "click" && (opts.logged_in || opts.verified)) {
+    // Dry-run first. Ask the owner before a real message leaves a verified site, and before any
+    // form submit on a logged-in page (SPEC safety rule).
     const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } });
     if (probe.note) return probe.note;
-    if (probe.submits && !window.confirm(`The test user wants to submit a form on ${origin}. Allow it?`)) {
-      return "form submit declined by the site owner";
+    if (probe.confirm === "send" || (opts.logged_in && probe.submits)) {
+      const what = probe.confirm === "send" ? "send a real message from" : "submit a form on";
+      if (!window.confirm(`The test user wants to ${what} ${origin}. Allow it?`)) return "the site owner declined this submit";
+      confirmed = true;
+      if (probe.confirm === "send") opts.sentOnce = true;
     }
   }
-  const result = await send<ExecResult>(tabId, { type: "act", step, opts: base });
+  const result = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, confirmed } });
   return result.note;
 }
 

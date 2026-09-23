@@ -58,6 +58,15 @@ _Last updated: 2026-09-23_
   - *Extension robustness:* the injected script waits for the page body before any DOM work, and the accessibility audit runs once per address with a 3 s budget.
   - `evals/e2e_extension.py` runs the built extension page script in headless Chrome against any URL with the real API, model, storage and a test account. Verified on the founder's portfolio (goal reached in 4 steps, 33 s) and the easy fixture (4 steps, 25 s). 87 API tests, 22 extension tests.
 
+- **Journey truthfulness pass (2026-09-23).** Driven by a portfolio contact run that got "stuck" and a report that blamed the site. Root causes were Walkthru's, all fixed and verified live:
+  - Snapshots mark form fields `filled`/`empty`/`checked` (never the value) and list visible confirmations (`notices`); typing that a field rejects is reported; a `type` with no text is filled from the test identity.
+  - Every step records what it led to (`result_url`, `errors_after`, `notices_after`, `note_after`); early stops (Stop, time limit, leaving the site, errors) send a reason to `POST /runs/{id}/stop`.
+  - Submit detection follows `form="id"` buttons outside the form.
+  - Safety split: destructive actions (pay, delete, cancel) never run; send/invite buttons run only on an owner-verified domain after the owner confirms in the side panel, at most once per run. Elsewhere the run ends as `safe_stop` ("Stopped before sending"), never "stuck".
+  - Reports: UX findings must cite a step where something went wrong (confusion 2+, a visible error, an executor problem, an interruption, giving up, a loop); a journey where everything worked has no UX findings. The writer sees each step's outcome and the final page's controls, and may not add unsupported claims. Local dev servers skip HTTPS, header and speed findings (fixtures opt out with `X-Walkthru-Fixture: production`). JavaScript-built pages label page checks as "before JavaScript runs".
+  - Live results: portfolio contact goal fills all 5 fields once and stops at the send button with a fully grounded report; Tripverse signup quotes the real "email rate limit exceeded" error with no localhost noise; the verified fixture contact form sends exactly once after approval and sees the confirmation. 96 API tests, 27 extension tests.
+  - The API pre-builds the agent at start so the first run is not slow. `dev.py` no longer refuses to start when another app holds 127.0.0.1:5173.
+
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
