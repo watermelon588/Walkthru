@@ -50,6 +50,9 @@ def test_run_report_merges_branches():
     assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
     assert rep.verified is False and not any("publicly readable" in f.title for f in rep.findings)
     assert rep.checks == {"accessibility": "complete", "performance": "unavailable", "seo": "complete", "security": "complete"}
+    assert rep.site_audit is not None
+    assert rep.site_audit.pages_scanned == 1  # hard fixture blocks crawling beyond the supplied homepage
+    assert rep.site_audit.robots_respected is True
 
 
 def test_instant_scan_endpoint_creates_public_run(fake_db):

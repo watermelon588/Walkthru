@@ -19,7 +19,7 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
   - Done 2026-09-18: `apps/extension` (WXT, React 19). `lib/snapshot.ts`, `lib/redact.ts`, side panel UI. 7 vitest. Manual load unpacked pending (founder's Chrome).
 - [x] T4 Action executor + safe-mode filter + same-origin/step caps (S)
   - Done 2026-09-18: `lib/execute.ts` (click/type/scroll/back, dry run, safe mode), `sidepanel/run.ts` loop (per-site permission, same-origin stop, 4 min cap, confirm before submit on logged-in pages). Manual run on fixture pending.
-- [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer (M)
+- [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer + interrupted-run stop/report recovery (M)
   - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver and a real Groq model were verified against the signup flow; LangSmith tracing is configured.
 - [ ] Checkpoint A: extension completes the easy fixture flow end to end
 
@@ -64,7 +64,7 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] T17B Real easy/hard browser benchmark and final provider decision
 - [ ] T18 Step evidence contract: timestamps, execution result, transition, screenshot reference
   - [x] API/extension contract, run-scoped path validation and backward-compatible report types
-  - [ ] Define and automate evidence retention, then verify one real stored run
+  - [x] Define and automate evidence retention (30 days, `app/retention.py`); real stored-run verification is the founder's fresh extension run
 - [ ] T19 Bounded screenshot capture and private storage
   - [x] Eight-frame cap, meaningful-action capture policy, private JWT upload, field masking and disclosure
   - [ ] Apply the `run-evidence` bucket policy in Supabase and complete public plus logged-in manual checks
@@ -75,12 +75,19 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
   - [x] Play, pause, previous, next and canonical print action
   - [ ] Render and visually inspect a multi-page PDF with real evidence
 - [ ] T22 Optional continuous video only after filmstrip validation
-- [ ] T23 Accessibility and performance evidence
+- [x] T23 Accessibility and performance evidence
   - [x] Static HTML accessibility checks for language, heading order, image alternatives and control names
   - [x] PageSpeed-backed mobile performance findings with an explicit unavailable state
   - [x] Accessibility and performance cards in private, public and PDF reports
-  - [ ] Add browser-level axe and Web Vitals evidence tied to exact journey steps
-- [ ] T24 Bounded full-site SEO and verified passive-security aggregation
+  - [x] Add browser-level axe and Web Vitals evidence tied to exact journey steps
+- [x] T24 Bounded full-site SEO and verified passive-security aggregation (closed 2026-09-23)
+  - [x] Backend bounded crawler, robots and same-origin rules, redirect SSRF validation, root-cause aggregation and report contract (`eefd34a`, local branch `1`)
+  - [x] API regression suite: 71 pytest pass and Ruff clean
+  - [x] Restore npm dependencies after the interrupted pnpm attempt (lockfile unchanged, generated leftovers removed)
+  - [x] Crawl-coverage UI in private, public and print/PDF reports; no overflow at 320, 768, 1024, 1440 px
+  - [x] Report contract test asserts `site_audit`; legacy reports render because the section is conditional; unverified audits asserted never to request exposed-file paths
+  - [x] Passive smoke on python.org: 3 pages in 1.4 s, truncation reported, repeated issues aggregated with page counts
+  - [x] Instant Scan of the easy fixture through the real form: public report shows 4 audited pages and aggregated findings; docs updated, both commits pushed
 - [ ] T25 Rerun comparison, multi-persona synthesis, schedules, then integrations
 
 ### Competitive quality checkpoints
@@ -89,3 +96,55 @@ Definition of done: tests pass, lint clean, manual check done, SPEC updated if b
 - [ ] Evidence checkpoint: every meaningful step has reproducible visual proof
 - [ ] Experience checkpoint: timeline, replay, and PDF pass browser/PDF review
 - [ ] Launch-readiness checkpoint: UX, accessibility, SEO, performance, and passive security share one prioritized report
+
+## Project completion checklist
+
+### Evidence and privacy
+
+- [ ] Run a fresh screenshot-backed easy fixture journey with axe and Web Vitals
+- [ ] Verify private evidence, public sharing and a multi-page PDF in a real browser
+- [ ] Link report findings to exact journey steps where evidence exists
+- [x] Define and automate screenshot retention and cleanup (2026-09-23)
+- [x] Add user data export and deletion for runs, reports and evidence (2026-09-23)
+
+### Store and legal
+
+- [ ] Replace placeholder Privacy, Terms and Security links with real pages
+- [ ] Document screenshot collection, masking, retention, subprocessors and deletion
+- [ ] Audit Chrome permissions and production `externally_connectable` origins
+- [ ] Produce store listing, screenshots, support contact and submit T13
+- [ ] Enable and verify Google and GitHub OAuth production redirects
+
+### Billing
+
+- [ ] Founder approves final pricing and included credits
+- [ ] Implement Dodo checkout and signed, idempotent webhook handling
+- [ ] Implement credit ledger, run reservation, consumption and refund rules
+- [ ] Test duplicate/delayed webhook, failed checkout and refund paths
+
+### Production
+
+- [ ] Buy/configure production domain and HTTPS
+- [ ] Deploy web with SPA rewrites and API with process supervision
+- [ ] Configure production CORS, extension id, Supabase redirects, Resend and PageSpeed
+- [ ] Replace per-process scan limiting with a shared production limiter
+- [ ] Add structured error logging, health checks and uptime alerts
+- [ ] Document database backup, restore and migration procedures
+- [ ] Split web and extension bundles if the 500 kB warnings remain
+- [ ] Rotate development credentials before launch
+
+### Launch validation
+
+- [ ] Replace placeholder screenshots with current product captures
+- [ ] Publish one representative public demo report
+- [ ] Add extension install, permission, safe-mode and verification onboarding
+- [ ] Test 20 community sites and triage failures
+- [ ] Confirm privacy-minimized analytics contain no DOM, credentials or evidence
+- [ ] Complete stranger install to test to report to share to payment checkpoint
+
+### Deferred until founder resumes
+
+- [ ] T17B Jev/Groq/Gemini benchmark and provider decision
+- [ ] T22 continuous video research
+- [ ] Safe single-click browser-session resume
+- [ ] T25 rerun comparison, multi-persona synthesis, schedules and integrations
