@@ -40,14 +40,15 @@ app.add_middleware(
 
 def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
     log.warning("database temporarily unavailable: %s", error)
-    return JSONResponse(status_code=503, content={"detail": "Database connection was interrupted. Please retry."})
+    return JSONResponse(status_code=503, content={"detail": "Walkthru could not reach its database just now. Please try again in a few seconds."})
 
 
-if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("DATABASE_URL"):
+if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
+app.add_exception_handler(db.DatabaseUnavailable, _database_unavailable)
 
 
 @app.get("/health")
@@ -111,6 +112,10 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
         raise HTTPException(409, "run already finished")
     if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
         raise HTTPException(422, "evidence path does not belong to this run")
+    if not runtime.get_state(row["tier"], _cfg(run_id)).next:
+        # The live agent state is gone (API restarted with the in-memory checkpointer). Close the run
+        # truthfully with its saved steps instead of failing; the extension shows "Ended early".
+        return stop_run(run_id, background, user)
     resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
@@ -210,6 +215,8 @@ SCAN_LIMIT, SCAN_WINDOW = 5, 3600
 
 
 def _rate_limit(ip: str) -> None:
+    if os.environ.get("ALLOW_LOCAL_SCANS") == "1" and ip in ("127.0.0.1", "::1"):
+        return  # dev only: the founder testing from this machine; production never sets ALLOW_LOCAL_SCANS
     now = time.time()
     hits = [t for t in _scan_hits.get(ip, []) if now - t < SCAN_WINDOW]
     if len(hits) >= SCAN_LIMIT:

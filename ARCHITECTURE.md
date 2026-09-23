@@ -76,6 +76,11 @@ or bounded action           |
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
 - Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
+## Runtime choices for this deployment stage
+- **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.
+- **Agent state:** LangGraph uses an in-memory checkpointer unless `CHECKPOINTER=postgres`. Use Postgres when the API runs next to the database or on more than one instance.
+- **Models:** free chain of Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite (`GROQ_MODELS`, `GEMINI_MODELS`). Each Groq model has its own 8k tokens/min budget; zero retries so a 429 moves on instantly.
+
 ## Data lifecycle
 - Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
 - `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.

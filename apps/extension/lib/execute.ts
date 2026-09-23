@@ -22,6 +22,8 @@ export function submits(el: Element): boolean {
   return false;
 }
 
+const APP_LINKS: Record<string, string> = { mailto: "an email app", tel: "a phone call", sms: "a text message" };
+
 export type ExecOptions = { logged_in?: boolean; dryRun?: boolean };
 
 /** dryRun reports what would happen (safe-mode block, form submit) without touching the page. */
@@ -38,8 +40,17 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
     case "type": {
       const el = step.target_id == null ? null : findById(doc, step.target_id);
       if (!el) return { ok: false, note: `element #${step.target_id} not found` };
-      const text = (el as HTMLElement).innerText ?? el.textContent ?? "";
-      if (opts.logged_in && isDangerous(text)) return { ok: false, note: `blocked by safe mode: "${text.trim().slice(0, 40)}"` };
+      const input = el as HTMLInputElement;
+      const text = [(el as HTMLElement).innerText ?? el.textContent, el.tagName === "INPUT" ? input.value : "", el.getAttribute("aria-label")].filter(Boolean).join(" ");
+      // Logged-in pages: never touch anything dangerous. Public pages: links may navigate, but buttons
+      // and submits that pay, delete or send never fire (mirrors _enforce in app/agent/persona.py).
+      const publicAction = step.action === "click" && el.tagName !== "A";
+      if (isDangerous(text) && (opts.logged_in || publicAction)) return { ok: false, note: `blocked by safe mode: "${text.trim().slice(0, 40)}"` };
+      const scheme = el.tagName === "A" ? ((el.getAttribute("href") ?? "").split(":")[0] ?? "").toLowerCase() : "";
+      if (step.action === "click" && APP_LINKS[scheme]) {
+        // Opening a mail or phone app is a real side effect and gives the agent nothing to observe.
+        return { ok: true, note: `this link opens ${APP_LINKS[scheme]}; it is a working contact method, so Walkthru did not open it` };
+      }
       const willSubmit = step.action === "click" && submits(el);
       if (opts.dryRun) return { ok: true, submits: willSubmit };
       (el as HTMLElement).scrollIntoView?.({ block: "center", behavior: "instant" as ScrollBehavior });

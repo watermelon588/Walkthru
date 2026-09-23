@@ -112,6 +112,7 @@ def audit(
         return SiteAudit([failure], [], coverage)
 
     root_url = str(root.url)
+    shell = fetch.is_js_shell(root.text)
     base = fetch.origin(root_url)
     robots_response = fetch.get(client, f"{base}/robots.txt", same_origin=base)
     robots_text = robots_response.text if robots_response is not None and robots_response.status_code == 200 else None
@@ -152,6 +153,18 @@ def audit(
     if verified:
         security_records.extend((finding, None) for finding in security.check_exposed(base, client))
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
+
+    if shell:
+        seo_records.append((Finding(
+            kind="seo",
+            severity="medium",
+            title="Homepage content only appears after JavaScript runs",
+            detail=f"The server sends {len(root.text)} bytes of HTML with {len(fetch.page_text(root.text))} characters of visible text. "
+            "Link previews on WhatsApp, LinkedIn and Slack, most AI crawlers and slower search crawlers see an empty page, "
+            "and the other page checks in this report describe that pre-JavaScript HTML.",
+            fix="Prerender the homepage (static generation or server rendering), or at least put a real h1, description and Open Graph tags in index.html.",
+            evidence=root_url,
+        ), root_url))
 
     if not pages:  # never report a clean audit when nothing was actually checked
         kind = root.headers.get("content-type", "unknown")

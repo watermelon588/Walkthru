@@ -16,6 +16,14 @@ From the repository root in PowerShell or cmd:
 
 This builds the extension and starts the API (:8000), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
 
+### Test any live site end to end (development)
+
+With `.\dev` running, this drives the built extension's page script in headless Chrome through the real API and model, then prints the report:
+
+```powershell
+appspi\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
+```
+
 ## Run locally on Windows, one process per terminal
 
 Copy each block into a separate PowerShell terminal from the repository root. Copy `apps/api/.env.example` and `apps/web/.env.example` to `.env` and fill in the required keys first.
