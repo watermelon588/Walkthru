@@ -1,6 +1,83 @@
-# Walkthru v1 — Task List
+# Walkthru Task List
 
-Definition of done: tests pass, lint clean, manual check done, SPEC updated if behavior changed.
+Definition of done: see ROADMAP.md. The v1.1 plan (2026-09-24) comes first; the v1 history below it stays for reference.
+
+## v1.1 plan (2026-09-24)
+
+Order: A runs alongside B. Then C, with D in parallel from 10-01. Launch 10-20, then E and F. Sizes: S = 1-2 files, M = 3-5 files.
+
+### Founder
+- [ ] A1 Post 30 free Instant Scans with a "$9 founding Launch Pack" line. Gate: 5 paid of the first 100 scans.
+- [ ] A2 Recruit 20 beta users for the unpacked extension. Gate: 5 or more finish a run within 48 hours.
+- [ ] A3 Headline test: "Can ChatGPT read your site?" against "Find where users get stuck". Gate: 1.5x or more scan starts.
+- [ ] Confirm list prices $19 and $49 (founding $15 and $39), or name others, before V9 changes the landing page.
+- [ ] Buy the domain; Chrome Web Store account ($5); Oracle VM; Dodo test mode; enable Google and GitHub sign-in; rotate Supabase secrets.
+
+### Phase B: foundation
+- [ ] **V1 Server-owned entitlements** (M)
+  - Accept: `POST /runs` ignores client `tier`; a free user gets 403 on `logged_in`, 12 steps at most, first-time visitor only, 402 after 3 runs this month; an active `entitlements` row lifts the limits to its plan; `GET /me/plan` returns plan, limits and runs left; `FREE_RUNS_PER_DAY` stops free runs with a clear message.
+  - Verify: pytest for each limit with a crafted request; the side panel shows runs left.
+  - Files: `apps/api/app/plans.py` (new), `app/main.py`, `app/db.py`, `schema.sql`, `apps/extension/entrypoints/sidepanel/App.tsx`.
+- [ ] **V2 GEO readiness scanner** (M)
+  - Accept: `app/scans/geo.py` scores the 7 categories in SPEC.md from pages the audit already fetched, plus `GET /llms.txt` and one citation-bot user-agent probe; findings use `kind="geo"`; `report.geo` has score, band and categories; free scans score the homepage only; the first-impression block is labeled "What AI search sees"; llms.txt is labeled low impact; the probe is worded as a user-agent check.
+  - Verify: pytest per category on fixture HTML (SPA shell, blocked OAI-SearchBot, valid and broken JSON-LD, missing H1); live Instant Scan of the portfolio returns a score in 20 s or less.
+  - Files: `app/scans/geo.py` (new), `app/agent/schema.py`, `app/agent/report.py`, `apps/web/src/components/ReportView.tsx`, `tests/test_geo.py` (new).
+- [ ] **V3 GEO traps and Checkpoint B** (S)
+  - Accept: the hard fixture gains 3 GEO traps (robots blocks OAI-SearchBot, a JavaScript-only pricing page, no Organization schema) in `traps.json`; the scorer runs on today's code; misses fixed until recall is 80% or more.
+  - Verify: scorer output saved in `docs/decisions.md`.
+  - Files: `evals/fixtures/hard/*`, `evals/traps.json`, scan fixes as needed.
+
+#### Checkpoint B
+- [ ] pytest, Ruff, web and extension builds green
+- [ ] Crafted free request cannot exceed limits
+- [ ] Recall is 80% or more; founder reviews one GEO report
+
+### Phase C: paid value
+- [ ] **V4 Rerun and compare** (M)
+  - Accept: `runs.parent_run_id`; `rerun_of` on `/runs` and `/scans`, owner and same origin checked; `report.comparison` lists fixed, still broken and new by fingerprint (kind, normalized title, URL path), computed in code; report page shows the three lists and a "Rerun" button.
+  - Verify: pytest for fingerprint and diff; 3 fixture reruns match a hand check.
+  - Files: `schema.sql`, `app/main.py`, `app/agent/report.py`, `ReportView.tsx`, `Report.tsx`.
+- [ ] **V5 GEO fix pack** (S)
+  - Accept: `app/scans/geo_fixes.py` returns a robots.txt block, JSON-LD (Organization, WebSite, SoftwareApplication), an llms.txt draft and a framework rendering fix (Vite SPA, Next.js, Lovable, Astro); paid plans see all, free sees one; copy buttons.
+  - Verify: pytest that generated JSON-LD parses and robots rules allow the citation bots; SPA fixture gets the Vite fix.
+  - Files: `app/scans/geo_fixes.py` (new), `app/agent/report.py`, `ReportView.tsx`, `tests/test_geo_fixes.py` (new).
+- [ ] **V6 50-page paid site audit** (S)
+  - Accept: paid scans use `max_pages=50` and a 60 s budget in a background task; Instant Scan stays at 10 pages and 20 s; coverage shows what was checked.
+  - Verify: pytest with a fake 60-page site; free stays 10.
+  - Files: `app/scans/site.py`, `app/main.py`.
+- [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S)
+  - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
+  - Verify: manual browser and print check, recorded in CURRENT_STATE.md.
+- [ ] **V8 Share loop** (S)
+  - Accept: public report `<title>` and description carry the AI readiness score; a "Checked by Walkthru" badge snippet with a backlink on shared reports; the owner can turn it off on paid plans.
+  - Verify: page meta checked in the browser; badge links to the landing page.
+  - Files: `apps/web/src/pages/Public.tsx`, `ReportView.tsx`, `content.ts`.
+
+#### Checkpoint C
+- [ ] Rerun, fix pack and PDF verified on fixtures
+- [ ] Founder reviews one full Pro report before launch copy is written
+
+### Phase D: ship (from 10-01, parallel)
+- [ ] **V9 Landing and pricing copy** (S): "launch check for apps built with AI" hero, the SPEC.md plans table, Plus as a waitlist, GEO in every plan; `content.ts` only. Verify: web build, lint, phone and desktop check.
+- [ ] **V10 Concierge billing** (M): founder inserts `entitlements` rows; then a Dodo test-mode checkout and a signed, idempotent webhook that inserts the row (payment.md). Verify: duplicate webhook grants once; forged signature rejected.
+- [ ] **V11 Production and store** (M): domain, Vercel with SPA rewrites, API on the VM under supervision, `CHECKPOINTER=postgres`, Postgres-backed scan limiter, production CORS and extension origin, secrets rotated, store listing submitted by 10-08. Verify: clean-profile store build completes a run in production.
+
+#### Checkpoint D (launch gate)
+- [ ] Stranger path: scan, install, run, report, share, pass granted, all in production
+- [ ] Launch Tue 2026-10-20: Free, Launch Pack, Pro; Plus waitlist
+
+### Phase E: retention (after launch)
+- [ ] **V12 Watch** (M)
+  - Accept: `sites` table; weekly job scans due sites (`kind='watch'`), compares with the last watch run, emails only on change; `POST /hooks/deploy/{token}` triggers it, at most once per 10 minutes; branded PDF for Plus.
+  - Verify: fixture deploy that blocks OAI-SearchBot sends exactly one email; an unchanged week sends none.
+  - Then: open Plus to the waitlist.
+
+### Phase F: depth (November)
+- [ ] **V13 Custom test users and several test users per report** (M, Plus)
+- [ ] **V14 Cloud runner** (M): only if A2 misses its gate. Headless Chrome on the VM drives the built `inject.js` over CDP (as `evals/e2e_extension.py` does), public pages only, one concurrent run, same safety code.
+- [ ] Evaluate an AI citation-tracking add-on for Plus; paid model funded from revenue within payment.md caps.
+
+## v1 history
 
 ## Founder tasks
 - [ ] Accounts: ~~Supabase~~, ~~LangSmith~~, ~~Gemini key~~, ~~Groq key~~, Google PageSpeed Insights API key, Anthropic (deferred, free providers for now), Dodo (test mode), Resend, Vercel

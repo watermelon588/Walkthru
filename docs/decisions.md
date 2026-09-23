@@ -100,3 +100,32 @@ gpt-oss-20b's flagged summary said the portfolio form "cannot be submitted becau
 **Decision:** report writing goes Groq gpt-oss-120b, then Nemotron 3 Ultra through OpenRouter (90 s budget), then the fast chain. Persona steps stay on the fast chain, because a step cannot wait 60 s. The persona steps usually use up 120b's per-minute budget, so in practice Ultra writes most reports. That adds about a minute to report time and costs nothing. A 503 or 429 from OpenRouter falls through in under a second.
 
 **Revisit when:** a paid tier exists (the T9 eval decides the paid writer), or OpenRouter's free Ultra becomes unreliable. Rerun the bakeoff with `MODELS=... python evals/model_bakeoff.py`.
+
+## 2026-09-24 Positioning, plans and GEO (v1.1)
+
+**Context:**
+- A sourced review (`founder/competitor-matrix.md`, `founder/pricing-strategy.md`, `founder/validate-idea.md`) found that "AI users test your site" is crowded. Meerkat, CanaryUsers, Swarm and Uxia all sell it, CanaryUsers from $9.
+- Our paid plans mostly sold volume.
+- Plan limits were not enforced by the server.
+- The idea scored 21 out of 35.
+
+**Decision:**
+- Walkthru is "the launch check for apps built with AI": journeys, SEO, GEO and passive security in one report, with logged-in pages tested in the owner's own browser.
+- GEO readiness is in every plan: a free score, a paid fix pack, and a watch in Plus.
+- Plans:
+  - Free.
+  - Launch Pack $9 once.
+  - Pro $19 (founding $15, 40 runs).
+  - Plus $49 (founding $39, 150 runs), replacing Team and launched as a waitlist until watch ships.
+- Free report quality always equals paid.
+- The server owns every limit.
+
+**Alternatives rejected:**
+- Competing on run volume: capacity is capped by free providers at about 110 runs a day.
+- Selling a better model: grounding, not the model, removes invented findings (2026-09-24 bakeoff).
+- AI citation tracking in V1: recurring model and search cost, and Otterly already sells it.
+- Adding `geo-optimizer-skill` as a runtime dependency: it uses its own HTTP client, outside our SSRF guard, and weights low-evidence checks such as llms.txt at 18 of 100.
+
+**Revisit when:**
+- Experiment A1 (5 of 100 scans convert at $9) fails.
+- A2 shows fewer than 25% of beta users finish a run. That triggers the cloud runner.

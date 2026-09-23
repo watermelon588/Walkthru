@@ -79,6 +79,7 @@ _Last updated: 2026-09-24_
   - Verified: web build and oxlint clean, extension tsc/oxlint/27 vitest/WXT build clean, Impeccable detector clean, browser check of docs, privacy, 404, landing menu, app shell (phone drawer and desktop sidebar via a temporary unguarded route, since removed) and the extension panel. Not verified live: the verification panel's ready state (needs a signed-in session; error state checked).
 
 ## In progress
+- **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
@@ -87,10 +88,17 @@ _Last updated: 2026-09-24_
 - **Fresh T23 browser verification pending.** Rebuild and reload the extension, run the easy fixture once, then confirm the selected journey step shows axe status and any available LCP, CLS or INP values in the report inspector and PDF.
 
 ## Next up
-1. Founder: in the Supabase dashboard enable Google and GitHub providers and add the local and future production redirect URLs. Rotate the DB password and secret key before launch.
-2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture plus per-step axe and Web Vitals evidence.
-3. Inspect that run privately and publicly, then print the real evidence report to PDF and close T18-T21.
-4. Test Phase 2 in the browser (export, delete a run, delete a throwaway account). Then follow `ROADMAP.md`: T13 store/legal, T14 billing, T15 production reliability, then T16 launch wiring. T17B remains intentionally deferred.
+The v1.1 plan (2026-09-24) replaces the old list. See ROADMAP.md for the 22 weak points and their fixes, and tasks/todo.md for tasks V1 to V14.
+1. **Founder:**
+   - Confirm list prices ($19 Pro and $49 Plus, founding $15 and $39) before V9 changes the landing page.
+   - Start experiment A1: 30 free Instant Scans with a $9 founding Launch Pack line.
+   - Buy the domain, register for the Chrome Web Store, set up the Oracle VM and Dodo test mode, enable OAuth, rotate Supabase secrets.
+2. **Build, phase B:**
+   - V1 server-owned entitlements. Today the client picks its own tier, so no plan limit is real.
+   - V2 GEO readiness scanner.
+   - V3 GEO traps and Checkpoint B trap recall.
+3. **Phase C:** V4 rerun and compare, V5 GEO fix pack, V6 50-page paid audit, V7 evidence and PDF close-out (includes the pending fresh screenshot run), V8 share loop.
+4. **Phase D, in parallel:** V9 landing copy, V10 concierge billing, V11 deploy and store submission by 2026-10-08. Launch 2026-10-20 with Free, Launch Pack and Pro; Plus is a waitlist.
 
 ## Known issues and notes
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.

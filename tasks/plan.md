@@ -1,5 +1,7 @@
 # Implementation Plan: Walkthru v1
 
+_2026-09-24: the plan, plans and build order are superseded by [SPEC.md](../SPEC.md) v1.1 and [ROADMAP.md](../ROADMAP.md) v1.1. Cost notes and risks below still apply._
+
 Task-level detail lives in [todo.md](todo.md). This file holds decisions, costs, and risks.
 
 ## Overview
