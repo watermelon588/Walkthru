@@ -1,26 +1,63 @@
-import { BrowserRouter, Route, Routes } from 'react-router'
-import { RequireAuth } from './components/RequireAuth'
-import Dashboard from './pages/Dashboard'
-import AgentLab from './pages/AgentLab'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
 import Landing from './pages/Landing'
-import Login from './pages/Login'
-import Public from './pages/Public'
-import Report from './pages/Report'
-import Settings from './pages/Settings'
+
+// Landing is the LCP path, so it ships in the main bundle. Everything else loads on demand.
+const RequireAuth = lazy(() => import('./components/RequireAuth').then((m) => ({ default: m.RequireAuth })))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const AgentLab = lazy(() => import('./pages/AgentLab'))
+const Login = lazy(() => import('./pages/Login'))
+const Public = lazy(() => import('./pages/Public'))
+const Report = lazy(() => import('./pages/Report'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Docs = lazy(() => import('./pages/Docs'))
+const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
+const Security = lazy(() => import('./pages/Security'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+
+/** New page: start at the top. With a #hash: scroll to it once the (lazy) page has rendered it. */
+function ScrollManager() {
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0)
+      return
+    }
+    const id = decodeURIComponent(hash.slice(1))
+    let frame = 0
+    let tries = 0
+    const find = () => {
+      const el = document.getElementById(id)
+      if (el) el.scrollIntoView()
+      else if (tries++ < 90) frame = requestAnimationFrame(find)
+    }
+    find()
+    return () => cancelAnimationFrame(frame)
+  }, [pathname, hash])
+  return null
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/agent-lab" element={<AgentLab />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
-        <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-        <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
-        <Route path="/r/:id" element={<Public />} />
-        <Route path="*" element={<Landing />} />
-      </Routes>
+      <ScrollManager />
+      <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-[100dvh] bg-bg" />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/agent-lab" element={<AgentLab />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/security" element={<Security />} />
+          <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
+          <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
+          <Route path="/r/:id" element={<Public />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

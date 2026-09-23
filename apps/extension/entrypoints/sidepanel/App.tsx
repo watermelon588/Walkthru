@@ -43,6 +43,16 @@ export function App() {
 
   const running = progress.phase === "running" || progress.phase === "starting";
   const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true;
+  // Say why Start is disabled instead of leaving a dead button.
+  const blocked = running || canStart
+    ? null
+    : signedIn === false
+      ? "Connect your account to start."
+      : !/^https?:\/\//.test(site)
+        ? "Open a website in this tab to test it."
+        : !goal.trim()
+          ? "Give the test user a goal."
+          : null;
   const agentState: AgentState = progress.phase === "error"
     ? "stopped"
     : progress.phase === "finished"
@@ -110,6 +120,7 @@ export function App() {
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
           {running && <button type="button" onClick={() => abort.current?.abort()}>Stop</button>}
         </div>
+        {blocked && <p className="hint" role="status">{blocked}</p>}
       </form>
 
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
@@ -119,6 +130,11 @@ export function App() {
         <section className="summary" aria-label="Result">
           <h2>{STATUS_COPY[progress.status ?? ""]}</h2>
           <p>{progress.steps.length} steps. Highest confusion: {Math.max(0, ...progress.steps.map((s) => s.confusion))} of 3.</p>
+          {progress.status === "safe_stop" && (
+            <p>
+              <a href={`${WEB_URL}/docs#verify`} target="_blank" rel="noreferrer">Verify your domain</a> to let the test user send once, after you approve.
+            </p>
+          )}
           {progress.runId && (
             <p>
               <a href={`${WEB_URL}/app/runs/${progress.runId}`} target="_blank" rel="noreferrer">View the full report</a> (ready in about half a minute)
@@ -147,6 +163,12 @@ export function App() {
           </ol>
         )}
       </section>
+
+      <footer className="panel-footer">
+        <a href={`${WEB_URL}/app`} target="_blank" rel="noreferrer">Dashboard</a>
+        <a href={`${WEB_URL}/docs#run-a-test`} target="_blank" rel="noreferrer">Help</a>
+        <a href={`${WEB_URL}/privacy`} target="_blank" rel="noreferrer">Privacy</a>
+      </footer>
     </main>
   );
 }

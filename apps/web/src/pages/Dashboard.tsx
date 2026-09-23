@@ -13,6 +13,12 @@ type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'erro
 
 const extensionId = import.meta.env.VITE_EXTENSION_ID as string | undefined
 
+const firstRun = [
+  { title: 'Install the extension', body: 'Add Walkthru to Chrome and pin the bird to your toolbar.', link: 'How to install', href: '/docs#install' },
+  { title: 'Connect it', body: 'Use Connect extension above so tests run as you.', link: 'Why it is safe', href: '/security#extension' },
+  { title: 'Start a test', body: 'Open your site, click the bird and give the test user one goal.', link: 'Write a good goal', href: '/docs#goals' },
+]
+
 export default function Dashboard() {
   const [runs, setRuns] = useState<Runs>({ kind: 'loading' })
   const [scoutOpen, setScoutOpen] = useState(false)
@@ -58,7 +64,7 @@ export default function Dashboard() {
   }
 
   return (
-    <AppShell>
+    <AppShell title="Runs">
       <div className="grid gap-8 border-b border-line pb-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Workspace overview</p>
@@ -117,6 +123,16 @@ export default function Dashboard() {
             <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-relaxed text-muted">
               Connect the extension, open the site you want tested, click the Walkthru bird in the toolbar and start a test.
             </p>
+            <ol className="mx-auto mt-8 grid max-w-3xl gap-px overflow-hidden rounded-2xl bg-line text-left sm:grid-cols-3">
+              {firstRun.map((s, i) => (
+                <li key={s.title} className="flex flex-col bg-bg px-5 py-5">
+                  <span className="grid size-6 place-items-center rounded-full border border-line font-mono text-[11px] text-muted">{i + 1}</span>
+                  <h3 className="mt-4 text-sm font-medium">{s.title}</h3>
+                  <p className="mt-1 flex-1 text-xs leading-relaxed text-muted">{s.body}</p>
+                  <Link to={s.href} className="mt-4 self-start text-xs text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">{s.link}</Link>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
         {runs.kind === 'ready' && runs.runs.length > 0 && (

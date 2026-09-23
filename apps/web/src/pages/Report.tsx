@@ -50,7 +50,7 @@ export default function Report() {
   }, [id])
 
   return (
-    <AppShell>
+    <AppShell title="Report">
       <Link to="/app" className="no-print inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
         <ArrowLeftIcon className="size-4" /> All runs
       </Link>

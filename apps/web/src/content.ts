@@ -65,13 +65,28 @@ export const plans = [
   { name: 'Team', price: '$39', per: 'per month', cta: 'Start Team', features: ['250 runs a month', '5 sites', 'Custom test users', 'Weekly scans'] },
 ]
 
+// Absolute (/#...) so they work from docs and legal pages too.
+export const navLinks = [
+  { label: 'How it works', href: '/#how' },
+  { label: 'Report', href: '/#report' },
+  { label: 'Pricing', href: '/#pricing' },
+  { label: 'FAQ', href: '/#faq' },
+  { label: 'Docs', href: '/docs' },
+]
+
 export const footer = {
   columns: [
     { title: 'Product', links: [{ label: 'How it works', href: '/#how' }, { label: 'Sample report', href: '/#report' }, { label: 'Pricing', href: '/#pricing' }, { label: 'FAQ', href: '/#faq' }] },
-    { title: 'Get started', links: [{ label: 'Scan my site', href: '/#scan' }, { label: 'Sign in', href: '/login' }] },
-    // Legal pages must exist before launch (tracked in CURRENT_STATE.md).
-    { title: 'Legal', links: [{ label: 'Privacy', href: '#' }, { label: 'Terms', href: '#' }, { label: 'Security', href: '#' }] },
+    { title: 'Get started', links: [{ label: 'Scan my site', href: '/#scan' }, { label: 'Documentation', href: '/docs' }, { label: 'Install the extension', href: '/docs#install' }, { label: 'Sign in', href: '/login' }] },
+    { title: 'Legal', links: [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Security', href: '/security' }] },
   ],
+}
+
+/** Contact addresses. The domain is a placeholder until it is bought (brand.ts). */
+export const contact = {
+  hello: 'hello@walkthru.dev',
+  privacy: 'privacy@walkthru.dev',
+  security: 'security@walkthru.dev',
 }
 
 export const faqs = [
