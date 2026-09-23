@@ -2,6 +2,7 @@ import { KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from 
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { SiteAuditCoverage } from './SiteAuditCoverage'
 
 /** The report body. Shared by the signed-in report page and the public share page. */
 export function ReportView({ run }: { run: Run }) {
@@ -65,6 +66,8 @@ export function ReportView({ run }: { run: Run }) {
               </dl>
             </section>
           )}
+
+          {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 
           <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} />
 

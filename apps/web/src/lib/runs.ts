@@ -62,6 +62,14 @@ export type Report = {
   verified: boolean
   tokens: number
   checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
+  site_audit?: {
+    pages_scanned: number
+    page_limit: number
+    duration_ms: number
+    truncated: boolean
+    urls: string[]
+    robots_respected: boolean
+  } | null
 }
 
 export type Run = {
