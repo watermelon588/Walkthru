@@ -293,9 +293,8 @@ LOCAL_NOTE = (
 CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle")
 
 
-def synthesize(state: ReportState) -> dict:
-    from app.agent import runtime
-
+def synthesis_inputs(state: ReportState) -> dict:
+    """Everything the report writer is given, built from graph state. Shared by synthesize and model evals."""
     journey_findings, browser_accessibility, browser_performance = browser_findings(state.get("steps", []))
     code_findings = journey_findings + [
         Finding.model_validate(f)
@@ -342,7 +341,17 @@ def synthesize(state: ReportState) -> dict:
         ("system", SYNTHESIS_SYSTEM),
         ("human", "\n\n".join(context) + "\n\n" + task),
     ]
-    syn, used = runtime.call(Synthesis, messages)
+    return {"messages": messages, "code_findings": code_findings, "local": local, "steps": steps, "fi": fi,
+            "browser_accessibility": browser_accessibility, "browser_performance": browser_performance}
+
+
+def synthesize(state: ReportState) -> dict:
+    from app.agent import runtime
+
+    inputs = synthesis_inputs(state)
+    code_findings, local, steps, fi = inputs["code_findings"], inputs["local"], inputs["steps"], inputs["fi"]
+    browser_accessibility, browser_performance = inputs["browser_accessibility"], inputs["browser_performance"]
+    syn, used = runtime.call(Synthesis, inputs["messages"])
     findings = [f.model_copy(update={"kind": "ux"}) for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))] + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])

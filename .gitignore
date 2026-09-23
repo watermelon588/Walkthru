@@ -11,3 +11,4 @@ dist/
 graphify-out/
 .DS_Store
 evals/.walkthru-token
+evals/results/
