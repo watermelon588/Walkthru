@@ -90,14 +90,14 @@ _Last updated: 2026-09-24_
 ## Next up
 The v1.1 plan (2026-09-24) replaces the old list. See ROADMAP.md for the 22 weak points and their fixes, and tasks/todo.md for tasks V1 to V14.
 1. **Founder:**
-   - Confirm list prices ($19 Pro and $49 Plus, founding $15 and $39) before V9 changes the landing page.
+   - Prices confirmed 2026-09-24: $19 Pro and $49 Plus, founding $15 and $39.
    - Start experiment A1: 30 free Instant Scans with a $9 founding Launch Pack line.
    - Buy the domain, register for the Chrome Web Store, set up the Oracle VM and Dodo test mode, enable OAuth, rotate Supabase secrets.
 2. **Build, phase B:**
    - V1 server-owned entitlements. Today the client picks its own tier, so no plan limit is real.
    - V2 GEO readiness scanner.
    - V3 GEO traps and Checkpoint B trap recall.
-3. **Phase C:** V4 rerun and compare, V5 GEO fix pack, V6 50-page paid audit, V7 evidence and PDF close-out (includes the pending fresh screenshot run), V8 share loop.
+3. **Phase C:** V4 rerun and compare, V5 GEO fix pack, V15 agent fix prompt, V6 50-page paid audit, V7 evidence and PDF close-out (includes the pending fresh screenshot run), V8 share loop.
 4. **Phase D, in parallel:** V9 landing copy, V10 concierge billing, V11 deploy and store submission by 2026-10-08. Launch 2026-10-20 with Free, Launch Pack and Pro; Plus is a waitlist.
 
 ## Known issues and notes

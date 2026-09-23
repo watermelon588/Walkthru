@@ -61,6 +61,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `geo-scan` | AI readiness score, GEO findings, "what AI search sees" label | site audit (live) | Planned |
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
+| `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Planned |
 | `share-loop` | Public report with AI readiness score in page meta, "Checked by Walkthru" badge with backlink | `geo-scan` | Planned |
 | `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
@@ -110,6 +111,15 @@ Dependency direction is one way. `entitlements` comes first because every paid p
   - an `llms.txt` draft listing audited pages;
   - a rendering fix picked by framework markers: `id="root"` plus `/assets/index-*.js` means a Vite SPA (prerender or SSG); `__NEXT_DATA__` means Next.js (keep pages server-rendered); Lovable and Astro have their own markers.
 - No model calls. Shown in the report with copy buttons.
+
+### `fix-prompt`
+- `app/agent/fix_prompt.py`: `build(report, style) -> str`. `style` is `full` or `chat`.
+  - A pure function over the stored report JSON and the fix pack. No model call.
+  - It uses only findings already in the report, so it cannot add claims.
+  - Leaked key values stay masked.
+- `GET /runs/{id}/fix-prompt?style=full|chat` (owner only, paid plan) returns text, or a file with `download=1`.
+- Not written into `runs.report`. The web app reads reports straight from Supabase under RLS, so anything stored there would be free to read.
+- It ends with the fingerprints the next rerun should mark fixed. That makes the rerun the verification step.
 
 ### `rerun-compare`
 - **Data:** column `runs.parent_run_id text`. `POST /runs` and `POST /scans` accept `rerun_of`; the API checks the parent belongs to the caller and has the same origin.

@@ -25,7 +25,7 @@ Plus accessibility and mobile performance evidence, and one fix list ranked by i
 
 ## Plans
 
-The founder asked for this finalized plan on 2026-09-24. Prices: list price, with the founding price in brackets for the first 50 customers, locked for 12 months. V1 paid access follows [payment.md](payment.md): founder-approved 30-day passes through Dodo, no auto-renewal until the V2 gate.
+Prices confirmed by the founder on 2026-09-24. Shown as list price, with the founding price in brackets for the first 50 customers, locked for 12 months. V1 paid access follows [payment.md](payment.md): founder-approved 30-day passes through Dodo, no auto-renewal until the V2 gate.
 
 | | Free | Launch Pack | Pro | Plus |
 |---|---|---|---|---|
@@ -34,6 +34,7 @@ The founder asked for this finalized plan on 2026-09-24. Prices: list price, wit
 | **AI readiness score (GEO)** | Homepage score and top 3 fixes | Full site | Full site, up to 50 pages | Full site, up to 50 pages, every site |
 | **"What AI search sees"** | Yes | Yes | Yes | Yes |
 | **GEO fix pack** (robots.txt rules, JSON-LD, llms.txt draft, rendering fix for your framework) | Preview of 1 fix | Yes | Yes | Yes |
+| **Agent fix prompt**: one prompt for Cursor, Claude Code, Lovable or Bolt that fixes every finding in the report | Locked, shows how many fixes it holds | Yes | Yes | Yes |
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
 | Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
 | Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
@@ -51,6 +52,13 @@ The founder asked for this finalized plan on 2026-09-24. Prices: list price, wit
 - **Free:** the hook. "Can ChatGPT read your site?"
 - **Pro:** full-site readiness plus the fix pack.
 - **Plus:** keeps it working, with alerts when a deploy blocks an AI crawler, drops structured data or empties the HTML sent before JavaScript runs.
+
+**Agent fix prompt (paid).** Built in code from the report, with no model call, so it costs nothing and cannot invent findings.
+- **What it contains:** the detected stack. Then each finding in priority order: security, UX blockers, GEO, SEO, accessibility, performance. For each: what is wrong, where (URL, element text, header), the evidence, the required change and an acceptance check.
+- **Rules for the coding agent:** keep existing behavior, ask before adding dependencies, never paste secrets.
+- **Last step:** "rerun Walkthru to verify", with the list of findings expected to flip to fixed.
+- **Formats:** a full Markdown version (Cursor, Claude Code, Codex), a short chat version for Lovable and Bolt, and a `walkthru-fixes.md` download.
+- **Privacy:** leaked key values are masked. Journey text never includes personal data. The API serves it only to paid plans; it is not stored in the report, so the free tier cannot read it through the report row.
 
 **Not sold in V1:** AI citation tracking ("does ChatGPT mention you for this prompt"). It costs model and search calls on every check and needs its own evaluation. Candidate Plus add-on after launch.
 
