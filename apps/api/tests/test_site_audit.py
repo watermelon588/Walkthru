@@ -39,6 +39,7 @@ def test_site_audit_respects_robots_origin_cap_and_aggregates(monkeypatch):
     assert result.coverage.urls == ["https://site.test/", "https://site.test/about"]
     assert not any("/private" in url for url in requested)
     assert not any("elsewhere.test" in url for url in requested)
+    assert not any(p in url for url in requested for p in ("/.env", "/.git", "/.DS_Store", "wp-config")), "unverified audit must not probe exposed files"
 
     missing_description = next(finding for finding in result.seo if finding.title == "Missing meta description")
     assert "2 audited pages" in missing_description.detail
