@@ -1,6 +1,10 @@
 """Shared fakes: in-memory runs table and a fixed signed-in user. Tests never touch Supabase."""
 
+import os
+
 import pytest
+
+os.environ["RETENTION_JOB"] = "0"  # before app.main is imported
 
 from app import db
 from app.auth import require_user

@@ -44,6 +44,17 @@ def _execute(query: str, params: tuple[Any, ...] = (), *, fetchone: bool = False
     return None
 
 
+def _fetchall(query: str, params: tuple[Any, ...] = ()) -> list[dict]:
+    for attempt in range(2):
+        try:
+            with pool().connection() as conn:
+                return conn.execute(query, params).fetchall()
+        except OperationalError:
+            if attempt:
+                raise
+    return []
+
+
 def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", email: str | None = None, public: bool = False) -> None:
     _execute(
         "insert into runs (id, user_id, site, goal, persona, tier, logged_in, kind, email, public) "
@@ -80,6 +91,42 @@ def set_report(run_id: str, report: dict, status: str | None = None) -> None:
 
 def set_public(run_id: str, public: bool = True) -> None:
     _execute("update runs set public = %s, updated_at = now() where id = %s", (public, run_id))
+
+
+def runs_for_user(user_id: str) -> list[dict]:
+    return _fetchall("select * from runs where user_id = %s order by created_at", (user_id,))
+
+
+def run_ids_for_user(user_id: str) -> list[str]:
+    return [r["id"] for r in _fetchall("select id from runs where user_id = %s", (user_id,))]
+
+
+def evidence_objects(run_ids: list[str]) -> list[str]:
+    if not run_ids:
+        return []
+    rows = _fetchall("select name from storage.objects where bucket_id = 'run-evidence' and split_part(name, '/', 1) = any(%s)", (run_ids,))
+    return [r["name"] for r in rows]
+
+
+def expired_evidence_runs(days: int, limit: int = 100) -> list[dict]:
+    return _fetchall(
+        "select id, steps from runs where kind = 'test' and evidence_purged_at is null "
+        "and created_at < now() - make_interval(days => %s) order by created_at limit %s",
+        (days, limit),
+    )
+
+
+def mark_evidence_purged(run_id: str, steps: list[dict]) -> None:
+    _execute("update runs set steps = %s, evidence_purged_at = now() where id = %s", (Jsonb(steps), run_id))
+
+
+def forget_scan_emails(days: int) -> None:
+    """Instant Scan emails are only needed to deliver the report."""
+    _execute("update runs set email = null where kind = 'scan' and email is not null and created_at < now() - make_interval(days => %s)", (days,))
+
+
+def delete_runs(run_ids: list[str]) -> None:
+    _execute("delete from runs where id = any(%s)", (run_ids,))
 
 
 def setup() -> None:
