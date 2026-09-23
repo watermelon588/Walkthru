@@ -1,10 +1,10 @@
-import { ArrowLeftIcon, DownloadSimpleIcon, EnvelopeSimpleIcon, LinkIcon, PrinterIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, DownloadSimpleIcon, EnvelopeSimpleIcon, LinkIcon, PrinterIcon, TrashIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { ReportView } from '../components/ReportView'
 import { btnGhost } from '../components/Shared'
-import { emailRun, findingsCsv, getRun, shareRun, type Run } from '../lib/runs'
+import { deleteRun, emailRun, findingsCsv, getRun, shareRun, stopRun, type Run } from '../lib/runs'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -61,6 +61,12 @@ export default function Report() {
 
       {state.kind === 'ready' && (
         <div className="mt-6">
+          {state.run.status === 'running' && (
+            <EndRunningRun
+              run={state.run}
+              onStopped={(steps) => setState({ kind: 'ready', run: { ...state.run, status: 'stopped', steps } })}
+            />
+          )}
           {state.run.report && <Actions run={state.run} onShared={() => setState({ kind: 'ready', run: { ...state.run, public: true } })} />}
           <ReportView run={state.run} />
         </div>
@@ -69,7 +75,37 @@ export default function Report() {
   )
 }
 
+function EndRunningRun({ run, onStopped }: { run: Run; onStopped: (steps: Run['steps']) => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function end() {
+    setBusy(true)
+    setError(null)
+    try {
+      const stopped = await stopRun(run.id)
+      onStopped(stopped.steps)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not end this run.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="no-print mb-8 rounded-2xl border border-line bg-surface px-5 py-4">
+      <p className="text-sm">This browser session is no longer progressing?</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted">End it now to keep its completed steps and generate a partial report.</p>
+      <button type="button" onClick={end} disabled={busy} className={`${btnGhost} mt-4`}>
+        {busy ? 'Ending run...' : 'End run and build report'}
+      </button>
+      {error && <p role="alert" className="mt-3 text-xs text-danger">{error}</p>}
+    </div>
+  )
+}
+
 function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
+  const navigate = useNavigate()
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -112,6 +148,15 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
     })
   }
 
+  function remove() {
+    if (!window.confirm('Delete this run, its report and its screenshots? This cannot be undone.')) return
+    return act('delete', async () => {
+      await deleteRun(run.id)
+      navigate('/app', { replace: true })
+      return 'Run deleted.'
+    })
+  }
+
   async function savePdf() {
     setBusy('pdf')
     setMsg('Preparing screenshots for the PDF.')
@@ -140,6 +185,9 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
       </button>
       <button type="button" onClick={email} disabled={busy !== null} className={btnGhost}>
         <EnvelopeSimpleIcon weight="light" className="size-4" /> Email me
+      </button>
+      <button type="button" onClick={remove} disabled={busy !== null} className={`${btnGhost} text-danger`}>
+        <TrashIcon weight="light" className="size-4" /> {busy === 'delete' ? 'Deleting' : 'Delete run'}
       </button>
       {msg && <p role="status" className="basis-full text-xs text-muted">{msg}</p>}
     </div>

@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useState, type FormEvent } from 'react'
 import { AccountAvatar } from '../components/AccountAvatar'
 import { AppShell } from '../components/AppShell'
+import { YourData } from '../components/YourData'
 import { AgentPresence } from '../components/AgentPresence'
 import { btnPrimary } from '../components/Shared'
 import { accountAvatar, accountProfile, updateAccountProfile, useSession, type AccountProfile } from '../lib/auth'
@@ -165,6 +166,7 @@ function SettingsContent({ session }: { session: Session }) {
           </div>
         </aside>
       </div>
+      <YourData email={session.user.email ?? ''} />
     </>
   )
 }

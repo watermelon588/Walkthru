@@ -3,20 +3,24 @@
 import ipaddress
 import os
 import socket
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from selectolax.parser import HTMLParser
 
 UA = "Mozilla/5.0 (compatible; WalkthruBot/0.1; +https://walkthru.dev/bot)"
 MAX_TEXT = 300_000
+MAX_REDIRECTS = 5
 
 
 def assert_public(url: str) -> None:
     """Refuse hosts that resolve to private, loopback or link-local addresses. ALLOW_LOCAL_SCANS=1 for fixtures."""
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("site must use http or https")
     if os.environ.get("ALLOW_LOCAL_SCANS") == "1":
         return
-    host = urlsplit(url).hostname or ""
+    host = parsed.hostname
     try:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror as e:
@@ -27,14 +31,27 @@ def assert_public(url: str) -> None:
 
 
 def client() -> httpx.Client:
-    return httpx.Client(follow_redirects=True, max_redirects=5, timeout=15, headers={"User-Agent": UA})
+    return httpx.Client(follow_redirects=False, timeout=15, headers={"User-Agent": UA})
 
 
-def get(c: httpx.Client, url: str) -> httpx.Response | None:
+def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.Response | None:
+    """Fetch with every redirect revalidated before the next network request."""
+    current = url
     try:
-        return c.get(url)
-    except httpx.HTTPError:
+        for _ in range(MAX_REDIRECTS + 1):
+            assert_public(current)
+            if same_origin is not None and origin(current) != same_origin:
+                return None
+            response = c.get(current)
+            if not response.is_redirect:
+                return response
+            location = response.headers.get("location")
+            if not location:
+                return response
+            current = urljoin(str(response.url), location)
+    except (httpx.HTTPError, ValueError):
         return None
+    return None
 
 
 def page_text(html: str, limit: int = 6000) -> str:

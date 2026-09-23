@@ -10,7 +10,30 @@ export type Step = {
   provider?: 'jev' | 'llm'
   decision_confidence?: number
   fallback_reason?: string
+  interrupted?: boolean
   evidence?: StepEvidence
+  diagnostics?: BrowserDiagnostics
+}
+
+export type AccessibilityIssue = {
+  rule: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  target?: string
+}
+
+export type BrowserDiagnostics = {
+  captured_at: string
+  accessibility: {
+    status: 'complete' | 'unavailable'
+    total: number
+    issues: AccessibilityIssue[]
+  }
+  web_vitals: {
+    lcp_ms?: number
+    cls?: number
+    inp_ms?: number
+  }
 }
 
 export type StepEvidence = {
@@ -39,15 +62,24 @@ export type Report = {
   verified: boolean
   tokens: number
   checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
+  site_audit?: {
+    pages_scanned: number
+    page_limit: number
+    duration_ms: number
+    truncated: boolean
+    urls: string[]
+    robots_respected: boolean
+  } | null
 }
 
 export type Run = {
+  evidence_purged_at?: string | null
   id: string
   site: string
   goal: string
   persona: string
   kind: 'test' | 'scan'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -62,6 +94,7 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   budget: 'Ran out of steps',
   stuck: 'Got stuck',
   captcha: 'Stopped at a CAPTCHA',
+  stopped: 'Ended early',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {
@@ -75,7 +108,10 @@ export const PERSONA_LABEL: Record<string, string> = {
 export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
-const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at'
+const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'
+
+/** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */
+export const EVIDENCE_RETENTION_DAYS = 30
 
 /** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs (or public ones). */
 export async function listRuns(): Promise<Run[]> {
@@ -104,14 +140,14 @@ export async function evidenceUrls(paths: string[]): Promise<Record<string, stri
 }
 
 /** Writes go through the API. */
-async function api<T>(path: string, body?: unknown, auth = true): Promise<T> {
+async function api<T>(path: string, body?: unknown, auth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST'): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (auth) {
     const token = (await supabase?.auth.getSession())?.data.session?.access_token
     if (!token) throw new Error('Sign in first')
     headers.Authorization = `Bearer ${token}`
   }
-  const res = await fetch(API + path, { method: 'POST', headers, body: JSON.stringify(body ?? {}) })
+  const res = await fetch(API + path, { method, headers, body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined })
   if (!res.ok) {
     const detail = (await res.json().catch(() => ({}))) as { detail?: string }
     throw new Error(detail.detail ?? `Request failed (${res.status})`)
@@ -122,6 +158,10 @@ async function api<T>(path: string, body?: unknown, auth = true): Promise<T> {
 export const instantScan = (site: string, email?: string) => api<{ run_id: string; url: string; report: Report }>('/scans', { site, email: email || null }, false)
 export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`)
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
+export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`, undefined, true, 'DELETE')
+export const exportAccount = () => api<Record<string, unknown>>('/account/export', undefined, true, 'GET')
+export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
+export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
 
 export function findingsCsv(run: Run): string {
   const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`

@@ -5,7 +5,7 @@
 Chrome extension (user's browser)               Walkthru API (FastAPI + LangGraph)
 ────────────────────────────────                ───────────────────────────────────
 side panel: pick site, goal, test user ── POST /runs ──────▶ create run + LangGraph thread
-content script: page snapshot           ── POST /runs/{id}/observe ─▶ persona agent decides
+content script: snapshot + axe + vitals ── POST /runs/{id}/observe ─▶ persona agent decides
   (URL, numbered buttons/links/inputs,  ◀── next action ──── click #12 | type #4 "..." | scroll | done | give_up
    visible text, errors; PII masked)
 executes the action in the real tab
@@ -25,7 +25,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 | Auth | Supabase Auth: Google, GitHub, email magic link. API validates bearer tokens via Supabase Auth (`app/auth.py`) | Live; OAuth providers still to enable in dashboard |
 | API | Python 3.12+, FastAPI, LangGraph + Postgres checkpointer, httpx | `/health`, `/runs` step API, persona graph |
 | Agent models | Default: Groq `openai/gpt-oss-120b` primary, Gemini `gemini-3.1-flash-lite` fallback. Experimental: TypeSafe Jev `jev-1.13.0` for bounded browser decisions with confidence-gated LLM fallback. Paid: Claude candidate after T9 eval | Free pool live; Jev adapter built and opt-in |
-| Extension | Chrome MV3, TypeScript, WXT, React side panel | Built: snapshot, redaction, executor, step loop, Scout status and bounded evidence capture. Real easy-fixture run works; evidence rerun pending Storage policy application |
+| Extension | Chrome MV3, TypeScript, WXT, React side panel, axe-core | Built: snapshot, redaction, executor, step loop, Scout status, bounded screenshot evidence, WCAG A/AA checks and Core Web Vitals. Real easy-fixture run works; diagnostics rerun pending rebuilt-extension verification |
 | Data | Supabase Postgres (RLS on every table) + private Storage (screenshots) | `runs` table + RLS live; `run-evidence` bucket and owner/public-report policies are declared in `apps/api/schema.sql` but still need applying to the project |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
@@ -35,7 +35,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 ## Key decisions
 1. **Browser runs on the user's machine, brain on our server.** No Chromium on our server, hosting stays $0-5, logged-in pages work without sharing passwords.
 2. **Step loop lives in the extension side panel page**, not the MV3 service worker (Chrome suspends workers after ~30 s idle). Chrome does not reliably grant `activeTab` to side panels and `captureVisibleTab` only accepts `activeTab` or `<all_urls>`, so Start Test requests the optional broad host permission in a one-time Chrome prompt. It is used only for the active test tab.
-3. **One HTTP call per agent step.** LangGraph `interrupt()` emits the action; `Command(resume=observation)` continues. Postgres checkpointer holds state, so the API is stateless between calls.
+3. **One HTTP call per agent step.** LangGraph `interrupt()` emits the action; `Command(resume=observation)` continues. Postgres checkpointer holds state, so the API is stateless between calls. If the browser journey ends early, authenticated `POST /runs/{id}/stop` atomically marks the run stopped, labels the unconfirmed action as interrupted and starts a partial report.
 4. **Text snapshot first, screenshots rarely** (first impression and when stuck). Tokens are the main cost.
 5. **Plain code wherever possible.** Accessibility, performance, SEO and security checks are deterministic integrations. LLMs explain and prioritize the evidence; only the persona session is an agent.
 6. **Passive security only, on verified domains** (meta tag, DNS TXT or well-known file).
@@ -45,6 +45,7 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 11. **Decision providers are replaceable, LangGraph is not.** The persona graph owns state, interrupts, budgets, and termination. A Jev provider may choose bounded operations and targets; the existing LLM remains responsible for open-ended generation and fallback. Safety stays in deterministic code.
 12. **Step evidence is private and bounded.** The extension captures at most eight JPEG frames per run after meaningful actions, hides Scout and masks form controls for the captured paint, then uploads directly to the private `run-evidence` bucket with the user's JWT. The API only accepts a screenshot path beneath the current run id. Reports request one-hour signed URLs; public reports can read evidence only when the owning run is public.
+13. **Browser diagnostics belong to journey steps.** The injected script runs bounded axe WCAG A/AA checks and observes LCP, CLS and INP in the tested tab. Each post-action observation is validated by the API and attached to the exact LangGraph step. Deterministic report code turns failing thresholds into prioritized findings; the LLM explains and ranks but does not invent these measurements.
 
 ## Experimental TypeSafe decision path
 
@@ -72,10 +73,16 @@ or bounded action           |
 ## Agent graphs
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
-- `site_scan`: accessibility_scan, performance_scan, seo_scan and security_scan in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
+- `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
+- Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
+
+## Data lifecycle
+- Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
+- `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.
+- Routes: `DELETE /runs/{id}` (owner only), `GET /account/export` (JSON of every run the user owns), `POST /account/delete` (body must repeat the account email).
 
 ## Safety rules (enforced in code, not prompts)
-Safe mode on logged-in pages (never click delete / remove / cancel subscription / pay / send / invite / transfer; confirm before any form submit), same-origin only, 25-step and 4-minute caps, stop at CAPTCHA, client-side PII masking before snapshot upload, form-control masking before screenshot capture, fake test identity for signups. Evidence capture is best-effort and never blocks the journey.
+Safe mode on logged-in pages (never click delete / remove / cancel subscription / pay / send / invite / transfer; confirm before any form submit), same-origin only, 25-step and 4-minute caps, stop at CAPTCHA, client-side PII masking before snapshot upload, form-control masking before screenshot capture, fake test identity for signups. Evidence capture is best-effort and never blocks the journey. Owner stop, time-limit, origin-exit and post-creation extension errors close the API run and preserve a partial report.
 
 ## Environment variables
 See [.env.example](.env.example). Web reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`. Never expose service-role keys to the web app.

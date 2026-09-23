@@ -1,7 +1,8 @@
-import { KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { EVIDENCE_RETENTION_DAYS, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { SiteAuditCoverage } from './SiteAuditCoverage'
 
 /** The report body. Shared by the signed-in report page and the public share page. */
 export function ReportView({ run }: { run: Run }) {
@@ -12,7 +13,7 @@ export function ReportView({ run }: { run: Run }) {
   const isScan = run.kind === 'scan'
   const counts = { high: 0, medium: 0, low: 0 }
   for (const f of r?.findings ?? []) counts[f.severity]++
-  const stopped = ['gave_up', 'budget', 'stuck', 'captcha'].includes(run.status)
+  const stopped = ['gave_up', 'budget', 'stuck', 'captcha', 'stopped'].includes(run.status)
   const agentState: AgentPresenceState = stopped ? 'stopped' : r ? 'complete' : 'observing'
   const agentActivity = stopped
     ? STATUS_LABEL[run.status]
@@ -53,6 +54,7 @@ export function ReportView({ run }: { run: Run }) {
           </section>
 
           {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
+          {!isScan && steps.length > 0 && <RetentionNote run={run} />}
 
           {r.first_impression && (
             <section aria-label="First impression" className="report-print-section mt-12">
@@ -65,6 +67,8 @@ export function ReportView({ run }: { run: Run }) {
               </dl>
             </section>
           )}
+
+          {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 
           <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} />
 
@@ -103,6 +107,17 @@ export function ReportView({ run }: { run: Run }) {
         </>
       )}
     </article>
+  )
+}
+
+function RetentionNote({ run }: { run: Run }) {
+  const expires = new Date(new Date(run.created_at).getTime() + EVIDENCE_RETENTION_DAYS * 86_400_000)
+  return (
+    <p className="mt-3 text-xs text-muted">
+      {run.evidence_purged_at
+        ? `Screenshots were deleted on ${new Date(run.evidence_purged_at).toLocaleDateString()}, ${EVIDENCE_RETENTION_DAYS} days after the run. The steps and report are kept.`
+        : `Screenshots are kept for ${EVIDENCE_RETENTION_DAYS} days and deleted automatically on ${expires.toLocaleDateString()}. The steps and report are kept until you delete the run.`}
+    </p>
   )
 }
 

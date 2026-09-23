@@ -15,6 +15,33 @@ class Element(BaseModel):
     type: str | None = None  # input type
 
 
+class WebVitals(BaseModel):
+    """Core Web Vitals observed in the real browser so far."""
+
+    lcp_ms: int | None = Field(default=None, ge=0, le=600_000)
+    cls: float | None = Field(default=None, ge=0, le=100)
+    inp_ms: int | None = Field(default=None, ge=0, le=600_000)
+
+
+class AccessibilityIssue(BaseModel):
+    rule: str = Field(max_length=100)
+    severity: Literal["high", "medium", "low"]
+    message: str = Field(max_length=300)
+    target: str | None = Field(default=None, max_length=300)
+
+
+class AccessibilityAudit(BaseModel):
+    status: Literal["complete", "unavailable"]
+    total: int = Field(ge=0, le=500)
+    issues: list[AccessibilityIssue] = Field(default_factory=list, max_length=12)
+
+
+class BrowserDiagnostics(BaseModel):
+    captured_at: datetime
+    accessibility: AccessibilityAudit
+    web_vitals: WebVitals = Field(default_factory=WebVitals)
+
+
 class Observation(BaseModel):
     """One page snapshot from the content script. PII is masked before upload."""
 
@@ -24,6 +51,7 @@ class Observation(BaseModel):
     text: str = ""  # visible text, trimmed client side
     errors: list[str] = Field(default_factory=list)  # visible error messages
     note: str | None = None  # executor feedback: "element not found", "captcha", ...
+    diagnostics: BrowserDiagnostics | None = None
 
 
 class StepEvidence(BaseModel):
@@ -76,6 +104,17 @@ class Synthesis(BaseModel):
     top_fixes: list[str] = Field(description="Up to five fixes ranked by impact, across UX, SEO and security.", max_length=5)
 
 
+class SiteAuditSummary(BaseModel):
+    """Bounded crawl coverage included with new reports. Absent on legacy reports."""
+
+    pages_scanned: int = Field(ge=0, le=20)
+    page_limit: int = Field(ge=1, le=20)
+    duration_ms: int = Field(ge=0)
+    truncated: bool
+    urls: list[str] = Field(default_factory=list, max_length=20)
+    robots_respected: bool = True
+
+
 class Report(BaseModel):
     summary: str
     first_impression: FirstImpression | None = None
@@ -84,3 +123,4 @@ class Report(BaseModel):
     verified: bool = False
     tokens: int = 0
     checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
+    site_audit: SiteAuditSummary | None = None

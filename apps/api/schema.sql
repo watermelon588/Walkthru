@@ -72,3 +72,7 @@ create policy "owners and public reports read run evidence" on storage.objects
         and (runs.user_id = (select auth.uid()) or runs.public = true)
     )
   );
+
+-- Evidence retention (2026-09-23): screenshots expire, runs and reports stay until the owner deletes them.
+alter table public.runs add column if not exists evidence_purged_at timestamptz;
+create index if not exists runs_evidence_retention on public.runs (created_at) where kind = 'test' and evidence_purged_at is null;

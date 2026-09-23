@@ -13,7 +13,7 @@ from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
-from app import db, deliver
+from app import auth, db, deliver, retention
 from app.agent import report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -33,7 +33,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(WEB_ORIGINS),
     allow_origin_regex=r"chrome-extension://.*",
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -42,6 +42,9 @@ def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
     log.warning("database temporarily unavailable: %s", error)
     return JSONResponse(status_code=503, content={"detail": "Database connection was interrupted. Please retry."})
 
+
+if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("DATABASE_URL"):
+    retention.start_background()
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
@@ -96,7 +99,7 @@ def _owned(run_id: str, user: dict) -> dict:
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
-    state = body.model_dump(exclude={"tier"}) | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
+    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000]}
     result = runtime.invoke(body.tier, state, _cfg(run_id))
     return _reply(run_id, body.tier, result, background)
 
@@ -108,7 +111,7 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
         raise HTTPException(409, "run already finished")
     if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
         raise HTTPException(422, "evidence path does not belong to this run")
-    resume = {"observation": body.observation.model_dump()}
+    resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
     result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))
@@ -119,6 +122,46 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
 def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     row = _owned(run_id, user)
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
+
+
+@app.post("/runs/{run_id}/stop")
+def stop_run(run_id: str, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    """End an interrupted browser session and generate a truthful partial report."""
+    row = _owned(run_id, user)
+    if row["status"] == "stopped":
+        return {
+            "run_id": run_id,
+            "status": "stopped",
+            "steps": row["steps"],
+            "report_status": "ready" if row.get("report") else "generating",
+        }
+    if row["status"] != "running":
+        raise HTTPException(409, "run already finished")
+
+    steps = [dict(step) for step in row.get("steps", [])]
+    if steps and steps[-1].get("action") not in {"done", "give_up"}:
+        steps[-1] = steps[-1] | {"interrupted": True}
+    tokens = row.get("tokens", 0)
+    first_text = ""
+    try:
+        first_text = runtime.get_state(row["tier"], _cfg(run_id)).values.get("first_text", "")
+    except Exception:  # noqa: BLE001 - old or missing checkpoints still produce a partial report
+        log.info("checkpoint unavailable while stopping run %s", run_id)
+
+    if not db.mark_run_stopped(run_id, steps, tokens):
+        refreshed = _owned(run_id, user)
+        if refreshed["status"] != "stopped":
+            raise HTTPException(409, "run already finished")
+        return {
+            "run_id": run_id,
+            "status": "stopped",
+            "steps": refreshed["steps"],
+            "report_status": "ready" if refreshed.get("report") else "generating",
+        }
+
+    values = {"status": "stopped", "steps": steps, "tokens": tokens, "first_text": first_text}
+    background.add_task(finish_run, run_id, values)
+    return {"run_id": run_id, "status": "stopped", "steps": steps, "report_status": "generating"}
 
 
 def finish_run(run_id: str, values: dict) -> None:
@@ -215,6 +258,40 @@ def email_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     # Keep the destination in the response when delivery is not configured so
     # the web app can offer a truthful, ready-to-send mail-client fallback.
     return {"sent": sent, "to": to}
+
+
+@app.delete("/runs/{run_id}")
+def delete_run(run_id: str, user: dict = Depends(require_user)) -> dict:
+    """Owner deletes one run: screenshots, checkpoint, report and row."""
+    _owned(run_id, user)
+    retention.delete_runs([run_id])
+    return {"deleted": run_id}
+
+
+@app.get("/account/export")
+def export_account(user: dict = Depends(require_user)) -> dict:
+    """Everything stored about the signed-in user's runs, as one JSON document."""
+    return {
+        "user": {"id": user["id"], "email": user.get("email")},
+        "evidence_retention_days": retention.RETENTION_DAYS,
+        "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
+        "runs": db.runs_for_user(user["id"]),
+    }
+
+
+class DeleteAccount(BaseModel):
+    confirm: str = Field(max_length=320)
+
+
+@app.post("/account/delete")
+def delete_account(body: DeleteAccount, user: dict = Depends(require_user)) -> dict:
+    """Permanent. The caller must type their account email to confirm."""
+    if not user.get("email") or body.confirm.strip().lower() != user["email"].lower():
+        raise HTTPException(422, "Type your account email exactly to confirm deletion.")
+    retention.delete_account(user["id"])
+    for token in [t for t, (u, _) in auth._cache.items() if u["id"] == user["id"]]:
+        auth._cache.pop(token, None)
+    return {"deleted": True}
 
 
 @app.get("/verification")

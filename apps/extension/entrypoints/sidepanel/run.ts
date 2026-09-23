@@ -1,6 +1,6 @@
 /** The step loop. Lives here (side panel page) because Chrome suspends the MV3 worker. */
 
-import { observe, startRun, type RunReply, type StepEvidence } from "../../lib/api";
+import { observe, startRun, stopRun, type RunReply, type StepEvidence } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
@@ -77,6 +77,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
   let evidenceWarning: string | undefined;
   const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], evidenceWarning, ...p });
   let tabId: number | undefined;
+  let runId: string | undefined;
   try {
     emit({ phase: "starting" });
     const origin = new URL(opts.site).origin;
@@ -92,16 +93,22 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     await setAgentStatus(tabId, "observing", "Reading the page");
     let obs = await send<Observation>(tabId, { type: "snapshot" });
     let reply = await startRun({ ...opts, observation: obs });
-    const runId = reply.run_id;
+    runId = reply.run_id;
 
     while (reply.status === "running") {
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
-        return onProgress({ phase: "finished", steps, status: "aborted", runId });
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+          onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
+        }
+        return;
       }
       if (Date.now() > deadline) {
         await setAgentStatus(tabId, "stopped", "Ran out of test time");
-        return onProgress({ phase: "finished", steps, status: "budget", runId });
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+          onProgress({ phase: "error", steps, message: "The time limit ended, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
+        }
+        return;
       }
       const step = reply.action;
       steps.push(step);
@@ -110,9 +117,20 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       await setAgentStatus(tabId, step.action === "give_up" ? "stopped" : step.action === "done" ? "observing" : "acting", ACTION_ACTIVITY[step.action]);
       const note = await act(tabId, step, opts, origin);
       await settled(tabId, opts.signal);
+      if (opts.signal.aborted) {
+        await setAgentStatus(tabId, "stopped", "Test stopped");
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+          onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
+        }
+        return;
+      }
       const current = await chrome.tabs.get(tabId);
       if (current.url && !sameOrigin(current.url, origin)) {
-        return onProgress({ phase: "finished", steps, status: "gave_up", message: "Left the site", runId });
+        await setAgentStatus(tabId, "stopped", "Left the site");
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning)) {
+          onProgress({ phase: "error", steps, message: "The test left the site, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
+        }
+        return;
       }
       await setAgentStatus(tabId, "observing", "Reading the updated page");
       obs = await send<Observation>(tabId, { type: "snapshot" });
@@ -139,7 +157,23 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
     if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
+    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning)) return;
     onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e), evidenceWarning });
+  }
+}
+
+async function closeRun(
+  runId: string,
+  steps: Step[],
+  onProgress: (p: Progress) => void,
+  evidenceWarning?: string,
+): Promise<boolean> {
+  try {
+    const stopped = await stopRun(runId);
+    onProgress({ phase: "finished", steps: stopped.steps, status: "stopped", runId, evidenceWarning });
+    return true;
+  } catch {
+    return false;
   }
 }
 

@@ -4,8 +4,8 @@ import type { Finding } from '../lib/runs'
 const checks = [
   { kind: 'accessibility' as const, label: 'Accessibility basics', description: 'Page language, heading order, image text and named controls.', icon: WheelchairIcon },
   { kind: 'performance' as const, label: 'Mobile performance', description: 'PageSpeed score and Largest Contentful Paint evidence.', icon: GaugeIcon },
-  { kind: 'seo' as const, label: 'Search readiness', description: 'Titles, descriptions, headings, links and crawl basics.', icon: MagnifyingGlassIcon },
-  { kind: 'security' as const, label: 'Security hygiene', description: 'Passive headers and verified-domain exposure checks.', icon: WarningCircleIcon },
+  { kind: 'seo' as const, label: 'Search readiness', description: 'Titles, descriptions, headings and crawl basics across audited pages.', icon: MagnifyingGlassIcon },
+  { kind: 'security' as const, label: 'Security hygiene', description: 'Passive page checks plus verified-domain exposure checks.', icon: WarningCircleIcon },
 ]
 
 type CheckState = Partial<Record<(typeof checks)[number]['kind'], 'complete' | 'unavailable'>>

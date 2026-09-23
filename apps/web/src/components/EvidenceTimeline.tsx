@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { evidenceUrls, type Step } from '../lib/runs'
 import { AgentBird } from './AgentBird'
 import { AgentPresence } from './AgentPresence'
+import { BrowserDiagnostics, BrowserDiagnosticsSummary } from './BrowserDiagnostics'
 
 const ACTION_LABEL: Record<Step['action'], string> = {
   click: 'Clicked',
@@ -146,7 +147,9 @@ export function EvidenceTimeline({ steps }: { steps: Step[] }) {
               {current.provider && <Detail term="Decision" value={`${current.provider}${current.decision_confidence != null ? ` · ${Math.round(current.decision_confidence * 100)}% confidence` : ''}`} />}
               {current.fallback_reason && <Detail term="Fallback" value={current.fallback_reason} />}
               {evidence?.note && <Detail term="Executor note" value={evidence.note} />}
+              {current.interrupted && <Detail term="Result" value="Run ended before this action was confirmed." />}
             </dl>
+            {current.diagnostics && <BrowserDiagnostics diagnostics={current.diagnostics} />}
             <div className="mt-5 flex gap-1" aria-label={`Confusion ${current.confusion} of 3`}>
               {[0, 1, 2].map((level) => <span key={level} className={`h-1.5 flex-1 rounded-full ${level < current.confusion ? 'bg-danger' : 'bg-line'}`} />)}
             </div>
@@ -191,10 +194,12 @@ function PrintEvidenceJourney({ steps, images }: { steps: Step[]; images: Record
                 <figcaption>
                   <span className="report-print-step">{String(index + 1).padStart(2, '0')}</span>
                   <span>
-                    <strong>{ACTION_LABEL[step.action]}</strong>
+                    <strong>{step.interrupted ? `${ACTION_LABEL[step.action]} (interrupted)` : ACTION_LABEL[step.action]}</strong>
                     <span>{step.thought}</span>
                   </span>
-                  <span className="report-print-confusion">Confusion {step.confusion}/3</span>
+                  <span className="report-print-confusion">
+                    Confusion {step.confusion}/3{step.diagnostics && <> · <BrowserDiagnosticsSummary diagnostics={step.diagnostics} /></>}
+                  </span>
                 </figcaption>
               </figure>
             )
