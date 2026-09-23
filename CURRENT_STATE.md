@@ -1,6 +1,6 @@
 # Current State
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-22_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
@@ -41,6 +41,8 @@ _Last updated: 2026-09-21_
 - **Interrupted-run recovery (2026-09-21).** Authenticated `POST /runs/{id}/stop` atomically changes an open run to `stopped`, marks its unconfirmed final action as interrupted and starts the normal partial-report pipeline. The dashboard explains why an open run can remain, offers **End and report** on each running row and redirects to the polling report page. The report page offers the same recovery action. Extension Stop, time limit, origin exit and post-creation errors now call the endpoint automatically. The one stale three-step founder run was closed and its partial report generated successfully.
 - **Local runbook (2026-09-20).** `README.md` now contains copy-paste Windows PowerShell commands for the API, web app, fixture servers, extension build/load flow, end-to-end manual test and every automated verification suite.
 
+- **T24 full-site launch audit closed (2026-09-23).** `app/scans/site.py` crawls up to 10 same-origin HTML pages (hard cap 20, 20 s budget) with robots.txt honoured and every redirect SSRF-checked before the request. One shared branch feeds SEO and passive-security findings; repeated issues collapse into one finding that names how many pages and which URLs. Exposed-file and bundle-secret checks still run only on verified domains. Reports carry optional `site_audit` coverage, shown by `SiteAuditCoverage` in private, public and PDF views. Verified: 71 API tests, web build and lint, a live Instant Scan of the easy fixture (4 pages, 336 ms), a passive three-page smoke of python.org, and no overflow at four widths. The `web` launch config now starts Vite through Node because this machine's `npm` launcher is broken.
+
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
@@ -50,11 +52,10 @@ _Last updated: 2026-09-21_
 - **Fresh T23 browser verification pending.** Rebuild and reload the extension, run the easy fixture once, then confirm the selected journey step shows axe status and any available LCP, CLS or INP values in the report inspector and PDF.
 
 ## Next up
-1. Founder: in the Supabase dashboard enable Google and GitHub providers and add `http://localhost:5173` to redirect URLs (keys are already in both `.env` files). Rotate the DB password and secret key before launch (shared over chat).
-2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture plus per-step axe and Web Vitals evidence; the latest successful five-step run predates this diagnostics build.
-3. Inspect that run in the private replay, share it, verify public evidence access and print the report to PDF.
-4. T17B is intentionally deferred per founder direction. When resumed, capture the hard fixture through the same extension build with the Groq/Gemini and Jev-hybrid candidates, score with `evals/runner.py`, publish to LangSmith, and finalize `docs/decisions.md`.
-5. Then T13 store submission, T14 billing, T15 deployment, and T16 launch wiring.
+1. Founder: in the Supabase dashboard enable Google and GitHub providers and add the local and future production redirect URLs. Rotate the DB password and secret key before launch.
+2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture plus per-step axe and Web Vitals evidence.
+3. Inspect that run privately and publicly, then print the real evidence report to PDF and close T18-T21.
+4. Follow `ROADMAP.md` Phase 2 (evidence retention, data export and deletion), then: T13 store/legal, T14 billing, T15 production reliability, then T16 launch wiring. T17B remains intentionally deferred.
 
 ## Known issues and notes
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
