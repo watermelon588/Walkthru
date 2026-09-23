@@ -1,10 +1,9 @@
-import { PlusIcon } from '@phosphor-icons/react'
+import { ListIcon, PlusIcon, XIcon } from '@phosphor-icons/react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { instantScan } from '../lib/runs'
 import { brand } from '../brand'
-import { faqs, footer, hero, plans } from '../content'
+import { faqs, footer, hero, navLinks, plans } from '../content'
 
 export const btnPrimary =
   'inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm whitespace-nowrap text-bg transition hover:opacity-85 active:scale-[0.98]'
@@ -66,20 +65,44 @@ export function Logo({ withName = true, className = '' }: { withName?: boolean; 
   )
 }
 
+/** First focusable element on every page: jumps keyboard users past the navigation. */
+export function SkipLink() {
+  return (
+    <a href="#main" className="sr-only z-50 rounded-full bg-ink px-4 py-2 text-sm text-bg focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      Skip to content
+    </a>
+  )
+}
+
 export function Nav() {
+  const menu = useRef<HTMLDetailsElement>(null)
+  const close = () => menu.current?.removeAttribute('open')
   return (
     <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-md">
+      <SkipLink />
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-10" aria-label="Main">
         <Logo withName={false} />
         <div className="hidden items-center gap-9 text-sm text-muted md:flex">
-          <a href="#how" className="transition hover:text-ink">How it works</a>
-          <a href="#report" className="transition hover:text-ink">Report</a>
-          <a href="#pricing" className="transition hover:text-ink">Pricing</a>
-          <a href="#faq" className="transition hover:text-ink">FAQ</a>
+          {navLinks.map((l) => <a key={l.href} href={l.href} className="transition hover:text-ink">{l.label}</a>)}
         </div>
-        <div className="flex items-center gap-5">
-          <a href="/login" className="hidden text-sm text-ink sm:block">Sign in</a>
-          <a href="#scan" className={btnPrimary.replace('px-6 py-3', 'px-5 py-2.5')}>{hero.primary}</a>
+        <div className="flex items-center gap-3 sm:gap-5">
+          <a href="/login" className="hidden text-sm text-ink transition hover:opacity-70 sm:block">Sign in</a>
+          <a href="/#scan" className={btnPrimary.replace('px-6 py-3', 'px-5 py-2.5')}>{hero.primary}</a>
+          <details ref={menu} className="group md:hidden">
+            <summary aria-label="Menu" className="grid size-10 cursor-pointer list-none place-items-center rounded-full border border-line transition hover:bg-surface [&::-webkit-details-marker]:hidden">
+              <ListIcon weight="light" className="size-4 group-open:hidden" />
+              <XIcon weight="light" className="hidden size-4 group-open:block" />
+            </summary>
+            <div onClick={close} className="absolute inset-x-0 top-16 border-y border-line bg-bg px-5 pb-6 shadow-[0_24px_40px_-32px_rgba(27,27,31,0.4)]">
+              <ul className="grid text-lg font-light">
+                {[...navLinks, { label: 'Sign in', href: '/login' }].map((l) => (
+                  <li key={l.href} className="border-b border-line last:border-b-0">
+                    <a href={l.href} className="flex min-h-12 items-center py-2 text-ink">{l.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
         </div>
       </nav>
     </header>
@@ -152,6 +175,8 @@ export function ScanForm() {
     setError('')
     setBusy(true)
     try {
+      // Loaded on submit so the landing page does not ship the Supabase client.
+      const { instantScan } = await import('../lib/runs')
       const { run_id } = await instantScan(site, email || undefined)
       navigate(`/r/${run_id}`)
     } catch (err) {

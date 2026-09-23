@@ -1,6 +1,6 @@
 # Current State
 
-_Last updated: 2026-09-23_
+_Last updated: 2026-09-24_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
@@ -46,6 +46,38 @@ _Last updated: 2026-09-23_
 
 - **Phase 2 data lifecycle (2026-09-23).** Journey screenshots expire after `EVIDENCE_RETENTION_DAYS` (30). `app/retention.py` deletes expired objects through the Storage API, strips the dead links from steps, stamps `runs.evidence_purged_at` and erases Instant Scan emails after the same window. It runs inside the API one minute after boot and every six hours, or manually with `python -m app.retention`. Owners can `DELETE /runs/{id}`, download everything with `GET /account/export`, and delete their account with `POST /account/delete` (they must type their email). Deletion always removes storage files first, then LangGraph checkpoints, then rows, then the Supabase user, so a failed storage call never strands unreachable files. Web: a "Your data" section in Settings (policy, Export my data, Delete account), a Delete run action on reports, and a retention date under the evidence timeline. The extension panel states the 30-day policy. Verified: 76 API tests, web build and lint, real Storage listing and deletion calls, live export, and the settings and report UI in the browser. Not yet verified live: run and account deletion through the running API, because this machine's database connection kept timing out; both attempts failed cleanly with nothing deleted. A throwaway account `walkthru.delete-check@example.com` (password `Walk-thru-2026-local!`, local test only) holds one run and one screenshot for that test.
 
+- **One-command dev stack (2026-09-23, dev only).** `.\dev` (`dev.cmd` runs `dev.py`) builds the extension and starts API, web and both fixture sites, waits for all of them, prints URLs, and stops the whole process tree on Ctrl+C. The `stack` launch config runs the same script. Remove both files before production.
+- **Live-site fix (2026-09-23).** Vercel serves Markdown to clients that do not ask for HTML, so the crawler audited 0 pages on nextjs.org and reported a clean result. The fetcher now sends a browser `Accept` header, and an audit that finds no HTML pages says so as a finding. nextjs.org now crawls 3 pages. 78 API tests.
+
+- **Reliability and latency pass (2026-09-23).** Root causes and fixes, all verified live:
+  - *503 "database interrupted":* Supabase's direct Postgres host is IPv6-only and raw Postgres from this network dropped most connections. The API now talks to Supabase through its HTTPS Data API (`app/db.py`, one keep-alive client, 4 s connect limit, one retry, 333 ms median, fails in seconds with a clear 503 instead of hanging 20-30 s). Agent step state is in memory by default (`CHECKPOINTER=postgres` opts back into Postgres on a server next to the database). A run whose live state was lost to an API restart closes truthfully with a partial report.
+  - *Slow steps:* Groq's free tier allows 8k tokens/min per model and each step uses ~1.6k, so the old pool retried with backoff and then waited on an overloaded Gemini (35 s steps). `runtime.free_pool` now chains Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite, all with zero retries and 8 s (Groq) / 20 s (Gemini) ceilings. Steps now take 1.5-6 s of API time.
+  - *Dev stack:* uvicorn's Windows reload killed the whole `.\dev` stack and later hung silently; `dev.py` now restarts the API itself when `apps/api/app` changes (~2 s) and isolates each server's console.
+  - *Report truthfulness:* JavaScript-only pages (Vite/React SPAs on Vercel) are detected; the first impression is "Not judged" instead of invented, accessibility is "not measured" instead of a false pass, and the shell itself is reported with accurate impact. UX findings must cite a step and must not restate a scan finding. Browser accessibility findings group by rule.
+  - *Safety:* on public pages the agent never clicks buttons that send, pay or delete (a portfolio contact form was submitted once during testing before this fix); it ends the journey as done at that button. `mailto:`/`tel:` links are reported as working contact methods and never opened.
+  - *Extension robustness:* the injected script waits for the page body before any DOM work, and the accessibility audit runs once per address with a 3 s budget.
+  - `evals/e2e_extension.py` runs the built extension page script in headless Chrome against any URL with the real API, model, storage and a test account. Verified on the founder's portfolio (goal reached in 4 steps, 33 s) and the easy fixture (4 steps, 25 s). 87 API tests, 22 extension tests.
+
+- **Journey truthfulness pass (2026-09-23).** Driven by a portfolio contact run that got "stuck" and a report that blamed the site. Root causes were Walkthru's, all fixed and verified live:
+  - Snapshots mark form fields `filled`/`empty`/`checked` (never the value) and list visible confirmations (`notices`); typing that a field rejects is reported; a `type` with no text is filled from the test identity.
+  - Every step records what it led to (`result_url`, `errors_after`, `notices_after`, `note_after`); early stops (Stop, time limit, leaving the site, errors) send a reason to `POST /runs/{id}/stop`.
+  - Submit detection follows `form="id"` buttons outside the form.
+  - Safety split: destructive actions (pay, delete, cancel) never run; send/invite buttons run only on an owner-verified domain after the owner confirms in the side panel, at most once per run. Elsewhere the run ends as `safe_stop` ("Stopped before sending"), never "stuck".
+  - Reports: UX findings must cite a step where something went wrong (confusion 2+, a visible error, an executor problem, an interruption, giving up, a loop); a journey where everything worked has no UX findings. The writer sees each step's outcome and the final page's controls, and may not add unsupported claims. Local dev servers skip HTTPS, header and speed findings (fixtures opt out with `X-Walkthru-Fixture: production`). JavaScript-built pages label page checks as "before JavaScript runs".
+  - Live results: portfolio contact goal fills all 5 fields once and stops at the send button with a fully grounded report; Tripverse signup quotes the real "email rate limit exceeded" error with no localhost noise; the verified fixture contact form sends exactly once after approval and sees the confirmation. 96 API tests, 27 extension tests.
+  - The API pre-builds the agent at start so the first run is not slow. `dev.py` no longer refuses to start when another app holds 127.0.0.1:5173.
+- **Report writer model chosen by measurement (2026-09-24).** `evals/model_bakeoff.py` replayed the production report prompt on five saved runs across seven free models (table in `docs/decisions.md`). Report calls now go Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (free, 90 s budget), then the fast chain; persona steps are unchanged. Grounding already removed invented findings from every model; Ultra wrote the most careful summaries (it never blamed the site for a Walkthru safety stop, gpt-oss-20b once did). Cost: reports can take about a minute longer when Groq is rate-limited.
+
+- **UI/UX production pass (2026-09-24, front end only).** Nothing removed; additions on the existing backend:
+  - New pages: `/docs` (getting started, extension, test users, goals, safe mode, domain verification, reports, data, troubleshooting), `/privacy`, `/terms`, `/security` (extension permissions, scanner scope, vulnerability disclosure) and a real 404. They share `DocLayout` (sticky "On this page" index with active section, collapsible on phones) and `.prose-doc` styles. Copy is drawn from the code; legal text still needs founder or lawyer review, and contact addresses use the placeholder domain (`contact` in `content.ts`).
+  - App shell: left sidebar on desktop (Runs, Settings, Documentation, Install the extension, account, sign out); phones get a top bar with a native `<dialog>` drawer (focus trap, Esc, backdrop close, scroll lock, closes on navigation, reduced-motion aware).
+  - Settings: "Verify your domain" shows the account's meta tag and `/.well-known/walkthru.txt` token from `GET /verification`, with copy buttons, loading and retry states. Empty dashboard: three-step first-run checklist linking into the docs.
+  - Marketing nav: mobile menu, Docs link, absolute `/#` anchors so nav works from every page. Footer and login legal links now point at the real pages.
+  - Production polish: skip links and `#main` landmarks, per-route `<title>` (React 19), themed selection/focus/scrollbar, `theme-color` matches `bg`, scroll-to-top and hash scrolling on route change. Routes are lazy-loaded and the landing page no longer bundles Supabase: main chunk 682 kB to 415 kB, no size warning.
+  - Extension panel: hover/active/disabled states, the disabled Start button says why, steps fade in, footer links to Dashboard, Help and Privacy.
+  - Runs that end as `safe_stop` now point the owner to `/docs#verify`, in the report (screen only) and in the side-panel result. Not seen rendered yet: needs a real safe_stop run.
+  - Verified: web build and oxlint clean, extension tsc/oxlint/27 vitest/WXT build clean, Impeccable detector clean, browser check of docs, privacy, 404, landing menu, app shell (phone drawer and desktop sidebar via a temporary unguarded route, since removed) and the extension panel. Not verified live: the verification panel's ready state (needs a signed-in session; error state checked).
+
 ## In progress
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
@@ -65,19 +97,20 @@ _Last updated: 2026-09-23_
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
 - Local extension testing must happen in regular Chrome with the unpacked build loaded and reloaded. The Codex in-app browser can render the web app and fixtures but does not host the user's Chrome extension, so its `/login` or `/app` tab cannot complete the session handoff.
-- Privacy, Terms and Security pages do not exist yet (footer links are `#`). Required before launch.
+- Privacy, Terms and Security pages exist (2026-09-24) but are drafts: review the legal copy and replace the placeholder contact domain before launch.
 - Domain not bought yet (`brand.domain` is a placeholder). `agent-eye.jpg` is 735px wide, a bit soft on large screens.
 - Two portraits are low resolution (persona-phone, persona-buyer, under 1000px wide).
 - Production hosting must rewrite all paths to `index.html` for `/login` to work on refresh.
 - Resume-in-browser is intentionally not implemented yet. A safe resume needs to revalidate the current tab, origin, pending action and checkpoint before executing anything. The shipped recovery path ends the run truthfully and generates a partial report in one click.
 - The retention job runs one thread per API process. Move it to a scheduled job when the API runs on more than one instance.
 - Local network to the Supabase database is intermittent on this machine; requests can take 5 to 15 s or briefly fail with a 503, then recover on their own.
-- The production web and extension bundles both exceed the default 500 kB warning threshold. Builds pass; route/chunk splitting should be scheduled before launch.
+- The web bundle is route-split (main chunk 415 kB). The extension bundle still exceeds the 500 kB warning threshold.
 - Automatic report email delivery still requires a non-empty `RESEND_API_KEY` and a verified `RESEND_FROM`; local development falls back to the user's email client.
 - Remote: https://github.com/watermelon588/Walkthru.git. Pushed 2026-09-18.
-- No Anthropic budget for now: everything runs on free providers (Groq, Gemini). Fallback chain lives in `apps/api/app/agent/runtime.py`.
+- No Anthropic budget for now: everything runs on free providers (Groq, Gemini, OpenRouter free models for the report writer). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
+- 2026-09-24 report writer: API 99 pytest pass and Ruff is clean. A live Tripverse report through the new chain with 120b disabled fell through an overloaded Ultra in 0.7 s and still produced a grounded report quoting the real error.
 - 2026-09-21 interrupted-run recovery: API 69 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 19 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. Live API health and extension-origin stop preflight return 200. The remaining stale run was converted to `stopped` and its report is ready.
 - 2026-09-21 T23 browser evidence: API 68 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 18 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. `axe-core` 4.13.0 reports no audited dependency vulnerabilities; the new wire and report mappings have direct regression coverage.
 - 2026-09-21 local CORS closure: API 66 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 15 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. Live preflights for `localhost:5173`, `127.0.0.1:5173` and the configured extension origin all return 200 with the exact allow-origin header.

@@ -65,3 +65,56 @@ def test_guarded_fetch_rejects_redirect_to_private_address(monkeypatch):
 
     assert response is None
     assert requested == ["https://public.test/"]
+
+
+def test_site_audit_asks_for_html_and_reports_when_none_is_served(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    accepts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        accepts.append(request.headers.get("accept", ""))
+        if request.url.path in ("/robots.txt", "/sitemap.xml"):
+            return httpx.Response(404, request=request)
+        return httpx.Response(200, text="# Docs", headers={"content-type": "text/markdown"}, request=request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler), headers={"Accept": fetch.ACCEPT}) as client:
+        result = site.audit("https://md.test/", client, verified=False, max_pages=2, time_limit=2)
+
+    assert accepts[0].startswith("text/html")
+    assert result.coverage.pages_scanned == 0
+    assert any(f.title == "No HTML pages could be audited" and "text/markdown" in f.detail for f in result.seo)
+
+
+def test_client_requests_html():
+    with fetch.client() as c:
+        assert c.headers["accept"].startswith("text/html")
+
+
+def test_js_only_shell_is_reported_not_judged(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    shell = '<!doctype html><html lang="en"><head><title>Me</title></head><body><div id="root"></div><script type="module" src="/assets/index.js"></script></body></html>'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path in ("/robots.txt", "/sitemap.xml"):
+            return httpx.Response(404, request=request)
+        return httpx.Response(200, text=shell, headers={"content-type": "text/html"}, request=request)
+
+    assert fetch.is_js_shell(shell) and not fetch.is_js_shell("<p>Small but real page with a sentence.</p><script src='a.js'></script>")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = site.audit("https://spa.test/", client, verified=False, max_pages=2, time_limit=2)
+    assert any(f.title == "Homepage content only appears after JavaScript runs" for f in result.seo)
+
+
+def test_js_shell_findings_say_they_describe_pre_javascript_html(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    shell = '<!doctype html><html lang="en"><head><title>A long enough page title</title></head><body><div id="root"></div><script type="module" src="/a.js"></script></body></html>'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path in ("/robots.txt", "/sitemap.xml"):
+            return httpx.Response(404, request=request)
+        return httpx.Response(200, text=shell, headers={"content-type": "text/html"}, request=request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = site.audit("https://spa.test/", client, verified=False, max_pages=1, time_limit=2)
+    h1 = next(f for f in result.seo if f.title == "No h1 heading")
+    assert h1.detail.startswith("In the HTML sent before JavaScript runs:") and "screen readers" not in h1.detail

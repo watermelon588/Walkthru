@@ -79,7 +79,7 @@ export type Run = {
   goal: string
   persona: string
   kind: 'test' | 'scan'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -95,6 +95,7 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   stuck: 'Got stuck',
   captcha: 'Stopped at a CAPTCHA',
   stopped: 'Ended early',
+  safe_stop: 'Stopped before sending',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {
@@ -160,6 +161,7 @@ export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
 export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`, undefined, true, 'DELETE')
 export const exportAccount = () => api<Record<string, unknown>>('/account/export', undefined, true, 'GET')
+export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
 

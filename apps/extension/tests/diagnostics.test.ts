@@ -1,3 +1,4 @@
+import axe from "axe-core";
 import { collectBrowserDiagnostics, summarizeAxeResults, type VitalState } from "../lib/diagnostics";
 
 test("summarizes and caps axe violations for the wire payload", () => {
@@ -37,5 +38,24 @@ test("runs axe against the rendered page and preserves observed vitals", async (
   expect(diagnostics.accessibility.status).toBe("complete");
   expect(diagnostics.accessibility.issues.some((issue) => issue.rule === "label")).toBe(true);
   expect(diagnostics.web_vitals).toEqual({ lcp_ms: 1200, cls: 0.02 });
+  canvasContext.mockRestore();
+});
+
+test("audits each address once and never waits past the time budget", async () => {
+  const canvasContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  const run = vi.spyOn(axe, "run");
+  history.pushState({}, "", "/slow-page");
+  run.mockReturnValueOnce(new Promise(() => {}) as never); // an audit that never finishes
+  const started = Date.now();
+  const slow = await collectBrowserDiagnostics(document, {}, 50);
+  expect(slow.accessibility.status).toBe("unavailable");
+  expect(Date.now() - started).toBeLessThan(1000);
+
+  history.pushState({}, "", "/form-page");
+  const first = await collectBrowserDiagnostics(document, {});
+  const second = await collectBrowserDiagnostics(document, {});
+  expect(second.accessibility).toEqual(first.accessibility);
+  expect(run).toHaveBeenCalledTimes(2); // slow page once, form page once (second call was cached)
+  run.mockRestore();
   canvasContext.mockRestore();
 });

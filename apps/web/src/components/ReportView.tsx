@@ -46,13 +46,19 @@ export function ReportView({ run }: { run: Run }) {
           <section aria-label="Summary" className="report-summary mt-8 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3">
             <Stat label="Findings" value={String(r.findings.length)} note={`${counts.high} high / ${counts.medium} medium / ${counts.low} low`} />
             {isScan ? (
-              <Stat label="First impression clarity" value={r.first_impression ? `${3 - r.first_impression.clarity} of 3` : '?'} note="3 = instantly clear" />
+              <Stat label="First impression clarity" value={r.first_impression ? `${3 - r.first_impression.clarity} of 3` : 'Not judged'} note={r.first_impression ? '3 = instantly clear' : 'no readable text before JavaScript runs'} />
             ) : (
               <Stat label="Outcome" value={STATUS_LABEL[run.status]} note={`${steps.length} steps`} />
             )}
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
           </section>
 
+          {run.status === 'safe_stop' && (
+            <p className="no-print mt-6 max-w-[64ch] rounded-2xl border border-line px-5 py-4 text-sm leading-relaxed text-muted">
+              The test user stopped at the send button, so nothing was sent. Walkthru only sends on a verified domain, once per run, after the owner approves.{' '}
+              <a href="/docs#verify" className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">Verify your domain</a> to test the full flow.
+            </p>
+          )}
           {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
           {!isScan && steps.length > 0 && <RetentionNote run={run} />}
 
@@ -140,7 +146,7 @@ function FindingRow({ f }: { f: Finding }) {
 }
 
 export function StatusPill({ status }: { status: Run['status'] }) {
-  const tone = status === 'done' ? 'text-accent' : status === 'running' ? 'text-muted' : 'text-danger'
+  const tone = status === 'done' || status === 'safe_stop' ? 'text-accent' : status === 'running' ? 'text-muted' : 'text-danger'
   return <span className={`rounded-full border border-line px-2.5 py-0.5 ${tone}`}>{STATUS_LABEL[status]}</span>
 }
 
