@@ -121,3 +121,40 @@ def test_js_shell_findings_say_they_describe_pre_javascript_html(monkeypatch):
         result = site.audit("https://spa.test/", client, verified=False, max_pages=1, time_limit=2)
     h1 = next(f for f in result.seo if f.title == "No h1 heading")
     assert h1.detail.startswith("In the HTML sent before JavaScript runs:") and "screen readers" not in h1.detail
+
+
+def _site(handler_pages, robots="User-agent: *\nDisallow: /\n"):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text=robots, request=request)
+        if request.url.path in handler_pages:
+            return httpx.Response(200, text=handler_pages[request.url.path], headers={"content-type": "text/html"}, request=request)
+        return httpx.Response(404, request=request)
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+SIGNUP_FORM = '<html><body><h1>Sign up</h1><form action="http://site.test/api/signup"><input name="email"></form></body></html>'
+
+
+def test_pages_the_test_user_visited_are_audited_on_verified_sites(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    pages = {"/": "<html><body><h1>Home</h1></body></html>", "/signup.html": SIGNUP_FORM}
+    with _site(pages) as c:
+        verified = site.audit("https://site.test/", c, verified=True, visited=["https://site.test/signup.html", "https://elsewhere.test/x"])
+    assert "https://site.test/signup.html" in verified.coverage.urls
+    assert any(f.title == "Form submits over plain http" for f in verified.security)
+    with _site(pages) as c:
+        unverified = site.audit("https://site.test/", c, verified=False, visited=["https://site.test/signup.html"])
+    assert "https://site.test/signup.html" not in unverified.coverage.urls  # robots.txt still wins for sites the user has not verified
+
+
+def test_signup_link_only_in_the_footer_is_reported(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    hidden = '<html><body><header><a href="/login">Log in</a></header><main><h1>Hi</h1></main><footer><a href="/signup">Create account</a></footer></body></html>'
+    visible = '<html><body><header><a href="/signup">Sign up</a></header><footer><a href="/signup">Create account</a></footer></body></html>'
+    with _site({"/": hidden}, robots="") as c:
+        found = site.audit("https://site.test/", c, verified=False)
+    assert any(f.title == "Sign-up is hidden in the footer" and f.kind == "ux" for f in found.seo)
+    with _site({"/": visible}, robots="") as c:
+        fine = site.audit("https://site.test/", c, verified=False)
+    assert not any("Sign-up is hidden" in f.title for f in fine.seo)

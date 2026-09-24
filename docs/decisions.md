@@ -171,3 +171,33 @@ This approves the official `mcp` Python SDK when V20 is built.
   - matplotlib is a heavy server dependency producing static, theme-blind images.
   - The PDF is the printed web page.
   - Charts come back for trends over time (score and fixed/new findings across reruns) once rerun-compare (V4) and watch (V12) produce that data, drawn as inline SVG in React.
+
+## 2026-09-24 Checkpoint B: trap recall 82%
+
+**Setup:**
+- Two real journeys on the hard fixture through `evals/e2e_extension.py`: headless Chrome, the built extension script, the real API and the free models.
+- The test account was on a Pro dev pass, on an owner-verified domain.
+- Goals: "Sign up for an account" and "Find the pricing plans".
+- Scored with `evals/runner.py --combine` against 22 traps (18 original plus 4 GEO traps the hard site already had).
+
+| Run | Overall | UX | SEO | Security | GEO |
+|---|---:|---:|---:|---:|---:|
+| Sign up | 17/22 (77%) | 1/6 | 6/6 | 6/6 | 4/4 |
+| Find pricing | 17/22 (77%) | 2/6 | 6/6 | 5/6 | 4/4 |
+| **Both (one site evaluation)** | **18/22 (82%)** | 2/6 | 6/6 | 6/6 | 4/4 |
+
+**What made the difference:**
+1. **Visited pages audited.** Pages the test user visited are audited even when robots.txt blocks crawlers, on owner-verified domains only. This found the signup form posting over plain http (X5).
+2. **Signup placement check.** A plain-code check reports a homepage whose only sign-up link is in the footer (U1).
+
+**Misses:**
+- **U2:** the report did describe the silent submit ("an unchecked required checkbox with no validation feedback"), but not in the scorer's exact phrases. It is counted as missed; the scorer was not changed to fit.
+- **U4:** the ambiguous CTAs were never needed by either goal.
+- **U5:** the pricing page is not linked from anywhere.
+- **U6:** the test password already met the hidden rule.
+
+**Also fixed on the way:**
+- "Done" right after a click or typing that changed nothing is questioned once, then ends as gave up. A run had declared signup complete without submitting.
+- A click that changes nothing is evidence for the report.
+- Em and en dashes are stripped from model-written report text.
+- Cost per run is logged in tokens (about 9,000 to 12,000 for a report), all on free models.

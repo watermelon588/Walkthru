@@ -63,7 +63,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
 | `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Planned |
 | `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Planned |
-| `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Planned |
+| `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
 | `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Planned |
 | `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
 | `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
@@ -236,7 +236,7 @@ or bounded action           |
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
-- Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
+- Site audit (`app/scans/site.py`): pages the test user visited (up to 5) are audited on top of the crawl, past a robots.txt block only on an owner-verified domain; a homepage whose only sign-up link is in the footer is reported as a UX finding. GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
 ## Runtime choices for this deployment stage
 - **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.

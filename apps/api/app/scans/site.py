@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from collections import OrderedDict, deque
 from dataclasses import dataclass
@@ -18,6 +19,8 @@ USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
 MAX_MAX_PAGES = 20
 DEFAULT_TIME_LIMIT = 20.0
+MAX_VISITED = 5  # pages the test user visited, audited on top of the crawl
+SIGNUP = re.compile(r"\b(sign ?up|get started|start (for )?free|create (an )?account|register|join now)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -60,6 +63,25 @@ def _links(html: str, page_url: str, base: str) -> list[str]:
     return links
 
 
+def _in_footer(node) -> bool:
+    while node is not None:
+        if node.tag == "footer" or node.attributes.get("role") == "contentinfo":
+            return True
+        node = node.parent
+    return False
+
+
+def _signup_hidden(html: str, url: str) -> Finding | None:
+    """A homepage whose only sign-up link sits in the footer: visitors look for it in the header or first screen."""
+    links = [n for n in HTMLParser(html).css("a, button") if SIGNUP.search(n.text(strip=True) or "")]
+    if not links or not all(_in_footer(n) for n in links):
+        return None
+    label = links[0].text(strip=True)[:60]
+    return Finding(kind="ux", severity="medium", title="Sign-up is hidden in the footer",
+                   detail=f"The only sign-up link on the homepage is \"{label}\" in the footer. Visitors look for it in the header or the first screen, and many leave before scrolling that far.",
+                   fix="Add a clear Sign up button to the header and to the first screen of the homepage.", evidence=f"{url}: footer link \"{label}\"")
+
+
 def _robots(text: str | None, url: str) -> RobotFileParser:
     parser = RobotFileParser(url)
     parser.parse((text or "").splitlines())
@@ -100,6 +122,7 @@ def audit(
     *,
     verified: bool,
     geo_full: bool = False,
+    visited: list[str] | tuple[str, ...] = (),
     max_pages: int = DEFAULT_MAX_PAGES,
     time_limit: float = DEFAULT_TIME_LIMIT,
 ) -> SiteAudit:
@@ -142,6 +165,18 @@ def audit(
                 queued.add(link)
                 queue.append(link)
 
+    # Pages the owner's test user just visited are audited too (a signup form the crawl never reached). Past a
+    # robots.txt block only on a verified domain, where the owner asked for them to be tested.
+    audited = {page_url for page_url, _ in pages}
+    for page_url in list(dict.fromkeys(urldefrag(u)[0] for u in visited))[:MAX_VISITED]:
+        if page_url in audited or fetch.origin(page_url) != base or (not verified and not robot_rules.can_fetch(USER_AGENT, page_url)):
+            continue
+        response = fetch.get(client, page_url, same_origin=base)
+        if response is None or response.status_code >= 400 or "html" not in response.headers.get("content-type", "text/html").lower():
+            continue
+        pages.append((str(response.url), response))
+        audited.add(str(response.url))
+
     seo_records: list[tuple[Finding, str | None]] = []
     security_records: list[tuple[Finding, str | None]] = []
     for page_url, response in pages:
@@ -149,6 +184,9 @@ def audit(
         security_records.extend((finding, page_url) for finding in security.check_headers(response))
         security_records.extend((finding, page_url) for finding in security.check_content(response.text, page_url))
 
+    hidden = _signup_hidden(root.text, root_url)
+    if hidden:  # a UX finding from the served HTML; it travels with the SEO list, the report sorts by kind
+        seo_records.append((hidden, root_url))
     seo_records.extend((finding, None) for finding in seo.check_robots(robots_text))
     sitemap_status = sitemap_response.status_code if sitemap_response is not None else None
     seo_records.extend((finding, None) for finding in seo.check_sitemap(sitemap_status, robots_text))

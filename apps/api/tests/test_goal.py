@@ -152,3 +152,45 @@ def test_owner_stop_and_walkthru_loop_are_not_site_problems():
     ]
     assert problem_steps(steps, "stopped") == set()
     assert problem_steps(steps[:2], "looping") == set()
+
+
+def test_done_right_after_a_click_that_changed_nothing_is_questioned(monkeypatch):
+    planned(monkeypatch, ("sign up", None))
+    model = use(monkeypatch, [
+        PersonaStep(thought="submit", action="click", target_id=1, confusion=0),
+        PersonaStep(thought="that must have worked", action="done", confusion=0),
+        PersonaStep(thought="try submit again", action="click", target_id=1, confusion=1),
+    ])
+    c = TestClient(app)
+    form = page("/signup", [{"id": 1, "tag": "button", "text": "Create account"}])
+    r = start(c, form).json()
+    r = observe(c, r["run_id"], form)  # the submit changed nothing
+    assert r["status"] == "running" and r["action"]["action"] == "click"
+    assert "not confirmed" in model.last[-1][1]
+
+
+def test_insisting_on_done_without_proof_ends_as_gave_up(monkeypatch):
+    planned(monkeypatch, ("sign up", None))
+    use(monkeypatch, [
+        PersonaStep(thought="submit", action="click", target_id=1, confusion=0),
+        PersonaStep(thought="done", action="done", confusion=0),
+    ])
+    c = TestClient(app)
+    form = page("/signup", [{"id": 1, "tag": "button", "text": "Create account"}])
+    r = start(c, form).json()
+    r = observe(c, r["run_id"], form)
+    assert r["status"] == "gave_up" and "could not confirm" in r["steps"][-1]["thought"]
+
+
+def test_done_after_the_page_moved_on_is_accepted(monkeypatch):
+    planned(monkeypatch, ("sign up", None))
+    use(monkeypatch, [PersonaStep(thought="submit", action="click", target_id=1, confusion=0), PersonaStep(thought="welcome page", action="done", confusion=0)])
+    c = TestClient(app)
+    r = start(c, page("/signup", [{"id": 1, "tag": "button", "text": "Create account"}])).json()
+    r = observe(c, r["run_id"], page("/welcome"))
+    assert r["status"] == "done"
+
+
+def test_a_click_that_changed_nothing_is_evidence_for_the_report():
+    steps = [{"action": "click", "confusion": 0, "url": "a", "result_url": "a", "no_change": True}]
+    assert problem_steps(steps, "done") == {1}

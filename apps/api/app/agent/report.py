@@ -13,7 +13,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.schema import Finding, FirstImpression, Report, Synthesis
-from app.scans import accessibility, fetch, performance, security, seo, site
+from app.scans import accessibility, email, fetch, performance, security, seo, site
 
 
 class ReportState(TypedDict, total=False):
@@ -106,12 +106,15 @@ def site_scan(state: ReportState) -> dict:
     try:
         fetch.assert_public(state["site"])
         with fetch.client() as c:
-            result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=state.get("paid", False))
+            visited = [u for s in state.get("steps", []) for u in (s.get("url"), s.get("result_url")) if u]
+            result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=state.get("paid", False), visited=visited)
+            mail, mail_note = email.check(state["site"], c, full=state.get("paid", False))
         return {
             "seo": [finding.model_dump() for finding in result.seo],
             "geo": [finding.model_dump() for finding in result.geo.findings] if result.geo else [],
             "geo_summary": result.geo.summary() if result.geo else {},
-            "security": [finding.model_dump() for finding in result.security],
+            "security": [finding.model_dump() for finding in result.security + mail],
+            "notes": [mail_note] if mail_note else [],
             "seo_measured": result.coverage.pages_scanned > 0,
             "security_measured": result.coverage.pages_scanned > 0,
             "production_like": result.production_like,
@@ -247,7 +250,8 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
             continue
         walkthru_note = any(k in note for k in NOT_A_SITE_PROBLEM)
         # An interruption is only evidence when the browser run broke, not when the owner pressed Stop.
-        if (s.get("confusion", 0) >= 2 or s.get("errors_after") or (s.get("interrupted") and not walkthru_note) or s.get("action") == "give_up"
+        # no_change: a click that visibly did nothing (a silent submit, a dead button) is evidence too.
+        if (s.get("confusion", 0) >= 2 or s.get("errors_after") or s.get("no_change") or (s.get("interrupted") and not walkthru_note) or s.get("action") == "give_up"
                 or (note and not walkthru_note)):
             out.add(i)
     if status in ("stuck", "budget"):
@@ -290,10 +294,29 @@ LOCAL_NOTE = (
 CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle")
 
 
+# Error text a journey can show that comes from the auth provider's mailer, not from the site's own code.
+MAILER_LIMITS = (
+    ("email rate limit exceeded", "Supabase's built-in email service",
+     "Set up your own SMTP provider (for example Resend, Postmark or Amazon SES) in Supabase Auth settings. The built-in mailer is for testing and sends only a few emails an hour."),
+)
+
+
+def mailer_findings(steps: list[dict]) -> list[Finding]:
+    """A signup that failed on the auth provider's email sending limit, with the exact fix."""
+    for i, s in enumerate(steps, start=1):
+        for error in s.get("errors_after") or []:
+            for pattern, who, fix in MAILER_LIMITS:
+                if pattern in error.lower():
+                    return [Finding(kind="ux", severity="high", title="Signup emails hit your auth provider's sending limit",
+                                    detail=f"The page showed \"{error}\". That message comes from {who}, which sends only a few emails an hour, so real visitors cannot sign up or get their confirmation email.",
+                                    fix=fix, evidence=f"Step {i}: page then showed: {error}"[:300])]
+    return []
+
+
 def synthesis_inputs(state: ReportState) -> dict:
     """Everything the report writer is given, built from graph state. Shared by synthesize and model evals."""
     journey_findings, browser_accessibility, browser_performance = browser_findings(state.get("steps", []))
-    code_findings = journey_findings + [
+    code_findings = journey_findings + mailer_findings(state.get("steps", [])) + [
         Finding.model_validate(f)
         for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("geo", []) + state.get("security", [])
     ]
@@ -347,6 +370,12 @@ def synthesis_inputs(state: ReportState) -> dict:
             "browser_accessibility": browser_accessibility, "browser_performance": browser_performance}
 
 
+def plain(text: str) -> str:
+    """House style for model-written text: no em or en dashes (models add them even when told not to)."""
+    text = re.sub(r"(?<=\d)\u2013(?=\d)", "-", text)
+    return re.sub(r"\s*[\u2014\u2013]\s*", ", ", text)
+
+
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
 
@@ -354,14 +383,16 @@ def synthesize(state: ReportState) -> dict:
     code_findings, local, steps, fi = inputs["code_findings"], inputs["local"], inputs["steps"], inputs["fi"]
     browser_accessibility, browser_performance = inputs["browser_accessibility"], inputs["browser_performance"]
     syn, used = runtime.call(Synthesis, inputs["messages"])
-    findings = [f.model_copy(update={"kind": "ux"}) for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))] + code_findings
+    written = [f.model_copy(update={"kind": "ux", "title": plain(f.title), "detail": plain(f.detail), "fix": plain(f.fix)})
+               for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))]
+    findings = written + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])
     report = Report(
-        summary=syn.summary,
-        first_impression=FirstImpression.model_validate(fi) if fi else None,
+        summary=plain(syn.summary),
+        first_impression=FirstImpression.model_validate({k: plain(v) if isinstance(v, str) else [plain(t) for t in v] if isinstance(v, list) else v for k, v in fi.items()}) if fi else None,
         findings=findings,
-        top_fixes=syn.top_fixes[:5],
+        top_fixes=[plain(t) for t in syn.top_fixes[:5]],
         verified=state.get("verified", False),
         tokens=state.get("tokens", 0) + used,
         checks={

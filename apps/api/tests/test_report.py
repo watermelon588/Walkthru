@@ -153,3 +153,9 @@ def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
     steps = [{"thought": "no other way to sign up", "action": "give_up", "target_id": None, "text": None, "confusion": 3, "url": HARD + "/"}]
     report.run_report(HARD + "/", "Some page text that is long enough.", goal="sign up", status="gave_up", steps=steps, final_controls=["button: Continue with Google"])
     assert any("Continue with Google" in m and "Never claim a button" in m for m in seen)
+
+
+def test_report_text_never_contains_em_or_en_dashes():
+    from app.agent.report import plain
+
+    assert plain("Fix HTTPS first — then the forms – and the 6–53 s load") == "Fix HTTPS first, then the forms, and the 6-53 s load"

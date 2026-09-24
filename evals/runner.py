@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-KINDS = ("ux", "seo", "security")
+KINDS = ("ux", "seo", "security", "geo")
 
 
 @dataclass(frozen=True)
@@ -141,8 +141,8 @@ def score_candidate(
 
 def format_markdown(results: list[EvaluationResult]) -> str:
     lines = [
-        "| Model | Overall | UX | SEO | Security | Cost / run |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Model | Overall | UX | SEO | Security | GEO | Cost / run |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for result in results:
         cells = [f"{score.found}/{score.total} ({score.recall:.0%})" for score in result.by_kind.values()]
@@ -211,6 +211,27 @@ def _load_candidates(paths: list[Path]) -> list[dict[str, Any]]:
     return candidates
 
 
+def combine(candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    """One evaluation of a site from several runs of it: owners test more than one goal (sign up, pricing...)."""
+    reports = [c.get("report") if isinstance(c.get("report"), dict) else c for c in candidates]
+    usage: dict[str, float] = {}
+    for c in candidates:
+        for key, value in (c.get("usage") or {}).items():
+            if isinstance(value, (int, float)):
+                usage[key] = usage.get(key, 0) + value
+    return {
+        "model": "+".join(str(c.get("model", "run")) for c in candidates),
+        "report": {
+            "summary": " ".join(r.get("summary", "") for r in reports),
+            "first_impression": next((r["first_impression"] for r in reports if r.get("first_impression")), {}),
+            "findings": [f for r in reports for f in r.get("findings", [])],
+            "top_fixes": [t for r in reports for t in r.get("top_fixes", [])],
+        },
+        "steps": [s for c in candidates for s in c.get("steps", [])],
+        "usage": usage,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score captured Walkthru runs against the seeded hard-site traps.")
     parser.add_argument("inputs", nargs="+", type=Path, help="Captured run/report JSON files")
@@ -220,10 +241,13 @@ def main() -> None:
     parser.add_argument("--output-per-million", type=float, help="USD per million output tokens")
     parser.add_argument("--langsmith", action="store_true", help="Publish each result as a LangSmith experiment")
     parser.add_argument("--experiment-prefix", default="walkthru-t9")
+    parser.add_argument("--combine", action="store_true", help="Score all inputs together as one evaluation of the site")
     args = parser.parse_args()
 
     traps = load_traps(args.traps)
     candidates = _load_candidates(args.inputs)
+    if args.combine:
+        candidates = [combine(candidates)]
     results = [
         score_candidate(candidate, traps, input_per_million=args.input_per_million, output_per_million=args.output_per_million)
         for candidate in candidates

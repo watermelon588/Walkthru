@@ -287,6 +287,12 @@ def main() -> int:
                 for f in rep["findings"][:10]:
                     print(f"  - {f['severity']:6} {f['kind']:13} {f['title']}")
                 print(f"  open: {WEB}/app/runs/{run_id}")
+                # Saved for the trap scorer: apps/api/.venv/Scripts/python evals/runner.py evals/results/e2e-*.json
+                out = os.path.join(ROOT, "evals", "results", f"e2e-{run_id}.json")
+                os.makedirs(os.path.dirname(out), exist_ok=True)
+                with open(out, "w", encoding="utf-8") as f:
+                    json.dump({"model": f"{persona}:{goal[:40]}", "report": rep, "steps": row["steps"], "usage": {"tokens": rep.get("tokens", 0)}}, f, indent=1)
+                print(f"  saved: {out}")
                 return 0
             time.sleep(3)
         print("report not ready after 3 minutes")

@@ -31,7 +31,7 @@ def test_traps_manifest_is_valid():
     with open(os.path.join(EVALS, "traps.json")) as f:
         traps = json.load(f)
     assert len(traps) >= 15 and len({t["id"] for t in traps}) == len(traps)
-    assert {t["kind"] for t in traps} == {"ux", "seo", "security"}
+    assert {t["kind"] for t in traps} == {"ux", "seo", "security", "geo"}
 
 
 def test_easy_flow_is_reachable():
