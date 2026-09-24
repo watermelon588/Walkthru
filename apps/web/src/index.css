@@ -16,13 +16,12 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
-  --color-card: var(--card);
 }
 
 /* Shape rule: buttons are pills, frames and images rounded-2xl, inputs rounded-xl. */
 
 /* Palette: Silver (neutral silver, smoke, grey teal accent). Contrast checked for AA. */
-:root { --bg: #f4f4f5; --card: #fbfbfb; --surface: #e9e9eb; --ink: #1b1b1f; --muted: #63636b; --line: #dedee2; --accent: #4d7274; --danger: #a33b3b; }
+:root { --bg: #f4f4f5; --surface: #e9e9eb; --ink: #1b1b1f; --muted: #63636b; --line: #dedee2; --accent: #4d7274; --danger: #a33b3b; }
 
 html { color-scheme: light; scrollbar-color: var(--line) transparent; -webkit-tap-highlight-color: transparent; }
 /* A modal drawer is open: keep the page behind it still. */

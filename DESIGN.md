@@ -18,8 +18,7 @@ Defined in `apps/web/src/index.css` as CSS variables, exposed as Tailwind colour
 | `muted` | #63636b | Secondary text (passes AA on bg) |
 | `line` | #dedee2 | Hairlines, borders |
 | `accent` | #4d7274 | Icons, small highlights only. Never large fills. |
-| `danger` | #a33b3b | Form errors, problem pills |
-| `card` | #fbfbfb | Cards in the app and report (one step lighter than `bg`, as in the mock-ups) |
+| `danger` | #a33b3b | Form errors |
 
 One accent only. No new colours without updating this file.
 
@@ -47,10 +46,6 @@ One accent only. No new colours without updating this file.
 - Placeholders are rendered from `apps/web/design/mocks/*.html` (`bash design/mocks/render.sh`). Replace with real captures, same filenames, once the product exists.
 - `<Asset>` shows a labelled slot if a file is missing, so layout never breaks.
 
-## Cards and pills
-- `Card` (`components/Card.tsx`): `rounded-2xl border border-line bg-card`, no shadow. One card per topic; never nest cards.
-- `Pill`: `ok` (accent tint), `bad` (danger tint), `neutral` (surface). The words always carry the meaning, never the colour alone.
-
 ## Headings
 No eyebrow labels above headings in the app (craft floor). A section heading carries its own name, with one light Phosphor icon in `text-accent` for report sections. The printed report keeps its cover kicker.
 
@@ -73,10 +68,10 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 |---|---|---|
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
-| App shell | `/app/*` | The marketing top bar, not a sidebar: logo, Runs, Settings, Docs, a runs-left pill and an account menu; phones get the same details menu as the landing page. Content sits in a centred `max-w-6xl` column like the rest of the site. |
-| Dashboard | `/app` | A greeting and Scout, then three cards in the mock-up style: Your launch (runs left with a usage bar, plan, latest Launch Ready score), Scan a site, Recent runs (rows with a status pill, score pill and time; a thinking orb on open runs). Numbers count up once (reduced motion: static). |
+| App shell | `/app/*` | Desktop: 15rem left sidebar on `bg` with a hairline, active item on `surface`. Phones: sticky top bar and a native `<dialog>` drawer with the same navigation. |
+| Dashboard | `/app` | Operate mode: a greeting, then state before history. One hairline band holds the plan meter (runs left is the largest number on the page, with a usage bar that turns danger at 20% or less), the latest Launch Ready score and Scout. Run rows show kind icon (a thinking orb while running), high-severity count, status, score chip and time. Instant Scan sits last as a surface band. Numbers count up and rows settle in once when data lands (reduced motion: static). |
 | Profile & settings | `/app/settings` | Authenticated personal or business profile stored in Supabase Auth metadata. Shows the signed-in identity, provider status and one focused profile form. |
-| Report | `/app/runs/:id`, `/r/:id` | Mirrors the landing page report mock-up: "Report for host", the outcome as the headline, chips, then a main column (summary, first impression card, journey replay, AI search card, SEO and security check cards, crawl coverage, findings) and a sticky right column (Scores card with the badge for owners, Fix these first). Check cards list every check that ran with a pill: passed, a problem (expands to detail and fix), not measured, or needs a verified domain. |
+| Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
 | Docs | `/docs` | Read mode. `DocLayout`: title, lead, sticky "On this page" index (collapsible on phones), `.prose-doc` body at ~68ch. Same layout for `/privacy`, `/terms`, `/security`. |
 | Not found | `*` | Scout in its stopped state, one line of copy, Home and Docs actions. |
 | Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
