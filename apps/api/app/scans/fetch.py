@@ -3,6 +3,7 @@
 import ipaddress
 import os
 import socket
+import time
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -40,12 +41,15 @@ def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: d
     """Fetch with every redirect revalidated before the next network request."""
     current = url
     try:
-        for _ in range(MAX_REDIRECTS + 1):
+        for hops in range(MAX_REDIRECTS + 1):
             assert_public(current)
             if same_origin is not None and origin(current) != same_origin:
                 return None
+            started = time.monotonic()
             response = c.get(current, headers=headers)
             if not response.is_redirect:
+                response.extensions["walkthru_hops"] = hops  # redirect chains are an SEO finding (site.py)
+                response.extensions["walkthru_seconds"] = time.monotonic() - started  # the final page only (slow-response check)
                 return response
             location = response.headers.get("location")
             if not location:

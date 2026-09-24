@@ -121,6 +121,69 @@ def _aggregate(records: list[tuple[Finding, str | None]], pages_scanned: int, pa
     return output
 
 
+CHALLENGE = re.compile(r"just a moment|challenge-platform|cf-chl|captcha|access denied", re.IGNORECASE)
+SLOW_SECONDS, THIN_WORDS, DEEP_CLICKS = 1.5, 100, 5
+
+
+def _site_checks(pages: list[tuple[str, httpx.Response]], failed: list[tuple[str, httpx.Response]], linked_from: dict[str, str],
+                 depth: dict[str, int], sitemap_text: str, base: str, *, truncated: bool, local: bool) -> list[tuple[Finding, str | None]]:
+    """Checks that need the whole crawl, not one page (adapted from OpenSEO's audit, MIT; see docs/decisions.md)."""
+    out: list[tuple[Finding, str | None]] = []
+    for url, r in failed:
+        source = linked_from.get(url, "the crawl")
+        if r.status_code == 429:
+            out.append((seo._f("medium", "Rate limited, so not checked", "The server answered 429 Too Many Requests, so Walkthru could not check this page. Search engine crawlers can hit the same limit.", "Raise the rate limit for crawlers, then run the check again.", url), url))
+        elif r.status_code == 403 or r.headers.get("cf-mitigated") or (r.status_code == 503 and CHALLENGE.search(r.text[:3000])):
+            out.append((seo._f("medium", "Crawler was blocked, so not checked", f"The page answered {r.status_code} or a bot challenge instead of the page, so it was not checked. Search and AI crawlers may be blocked the same way.", "If this page should be found, let known crawlers through your bot protection (for example a firewall rule for verified bots).", url), url))
+        elif r.status_code >= 500:
+            out.append((seo._f("high", "Server error on a linked page", f"{url} answered {r.status_code}. Crawlers that keep seeing server errors crawl the site less and can drop the page.", "Check the server logs for this URL and fix the error, or return 404 and remove the links if the page is gone.", f"{url} ({r.status_code}), linked from {source}"), url))
+        else:
+            out.append((seo._f("high", "Broken internal link", f"A page links to {url}, which answers {r.status_code}. Visitors hit a dead end and crawlers waste their visit.", "Point the link at the live page, or remove it. If the page moved, add a redirect.", f"{url} ({r.status_code}), linked from {source}"), url))
+
+    titles: dict[str, list[str]] = {}
+    descriptions: dict[str, list[str]] = {}
+    bodies: dict[str, list[str]] = {}
+    for url, r in pages:
+        tree = HTMLParser(r.text)
+        title = tree.css_first("title")
+        if title is not None and title.text(strip=True):
+            titles.setdefault(title.text(strip=True), []).append(url)
+        desc = tree.css_first('meta[name="description"]')
+        if desc is not None and (desc.attributes.get("content") or "").strip():
+            descriptions.setdefault((desc.attributes.get("content") or "").strip(), []).append(url)
+        text = fetch.page_text(r.text, limit=200000)
+        words = len(text.split())
+        if words >= 20:
+            bodies.setdefault(text, []).append(url)
+        if 20 <= words < THIN_WORDS:  # empty JavaScript shells are reported once by the GEO section
+            out.append((seo._f("low", "Thin content", f"About {words} words of text before JavaScript runs. Pages this short rarely rank.", "Add useful content, merge the page into a stronger one, or mark it noindex.", url), url))
+        if tree.css_first("a[href]") is None and not fetch.is_js_shell(r.text):
+            out.append((seo._f("low", "Page has no links", "A dead end: visitors and crawlers have nowhere to go next.", "Link to related pages, the parent section or the homepage.", url), url))
+        if r.extensions.get("walkthru_hops", 0) >= 2:
+            out.append((seo._f("low", "Redirect chain", f"Reaching this page takes {r.extensions['walkthru_hops']} redirects. Each one adds delay and some crawlers stop following.", "Link and redirect straight to the final URL, so there is at most one redirect.", url), url))
+        html_canonical = tree.css_first('link[rel="canonical"]')
+        header_canonical = re.search(r"<([^>]+)>\s*;\s*rel=\"?canonical", r.headers.get("link", ""))
+        if html_canonical is not None and header_canonical and urljoin(url, html_canonical.attributes.get("href") or "") != urljoin(url, header_canonical.group(1)):
+            out.append((seo._f("medium", "Conflicting canonical URLs", "The HTML canonical tag and the HTTP Link header name different URLs, so search engines may ignore both.", "Declare one canonical URL in one place.", url), url))
+        if not local and r.extensions.get("walkthru_seconds", 0) > SLOW_SECONDS:
+            out.append((seo._f("low", "Slow server response", f"The HTML took {r.extensions['walkthru_seconds']:.1f} s to arrive. Every later speed metric waits on it.", "Cache or pre-render this page's HTML.", url), url))
+        if depth.get(url, 0) >= DEEP_CLICKS:
+            out.append((seo._f("low", "Page is deep in the site", f"{depth[url]} clicks from the homepage. Deep pages are crawled less often.", "Link to it from the navigation or a higher-level page.", url), url))
+
+    for label, groups in (("title", titles), ("meta description", descriptions), ("text", bodies)):
+        for urls in groups.values():
+            if len(urls) > 1:
+                name = "Duplicate page content" if label == "text" else f"Duplicate {label}"
+                out.extend((seo._f("medium" if label == "text" else "low", name, f"Several pages share the same {label}, so search engines cannot tell them apart and may show only one.", f"Give each page its own {label}; for true duplicates, pick one URL and point the others at it with rel=canonical or a redirect.", url), url) for url in urls)
+
+    # Orphans are only knowable when the crawl finished: a truncated crawl may simply not have reached the linking page.
+    if not truncated:
+        listed = {u for raw in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sitemap_text) if (u := _normal_url(raw, base + "/", base))}
+        for url in sorted(listed - set(linked_from) - {u for u, _ in pages[:1]}):
+            out.append((seo._f("low", "Orphan page", "Listed in the sitemap, but no crawled page links to it, so visitors cannot find it by browsing.", "Link to it from a related page or the navigation, or remove it from the sitemap.", url), url))
+    return out
+
+
 def audit(
     url: str,
     client: httpx.Client,
@@ -153,22 +216,30 @@ def audit(
     queue = deque([root_url])
     queued = {root_url}
     pages: list[tuple[str, httpx.Response]] = []
+    failed: list[tuple[str, httpx.Response]] = []  # linked pages that answered 4xx/5xx: reported, never silently skipped
+    linked_from: dict[str, str] = {}  # first crawled page linking to each URL
+    depth = {root_url: 0}  # clicks from the homepage
     while queue and len(pages) < max_pages and time.monotonic() < deadline:
         page_url = queue.popleft()
         if page_url != root_url and not robot_rules.can_fetch(USER_AGENT, page_url):
             continue
         response = root if page_url == root_url else fetch.get(client, page_url, same_origin=base)
         if response is None or response.status_code >= 400:
+            if response is not None:
+                failed.append((page_url, response))
             continue
         content_type = response.headers.get("content-type", "")
         if content_type and "html" not in content_type.lower():
             continue
         final_url = str(response.url)
         pages.append((final_url, response))
+        depth.setdefault(final_url, depth.get(page_url, 0))
         for link in _links(response.text, final_url, base):
+            linked_from.setdefault(link, final_url)
             if link not in queued and robot_rules.can_fetch(USER_AGENT, link):
                 queued.add(link)
                 queue.append(link)
+                depth[link] = depth[final_url] + 1
 
     # Pages the owner's test user just visited are audited too (a signup form the crawl never reached). Past a
     # robots.txt block only on a verified domain, where the owner asked for them to be tested.
@@ -219,6 +290,8 @@ def audit(
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])
     production_like = root.headers.get("x-walkthru-fixture") == "production"
     local = fetch.is_local_site(root_url) and not production_like
+    sitemap_text = sitemap_response.text if sitemap_response is not None and sitemap_response.status_code == 200 else ""
+    seo_records.extend(_site_checks(pages, failed, linked_from, depth, sitemap_text, base, truncated=truncated, local=local))
     llms = fetch.get(client, f"{base}/llms.txt", same_origin=base)
     probe = fetch.get(client, root_url, headers={"User-Agent": geo.PROBE_AGENT})
     readiness = geo.audit(

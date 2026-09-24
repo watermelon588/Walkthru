@@ -199,3 +199,36 @@ def test_report_schema_accepts_the_largest_paid_audit():
     most = site.PAID_MAX_PAGES + site.MAX_VISITED
     SiteAuditSummary(pages_scanned=most, page_limit=site.MAX_MAX_PAGES, duration_ms=60000, truncated=True,
                      urls=[f"https://site.test/p{i}" for i in range(most)])
+
+
+def test_crawl_reports_broken_blocked_duplicate_and_orphan_pages(monkeypatch):
+    """OpenSEO-style whole-crawl checks: nothing that failed is silently skipped."""
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    words = " ".join(["useful"] * 150)
+    page = lambda title, body, links="": f"<html lang='en'><head><title>{title}</title><meta name='description' content='Short'></head><body><h1>{title}</h1><p>{body}</p>{links}</body></html>"
+    routes = {
+        "/": (200, page("Home page of the site", words, "<a href='/a'>A</a><a href='/b'>B</a><a href='/gone'>x</a><a href='/boom'>y</a><a href='/walled'>z</a><a href='/old'>o</a>")),
+        "/a": (200, page("Same title for two", words + " a", "<a href='/'>home</a>")),
+        "/b": (200, page("Same title for two", " ".join(["short"] * 30), "<a href='/'>home</a>")),
+        "/gone": (404, "not here"), "/boom": (500, "error"), "/walled": (403, "denied"),
+        "/final": (200, page("Final page after hops", words + " f", "<a href='/'>home</a>")),
+        "/lonely": (200, page("Lonely", words)),
+        "/sitemap.xml": (200, "<urlset><url><loc>https://site.test/lonely</loc></url></urlset>"),
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/old":
+            return httpx.Response(301, headers={"location": "/mid"}, request=request)
+        if path == "/mid":
+            return httpx.Response(301, headers={"location": "/final"}, request=request)
+        status, body = routes.get(path, (404, ""))
+        return httpx.Response(status, text=body, headers={"content-type": "text/html"}, request=request)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = site.audit("https://site.test/", client, verified=False, max_pages=10, time_limit=5)
+    titles = {f.title: f for f in result.seo}
+    assert "https://site.test/gone (404), linked from https://site.test/" in titles["Broken internal link"].evidence
+    assert "Server error on a linked page" in titles and "Crawler was blocked, so not checked" in titles
+    assert "Duplicate title" in titles and "Thin content" in titles and "Meta description is too short" in titles
+    assert "Redirect chain" in titles and titles["Orphan page"].evidence == "https://site.test/lonely"
