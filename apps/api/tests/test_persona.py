@@ -307,7 +307,8 @@ def test_field_state_is_shown_and_step_outcomes_are_recorded(monkeypatch):
     shown = render_observation(page("https://fixture.test/contact", [{"id": 1, "tag": "input", "type": "text", "state": "filled", "text": "What's your name?"}]))
     assert "[1] input (text) [filled]: What's your name?" in shown
 
-    use([PersonaStep(thought="contact", action="click", target_id=1, confusion=0), PersonaStep(thought="type", action="type", target_id=2, text="Test Walker", confusion=0), PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)
+    use([PersonaStep(thought="contact", action="click", target_id=1, confusion=0), PersonaStep(thought="type", action="type", target_id=2, text="Test Walker", confusion=0), PersonaStep(thought="ok", action="done", confusion=0),
+         PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)  # asked twice: done right after typing needs proof
     c = TestClient(app)
     home = page("https://fixture.test/", [{"id": 1, "tag": "a", "text": "Contact"}])
     contact = page("https://fixture.test/contact", [{"id": 2, "tag": "input", "type": "text", "state": "empty", "text": "Name"}])

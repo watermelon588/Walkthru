@@ -101,6 +101,14 @@ _Last updated: 2026-09-24_
   - **Showcase fixture** on :8103: its Instant Scan scored 99 of 100 for GEO through the live stack.
   - 131 API tests and 30 extension tests; web and extension builds green.
 
+- **Session 3: Checkpoint B passed and signup email check (2026-09-24).**
+  - **Trap recall:** 18 of 22 traps (82%) found by two real journeys on the hard fixture scored together. Details in docs/decisions.md.
+  - **Email check:** `app/scans/email.py` checks SPF, DMARC and (paid) MX over DNS-over-HTTPS, and skips shared hosting domains and local addresses. A journey error "email rate limit exceeded" becomes "use your own SMTP".
+  - **Audit coverage:** pages the test user visited are audited (past robots.txt only on verified domains), and a sign-up link found only in the footer is reported.
+  - **Proof before done:** "done" right after a click or typing that changed nothing is questioned, then ends as gave up; a click that changed nothing is report evidence.
+  - **House style:** model-written report text is stripped of em and en dashes.
+  - 145 API tests.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -115,7 +123,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
 - **Plus opens:** 2026-11-22 at the latest.
 
-1. **Next:** founder live test on the showcase site (http://127.0.0.1:8103). Then session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check. V1, V2 and V22 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
+1. **Next session (4):** V4 rerun and compare, plus V17 ignore a finding. Sessions 1, 2, 2b and 3 are done. The local test account holds a Pro dev pass until 2026-09-26. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.
@@ -132,6 +140,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
    - Rotate Supabase secrets before session 6.
 
 ## Known issues and notes
+- The first API call of a run can take 25 to 45 s when Groq's free tier is rate-limited: the goal planner and the first step fall through to slower models. Watch this before launch; a warm fast model for the planner is the fix.
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.

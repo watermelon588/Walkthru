@@ -129,14 +129,26 @@ def build_graph(model: Any, checkpointer: Any):
         ]
         from app.agent.runtime import unwrap  # local import: runtime imports this module
 
-        if hasattr(model, "decide"):
-            decision = model.decide(state, messages)
-            step, used, metadata = decision.step, decision.tokens, decision.metadata
-        else:
-            step, used = unwrap(model.invoke(messages))
-            metadata = {"provider": "llm"}
+        def ask(msgs: list) -> tuple[PersonaStep, int, dict]:
+            if hasattr(model, "decide"):
+                decision = model.decide(state, msgs)
+                return decision.step, decision.tokens, decision.metadata
+            answer, spent = unwrap(model.invoke(msgs))
+            return answer, spent, {"provider": "llm"}
+
+        step, used, metadata = ask(messages)
+        confirmed = _confirmed(state)
+        if step.action == "done" and not confirmed:
+            # "Done" right after a click or typing that changed nothing is a guess (a real run declared a signup
+            # complete without ever submitting it). Ask once more; if the test user insists, say so plainly.
+            retry, more, metadata = ask(messages + [("human", NOT_CONFIRMED)])
+            used += more
+            step = retry if retry.action != "done" else PersonaStep(
+                thought=f"{retry.thought} (Walkthru could not confirm the goal was reached: the last action did not move the page on or show a confirmation.)",
+                action="give_up", confusion=max(retry.confusion, 2), progress=retry.progress)
         total = len((state.get("plan") or {}).get("checkpoints", []))
-        plan_done = max(state.get("plan_done", 0), min(step.progress, total))
+        # The model's own count only moves the checklist forward when the last action visibly worked.
+        plan_done = max(state.get("plan_done", 0), min(step.progress, total)) if confirmed else state.get("plan_done", 0)
         if total and plan_done >= total and step.action not in ("done", "give_up"):
             # The test user says the checklist is complete but chose another action anyway: the goal is met, stop here.
             step = PersonaStep(thought=f"{step.thought} (Walkthru: every checkpoint of the goal is complete, so the test ends here.)",
@@ -222,6 +234,20 @@ def build_graph(model: Any, checkpointer: Any):
     g.add_edge("act", "check")
     g.add_conditional_edges("check", after_check)
     return g.compile(checkpointer=checkpointer)
+
+
+NOT_CONFIRMED = (
+    "Walkthru check: your goal is not confirmed yet. Your last action did not move the page on or show a confirmation, "
+    "so it may not have worked. Look at the page again and choose the next action, or answer give_up if you cannot continue."
+)
+
+
+def _confirmed(state: SessionState) -> bool:
+    """Did the last action visibly work? False only after a click or typing that left the page where it was, with no confirmation."""
+    last = next((s for s in reversed(state.get("steps", [])) if s["action"] not in ("done", "give_up")), None)
+    if last is None or last["action"] not in ("click", "type"):
+        return True
+    return bool(last.get("notices_after")) or bool(last.get("result_url") and last["result_url"] != last.get("url"))
 
 
 def _page(url: str) -> str:

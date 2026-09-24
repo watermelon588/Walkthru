@@ -56,7 +56,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = EXPOSED[self.path]
         if self.site == "hard" and self.path == "/app.js":
             return self._send_bundle()
-        if self.site == "easy" and self.path == "/.well-known/walkthru.txt":
+        if self.site in ("easy", "hard") and self.path == "/.well-known/walkthru.txt":  # owner-verified audits
             return self._send_verification()
         return super().send_head()
 

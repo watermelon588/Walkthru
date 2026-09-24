@@ -46,12 +46,12 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - `evals/fixtures/showcase` (:8103): strong GEO plus journey traps (circular stories, cookie banner, newsletter pop-up, dead button, new-tab and external links, content hidden until scrolled, Pay and Delete buttons).
 
 ### Session 3 (09-30 to 10-01)
-- [ ] **V3 GEO traps and Checkpoint B** (S)
+- [x] **V3 GEO traps and Checkpoint B** (S), done 2026-09-24: 18/22 (82%), see docs/decisions.md
   - Accept:
     - The hard fixture gains 3 GEO traps in `traps.json`: robots.txt blocks OAI-SearchBot, a JavaScript-only pricing page, no Organization schema.
     - The scorer runs on today's code, and misses are fixed until recall is 80% or more.
   - Verify: scorer output recorded in `docs/decisions.md`.
-- [ ] **V16 Signup email check** (S)
+- [x] **V16 Signup email check** (S), done 2026-09-24
   - Accept:
     - `app/scans/email.py` reads MX, SPF and DMARC over DNS-over-HTTPS (Cloudflare JSON endpoint, existing httpx client).
     - Free shows SPF and DMARC; paid shows all.
@@ -60,7 +60,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Files: `app/scans/email.py` (new), `app/agent/report.py`, `tests/test_email_check.py` (new).
 
 #### Checkpoint B
-- [ ] Tests, lint and builds green; crafted free requests cannot exceed limits; recall 80% or more; founder reviews one GEO report
+- [x] Tests, lint and builds green; crafted free requests cannot exceed limits; recall 80% or more (82%); founder reviews one GEO report
 
 ### Session 4 (10-02 to 10-03)
 - [ ] **V4 Rerun and compare** (M)
