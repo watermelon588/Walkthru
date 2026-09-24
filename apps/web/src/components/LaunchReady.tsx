@@ -1,3 +1,4 @@
+import { GaugeIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { copyText } from '../lib/clipboard'
 import { API, type Report } from '../lib/runs'
@@ -25,12 +26,12 @@ export function LaunchReady({ score, runId, isPublic, isScan, isOwner }: { score
   const b = band(score.score)
   return (
     <section aria-labelledby="launch-ready-title" className="report-print-section mt-10">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Launch Ready score</p>
       <div className="mt-2 grid gap-6 border-y border-line py-5 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
-          <h2 id="launch-ready-title" className="sr-only">Launch Ready score</h2>
-          <p className="flex items-baseline gap-3">
-            <span className="text-6xl font-extralight tracking-[-0.03em]">{score.score}</span>
+          <h2 id="launch-ready-title" className="text-xl font-light tracking-tight flex items-center gap-2">
+            <GaugeIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />Launch Ready score</h2>
+          <p className="mt-4 flex items-baseline gap-3">
+            <span className="text-6xl leading-none font-extralight tracking-[-0.03em] tabular-nums">{score.score}</span>
             <span className="text-sm text-muted">of 100</span>
             <span className={`text-sm font-medium ${b.tone}`}>{b.label}</span>
           </p>

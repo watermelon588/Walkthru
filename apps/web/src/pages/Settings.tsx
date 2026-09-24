@@ -78,7 +78,6 @@ function SettingsContent({ session }: { session: Session }) {
     <>
       <header className="grid gap-6 border-b border-line pb-10 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.16em] text-accent">Account</p>
           <h1 className="mt-3 text-4xl font-extralight tracking-tight md:text-5xl">Profile & settings</h1>
           <p className="mt-4 max-w-[58ch] leading-relaxed text-muted">Keep your identity and business context current. Walkthru uses this to make the workspace and reports feel like yours.</p>
         </div>

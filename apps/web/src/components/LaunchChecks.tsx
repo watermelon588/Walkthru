@@ -1,4 +1,4 @@
-import { CheckCircleIcon, GaugeIcon, MagnifyingGlassIcon, WarningCircleIcon, WheelchairIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, GaugeIcon, MagnifyingGlassIcon, WarningCircleIcon, WheelchairIcon, ShieldCheckIcon } from '@phosphor-icons/react'
 import type { Finding } from '../lib/runs'
 
 const checks = [
@@ -13,9 +13,9 @@ type CheckState = Partial<Record<(typeof checks)[number]['kind'], 'complete' | '
 export function LaunchChecks({ findings, verified, states = {} }: { findings: Finding[]; verified: boolean; states?: CheckState }) {
   return (
     <section aria-labelledby="launch-checks-title" className="report-print-section print-break-before mt-14">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Technical launch checks</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <h2 id="launch-checks-title" className="text-2xl font-light tracking-tight">Catch what the journey cannot see</h2>
+        <h2 id="launch-checks-title" className="text-2xl font-light tracking-tight flex items-center gap-2">
+            <ShieldCheckIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />Technical launch checks</h2>
         <p className="text-xs text-muted">{verified ? 'Verified-domain checks included' : 'Passive public checks only'}</p>
       </div>
       <div className="mt-5 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-2">
