@@ -96,6 +96,11 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 
 - [x] **Claude Haiku 4.5 for Pro and Plus, wired and off** (founder approved `anthropic[vertex]` on 2026-09-24): turns on with `CLAUDE_VERTEX_PROJECT`; free chain behind it; free plans never reach it.
 
+- [ ] **Fix-loop gaps found by the founder's showcase test (2026-09-24):**
+  - The fix prompt lists at most 3 pages per finding (evidence is cut to 3), so an agent following it exactly cannot finish. List every affected page in the prompt.
+  - The comparison matches by title only: "Few section headings" showed as still broken although all three listed pages were fixed, because a different page (welcome.html) now had it. Compare page by page and say "fixed on 3 pages, new on welcome.html".
+  - Crawl limits can make a finding look fixed (a new link pushed changelog.html out of the 10-page crawl). V6 raises paid crawls to 50 pages; the comparison should mention pages not re-audited.
+
 ### Session 6 (10-06 to 10-08)
 - [ ] Founder: Google Cloud project with billing prepaid by UPI (Rs 500 to 1,000); enable Vertex AI and Claude Haiku 4.5 in Model Garden; create a service account key; set `CLAUDE_VERTEX_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS`.
 - [ ] Measured comparison, about $1 to $2: Claude Haiku 4.5 against the free chain on the same hard and showcase journeys (trap recall, false dones, speed, cost). Decide what the pricing page may claim.

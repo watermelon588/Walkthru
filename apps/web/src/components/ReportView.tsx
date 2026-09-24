@@ -66,6 +66,9 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
           </section>
 
+          {/* The first thing a rerun owner wants to know. */}
+          {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}
+
           {run.status === 'safe_stop' && (
             <p className="no-print mt-6 max-w-[64ch] rounded-2xl border border-line px-5 py-4 text-sm leading-relaxed text-muted">
               The test user stopped at the send button, so nothing was sent. Walkthru only sends on a verified domain, once per run, after the owner approves.{' '}
@@ -86,8 +89,6 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
               </dl>
             </section>
           )}
-
-          {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}
 
           {ignore && r.findings.length > 0 && (
             <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[fingerprint(f)]).length} />
