@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { copyText } from '../lib/clipboard'
 import type { Report } from '../lib/runs'
 
 type Geo = NonNullable<Report['geo']>
@@ -49,11 +51,47 @@ export function GeoReadiness({ geo }: { geo: Geo }) {
         </blockquote>
       </figure>
 
+      {(geo.fixes?.length ?? 0) > 0 && <FixPack fixes={geo.fixes ?? []} total={geo.fixes_total ?? 0} />}
+
       {geo.notes.length > 0 && (
         <ul className="mt-4 grid gap-1 text-xs leading-relaxed text-muted">
           {geo.notes.map((n) => <li key={n}>{n}</li>)}
         </ul>
       )}
     </section>
+  )
+}
+
+type Fix = NonNullable<Geo['fixes']>[number]
+
+/** Copy-paste fixes built from the site's own pages. Free reports show one, paid reports all of them. */
+function FixPack({ fixes, total }: { fixes: Fix[]; total: number }) {
+  const [copied, setCopied] = useState<string | null>(null)
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-medium">GEO fix pack</h3>
+      <ol className="mt-3 grid gap-4">
+        {fixes.map((fix) => (
+          <li key={fix.id} className="rounded-2xl border border-line px-4 py-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm font-medium">{fix.title}</p>
+              <span className="font-mono text-xs text-muted">{fix.file}</span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted">{fix.note}</p>
+            <pre className="mt-3 max-h-64 overflow-auto rounded-xl bg-surface px-3 py-2 font-mono text-xs leading-relaxed"><code>{fix.code}</code></pre>
+            <button
+              type="button"
+              className="no-print mt-2 text-xs text-muted underline decoration-line underline-offset-4 transition hover:text-ink hover:decoration-ink"
+              onClick={async () => setCopied((await copyText(fix.code)) ? fix.id : null)}
+            >
+              {copied === fix.id ? 'Copied' : 'Copy'}
+            </button>
+          </li>
+        ))}
+      </ol>
+      {total > fixes.length && (
+        <p className="mt-3 text-xs text-muted">{total - fixes.length} more ready-made fix{total - fixes.length === 1 ? '' : 'es'} for this site on Pro.</p>
+      )}
+    </div>
   )
 }

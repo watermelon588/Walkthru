@@ -4,32 +4,13 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { ReportView } from '../components/ReportView'
 import { btnGhost } from '../components/Shared'
+import { copyText } from '../lib/clipboard'
 import { deleteRun, emailRun, findingsCsv, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Run } from '../lib/runs'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
 
 const POLL_MS = 5000
 
-async function copyText(text: string): Promise<boolean> {
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text)
-      return true
-    } catch {
-      // Clipboard permission can be unavailable in embedded and local contexts.
-    }
-  }
-  const input = document.createElement('textarea')
-  input.value = text
-  input.setAttribute('readonly', '')
-  input.style.position = 'fixed'
-  input.style.opacity = '0'
-  document.body.appendChild(input)
-  input.select()
-  const copied = document.execCommand('copy')
-  input.remove()
-  return copied
-}
 
 export default function Report() {
   const { id = '' } = useParams()

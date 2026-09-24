@@ -64,7 +64,17 @@ export type Report = {
   verified: boolean
   tokens: number
   checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', 'complete' | 'unavailable'>>
-  geo?: { score: number; band: 'critical' | 'foundation' | 'good' | 'excellent'; categories: { id: string; label: string; earned: number; max: number }[]; ai_words: number; ai_view: string; notes: string[] } | null
+  geo?: {
+    score: number
+    band: 'critical' | 'foundation' | 'good' | 'excellent'
+    categories: { id: string; label: string; earned: number; max: number }[]
+    ai_words: number
+    ai_view: string
+    notes: string[]
+    fixes?: { id: string; title: string; file: string; code: string; note: string }[]
+    fixes_total?: number
+  } | null
+  model?: string | null
   comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[] } | null
   site_audit?: {
     pages_scanned: number
@@ -193,6 +203,15 @@ export async function ignoredFindings(site: string): Promise<Record<string, stri
 export const ignoreFinding = (runId: string, fp: string, reason: string) => api<{ ignored: string }>(`/runs/${runId}/findings/ignore`, { fingerprint: fp, reason })
 export const unignoreFinding = (runId: string, fp: string) =>
   api<{ cleared: string }>(`/runs/${runId}/findings/ignore?fingerprint=${encodeURIComponent(fp)}`, undefined, true, 'DELETE')
+/** The agent fix prompt as Markdown (paid plans; 402 on free). */
+export async function getFixPrompt(runId: string, style: 'full' | 'chat'): Promise<string> {
+  const token = (await supabase?.auth.getSession())?.data.session?.access_token
+  if (!token) throw new Error('Sign in first')
+  const res = await fetch(`${API}/runs/${runId}/fix-prompt?style=${style}`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { detail?: string }).detail ?? `Request failed (${res.status})`)
+  return res.text()
+}
+
 export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)

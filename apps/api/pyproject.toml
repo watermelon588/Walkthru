@@ -9,6 +9,7 @@ dependencies = [
   "langgraph-checkpoint-postgres>=3",
   "langsmith>=0.12",
   "langchain-anthropic>=1",
+  "anthropic[vertex]>=1",  # Claude Haiku 4.5 on Google Cloud for Pro and Plus (approved 2026-09-24)
   "langchain-google-genai>=4",
   "httpx>=0.28",
   "selectolax>=0.3",

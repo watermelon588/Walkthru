@@ -150,6 +150,8 @@ class GeoSummary(BaseModel):
     ai_words: int = Field(ge=0, description="Words of homepage text an AI crawler gets before JavaScript runs.")
     ai_view: str = Field(default="", description="The start of that text, as the crawler reads it.")
     notes: list[str] = Field(default_factory=list)
+    fixes: list[dict] = Field(default_factory=list)  # GEO fix pack: id, title, file, code, note (one on free reports)
+    fixes_total: int = 0
 
 
 class ComparedFinding(BaseModel):
@@ -180,3 +182,4 @@ class Report(BaseModel):
     site_audit: SiteAuditSummary | None = None
     geo: GeoSummary | None = None
     comparison: Comparison | None = None
+    model: str | None = None  # which models ran the test and wrote the report, shown on the report

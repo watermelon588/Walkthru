@@ -27,7 +27,7 @@ def server():
 
 @pytest.fixture(autouse=True)
 def fake_llm(monkeypatch):
-    def call(schema, messages):
+    def call(schema, messages, fast=False, paid=False):
         if schema is FirstImpression:
             return FirstImpression(what="A vague platform for synergy.", who="Unclear, maybe enterprises.", first_click="Log in, since there is no sign-up.", trust=["no pricing shown"], clarity=3), 100
         return Synthesis(
@@ -143,7 +143,7 @@ def test_local_dev_server_skips_host_level_findings():
 def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
     seen = []
 
-    def call(schema, messages):
+    def call(schema, messages, fast=False, paid=False):
         seen.append(messages[-1][1])
         if schema is FirstImpression:
             return FirstImpression(what="w", who="w", first_click="c", trust=[], clarity=0), 0

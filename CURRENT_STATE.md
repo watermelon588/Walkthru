@@ -115,6 +115,12 @@ _Last updated: 2026-09-24_
   - **Safety:** a comparison failure never loses the report.
   - 152 API tests; web build and lint green.
 
+- **Session 5: GEO fix pack, agent fix prompt, Claude wiring (2026-09-24).**
+  - **GEO fix pack:** `app/scans/geo_fixes.py` builds copy-paste fixes from the site's own pages: a rendering fix for the detected framework, robots.txt rules, JSON-LD, og:site_name and an llms.txt draft. Free reports show one fix and the count. Live on the portfolio: a Vite rendering fix with its real name and description.
+  - **Agent fix prompt:** `app/agent/fix_prompt.py` and `GET /runs/{id}/fix-prompt` (paid; `style=chat` for Lovable and Bolt; `download=1` for `walkthru-fixes.md`). Plain code, ignored findings left out, secrets masked. The report page has Copy, Download and Copy chat version.
+  - **Claude Haiku 4.5:** wired for Pro and Plus through Google Cloud (`anthropic[vertex]`, approved), off until `CLAUDE_VERTEX_PROJECT` is set. Reports state which models ran. The spec's product rule is reworded (see docs/decisions.md).
+  - 164 API tests; web build and lint green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -130,7 +136,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Plus opens:** 2026-11-22 at the latest.
 
 1. **Founder, 30 seconds:** apply the `finding_states` table in the Supabase SQL editor (the block at the end of `apps/api/schema.sql`, from "-- Ignored findings"). Direct Postgres from this network timed out 8 times on 2026-09-24. Until then the Ignore button fails and comparisons run without ignored findings.
-2. **Next session (5):** V5 GEO fix pack, plus V15 agent fix prompt. Sessions 1 to 4 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
+2. **Next session (6):** production and store submission (V11), plus Google Cloud billing by UPI for Claude and the measured Claude comparison. Sessions 1 to 5 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.

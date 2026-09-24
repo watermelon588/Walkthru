@@ -19,14 +19,14 @@ def fallback(goal: str) -> dict:
     return {"intent": goal, "checkpoints": [{"description": goal[:200], "url_contains": None}], "feasible": True, "refusal": None}
 
 
-def plan(site: str, goal: str, observation: dict) -> dict:
+def plan(site: str, goal: str, observation: dict, paid: bool = False) -> dict:
     """One fast model call before the first step. A planner outage never blocks a test: the typed goal is used."""
     from app.agent import runtime
     from app.agent.persona import render_observation
 
     messages = [("system", PLANNER_SYSTEM), ("human", f"Site: {site}\nGoal as typed: {goal}\n\nStart page:\n{render_observation(observation)[:5000]}")]
     try:
-        result, _ = runtime.call(GoalPlan, messages, fast=True)
+        result, _ = runtime.call(GoalPlan, messages, fast=True, paid=paid)
     except Exception:  # noqa: BLE001 - fall back to the literal goal
         return fallback(goal)
     out = result.model_dump()

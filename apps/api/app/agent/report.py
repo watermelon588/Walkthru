@@ -57,7 +57,7 @@ def first_impression(state: ReportState) -> dict:
         ("system", "You are a stranger landing on a website for the first time. You have five seconds and you only see the page text below, not its design. Answer plainly, in the second person about the site owner ('your site'). Only mention things present in the text; never describe visuals, layout, colours or typography."),
         ("human", f"Homepage text of {state['site']}:\n\n{state.get('page_text', '')[:5000]}"),
     ]
-    fi, used = runtime.call(FirstImpression, messages)
+    fi, used = runtime.call(FirstImpression, messages, paid=state.get("paid", False))
     return {"first_impression": fi.model_dump(), "tokens": used}
 
 
@@ -382,7 +382,7 @@ def synthesize(state: ReportState) -> dict:
     inputs = synthesis_inputs(state)
     code_findings, local, steps, fi = inputs["code_findings"], inputs["local"], inputs["steps"], inputs["fi"]
     browser_accessibility, browser_performance = inputs["browser_accessibility"], inputs["browser_performance"]
-    syn, used = runtime.call(Synthesis, inputs["messages"])
+    syn, used = runtime.call(Synthesis, inputs["messages"], paid=state.get("paid", False))
     written = [f.model_copy(update={"kind": "ux", "title": plain(f.title), "detail": plain(f.detail), "fix": plain(f.fix)})
                for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))]
     findings = written + code_findings
@@ -404,6 +404,7 @@ def synthesize(state: ReportState) -> dict:
         },
         site_audit=state.get("site_audit"),
         geo=state.get("geo_summary") or None,
+        model=runtime.model_label(state.get("paid", False)),
     )
     return {"synthesis": report.model_dump(), "tokens": used}
 

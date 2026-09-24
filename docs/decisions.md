@@ -201,3 +201,22 @@ This approves the official `mcp` Python SDK when V20 is built.
 - A click that changes nothing is evidence for the report.
 - Em and en dashes are stripped from model-written report text.
 - Cost per run is logged in tokens (about 9,000 to 12,000 for a report), all on free models.
+
+## 2026-09-24 Claude Haiku 4.5 for Pro and Plus
+
+**Decision (founder):** Pro and Plus use Claude Haiku 4.5 as the goal planner, test user and report writer, through Google Cloud Vertex AI. Free stays on the free chain.
+
+**Why Google Cloud:** the founder has no credit card. Google Cloud accepts a UPI prepayment and lists Claude Haiku 4.5; OpenRouter needs an international card, AliPay or USDC. GPT-5 mini is not on Google Cloud.
+
+**Cost, from measured runs:**
+- Runs of 4 to 6 steps used 6,400 to 11,800 tokens.
+- At an estimated Google Cloud rate of $1.10 input and $5.50 output per million tokens (about 10% over Anthropic's list price; confirm at setup), a typical run costs about $0.02 to $0.04 and a 30-step run about $0.08.
+- Pro at full use costs about $1.40 a month (worst case $3.08) against $17.84 net.
+- Plus about $5.43 (worst $11.73) against $46.64 net.
+- Both stay within payment.md's 25% allowance, with the cost ledger as the guard.
+
+**Product rule changed:** "free reports are exactly as good as paid" became "same checks and honesty rules on every plan; Pro and Plus add Claude's judgment". Every report states which models ran.
+
+**Built on 2026-09-24:** off until `CLAUDE_VERTEX_PROJECT` is set. The free chain always sits behind Claude.
+
+**Before marketing specific gains:** a measured comparison on the hard and showcase journeys (session 6).

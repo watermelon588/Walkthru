@@ -17,7 +17,7 @@ from urllib.robotparser import RobotFileParser
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import fetch
+from app.scans import fetch, geo_fixes
 
 # Bots that fetch pages to answer and cite. Blocking any of these hides the site from that assistant.
 CITATION_BOTS = ("OAI-SearchBot", "ChatGPT-User", "Claude-SearchBot", "ClaudeBot", "PerplexityBot", "Googlebot", "Bingbot", "Applebot")
@@ -38,10 +38,14 @@ class GeoResult:
     ai_words: int
     ai_view: str
     notes: list[str] = field(default_factory=list)
+    fixes: list[dict] = field(default_factory=list)  # the GEO fix pack (app/scans/geo_fixes.py)
+    full: bool = True
 
     def summary(self) -> dict:
-        """The part stored in `report.geo`; findings go to the report's findings list."""
-        return {"score": self.score, "band": self.band, "categories": self.categories, "ai_words": self.ai_words, "ai_view": self.ai_view, "notes": self.notes}
+        """The part stored in `report.geo`; findings go to the report's findings list. Free reports keep one fix and the count."""
+        shown = self.fixes if self.full else self.fixes[:1]
+        return {"score": self.score, "band": self.band, "categories": self.categories, "ai_words": self.ai_words, "ai_view": self.ai_view,
+                "notes": self.notes, "fixes": shown, "fixes_total": len(self.fixes)}
 
 
 def _f(severity: str, title: str, detail: str, fix: str, evidence: str | None = None) -> Finding:
@@ -104,6 +108,8 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
 
     # 1. AI crawler access (25)
     access: list[tuple[float, int]] = []
+    blocked: list[str] = []
+    llms_ok: bool | None = None
     if not local:
         blocked = _blocked_bots(robots_text, root_url, CITATION_BOTS)
         access.append((15 * (len(CITATION_BOTS) - len(blocked)) / len(CITATION_BOTS), 15))
@@ -236,7 +242,7 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
     # 7. llms.txt (5): low measured impact, so light weight and a low-severity finding.
     if llms is not None and not local:
         status, body = llms
-        ok = status == 200 and body.lstrip().startswith("# ")
+        ok = llms_ok = status == 200 and body.lstrip().startswith("# ")
         score("llms", "llms.txt", [(5 if ok else 2 if status == 200 else 0, 5)])
         if not ok:
             findings.append(_f("low", "No llms.txt" if status != 200 else "llms.txt is not in the expected format",
@@ -248,4 +254,5 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
     total = round(100 * earned / possible) if possible else 0
     band = next(name for floor, name in BANDS if total >= floor)
     view = "" if shell else " ".join(text.split()[:60])
-    return GeoResult(total, band, cats, findings, 0 if shell else words, view, notes)
+    fixes = geo_fixes.build(root_url, list(scope), objects, root_objects=_json_ld(root)[0], blocked=blocked, shell=shell, llms_ok=llms_ok)
+    return GeoResult(total, band, cats, findings, 0 if shell else words, view, notes, fixes, full)
