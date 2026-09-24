@@ -39,6 +39,19 @@ export type StartBody = {
   observation: Observation;
 };
 
+/** What `GET /me/plan` returns: the server decides the plan and its limits (apps/api/app/plans.py). */
+export type PlanSummary = {
+  plan: "free" | "launch" | "pro" | "plus";
+  runs_allowed: number;
+  runs_left: number;
+  expires_at: string | null;
+  max_steps: number;
+  logged_in: boolean;
+  personas: string[];
+  sites: number;
+  sites_used: string[];
+};
+
 export async function getSession(): Promise<Session | null> {
   const { session } = await chrome.storage.local.get("session");
   return (session as Session | undefined) ?? null;
@@ -64,19 +77,24 @@ async function token(): Promise<string | null> {
   return fresh.access_token;
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+/** POST when a body is given, GET otherwise. */
+async function call<T>(path: string, body?: unknown): Promise<T> {
   const t = await token();
   if (!t) throw new Error(`Not signed in. Open ${WEB_URL}/app and click "Connect extension".`);
-  const res = await fetch(API_URL + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
-    body: JSON.stringify(body),
-  });
+  const res = await fetch(API_URL + path, body === undefined
+    ? { headers: { Authorization: `Bearer ${t}` } }
+    : { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify(body) });
   if (res.status === 401) {
     await chrome.storage.local.remove("session");
     throw new Error(`Session expired. Open ${WEB_URL}/app and click "Connect extension" again.`);
   }
-  if (!res.ok) throw new Error(`API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    const text = await res.text();
+    let detail: unknown;
+    try { detail = JSON.parse(text).detail; } catch { /* not JSON */ }
+    // Plan limits and other API refusals carry a plain-language `detail`; show it as is.
+    throw new Error(typeof detail === "string" ? detail : `API ${res.status}: ${text.slice(0, 200)}`);
+  }
   return res.json();
 }
 
@@ -96,7 +114,8 @@ export async function uploadEvidenceImage(path: string, dataUrl: string): Promis
   if (!res.ok) throw new Error(`Screenshot upload failed (${res.status})`);
 }
 
-export const startRun = (body: StartBody) => post<RunReply>("/runs", body);
+export const getPlan = () => call<PlanSummary>("/me/plan");
+export const startRun = (body: StartBody) => call<RunReply>("/runs", body);
 export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
-  post<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });
-export const stopRun = (runId: string, reason?: string) => post<StopReply>(`/runs/${runId}/stop`, reason ? { reason } : {});
+  call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });
+export const stopRun = (runId: string, reason?: string) => call<StopReply>(`/runs/${runId}/stop`, reason ? { reason } : {});

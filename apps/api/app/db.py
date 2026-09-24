@@ -99,6 +99,41 @@ def runs_for_user(user_id: str) -> list[dict]:
     return _rows({"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.asc"})
 
 
+def test_runs_since(user_id: str, since: str) -> list[dict]:
+    return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}", "select": "site"})
+
+
+def free_runs_today() -> int:
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    # ponytail: fetches ids to count them; switch to a Prefer: count=exact HEAD past a few thousand runs a day
+    return len(_rows({"kind": "eq.test", "tier": "eq.free", "created_at": f"gte.{today}", "select": "id"}))
+
+
+# ---------- entitlements (paid passes; SPEC.md "Plans", payment.md) ----------
+
+
+def active_entitlement(user_id: str, now: str) -> dict | None:
+    rows = _request("GET", "/rest/v1/entitlements", params={
+        "user_id": f"eq.{user_id}", "starts_at": f"lte.{now}", "expires_at": f"gt.{now}",
+        "select": "plan,starts_at,expires_at,runs_granted", "order": "expires_at.desc", "limit": "1"}) or []
+    return rows[0] if rows else None
+
+
+def entitlements_for_user(user_id: str) -> list[dict]:
+    return _request("GET", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.asc"}) or []
+
+
+def grant_entitlement(user_id: str, plan: str, days: int, runs: int, source: str) -> None:
+    now = datetime.now(UTC)
+    row = {"user_id": user_id, "plan": plan, "starts_at": now.isoformat(), "expires_at": (now + timedelta(days=days)).isoformat(), "runs_granted": runs, "source": source}
+    _request("POST", "/rest/v1/entitlements", json_body=row, prefer="return=minimal")
+
+
+def expire_entitlements(user_id: str) -> None:
+    now = _now()
+    _request("PATCH", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "expires_at": f"gt.{now}"}, json_body={"expires_at": now}, prefer="return=minimal")
+
+
 def run_ids_for_user(user_id: str) -> list[str]:
     return [r["id"] for r in _rows({"user_id": f"eq.{user_id}", "select": "id"})]
 

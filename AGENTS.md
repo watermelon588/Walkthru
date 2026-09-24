@@ -46,6 +46,7 @@ cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".
 .venv/Scripts/ruff check .
 .venv/Scripts/python -m app.db            # apply schema.sql to Supabase (idempotent)
 .venv/Scripts/python scripts/test_user.py # throwaway account + session for local testing
+.venv/Scripts/python scripts/grant_plan.py EMAIL pro   # dev pass to test paid plans for free (--revoke to end it)
 
 # extension
 cd apps/extension && npm install

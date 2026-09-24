@@ -76,3 +76,27 @@ create policy "owners and public reports read run evidence" on storage.objects
 -- Evidence retention (2026-09-23): screenshots expire, runs and reports stay until the owner deletes them.
 alter table public.runs add column if not exists evidence_purged_at timestamptz;
 create index if not exists runs_evidence_retention on public.runs (created_at) where kind = 'test' and evidence_purged_at is null;
+
+-- Paid passes (2026-09-24, SPEC.md "Plans"). The API reads the active row to decide the caller's plan.
+-- Rows come from the founder (V1 concierge), a verified Dodo webhook, promos, or scripts/grant_plan.py in development.
+create table if not exists public.entitlements (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  plan text not null check (plan in ('launch', 'pro', 'plus')),
+  starts_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  runs_granted integer not null check (runs_granted >= 0),
+  source text not null check (source in ('founder', 'dodo', 'promo', 'dev')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists entitlements_user_expires on public.entitlements (user_id, expires_at desc);
+
+alter table public.entitlements enable row level security;
+
+drop policy if exists "owner reads entitlements" on public.entitlements;
+create policy "owner reads entitlements" on public.entitlements
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+
+grant select on public.entitlements to authenticated;

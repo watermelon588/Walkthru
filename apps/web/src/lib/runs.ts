@@ -161,6 +161,9 @@ export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
 export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`, undefined, true, 'DELETE')
 export const exportAccount = () => api<Record<string, unknown>>('/account/export', undefined, true, 'GET')
+/** The server decides the plan (apps/api/app/plans.py). */
+export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
+export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
 export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)

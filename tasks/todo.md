@@ -13,7 +13,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 - [ ] Enable Google and GitHub sign-in; rotate Supabase secrets before session 6
 
 ### Session 1 (09-25 to 09-26)
-- [ ] **V1 Server-owned plans** (M)
+- [x] **V1 Server-owned plans** (M), done 2026-09-24
   - Accept:
     - `app/plans.py` holds the plan limits from SPEC.md; table `entitlements`.
     - `POST /runs` ignores the client's `tier`.

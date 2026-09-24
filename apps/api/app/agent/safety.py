@@ -6,7 +6,7 @@ import re
 DESTRUCTIVE = re.compile(r"\b(delete|remove|cancel\s+subscription|pay|purchase|buy|checkout|transfer|unsubscribe)\b", re.IGNORECASE)
 # Reaches a real person. Allowed only on a domain the owner verified, after they confirm in the side panel.
 SENDING = re.compile(r"\b(send|invite)\b", re.IGNORECASE)
-MAX_STEPS = 25
+MAX_STEPS = 30  # hard ceiling; each plan sets its own (app/plans.py)
 LOOP_LIMIT = 3  # identical action on identical URL this many times = stuck
 
 
