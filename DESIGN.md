@@ -46,6 +46,9 @@ One accent only. No new colours without updating this file.
 - Placeholders are rendered from `apps/web/design/mocks/*.html` (`bash design/mocks/render.sh`). Replace with real captures, same filenames, once the product exists.
 - `<Asset>` shows a labelled slot if a file is missing, so layout never breaks.
 
+## Headings
+No eyebrow labels above headings in the app (craft floor). A section heading carries its own name, with one light Phosphor icon in `text-accent` for report sections. The printed report keeps its cover kicker.
+
 ## Copy rules
 No em dashes. Plain verbs. Button labels 1 to 4 words. One label per intent ("Scan my site" everywhere for the free scan).
 
@@ -66,7 +69,7 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 | Landing | `/` | `src/pages/Landing.tsx` |
 | Login | `/login` | Split layout: form left, full-height photo right on desktop (`public/assets/login.jpg`: blurred figure in a lounge chair on light grey, desaturated to match the palette). Google, GitHub, email magic link. |
 | App shell | `/app/*` | Desktop: 15rem left sidebar on `bg` with a hairline, active item on `surface`. Phones: sticky top bar and a native `<dialog>` drawer with the same navigation. |
-| Dashboard | `/app` | Evidence-led command center. Lead with a plain-language launch-readiness promise, interactive Scout guidance, one run-to-report pipeline and recent runs with frame/finding counts. Keep controls in one clear column before history. |
+| Dashboard | `/app` | Operate mode: a greeting, then state before history. One hairline band holds the plan meter (runs left is the largest number on the page, with a usage bar that turns danger at 20% or less), the latest Launch Ready score and Scout. Run rows show kind icon (a thinking orb while running), high-severity count, status, score chip and time. Instant Scan sits last as a surface band. Numbers count up and rows settle in once when data lands (reduced motion: static). |
 | Profile & settings | `/app/settings` | Authenticated personal or business profile stored in Supabase Auth metadata. Shows the signed-in identity, provider status and one focused profile form. |
 | Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
 | Docs | `/docs` | Read mode. `DocLayout`: title, lead, sticky "On this page" index (collapsible on phones), `.prose-doc` body at ~68ch. Same layout for `/privacy`, `/terms`, `/security`. |

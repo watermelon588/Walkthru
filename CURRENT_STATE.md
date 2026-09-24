@@ -143,6 +143,13 @@ _Last updated: 2026-09-24_
 
 - **Whole-crawl SEO checks from OpenSEO's audit (2026-09-24).** Broken internal links, server errors, blocked or rate-limited pages (now reported, previously skipped silently), duplicate titles, descriptions and content, thin content, dead ends, redirect chains, canonical conflicts, slow HTML, deep pages, sitemap orphans and short descriptions. Plain code in `site.py`; 176 API tests; a live python.org crawl showed no false alarms. See docs/decisions.md.
 
+- **App design pass (2026-09-24, front end).** Loaded impeccable and frontend-ui-engineering; refinement of the existing look, no new colours.
+  - Dashboard rebuilt for Operate mode: greeting, Connect extension and Scan my site actions, a plan meter (runs left as the biggest number, usage bar, plan, renewal, what the plan includes, upgrade link when low or free), latest Launch Ready score, Scout, richer run rows (thinking orb on open runs, high-severity count, score chip), Instant Scan band. One GSAP moment: numbers count up, rows settle in.
+  - Sidebar shows runs left on every app page (`PlanMeterCompact`; `lib/plan.ts` fetches the plan once per signed-in user).
+  - Extension panel: plan meter under the header; Start test is a full-width primary button; the privacy note is smaller.
+  - Report and settings: eyebrow labels removed; section headings carry their name and one accent icon; summary numbers larger. `ReadinessPipeline` removed.
+  - Verified: web and extension build, lint and type check; 30 extension tests; Impeccable detector clean after moving meters from width to clip-path; the public report renders with the new headings and a clean console. Not seen in the browser: signed-in pages (dashboard, settings), since the browser pane is not signed in.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.

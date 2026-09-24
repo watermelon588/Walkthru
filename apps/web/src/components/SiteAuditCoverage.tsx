@@ -1,3 +1,4 @@
+import { TreeStructureIcon } from '@phosphor-icons/react'
 import type { Report } from '../lib/runs'
 
 type Audit = NonNullable<Report['site_audit']>
@@ -6,11 +7,11 @@ export function SiteAuditCoverage({ audit }: { audit: Audit }) {
   const duration = audit.duration_ms < 1000 ? `${audit.duration_ms} ms` : `${(audit.duration_ms / 1000).toFixed(1)} s`
   return (
     <section aria-labelledby="site-audit-title" className="report-print-section mt-12">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Crawl coverage</p>
       <div className="mt-2 grid gap-5 border-y border-line py-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
         <div>
-          <h2 id="site-audit-title" className="text-xl font-light tracking-tight">
-            {audit.pages_scanned} page{audit.pages_scanned === 1 ? '' : 's'} checked
+          <h2 id="site-audit-title" className="text-xl font-light tracking-tight flex items-center gap-2">
+            <TreeStructureIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />
+            Crawl coverage: {audit.pages_scanned} page{audit.pages_scanned === 1 ? "" : "s"} checked
           </h2>
           <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted">
             {audit.truncated

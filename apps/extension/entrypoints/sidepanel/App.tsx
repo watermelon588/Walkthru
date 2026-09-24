@@ -117,6 +117,8 @@ export function App() {
         <AgentStatus activity={agentActivity} state={agentState} />
       </header>
 
+      {plan && <PlanMeter plan={plan} />}
+
       {signedIn === false && (
         <p className="notice" role="status">
           Not connected. <a href={`${WEB_URL}/app`} target="_blank" rel="noreferrer">Sign in to Walkthru</a> and click "Connect extension".
@@ -153,12 +155,7 @@ export function App() {
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
         </label>
         {plan && !canLogIn && <p className="hint">Logged-in pages need a paid plan. Free runs test public pages.</p>}
-        {plan && (
-          <p className="hint" role="status">
-            {plan.runs_left} of {plan.runs_allowed} test runs left {plan.plan === "free" ? "this month" : "in your pass"}, up to {plan.max_steps} steps each.
-          </p>
-        )}
-        <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
+        <p className="hint fine">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
           {running && <button type="button" onClick={() => abort.current?.abort()}>Stop</button>}
@@ -222,5 +219,26 @@ export function App() {
         <a href={`${WEB_URL}/privacy`} target="_blank" rel="noreferrer">Privacy</a>
       </footer>
     </main>
+  );
+}
+
+const PLAN_NAME: Record<PlanSummary["plan"], string> = { free: "Free", launch: "Launch Pack", pro: "Pro", plus: "Plus" };
+
+/** Runs left is the one number that decides whether a test can start, so it gets the panel's biggest type. */
+function PlanMeter({ plan }: { plan: PlanSummary }) {
+  const share = plan.runs_allowed ? plan.runs_left / plan.runs_allowed : 0;
+  const low = share <= 0.2;
+  const until = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
+  return (
+    <section className="plan" aria-label="Your plan">
+      <div className="plan-top">
+        <p className="plan-count"><strong className={low ? "low" : ""}>{plan.runs_left}</strong> of {plan.runs_allowed} runs left</p>
+        <span className="plan-name">{PLAN_NAME[plan.plan]}{until ? ` · ${plan.plan === "free" ? "renews" : "until"} ${until}` : ""}</span>
+      </div>
+      <span className="meter" role="meter" aria-label="Test runs left" aria-valuemin={0} aria-valuemax={plan.runs_allowed} aria-valuenow={plan.runs_left}>
+        <span className={low ? "low" : ""} style={{ clipPath: `inset(0 ${100 - Math.round(share * 100)}% 0 0 round 999px)` }} />
+      </span>
+      <p className="plan-meta">Up to {plan.max_steps} steps a run · {plan.logged_in ? "logged-in pages included" : "public pages only"}</p>
+    </section>
   );
 }

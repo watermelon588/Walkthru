@@ -1,3 +1,4 @@
+import { ListNumbersIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { EVIDENCE_RETENTION_DAYS, fingerprint, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
@@ -40,7 +41,7 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
     <article className="report-root">
       <header className="report-cover grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <p className="report-kicker font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Launch readiness report</p>
+          <p className="report-kicker hidden print:block">Launch readiness report</p>
           <p className="mt-3 font-mono text-xs text-muted">{run.site}</p>
           <h1 className="mt-2 text-3xl font-extralight tracking-tight md:text-5xl">{isScan ? 'Instant Scan' : run.goal}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
@@ -106,8 +107,8 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
 
           {r.top_fixes.length > 0 && (
             <section aria-label="Top fixes" className="report-print-section print-break-before mt-14">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Prioritized fixes</p>
-              <h2 className="mt-2 text-2xl font-light tracking-tight">Fix these first</h2>
+              <h2 className="text-2xl font-light tracking-tight flex items-center gap-2">
+            <ListNumbersIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />Fix these first</h2>
               <ol className="mt-5 overflow-hidden rounded-2xl border border-line bg-line">
                 {r.top_fixes.map((f, i) => (
                   <li key={i} className="grid grid-cols-[3rem_1fr] gap-3 border-b border-line bg-bg px-5 py-4 leading-relaxed last:border-b-0">
@@ -229,9 +230,9 @@ export function StatusPill({ status }: { status: Run['status'] }) {
 
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="bg-bg px-5 py-4">
+    <div className="bg-bg px-5 py-5">
       <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-lg font-light">{value}</p>
+      <p className="mt-2 text-2xl font-extralight tracking-tight tabular-nums">{value}</p>
       {note && <p className="text-xs text-muted">{note}</p>}
     </div>
   )

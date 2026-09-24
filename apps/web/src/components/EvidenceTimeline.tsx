@@ -1,4 +1,4 @@
-import { CameraIcon, CaretLeftIcon, CaretRightIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react'
+import { CameraIcon, CaretLeftIcon, CaretRightIcon, PauseIcon, PlayIcon, FilmStripIcon } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { evidenceUrls, type Step } from '../lib/runs'
 import { AgentBird } from './AgentBird'
@@ -63,8 +63,8 @@ export function EvidenceTimeline({ steps }: { steps: Step[] }) {
     <section aria-labelledby="journey-evidence-title" className="no-print mt-14">
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Journey replay</p>
-          <h2 id="journey-evidence-title" className="mt-2 text-2xl font-light tracking-tight">See every meaningful moment</h2>
+          <h2 id="journey-evidence-title" className="text-2xl font-light tracking-tight flex items-center gap-2">
+            <FilmStripIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />Journey replay</h2>
           <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">Screenshots show the page after an action. Select a step to inspect what Scout tried, what changed and where confusion rose.</p>
         </div>
         <AgentPresence
