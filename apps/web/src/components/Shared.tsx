@@ -74,8 +74,19 @@ export function SkipLink() {
   )
 }
 
+/** Signed in? Reads Supabase's saved session key directly, so marketing pages need not load the Supabase library. */
+function hasSession(): boolean {
+  try {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+    return !!url && !!localStorage.getItem(`sb-${new URL(url).hostname.split('.')[0]}-auth-token`)
+  } catch {
+    return false
+  }
+}
+
 export function Nav() {
   const menu = useRef<HTMLDetailsElement>(null)
+  const [account] = useState(() => (hasSession() ? { label: 'Dashboard', href: '/app' } : { label: 'Sign in', href: '/login' }))
   const close = () => menu.current?.removeAttribute('open')
   return (
     <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-md">
@@ -86,7 +97,7 @@ export function Nav() {
           {navLinks.map((l) => <a key={l.href} href={l.href} className="transition hover:text-ink">{l.label}</a>)}
         </div>
         <div className="flex items-center gap-3 sm:gap-5">
-          <a href="/login" className="hidden text-sm text-ink transition hover:opacity-70 sm:block">Sign in</a>
+          <a href={account.href} className="hidden text-sm text-ink transition hover:opacity-70 sm:block">{account.label}</a>
           <a href="/#scan" className={btnPrimary.replace('px-6 py-3', 'px-5 py-2.5')}>{hero.primary}</a>
           <details ref={menu} className="group md:hidden">
             <summary aria-label="Menu" className="grid size-10 cursor-pointer list-none place-items-center rounded-full border border-line transition hover:bg-surface [&::-webkit-details-marker]:hidden">
@@ -95,7 +106,7 @@ export function Nav() {
             </summary>
             <div onClick={close} className="absolute inset-x-0 top-16 border-y border-line bg-bg px-5 pb-6 shadow-[0_24px_40px_-32px_rgba(27,27,31,0.4)]">
               <ul className="grid text-lg font-light">
-                {[...navLinks, { label: 'Sign in', href: '/login' }].map((l) => (
+                {[...navLinks, account].map((l) => (
                   <li key={l.href} className="border-b border-line last:border-b-0">
                     <a href={l.href} className="flex min-h-12 items-center py-2 text-ink">{l.label}</a>
                   </li>

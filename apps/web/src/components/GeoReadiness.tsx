@@ -1,7 +1,8 @@
-import { SparkleIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { copyText } from '../lib/clipboard'
-import type { Report } from '../lib/runs'
+import type { Finding, Report } from '../lib/runs'
+import { Card, Pill, type Tone } from './Card'
 
 type Geo = NonNullable<Report['geo']>
 
@@ -13,41 +14,61 @@ const BAND: Record<Geo['band'], { label: string; tone: string }> = {
 }
 
 /** AI search readiness (GEO): can ChatGPT, Claude, Perplexity and Google's AI answers read and quote the site? */
-export function GeoReadiness({ geo }: { geo: Geo }) {
+export function GeoReadiness({ geo, findings }: { geo: Geo; findings: Finding[] }) {
   const band = BAND[geo.band]
   return (
-    <section aria-labelledby="geo-title" className="report-print-section mt-12">
-      <div className="mt-2 grid gap-6 border-y border-line py-5 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+    <Card className="report-print-section mt-10 p-6" aria-labelledby="geo-title">
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h2 id="geo-title" className="flex items-center gap-2 font-medium">
+          <SparkleIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />AI search readiness
+        </h2>
+        <span className="text-xs text-muted">Can ChatGPT, Claude, Perplexity and Google AI read and quote you</span>
+      </div>
+      <div className="mt-5 flex gap-10">
         <div>
-          <h2 id="geo-title" className="text-xl font-light tracking-tight flex items-center gap-2">
-            <SparkleIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />AI search readiness</h2>
-          <p className="mt-3 flex items-baseline gap-3">
-            <span className="text-5xl font-extralight tracking-[-0.03em]">{geo.score}</span>
-            <span className="text-sm text-muted">of 100</span>
-            <span className={`text-sm font-medium ${band.tone}`}>{band.label}</span>
-          </p>
-          <p className="mt-3 max-w-[48ch] text-sm leading-relaxed text-muted">
-            Readiness, not rankings: whether assistants can fetch, understand and quote your pages. Fixes are in the findings below, marked GEO.
-          </p>
+          <p className={`text-4xl leading-none font-extralight tracking-[-0.02em] tabular-nums ${band.tone}`}>{geo.score}</p>
+          <p className="mt-2 text-xs text-muted">{band.label}, of 100</p>
         </div>
-        <dl className="grid content-start gap-3">
-          {geo.categories.map((c) => (
-            <div key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 text-sm">
-              <dt>{c.label}</dt>
-              <dd className="font-mono text-xs text-muted">{c.earned}/{c.max}</dd>
-              <dd className="col-span-2 h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-                <div className="h-full rounded-full bg-ink" style={{ width: `${Math.round((100 * c.earned) / c.max)}%` }} />
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <div>
+          <p className={`text-4xl leading-none font-extralight tracking-[-0.02em] tabular-nums ${findings.length ? 'text-danger' : 'text-accent'}`}>{findings.length}</p>
+          <p className="mt-2 text-xs text-muted">{findings.length === 1 ? 'Issue to fix' : 'Issues to fix'}</p>
+        </div>
       </div>
 
-      <figure className="mt-5 rounded-2xl border border-line px-5 py-4">
+      <ul className="mt-4">
+        {geo.categories.map((c) => {
+          const tone: Tone = c.earned >= c.max ? 'ok' : c.earned === 0 ? 'bad' : 'neutral'
+          return (
+            <li key={c.id} className="flex items-center justify-between gap-4 border-b border-line py-3">
+              <span className="text-sm">{c.label}</span>
+              <Pill tone={tone}>{c.earned} of {c.max} points</Pill>
+            </li>
+          )
+        })}
+        {findings.map((f) => (
+          <li key={f.title} className="border-b border-line last:border-b-0">
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0 text-sm">{f.title}</span>
+                <span className="flex items-center gap-2">
+                  <Pill tone={f.severity === 'high' ? 'bad' : 'neutral'}>{f.severity === 'high' ? 'High' : f.severity === 'medium' ? 'Medium' : 'Low'}</Pill>
+                  <CaretDownIcon weight="bold" className="size-3 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                </span>
+              </summary>
+              <div className="pb-4 text-sm leading-relaxed">
+                <p className="text-muted">{f.detail}</p>
+                <p className="mt-1"><span className="text-muted">Fix: </span>{f.fix}</p>
+              </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+
+      <figure className="mt-5 rounded-xl bg-surface px-4 py-3">
         <figcaption className="text-xs text-muted">
-          What AI search sees on your homepage, before JavaScript runs: {geo.ai_words} word{geo.ai_words === 1 ? '' : 's'}
+          What AI search sees on your homepage before JavaScript runs: {geo.ai_words} word{geo.ai_words === 1 ? '' : 's'}
         </figcaption>
-        <blockquote className="mt-2 max-w-[72ch] font-mono text-sm leading-relaxed">
+        <blockquote className="mt-2 max-w-[72ch] font-mono text-xs leading-relaxed text-ink">
           {geo.ai_view ? `${geo.ai_view}${geo.ai_words > 60 ? ' ...' : ''}` : 'Nothing. The page is empty until JavaScript runs, and most AI crawlers do not run it.'}
         </blockquote>
       </figure>
@@ -59,7 +80,7 @@ export function GeoReadiness({ geo }: { geo: Geo }) {
           {geo.notes.map((n) => <li key={n}>{n}</li>)}
         </ul>
       )}
-    </section>
+    </Card>
   )
 }
 
