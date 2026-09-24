@@ -33,14 +33,34 @@ def _brief(finding: dict) -> dict:
     return {"kind": finding["kind"], "severity": finding["severity"], "title": finding["title"], "fingerprint": fingerprint(finding)}
 
 
-def compare(previous: list[dict], current: list[dict], ignored: set[str] | dict = frozenset()) -> dict:
+def compare(previous: list[dict], current: list[dict], ignored: set[str] | dict = frozenset(), *,
+            prev_pages: dict | None = None, cur_pages: dict | None = None, audited: list[str] | None = None) -> dict:
+    """Finding by finding, and page by page where the reports know the pages. A finding that vanished only because
+    none of its pages were audited this time is "not re-checked", never "fixed"."""
     before = [p for p in previous if fingerprint(p) not in ignored]
     after = [c for c in current if fingerprint(c) not in ignored]
-    return {
-        "fixed": [_brief(p) for p in before if not any(_same(p, c) for c in after)],
-        "still_broken": [_brief(c) for c in after if any(_same(c, p) for p in before)],
-        "new": [_brief(c) for c in after if not any(_same(c, p) for p in before)],
-    }
+    prev_pages, cur_pages, seen = prev_pages or {}, cur_pages or {}, set(audited or [])
+    fixed, not_rechecked, still = [], [], []
+    for p in before:
+        if any(_same(p, c) for c in after):
+            continue
+        was = prev_pages.get(fingerprint(p), [])
+        if was and audited is not None and not seen & set(was):
+            not_rechecked.append(_brief(p) | {"pages_unchecked": was})
+        else:
+            fixed.append(_brief(p))
+    for c in after:
+        match = next((p for p in before if _same(c, p)), None)
+        if match is None:
+            continue
+        was, now = prev_pages.get(fingerprint(match), []), cur_pages.get(fingerprint(c), [])
+        item = _brief(c)
+        if was or now:
+            item |= {"pages_fixed": [u for u in was if u not in now and u in seen], "pages_new": [u for u in now if u not in was],
+                     "pages_unchecked": [u for u in was if u not in seen]}
+        still.append(item)
+    new = [_brief(c) for c in after if not any(_same(c, p) for p in before)]
+    return {"fixed": fixed, "still_broken": still, "new": new, "not_rechecked": not_rechecked}
 
 
 def origin(url: str) -> str:
@@ -65,5 +85,7 @@ def attach(row: dict, report: dict) -> dict | None:
         ignored = db.ignored_fingerprints(user_id, site)
     except (httpx.HTTPError, db.DatabaseUnavailable):  # still useful without them (e.g. before the table is applied)
         ignored = {}
-    result = compare(previous["report"].get("findings", []), report.get("findings", []), ignored)
+    result = compare(previous["report"].get("findings", []), report.get("findings", []), ignored,
+                     prev_pages=previous["report"].get("pages"), cur_pages=report.get("pages"),
+                     audited=(report.get("site_audit") or {}).get("urls"))
     return result | {"previous_run_id": previous["id"], "previous_at": previous["created_at"]}

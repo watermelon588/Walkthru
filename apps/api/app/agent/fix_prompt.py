@@ -49,7 +49,7 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
             f"## {i}. {f['title']}",
             f"**{f['severity'].capitalize()} {f['kind']} issue.** {_mask(f['detail'])}",
             "",
-            *([f"Where: `{_mask(f['evidence'])}`"] if f.get("evidence") else []),
+            *_where(f, report.get("pages", {})),
             f"Change: {_mask(f['fix'])}",
             f'Done when: a Walkthru rerun no longer reports "{f["title"]}".',
             "",
@@ -64,6 +64,14 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def _where(finding: dict, pages: dict) -> list[str]:
+    """Every affected page when the report knows them (the evidence line shows at most 3)."""
+    urls = pages.get(fingerprint(finding), [])
+    if len(urls) > 1:
+        return [f"Where ({len(urls)} pages, fix every one):", *[f"- {u}" for u in urls], ""]
+    return [f"Where: `{_mask(finding['evidence'])}`"] if finding.get("evidence") else []
 
 
 def _fix_for(finding: dict, fixes: dict) -> dict | None:

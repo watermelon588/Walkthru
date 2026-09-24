@@ -60,3 +60,12 @@ def test_free_plan_gets_402_and_paid_gets_markdown(fake_db, passes):
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/markdown") and "Stripe live key" in r.text
     d = c.get("/runs/r1/fix-prompt", params={"download": 1})
     assert "walkthru-fixes.md" in d.headers["content-disposition"]
+
+
+def test_every_affected_page_is_listed_not_just_three():
+    pages = [f"https://site.test/p{i}" for i in range(7)]
+    report = {"findings": [{"kind": "geo", "severity": "low", "title": "Few section headings", "detail": "d", "fix": "x",
+                            "evidence": ", ".join(pages[:3])}],
+              "pages": {compare.fingerprint({"kind": "geo", "title": "Few section headings"}): pages}}
+    text = fix_prompt.build(RUN, report, {}, "full")
+    assert all(p in text for p in pages) and "7 pages" in text

@@ -121,6 +121,8 @@ _Last updated: 2026-09-24_
   - **Claude Haiku 4.5:** wired for Pro and Plus through Google Cloud (`anthropic[vertex]`, approved), off until `CLAUDE_VERTEX_PROJECT` is set. Reports state which models ran. The spec's product rule is reworded (see docs/decisions.md).
   - 164 API tests; web build and lint green.
 
+- **Fix loop tested by the founder (2026-09-24).** A real fix prompt was applied to the showcase fixture and the rerun compared correctly (2 fixed, 0 new, 3 still broken). Two gaps it exposed are fixed: the prompt now lists every affected page (it showed at most 3), and the comparison works page by page, with a "not re-checked" state so a crawl limit cannot make a finding look fixed. The comparison now shows first on the report. 167 API tests.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.

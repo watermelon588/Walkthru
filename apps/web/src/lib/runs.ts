@@ -54,7 +54,15 @@ export type Finding = {
   evidence: string | null
 }
 
-export type Compared = { kind: Finding['kind']; severity: Finding['severity']; title: string; fingerprint: string }
+export type Compared = {
+  kind: Finding['kind']
+  severity: Finding['severity']
+  title: string
+  fingerprint: string
+  pages_fixed?: string[]
+  pages_new?: string[]
+  pages_unchecked?: string[]
+}
 
 export type Report = {
   summary: string
@@ -75,7 +83,8 @@ export type Report = {
     fixes_total?: number
   } | null
   model?: string | null
-  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[] } | null
+  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[] } | null
+  pages?: Record<string, string[]>
   site_audit?: {
     pages_scanned: number
     page_limit: number

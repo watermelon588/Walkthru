@@ -12,6 +12,7 @@ from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from app.agent import compare
 from app.agent.schema import Finding, FirstImpression, Report, Synthesis
 from app.scans import accessibility, email, fetch, performance, security, seo, site
 
@@ -37,6 +38,7 @@ class ReportState(TypedDict, total=False):
     site_audit: dict
     geo: list[dict]
     geo_summary: dict
+    finding_pages: dict  # finding fingerprint -> every affected page (code only, never the model)
     paid: bool  # paid plans get GEO scored on every audited page, free on the homepage
     production_like: bool
     final_controls: list[str]  # labels of the buttons, links and fields on the page where the journey ended
@@ -113,6 +115,7 @@ def site_scan(state: ReportState) -> dict:
             "seo": [finding.model_dump() for finding in result.seo],
             "geo": [finding.model_dump() for finding in result.geo.findings] if result.geo else [],
             "geo_summary": result.geo.summary() if result.geo else {},
+            "finding_pages": {compare.fingerprint({"kind": kind, "title": title}): urls for kind, title, urls in result.pages},
             "security": [finding.model_dump() for finding in result.security + mail],
             "notes": [mail_note] if mail_note else [],
             "seo_measured": result.coverage.pages_scanned > 0,
@@ -405,6 +408,7 @@ def synthesize(state: ReportState) -> dict:
         site_audit=state.get("site_audit"),
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),
+        pages=state.get("finding_pages") or {},
     )
     return {"synthesis": report.model_dump(), "tokens": used}
 
