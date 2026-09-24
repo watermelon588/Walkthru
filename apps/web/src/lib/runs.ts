@@ -108,7 +108,7 @@ export const PERSONA_LABEL: Record<string, string> = {
 
 export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
 
-const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'
 
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */

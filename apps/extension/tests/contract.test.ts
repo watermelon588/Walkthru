@@ -1,11 +1,11 @@
-/** Snapshot -> API contract. Runs only when the API (:8000) and fixtures (:8101) are up and
+/** Snapshot -> API contract. Runs only when the API (:8010) and fixtures (:8101) are up and
  *  WALKTHRU_TOKEN holds a Supabase access token (see apps/api/scripts/test_user.py).
  *  Start the "api" and "fixtures" launch configs, then: WALKTHRU_TOKEN=... npx vitest run tests/contract.test.ts */
 
 import { JSDOM } from "jsdom";
 import { snapshot } from "../lib/snapshot";
 
-const API = "http://127.0.0.1:8000";
+const API = "http://127.0.0.1:8010";
 const EASY = "http://127.0.0.1:8101";
 
 async function up(url: string) {

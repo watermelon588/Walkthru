@@ -31,7 +31,7 @@ evals/           Fixture sites (fixtures/easy, fixtures/hard, traps.json, serve.
 ## Commands
 ```
 # everything at once (DEV ONLY; remove dev.py and dev.cmd before production)
-.\dev              # API :8000, web :5173, fixtures :8101/:8102, extension build
+.\dev              # API :8010, web :5173, fixtures :8101/:8102, extension build
 
 # web
 cd apps/web && npm install
