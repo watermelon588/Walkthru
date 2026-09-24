@@ -78,6 +78,13 @@ _Last updated: 2026-09-24_
   - Runs that end as `safe_stop` now point the owner to `/docs#verify`, in the report (screen only) and in the side-panel result. Not seen rendered yet: needs a real safe_stop run.
   - Verified: web build and oxlint clean, extension tsc/oxlint/27 vitest/WXT build clean, Impeccable detector clean, browser check of docs, privacy, 404, landing menu, app shell (phone drawer and desktop sidebar via a temporary unguarded route, since removed) and the extension panel. Not verified live: the verification panel's ready state (needs a signed-in session; error state checked).
 
+- **V1 server-owned plans (2026-09-24).**
+  - `app/plans.py` holds the plan limits. `POST /runs` ignores the client's tier and enforces logged-in access, test users, steps (12 free, 30 paid), runs per month or pass, sites per plan, and a `FREE_RUNS_PER_DAY` capacity guard.
+  - `GET /me/plan` feeds the side panel (runs left, locked options) and the dashboard.
+  - New `entitlements` table, applied to Supabase. `scripts/grant_plan.py` gives dev passes.
+  - Checked live: a free account claiming `tier: paid` got 403 on a logged-in run and 402 once its 3 runs were used; a Pro dev pass ran a logged-in skeptic journey and counted it.
+  - 111 API tests, 27 extension tests; web and extension builds green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -92,7 +99,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
 - **Plus opens:** 2026-11-22 at the latest.
 
-1. **Next session (1):** V1 server-owned plans with the dev grant script. Today the client picks its own tier, so no plan limit is real.
+1. **Next session (2):** V2 GEO readiness scanner. V1 server-owned plans is done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.

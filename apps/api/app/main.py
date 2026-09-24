@@ -2,7 +2,6 @@ import logging
 import os
 import time
 import uuid
-from typing import Literal
 from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
@@ -13,7 +12,7 @@ from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
-from app import auth, db, deliver, retention
+from app import auth, db, deliver, plans, retention
 from app.agent import report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -66,12 +65,13 @@ def health() -> dict[str, str]:
 
 
 class StartRun(BaseModel):
+    # No tier field: the plan comes from the caller's entitlement (app/plans.py). Older clients that
+    # still send `tier` are accepted and ignored.
     site: str = Field(pattern=r"^https?://", max_length=2000)
     goal: str = Field(min_length=1, max_length=500)
     persona: str = Field(default="first_timer", max_length=40)
-    tier: Literal["free", "paid"] = "free"
     logged_in: bool = False
-    max_steps: int = Field(default=12, ge=1, le=MAX_STEPS)
+    max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)  # clamped to the plan
     observation: Observation
 
 
@@ -102,14 +102,23 @@ def _owned(run_id: str, user: dict) -> dict:
     return row
 
 
+@app.get("/me/plan")
+def my_plan(user: dict = Depends(require_user)) -> dict:
+    return plans.summary(plans.current(user["id"]))
+
+
 @app.post("/runs")
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    usage = plans.current(user["id"])
+    plans.check_start(usage, site=body.site, persona=body.persona, logged_in=body.logged_in)
+    plan = usage["plan"]
+    tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
+    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in, email=user.get("email"))
     verified = _verified(body.site, user["id"])  # owner-verified domains may send real messages after confirmation
-    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000], "verified": verified}
-    result = runtime.invoke(body.tier, state, _cfg(run_id))
-    return _reply(run_id, body.tier, result, background)
+    state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000], "verified": verified}
+    result = runtime.invoke(tier, state, _cfg(run_id))
+    return _reply(run_id, tier, result, background)
 
 
 @app.post("/runs/{run_id}/observe")
@@ -297,6 +306,7 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "evidence_retention_days": retention.RETENTION_DAYS,
         "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
         "runs": db.runs_for_user(user["id"]),
+        "passes": db.entitlements_for_user(user["id"]),
     }
 
 

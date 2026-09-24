@@ -52,7 +52,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | Security hygiene | Headers, TLS, cookies | + exposed files and leaked keys on verified domains | Same as Launch Pack | Same as Launch Pack |
 | One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
 | Evidence report with screenshots, PDF | Web report | PDF | PDF | PDF with your own logo, no Walkthru branding |
-| Verified sites | 1 | 1 | 2 | 5 |
+| Sites tested per month or pass (local dev servers do not count) | 1 | 1 | 2 | 5 |
 | Shareable public report with AI readiness badge | Yes | Yes | Yes | Yes |
 
 **GEO in every plan.** GEO checks are deterministic, so they cost nothing in model calls:

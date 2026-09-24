@@ -25,5 +25,5 @@ export function sameOrigin(a: string, b: string): boolean {
   }
 }
 
-export const MAX_STEPS = 25;
+export const MAX_STEPS = 30;
 export const MAX_MINUTES = 4;

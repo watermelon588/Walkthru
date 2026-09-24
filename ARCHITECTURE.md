@@ -57,7 +57,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 
 | Module id | Responsibility | Depends on | Status |
 |---|---|---|---|
-| `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Planned |
+| `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Built 2026-09-24 |
 | `geo-scan` | AI readiness score, GEO findings, "what AI search sees" label | site audit (live) | Planned |
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
@@ -79,7 +79,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 
 ### `entitlements`
 - `app/plans.py`: one dict of plans (free, launch, pro, plus) with limits: runs per period, max steps, logged-in allowed, test users, verified sites, SEO and GEO pages, compare, watch, pdf, white label. No config classes.
-- Table `entitlements(id, user_id, plan, starts_at, expires_at, runs_granted, source, created_at)`.
+- Table `entitlements(id, user_id, plan, starts_at, expires_at, runs_granted, source, created_at)`, owner-readable under RLS, deleted with the account. `scripts/grant_plan.py` grants dev and founder passes.
   - `source` is `founder`, `dodo` or `promo`.
   - V1 rows are inserted by the founder (payment.md concierge flow). Later a verified Dodo webhook writes them.
   - Balances follow payment.md's append-only ledger when billing lands.
@@ -89,9 +89,10 @@ Dependency direction is one way. `entitlements` comes first because every paid p
   - Rejects `logged_in` on free.
   - Clamps `max_steps` to the plan.
   - Rejects a persona outside the plan.
-  - Rejects a site beyond the verified-site count.
+  - Rejects a new site beyond the plan's site count for the month or pass. Local dev servers never count.
   - Returns 402 with a plain message when runs are used up.
 - `GET /me/plan` returns the plan, its limits and runs left, so the side panel and dashboard show them.
+- The persona graph's `tier` (`free` or `paid`) is now derived from the plan and only selects model routing.
 - Global free-capacity guard: `FREE_RUNS_PER_DAY` (default 90, about 80% of the Groq free budget of 3 models × 1,000 requests a day ÷ about 27 calls per run). Past it, free runs get "Free test capacity is used up for today"; paid runs continue on the full chain.
 
 ### `geo-scan`

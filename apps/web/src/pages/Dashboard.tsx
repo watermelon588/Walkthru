@@ -7,7 +7,7 @@ import { ReadinessPipeline } from '../components/ReadinessPipeline'
 import { StatusPill } from '../components/ReportView'
 import { btnGhost, ScanForm } from '../components/Shared'
 import { useSession } from '../lib/auth'
-import { listRuns, PERSONA_LABEL, stopRun, timeAgo, type Run } from '../lib/runs'
+import { getPlan, listRuns, PERSONA_LABEL, stopRun, timeAgo, type PlanSummary, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
 
@@ -86,6 +86,7 @@ export default function Dashboard() {
             </p>
           )}
           <ConnectExtension />
+          <PlanLine />
         </div>
       </div>
 
@@ -182,6 +183,24 @@ export default function Dashboard() {
 
 
 /** Hands the current session to the extension so it can call the API as you. Only the extension we name receives it. */
+const PLAN_NAME: Record<PlanSummary['plan'], string> = { free: 'Free plan', launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
+
+/** Runs left in the current month or pass. Quiet when the API cannot be reached: the runs list says so already. */
+function PlanLine() {
+  const [plan, setPlan] = useState<PlanSummary | null>(null)
+  useEffect(() => {
+    getPlan().then(setPlan).catch(() => setPlan(null))
+  }, [])
+  if (!plan) return null
+  const until = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null
+  const window = plan.plan === 'free' ? `this month${until ? `, renews ${until}` : ''}` : `in your pass${until ? `, until ${until}` : ''}`
+  return (
+    <p role="status" className="font-mono text-xs text-muted md:text-right">
+      {PLAN_NAME[plan.plan]}: {plan.runs_left} of {plan.runs_allowed} test runs left {window}
+    </p>
+  )
+}
+
 function ConnectExtension() {
   const { session } = useSession()
   const [msg, setMsg] = useState<string | null>(null)
