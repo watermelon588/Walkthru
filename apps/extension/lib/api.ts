@@ -20,8 +20,11 @@ export type StepEvidence = {
 };
 
 export type RunReply =
-  | { run_id: string; status: "running"; action: Step & { url: string }; verified?: boolean }
-  | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "stopped" | "safe_stop"; steps: (Step & { url: string })[] };
+  | { run_id: string; status: "running"; action: Step & { url: string }; verified?: boolean; plan?: GoalPlan }
+  | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "stopped" | "safe_stop" | "looping"; steps: (Step & { url: string })[]; plan?: GoalPlan };
+
+/** How the API understood the typed goal (apps/api/app/agent/goal.py). */
+export type GoalPlan = { intent: string; checkpoints: string[] };
 
 export type StopReply = {
   run_id: string;

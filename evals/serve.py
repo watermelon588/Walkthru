@@ -1,6 +1,6 @@
 """Serve the fixture sites with per-site response headers.
 
-    python evals/serve.py        # easy on :8101, hard on :8102
+    python evals/serve.py        # easy on :8101, hard on :8102, showcase on :8103
 
 `easy` gets sane security headers; `hard` gets none plus a leaky Server header and
 an insecure cookie. Static http.server cannot set headers, hence this file.
@@ -29,6 +29,7 @@ HEADERS = {
         "Set-Cookie": "session=abc; Path=/",  # X2 no Secure / HttpOnly
     },
 }
+HEADERS["showcase"] = HEADERS["easy"]  # a well-built site: good headers, strong GEO, deliberate journey traps
 # X3: exposed files. Stored under exposed/ because git ignores .env and cannot track a nested .git.
 EXPOSED = {"/.env": "/exposed/env", "/.git/config": "/exposed/git-config"}
 
@@ -104,7 +105,8 @@ def start(site: str, port: int) -> ThreadingHTTPServer:
 if __name__ == "__main__":
     start("easy", 8101)
     start("hard", 8102)
-    print("easy http://127.0.0.1:8101  hard http://127.0.0.1:8102  (Ctrl+C to stop)")
+    start("showcase", 8103)
+    print("easy http://127.0.0.1:8101  hard http://127.0.0.1:8102  showcase http://127.0.0.1:8103  (Ctrl+C to stop)")
     try:
         threading.Event().wait()
     except KeyboardInterrupt:

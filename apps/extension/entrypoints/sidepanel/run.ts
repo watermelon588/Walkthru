@@ -1,6 +1,6 @@
 /** The step loop. Lives here (side panel page) because Chrome suspends the MV3 worker. */
 
-import { observe, startRun, stopRun, type RunReply, type StepEvidence } from "../../lib/api";
+import { observe, startRun, stopRun, type GoalPlan, type RunReply, type StepEvidence } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
@@ -15,6 +15,7 @@ export type Progress = {
   message?: string;
   runId?: string;
   evidenceWarning?: string;
+  plan?: GoalPlan; // sent once, right after the run starts
 };
 
 const SETTLE_MS = 1200;
@@ -44,6 +45,15 @@ async function ensureContentScript(tabId: number) {
 async function send<T>(tabId: number, msg: unknown): Promise<T> {
   await ensureContentScript(tabId);
   return chrome.tabs.sendMessage(tabId, msg);
+}
+
+/** The current tab's snapshot, for goal suggestions. Null when the page cannot be read yet (no permission, chrome:// pages). */
+export async function snapshotActiveTab(): Promise<Observation | null> {
+  try {
+    return await send<Observation>((await activeTab()).id!, { type: "snapshot" });
+  } catch {
+    return null;
+  }
 }
 
 async function setAgentStatus(tabId: number, state: AgentState, activity: string) {
@@ -94,6 +104,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     let obs = await send<Observation>(tabId, { type: "snapshot" });
     let reply = await startRun({ ...opts, observation: obs });
     runId = reply.run_id;
+    if (reply.plan) emit({ plan: reply.plan });
     // Owner-verified domains may send real messages, but only after the owner approves each one.
     opts = { ...opts, verified: reply.status === "running" && reply.verified === true };
 

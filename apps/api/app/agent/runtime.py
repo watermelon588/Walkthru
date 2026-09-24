@@ -143,13 +143,14 @@ def unwrap(result: Any) -> tuple[Any, int]:
 
 
 @lru_cache(maxsize=8)
-def structured(schema: type[BaseModel]):
-    return free_pool(schema, writer=True)  # only the report calls come through here
+def structured(schema: type[BaseModel], fast: bool = False):
+    return free_pool(schema, writer=not fast)  # report text waits for the careful writer; fast calls do not
 
 
-def call(schema: type[BaseModel], messages: list) -> tuple[Any, int]:
-    """One LLM call returning (parsed schema instance, tokens used)."""
-    return unwrap(structured(schema).invoke(messages))
+def call(schema: type[BaseModel], messages: list, fast: bool = False) -> tuple[Any, int]:
+    """One LLM call returning (parsed schema instance, tokens used). fast=True skips the slow report writer
+    (used before a run starts, where the owner is waiting)."""
+    return unwrap(structured(schema, fast).invoke(messages))
 
 
 def make_checkpointer():

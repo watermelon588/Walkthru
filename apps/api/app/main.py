@@ -13,7 +13,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
 from app import auth, db, deliver, plans, retention
-from app.agent import report, runtime
+from app.agent import goal, report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
@@ -113,12 +113,19 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     plans.check_start(usage, site=body.site, persona=body.persona, logged_in=body.logged_in)
     plan = usage["plan"]
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
+    # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
+    goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"))
+    if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
+        raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in, email=user.get("email"))
     verified = _verified(body.site, user["id"])  # owner-verified domains may send real messages after confirmation
-    state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000], "verified": verified}
+    state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
+                                            "first_text": body.observation.text[:6000], "verified": verified, "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
-    return _reply(run_id, tier, result, background)
+    reply = _reply(run_id, tier, result, background)
+    # The side panel shows how Walkthru understood the goal.
+    return reply | {"plan": {"intent": goal_plan["intent"], "checkpoints": [c["description"] for c in goal_plan["checkpoints"]]}}
 
 
 @app.post("/runs/{run_id}/observe")
@@ -208,6 +215,7 @@ def finish_run(run_id: str, values: dict) -> None:
             verified=verified,
             final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
             paid=row.get("tier") == "paid",  # GEO on every audited page for paid plans (SPEC.md)
+            intent=(values.get("plan") or {}).get("intent", ""),
         )
         rep.tokens += values.get("tokens", 0)
         db.set_report(run_id, rep.model_dump())

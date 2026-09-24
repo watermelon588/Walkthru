@@ -36,6 +36,15 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: pytest per category on fixture HTML (SPA shell, blocked OAI-SearchBot, valid and broken JSON-LD, missing H1); a live Instant Scan of the portfolio returns a score in 20 s or less.
   - Files: `app/scans/geo.py` (new), `app/agent/schema.py`, `app/agent/report.py`, `ReportView.tsx`, `tests/test_geo.py` (new).
 
+### Session 2b (09-24, added after the portfolio loop run)
+- [x] **V22 Goal intent and loop guards** (M), done 2026-09-24
+  - `app/agent/goal.py`: one fast model call turns the typed goal into an intent and 1 to 4 checkpoints; unsafe or off-site goals get 422 before a run is used; an outage falls back to the typed goal.
+  - The test user sees the checklist and where each step led; code ends the run when the last checkpoint is reached (by URL marker or the model's `progress`).
+  - Guards: a third arrival at the same page ends the run as `looping` (Walkthru's limit, never a site finding); scroll position is part of the observation and of the stuck check; a click that changes nothing is recorded.
+  - Report: the owner's Stop is never a problem step; the planner's intent is given to the report writer.
+  - Side panel: goal suggestions read from the page's links; shows how the goal was understood.
+  - `evals/fixtures/showcase` (:8103): strong GEO plus journey traps (circular stories, cookie banner, newsletter pop-up, dead button, new-tab and external links, content hidden until scrolled, Pay and Delete buttons).
+
 ### Session 3 (09-30 to 10-01)
 - [ ] **V3 GEO traps and Checkpoint B** (S)
   - Accept:

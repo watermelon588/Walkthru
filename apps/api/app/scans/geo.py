@@ -221,8 +221,9 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
             findings.append(_f("low", "Your site never states its name in a machine-readable way",
                                "There is no og:site_name and no Organization or WebSite name, so assistants have to guess what to call you.",
                                "Add <meta property=\"og:site_name\" content=\"Your name\"> and an Organization name in JSON-LD.", root_url))
-        if not (groups[0] and groups[1]):
-            findings.append(_f("low", "No about or contact link on the homepage",
+        missing = [name for name, ok in (("about", groups[0]), ("contact", groups[1])) if not ok]
+        if missing:
+            findings.append(_f("low", f"No {' or '.join(missing)} link on the homepage",
                                "Assistants and people look for who is behind a product before recommending it.",
                                "Link to an about page and a contact page from the homepage header or footer.", root_url))
 

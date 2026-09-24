@@ -154,3 +154,20 @@ This approves the official `mcp` Python SDK when V20 is built.
 - Plans are `entitlements` rows granted by `scripts/grant_plan.py`.
 - No plan uses a paid model.
 - Payments run in Dodo test mode.
+
+## 2026-09-24 Goal intent before execution; no matplotlib charts
+
+**Context:**
+- A real run on the founder's portfolio reached its goal at step 2, then circled four "NEXT CASE" pages until the owner stopped it at step 11.
+- The report then blamed the site for the loop, and counted the owner's Stop as "user confusion".
+
+**Decisions:**
+- **Goal planner.** Every run starts with a goal planner (one fast model call): an intent plus a checklist, with the finish checked in code. A goal that asks to pay, delete or attack is refused before a run is used.
+- **Looping guard.** It stops circles as `looping`, Walkthru's own limit.
+- **Owner Stop.** It is never evidence against the site.
+- **Suggested goals.** They come from the page's own links, in plain code.
+- **Charts: no matplotlib charts for now.**
+  - Single reports hold too little data for a chart to add insight.
+  - matplotlib is a heavy server dependency producing static, theme-blind images.
+  - The PDF is the printed web page.
+  - Charts come back for trends over time (score and fixed/new findings across reruns) once rerun-compare (V4) and watch (V12) produce that data, drawn as inline SVG in React.
