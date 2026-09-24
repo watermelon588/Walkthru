@@ -14,7 +14,7 @@ From the repository root in PowerShell or cmd:
 .\dev
 ```
 
-This builds the extension and starts the API (:8000), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
+This builds the extension and starts the API (:8010), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
 
 ### Test any live site end to end (development)
 
@@ -32,11 +32,11 @@ To test a real send on the easy fixture as a verified owner, write your account'
 
 Copy each block into a separate PowerShell terminal from the repository root. Copy `apps/api/.env.example` and `apps/web/.env.example` to `.env` and fill in the required keys first.
 
-### 1. API: http://127.0.0.1:8000
+### 1. API: http://127.0.0.1:8010
 
 ```powershell
 cd apps/api
-.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8010
 ```
 
 ### 2. Web app: http://127.0.0.1:5173
@@ -72,7 +72,7 @@ After rebuilding, click **Reload** on the Walkthru extension card.
 
 ## End-to-end test
 
-1. Confirm API health at http://127.0.0.1:8000/health.
+1. Confirm API health at http://127.0.0.1:8010/health.
 2. Sign in at http://127.0.0.1:5173/login.
 3. Open http://127.0.0.1:8101 for the easy flow or http://127.0.0.1:8102 for the hard flow.
 4. Open the Walkthru side panel from its Chrome toolbar icon.

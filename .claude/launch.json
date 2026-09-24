@@ -7,7 +7,7 @@
       "runtimeArgs": [
         "dev.py"
       ],
-      "port": 8000
+      "port": 8010
     },
     {
       "name": "web",
@@ -42,11 +42,11 @@
         "app.main:app",
         "--reload",
         "--port",
-        "8000",
+        "8010",
         "--app-dir",
         "apps/api"
       ],
-      "port": 8000
+      "port": 8010
     },
     {
       "name": "fixtures",

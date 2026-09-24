@@ -4,6 +4,7 @@
     .venv/Scripts/python scripts/grant_plan.py EMAIL plus 7          # Plus for 7 days
     .venv/Scripts/python scripts/grant_plan.py EMAIL launch --source founder   # a concierge pass (payment.md)
     .venv/Scripts/python scripts/grant_plan.py EMAIL --revoke        # back to free now
+    .venv/Scripts/python scripts/grant_plan.py EMAIL --show          # current plan, changes nothing
 
 Test paid plans without spending money: grant a pass to the local test account (scripts/test_user.py).
 """
@@ -18,7 +19,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-from app import db, plans  # noqa: E402
+from app import db, plans
 
 
 def user_id_for(email: str) -> str:
@@ -44,15 +45,18 @@ def main() -> None:
     ap.add_argument("--runs", type=int, help="runs in the pass (default: the plan's allowance)")
     ap.add_argument("--source", default="dev", choices=["dev", "founder", "promo"])
     ap.add_argument("--revoke", action="store_true", help="end every active pass now")
+    ap.add_argument("--show", action="store_true", help="print the current plan and change nothing")
     args = ap.parse_args()
 
     user_id = user_id_for(args.email)
-    if args.revoke:
+    if args.show:
+        pass
+    elif args.revoke:
         db.expire_entitlements(user_id)
     elif args.plan:
         db.grant_entitlement(user_id, args.plan, args.days, args.runs or plans.PLANS[args.plan].runs, args.source)
     else:
-        ap.error("give a plan or --revoke")
+        ap.error("give a plan, --revoke or --show")
     print(plans.summary(plans.current(user_id)))
 
 

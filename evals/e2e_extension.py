@@ -30,7 +30,7 @@ from websockets.sync.client import connect
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(ROOT, "apps", "api", ".env"))
-API = os.environ.get("WALKTHRU_API", "http://127.0.0.1:8000")
+API = os.environ.get("WALKTHRU_API", "http://127.0.0.1:8010")
 WEB = os.environ.get("WEB_URL", "http://localhost:5173")
 SB, PUB = os.environ["SUPABASE_URL"], os.environ["SUPABASE_PUBLISHABLE_KEY"]
 INJECT = os.path.join(ROOT, "apps", "extension", ".output", "chrome-mv3", "inject.js")

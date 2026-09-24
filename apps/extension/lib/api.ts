@@ -3,7 +3,7 @@
 import type { Observation } from "./snapshot";
 import type { Step } from "./execute";
 
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8010";
 export const WEB_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:5173";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
