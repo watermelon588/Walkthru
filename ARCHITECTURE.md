@@ -94,6 +94,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - `GET /me/plan` returns the plan, its limits and runs left, so the side panel and dashboard show them.
 - The persona graph's `tier` (`free` or `paid`) is now derived from the plan and only selects model routing.
 - Global free-capacity guard: `FREE_RUNS_PER_DAY` (default 90, about 80% of the Groq free budget of 3 models × 1,000 requests a day ÷ about 27 calls per run). Past it, free runs get "Free test capacity is used up for today"; paid runs continue on the full chain.
+- `FREE_SCANS_PER_DAY` (default 200, 2 model calls each) caps Instant Scans the same way. Both caps count today's `runs` rows, so every API process shares them with no extra table. The per-address limit (5 scans an hour) stays in process memory: production runs one API process; move it to a table only if that changes.
 
 ### `geo-scan`
 - `app/scans/geo.py`: `audit(root, pages, robots_text, llms, bot_probe) -> GeoResult(score, categories, findings)`. It uses pages the site audit already fetched.

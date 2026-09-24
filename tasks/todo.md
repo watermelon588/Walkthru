@@ -109,7 +109,8 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
     - Domain and HTTPS.
     - Vercel with SPA rewrites.
     - API on the VM under process supervision, with `CHECKPOINTER=postgres`.
-    - Postgres-backed scan limiter, plus a global `FREE_SCANS_PER_DAY` cap: Instant Scans use the same free models as runs (2 calls each), and today only runs have a daily cap.
+    - [x] Global `FREE_SCANS_PER_DAY` cap (done 2026-09-24, counted from `runs` rows, so shared across processes).
+    - One API process on the VM, so the in-memory per-address scan limit holds; a Postgres-backed one only if the API ever runs several processes.
     - Production CORS and extension origin.
     - Secrets rotated.
     - Error logging and a health check.

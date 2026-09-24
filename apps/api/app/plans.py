@@ -35,6 +35,9 @@ PLANS = {
 }
 # About 80% of the free model budget: 3 Groq models x 1,000 requests a day / ~27 calls per run (ROADMAP weak point 12).
 FREE_RUNS_PER_DAY = int(os.environ.get("FREE_RUNS_PER_DAY", "90"))
+# Instant Scans use the same free models (2 report calls each): 200 scans is 400 calls, which with the runs' share
+# stays inside the 3,000 Groq requests a day.
+FREE_SCANS_PER_DAY = int(os.environ.get("FREE_SCANS_PER_DAY", "200"))
 
 
 def _site(url: str) -> str | None:
