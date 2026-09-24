@@ -26,8 +26,8 @@ def fake_db(monkeypatch):
         start = datetime.fromisoformat(since)
         return [r for r in rows.values() if r.get("user_id") == user_id and r.get("kind") == "test" and datetime.fromisoformat(r.get("created_at", since)) >= start]
 
-    def free_runs_today():
-        return sum(1 for r in rows.values() if r.get("kind") == "test" and r.get("tier") == "free")
+    def free_runs_today(kind="test"):
+        return sum(1 for r in rows.values() if r.get("kind") == kind and r.get("tier") == "free")
 
     def update_run(run_id, status, steps, tokens=0):
         rows[run_id] |= {"status": status, "steps": steps, "tokens": tokens}

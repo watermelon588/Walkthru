@@ -288,7 +288,7 @@ class ScanRequest(BaseModel):
     email: EmailStr | None = None
 
 
-_scan_hits: dict[str, list[float]] = {}  # ponytail: per-process rate limit; move to Postgres when there is more than one instance
+_scan_hits: dict[str, list[float]] = {}  # ponytail: per-process; production runs one API process. The daily cap (plans.FREE_SCANS_PER_DAY) is in the database.
 SCAN_LIMIT, SCAN_WINDOW = 5, 3600
 
 
@@ -306,6 +306,8 @@ def _rate_limit(ip: str) -> None:
 def instant_scan(body: ScanRequest, request: Request) -> dict:
     """Free homepage scan: first impression, SEO basics, security headers. Public report, no login."""
     _rate_limit(request.client.host if request.client else "?")
+    if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
+        raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
     try:
         fetch.assert_public(body.site)
     except ValueError as e:

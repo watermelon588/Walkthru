@@ -31,7 +31,7 @@ Found in the 2026-09-24 review. Each fix has a task in `tasks/todo.md`.
 | 10 | Only 4 test users, one per run; competitors run "flocks" | Side panel has 4 personas | Plus: custom test users and several test users merged in one report | V13 |
 | 11 | No trigger on deploy (CanaryUsers runs on every push) | None | Plus deploy webhook runs the server-side watch scan | V12 |
 | 12 | Free-model capacity has a ceiling | About 110 full runs a day across 3 Groq models | Global `FREE_RUNS_PER_DAY` guard with a clear message; paid runs keep the full chain; fund a paid model from revenue only | V1 |
-| 13 | Rate limiter per process; checkpointer in memory | `main.py` notes both | Postgres-backed scan limiter and `CHECKPOINTER=postgres` on the production VM | V11 |
+| 13 | Rate limiter per process; checkpointer in memory | `main.py` notes both | Daily free caps counted in the database (done 2026-09-24); one API process keeps the per-address limit valid; `CHECKPOINTER=postgres` on the production VM | V11 |
 | 14 | Report quality gate unproven | Hard-fixture recall last measured at 61% (11 of 18) on 2026-09-19 | Add GEO traps, rerun the scorer, fix misses until 80% or more (Checkpoint B) | V3 |
 | 15 | Evidence and PDF not verified in a real browser | T18 to T21 open | Fresh fixture run with screenshots, then private, public and PDF checks | V7 |
 | 16 | Not deployed, no domain | Phase 6 open | Domain, Vercel, Oracle VM, production CORS and extension origin | V11 |

@@ -103,10 +103,11 @@ def test_runs_since(user_id: str, since: str) -> list[dict]:
     return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}", "select": "site"})
 
 
-def free_runs_today() -> int:
+def free_runs_today(kind: str = "test") -> int:
+    """Free test runs (or Instant Scans, kind="scan") started today, UTC. Counted in the database, so every API process sees the same number."""
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     # ponytail: fetches ids to count them; switch to a Prefer: count=exact HEAD past a few thousand runs a day
-    return len(_rows({"kind": "eq.test", "tier": "eq.free", "created_at": f"gte.{today}", "select": "id"}))
+    return len(_rows({"kind": f"eq.{kind}", "tier": "eq.free", "created_at": f"gte.{today}", "select": "id"}))
 
 
 # ---------- entitlements (paid passes; SPEC.md "Plans", payment.md) ----------

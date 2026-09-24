@@ -77,6 +77,17 @@ def test_instant_scan_rejects_bad_input_and_rate_limits(fake_db, monkeypatch):
     assert c.post("/scans", json={"site": HARD + "/"}).status_code == 429
 
 
+def test_instant_scans_stop_at_the_daily_free_cap(fake_db, monkeypatch):
+    from app import plans
+
+    c = TestClient(app)
+    main._scan_hits.clear()
+    monkeypatch.setattr(plans, "FREE_SCANS_PER_DAY", 1)
+    assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200
+    r = c.post("/scans", json={"site": HARD + "/"})
+    assert r.status_code == 429 and "capacity" in r.json()["detail"]
+
+
 def test_share_and_email(fake_db, monkeypatch):
     from tests.conftest import USER
 

@@ -128,6 +128,7 @@ _Last updated: 2026-09-24_
   - Bug caught by the live check: the report schema capped crawl coverage at 20 pages, so the first paid report failed validation and was never saved. Fixed (50 pages, 55 scanned counting visited pages), with a test tying the schema to the crawler limits.
   - Reports that checked more than 10 pages show the page list behind "Show all N pages checked".
   - Verified: 50 pages of python.org in 13.9 s; a real Pro journey on the showcase fixture wrote a report covering all 13 pages; the public report opens the list with no overflow at 375 px and a clean console. 170 API tests, Ruff, web build and lint green.
+- **Free Instant Scan daily cap (2026-09-24).** `FREE_SCANS_PER_DAY` (default 200; each scan makes 2 free-model calls) returns 429 "Free scan capacity is used up for today". Like `FREE_RUNS_PER_DAY` it counts today's `runs` rows, so every API process shares it with no new table (live count checked: 4 of 200). The per-address limit (5 an hour) stays in memory, valid while production runs one API process. 171 API tests.
 
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
@@ -140,7 +141,7 @@ _Last updated: 2026-09-24_
 
 ## Next up
 New sessions start with handoff.md. Founder's order (2026-09-24):
-1. **Polish and harden end to end** (session 6a): V6 50-page paid crawls, V8 Launch Ready score and badge, `FREE_SCANS_PER_DAY`, a shared Postgres-backed rate limiter, `CHECKPOINTER=postgres` readiness, the slow first step, and a UI pass with the design skills.
+1. **Polish and harden end to end** (session 6a): ~~V6 50-page paid crawls~~, V8 Launch Ready score and badge, ~~`FREE_SCANS_PER_DAY`~~ (the shared limiter reduced to database-counted daily caps; see above), `CHECKPOINTER=postgres` readiness, the slow first step, and a UI pass with the design skills.
 2. **Payment gateway before launch:** V10 Dodo test mode per payment.md.
 3. **Later (6b):** deploy, Chrome Web Store, Google Cloud UPI billing with Claude switched on and the measured comparison, and OAuth, guided step by step.
 
