@@ -131,7 +131,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 ### `rerun-compare`
 - **Built as automatic comparison** (`app/agent/compare.py`), with no rerun button or `parent_run_id`: when a paid run's report is written, it is compared with the owner's previous run of the same goal (case and spacing ignored) on the same origin. The first run of a goal has no comparison. A failed comparison never loses the report.
 - **Fingerprint:** `kind:title`, lower-cased, spacing collapsed and numbers replaced ("3 more pages" matches "5 more pages"). The same rule runs in `lib/runs.ts` for the web app. Model-written UX titles also match on 50% word overlap, because their wording varies between runs.
-- **Comparison:** `report.comparison = {fixed, still_broken, new}` is computed in code after synthesis, never by the LLM.
+- **Comparison:** `report.comparison = {fixed, still_broken, new, not_rechecked}` is computed in code after synthesis, never by the LLM. Reports keep every affected page per finding (`report.pages`, from the site audit and GEO), so still-broken findings say which pages were fixed, which are new and which were not re-checked; a finding that vanished only because its pages were not audited again is `not_rechecked`, never `fixed`.
 - **Report page:** shows the three lists above the findings.
 
 ### `share-loop` (Launch Ready score and badge)

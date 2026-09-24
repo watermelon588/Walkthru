@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 from collections import OrderedDict, deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.parse import urldefrag, urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
@@ -39,6 +39,7 @@ class SiteAudit:
     coverage: AuditCoverage
     production_like: bool = False  # a local host that deliberately serves production headers (the eval fixtures)
     geo: geo.GeoResult | None = None
+    pages: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (kind, title, every affected page)
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -88,7 +89,7 @@ def _robots(text: str | None, url: str) -> RobotFileParser:
     return parser
 
 
-def _aggregate(records: list[tuple[Finding, str | None]], pages_scanned: int) -> list[Finding]:
+def _aggregate(records: list[tuple[Finding, str | None]], pages_scanned: int, page_map: list | None = None) -> list[Finding]:
     groups: OrderedDict[tuple[str, str, str], list[tuple[Finding, str | None]]] = OrderedDict()
     for finding, page_url in records:
         groups.setdefault((finding.kind, finding.title, finding.fix), []).append((finding, page_url))
@@ -98,6 +99,8 @@ def _aggregate(records: list[tuple[Finding, str | None]], pages_scanned: int) ->
     for items in groups.values():
         first = items[0][0]
         urls = list(dict.fromkeys(page for _, page in items if page))
+        if page_map is not None and urls:
+            page_map.append((first.kind, first.title, urls))  # the full list; evidence below shows only 3
         severity = max((item.severity for item, _ in items), key=severity_rank.__getitem__)
         if len(urls) <= 1:
             output.append(first.model_copy(update={"severity": severity}))
@@ -226,4 +229,6 @@ def audit(
         full=geo_full,
         local=local,
     )
-    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage, production_like, readiness)
+    page_map: list[tuple[str, str, list[str]]] = []
+    return SiteAudit(_aggregate(seo_records, len(pages), page_map), _aggregate(security_records, len(pages), page_map), coverage,
+                     production_like, readiness, page_map + readiness.pages)

@@ -40,6 +40,7 @@ class GeoResult:
     notes: list[str] = field(default_factory=list)
     fixes: list[dict] = field(default_factory=list)  # the GEO fix pack (app/scans/geo_fixes.py)
     full: bool = True
+    pages: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (kind, title, every affected page)
 
     def summary(self) -> dict:
         """The part stored in `report.geo`; findings go to the report's findings list. Free reports keep one fix and the count."""
@@ -100,6 +101,7 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
     cats: list[dict] = []
     findings: list[Finding] = []
     notes: list[str] = []
+    page_map: list[tuple[str, str, list[str]]] = []
 
     def score(cat_id: str, label: str, parts: list[tuple[float, int]]) -> None:
         measured = [(e, m) for e, m in parts if m]
@@ -159,6 +161,7 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
             shells = [u for u, h in pages[1:] if fetch.is_js_shell(h)]
             content.append((5 * (len(pages) - 1 - len(shells)) / (len(pages) - 1), 5))
             if shells:
+                page_map.append(("geo", f"{len(shells)} more page{'s' if len(shells) > 1 else ''} only render with JavaScript", shells))
                 findings.append(_f("medium", f"{len(shells)} more page{'s' if len(shells) > 1 else ''} only render with JavaScript",
                                    "AI crawlers see these pages as empty: " + ", ".join(shells[:5]),
                                    "Prerender these routes too, starting with pricing, features and docs.", ", ".join(shells[:3])))
@@ -204,11 +207,13 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
         score("answers", "Easy to quote", [(3 * sum(p[i] for p in per_page) / n, 3) for i in range(1, 6)])
         no_h2 = [u for u, _, h2, *_ in per_page if not h2]
         if no_h2:
+            page_map.append(("geo", "Few section headings", no_h2))
             findings.append(_f("low", "Few section headings",
                                "Pages with fewer than two h2 headings are harder for assistants to split into quotable answers.",
                                "Break each page into sections with descriptive h2 headings (for example 'How it works', 'Pricing', 'Who it is for').", ", ".join(no_h2[:3])))
         no_answer = [u for u, _, _, early, *_ in per_page if not early]
         if no_answer:
+            page_map.append(("geo", "No plain answer near the top", no_answer))
             findings.append(_f("low", "No plain answer near the top",
                                "None of the first paragraphs is a full sentence or two about what the page offers. Assistants quote early, self-contained paragraphs.",
                                "Open with a 25 to 50 word paragraph that says what it is, who it is for and one concrete number.", ", ".join(no_answer[:3])))
@@ -255,4 +260,4 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
     band = next(name for floor, name in BANDS if total >= floor)
     view = "" if shell else " ".join(text.split()[:60])
     fixes = geo_fixes.build(root_url, list(scope), objects, root_objects=_json_ld(root)[0], blocked=blocked, shell=shell, llms_ok=llms_ok)
-    return GeoResult(total, band, cats, findings, 0 if shell else words, view, notes, fixes, full)
+    return GeoResult(total, band, cats, findings, 0 if shell else words, view, notes, fixes, full, page_map)

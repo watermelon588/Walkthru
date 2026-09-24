@@ -159,6 +159,9 @@ class ComparedFinding(BaseModel):
     severity: str
     title: str
     fingerprint: str
+    pages_fixed: list[str] = Field(default_factory=list)  # pages where it is gone this run
+    pages_new: list[str] = Field(default_factory=list)  # pages where it appeared this run
+    pages_unchecked: list[str] = Field(default_factory=list)  # earlier pages this run did not audit
 
 
 class Comparison(BaseModel):
@@ -169,6 +172,7 @@ class Comparison(BaseModel):
     fixed: list[ComparedFinding] = Field(default_factory=list)
     still_broken: list[ComparedFinding] = Field(default_factory=list)
     new: list[ComparedFinding] = Field(default_factory=list)
+    not_rechecked: list[ComparedFinding] = Field(default_factory=list)  # gone only because its pages were not audited
 
 
 class Report(BaseModel):
@@ -183,3 +187,4 @@ class Report(BaseModel):
     geo: GeoSummary | None = None
     comparison: Comparison | None = None
     model: str | None = None  # which models ran the test and wrote the report, shown on the report
+    pages: dict[str, list[str]] = Field(default_factory=dict)  # finding fingerprint -> every affected page

@@ -33,7 +33,7 @@ def test_ignored_findings_leave_every_list():
     before = [f("security", "No HSTS header")]
     after = [f("security", "No HSTS header"), f("geo", "No llms.txt", "low")]
     ignored = {compare.fingerprint(f("security", "No HSTS header")), compare.fingerprint(f("geo", "No llms.txt"))}
-    assert compare.compare(before, after, ignored) == {"fixed": [], "still_broken": [], "new": []}
+    assert compare.compare(before, after, ignored) == {"fixed": [], "still_broken": [], "new": [], "not_rechecked": []}
 
 
 def _previous(fake_db, *, goal="Sign up for an account", site="https://site.test/", days_ago=1):
@@ -85,3 +85,22 @@ def test_a_failed_comparison_never_loses_the_report(monkeypatch, fake_db):
     monkeypatch.setattr(compare, "attach", broken)
     real_finish_run("r1", {})
     assert fake_db["r1"]["report"]["summary"] == "s"
+
+
+def test_page_level_changes_are_reported():
+    before = [f("geo", "Few section headings")]
+    after = [f("geo", "Few section headings")]
+    fp = compare.fingerprint(before[0])
+    prev_pages = {fp: ["https://s.test/contact", "https://s.test/login", "https://s.test/signup"]}
+    cur_pages = {fp: ["https://s.test/welcome"]}
+    audited = ["https://s.test/", "https://s.test/contact", "https://s.test/login", "https://s.test/signup", "https://s.test/welcome"]
+    [item] = compare.compare(before, after, prev_pages=prev_pages, cur_pages=cur_pages, audited=audited)["still_broken"]
+    assert item["pages_fixed"] == prev_pages[fp] and item["pages_new"] == ["https://s.test/welcome"] and item["pages_unchecked"] == []
+
+
+def test_a_finding_whose_pages_were_not_audited_again_is_not_called_fixed():
+    before = [f("geo", "Few section headings"), f("seo", "Missing meta description")]
+    fp = compare.fingerprint(before[0])
+    result = compare.compare(before, [], prev_pages={fp: ["https://s.test/changelog"]}, cur_pages={}, audited=["https://s.test/"])
+    assert [x["title"] for x in result["not_rechecked"]] == ["Few section headings"]
+    assert [x["title"] for x in result["fixed"]] == ["Missing meta description"]  # site-wide findings without pages stay fixed

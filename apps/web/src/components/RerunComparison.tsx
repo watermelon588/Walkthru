@@ -1,9 +1,27 @@
 import { Link } from 'react-router'
-import type { Report } from '../lib/runs'
+import type { Compared, Report } from '../lib/runs'
 
 type Comparison = NonNullable<Report['comparison']>
 
 const SHOWN = 8 // per column; the full list is in All findings
+
+function path(url: string): string {
+  try {
+    return new URL(url).pathname
+  } catch {
+    return url
+  }
+}
+
+/** Page-level detail for a finding that is still reported: where it went away and where it showed up. */
+function PageChange({ item }: { item: Compared }) {
+  const parts = [
+    item.pages_fixed?.length ? `fixed on ${item.pages_fixed.length} page${item.pages_fixed.length === 1 ? '' : 's'}` : null,
+    item.pages_new?.length ? `now on ${item.pages_new.map(path).join(', ')}` : null,
+    item.pages_unchecked?.length ? `${item.pages_unchecked.length} not re-checked` : null,
+  ].filter(Boolean)
+  return parts.length ? <span className="block text-xs text-muted">{parts.join(' · ')}</span> : null
+}
 
 /** Fixed, new and still broken against the previous run of the same goal (paid plans, apps/api/app/agent/compare.py). */
 export function RerunComparison({ comparison, linkPrevious }: { comparison: Comparison; linkPrevious: boolean }) {
@@ -13,6 +31,7 @@ export function RerunComparison({ comparison, linkPrevious }: { comparison: Comp
     { label: 'New', tone: 'text-danger', items: comparison.new },
     { label: 'Still broken', tone: 'text-ink', items: comparison.still_broken },
   ]
+  const unchecked = comparison.not_rechecked ?? []
   return (
     <section aria-labelledby="compare-title" className="report-print-section mt-12">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Since your last run</p>
@@ -30,12 +49,19 @@ export function RerunComparison({ comparison, linkPrevious }: { comparison: Comp
               {label} <span className="font-mono text-xs text-muted">{items.length}</span>
             </h3>
             <ul className="mt-2 grid gap-1.5 text-sm">
-              {items.length === 0 ? <li className="text-muted">None</li> : items.slice(0, SHOWN).map((item) => <li key={item.fingerprint}>{item.title}</li>)}
+              {items.length === 0
+                ? <li className="text-muted">None</li>
+                : items.slice(0, SHOWN).map((item) => <li key={item.fingerprint}>{item.title}<PageChange item={item} /></li>)}
               {items.length > SHOWN && <li className="text-muted">+{items.length - SHOWN} more in All findings below</li>}
             </ul>
           </div>
         ))}
       </div>
+      {unchecked.length > 0 && (
+        <p className="mt-3 text-xs leading-relaxed text-muted">
+          Not re-checked: {unchecked.map((item) => item.title).join(', ')}. Its pages were outside this run's crawl, so Walkthru does not call it fixed.
+        </p>
+      )}
     </section>
   )
 }
