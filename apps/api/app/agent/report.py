@@ -12,8 +12,8 @@ from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agent import compare
-from app.agent.schema import Finding, FirstImpression, Report, Synthesis
+from app.agent import compare, score
+from app.agent.schema import Finding, FirstImpression, LaunchReady, Report, Synthesis
 from app.scans import accessibility, email, fetch, performance, security, seo, site
 
 
@@ -413,6 +413,7 @@ def synthesize(state: ReportState) -> dict:
         model=runtime.model_label(state.get("paid", False)),
         pages=state.get("finding_pages") or {},
     )
+    report.launch_ready = LaunchReady.model_validate(score.launch_ready(report.model_dump(), state.get("status", "scan")))
     return {"synthesis": report.model_dump(), "tokens": used}
 
 

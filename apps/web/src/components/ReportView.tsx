@@ -3,6 +3,7 @@ import { EVIDENCE_RETENTION_DAYS, fingerprint, KIND_LABEL, PERSONA_LABEL, STATUS
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { LaunchReady } from './LaunchReady'
 import { FixPrompt } from './FixPrompt'
 import { GeoReadiness } from './GeoReadiness'
 import { RerunComparison } from './RerunComparison'
@@ -65,6 +66,9 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
             )}
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
           </section>
+
+          {/* `ignore` is only passed on the owner's page, so strangers on /r/ see the score but not the badge code. */}
+          {r.launch_ready && <LaunchReady score={r.launch_ready} runId={run.id} isPublic={run.public} isScan={isScan} isOwner={!!ignore} />}
 
           {/* The first thing a rerun owner wants to know. */}
           {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}

@@ -93,6 +93,8 @@ export type Report = {
     urls: string[]
     robots_respected: boolean
   } | null
+  /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
+  launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
 export type Run = {
@@ -132,7 +134,7 @@ export const PERSONA_LABEL: Record<string, string> = {
 
 export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security', geo: 'GEO' }
 
-const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
+export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'
 
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */

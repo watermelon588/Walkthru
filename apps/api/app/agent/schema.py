@@ -176,6 +176,11 @@ class Comparison(BaseModel):
     not_rechecked: list[ComparedFinding] = Field(default_factory=list)  # gone only because its pages were not audited
 
 
+class LaunchReady(BaseModel):
+    score: int | None = Field(default=None, ge=0, le=100)  # None when no area was measured
+    areas: dict[str, int | None] = Field(default_factory=dict)  # ux, security, geo, seo, speed; None = not measured
+
+
 class Report(BaseModel):
     summary: str
     first_impression: FirstImpression | None = None
@@ -189,3 +194,4 @@ class Report(BaseModel):
     comparison: Comparison | None = None
     model: str | None = None  # which models ran the test and wrote the report, shown on the report
     pages: dict[str, list[str]] = Field(default_factory=dict)  # finding fingerprint -> every affected page
+    launch_ready: LaunchReady | None = None  # app/agent/score.py; absent on reports written before 2026-09-24
