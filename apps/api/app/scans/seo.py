@@ -30,6 +30,8 @@ def check_html(html: str, url: str) -> list[Finding]:
     content = (desc.attributes.get("content") or "").strip() if desc else ""
     if not content:
         out.append(_f("high", "Missing meta description", "Search engines will pick a random snippet of page text as the summary.", "Add a meta description of 50 to 160 characters that says what the site does and for whom.", url))
+    elif len(content) < 50:
+        out.append(_f("low", "Meta description is too short", f"{len(content)} characters; search engines often replace short descriptions with text from the page.", "Write 50 to 160 characters that say what the page offers and why to click.", content))
     elif len(content) > 160:
         out.append(_f("low", "Meta description is too long", f"{len(content)} characters; it will be truncated in results.", "Keep it under 160 characters.", content[:80]))
 

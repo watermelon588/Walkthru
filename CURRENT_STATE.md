@@ -139,6 +139,10 @@ _Last updated: 2026-09-24_
   - Verified: 175 API tests; web build and lint; a real Pro journey on the showcase scored 94 (security 75 for plain http); the badge SVG, its cache header and the click redirect work live; the public page shows the score without the badge block.
   - Not verified in the browser: the owner's badge block (the browser pane is not signed in).
 
+- **Founder and co-founder briefing (2026-09-24).** `Walkthru-Briefing.pdf` at the repo root (45 pages): product, glossary, every service and report section with real screenshots, safety limits, plans, an honest audit of the free report, architecture, market, unit economics, investment, go-to-market, roadmap and the co-founder role. Source `docs/briefing/walkthru-briefing.html` (printed with headless Edge). New founder-skill outputs `founder/go-to-market.md` and `founder/product-brief.md`. Audit findings to fix before launch: the free first impression rated a clear page 0 of 3 and raised a high "value proposition unclear" finding; scans of local addresses still flag plain http as high; PageSpeed shows "not measured" until its key is set.
+
+- **Whole-crawl SEO checks from OpenSEO's audit (2026-09-24).** Broken internal links, server errors, blocked or rate-limited pages (now reported, previously skipped silently), duplicate titles, descriptions and content, thin content, dead ends, redirect chains, canonical conflicts, slow HTML, deep pages, sitemap orphans and short descriptions. Plain code in `site.py`; 176 API tests; a live python.org crawl showed no false alarms. See docs/decisions.md.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.

@@ -244,3 +244,11 @@ Steps arrive about 5 s apart even when the server answers in 1.5 s: the rest is 
 - Domain verification now runs in a background thread while the plan check and planner work (it needs only the site and the user).
 - Startup now warms both agent graphs and the planner's model clients, not just the free graph.
 - After: 7.6 to 8.8 s for the first call on the same machine. What remains is the database plan check and one planner model call.
+
+## 2026-09-24 OpenSEO's audit checks adopted; its paid data features not
+
+**Reviewed:** [every-app/open-seo](https://github.com/every-app/open-seo) (MIT, TypeScript). Keyword research, rank tracking, backlinks, competitor data and AI visibility all come from DataForSEO (paid, $50 minimum top-up; the hosted plan is $10 a month plus usage). Only its site audit is its own code.
+
+**Adopted** (rewritten in Python in `app/scans/site.py` `_site_checks`, no code copied): broken internal links, server errors, pages blocked by bot protection or rate limits (reported as "not checked" instead of silently skipped), duplicate titles, descriptions and content, thin content, dead-end pages, redirect chains, conflicting canonicals, slow HTML (production only), pages 5+ clicks deep, orphan pages from the sitemap (only when the crawl finished), and short meta descriptions. All plain code, every plan.
+
+**Not adopted:** anything that needs DataForSEO. It costs per call, needs a card, and OpenSEO already sells that data at cost plus 28%. Revisit: Google Search Console (free, the owner's real queries and indexing) after launch.
