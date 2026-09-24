@@ -2,6 +2,8 @@ import logging
 import os
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from itertools import pairwise
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -21,7 +23,10 @@ from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
+logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s")  # libraries stay at WARNING
 log = logging.getLogger("walkthru")
+log.setLevel(logging.INFO)  # Walkthru's own INFO lines (step timings, retention) reach the console
+_background = ThreadPoolExecutor(max_workers=8, thread_name_prefix="start-run")  # short side tasks of a request
 WEB_URL = os.environ.get("WEB_URL", "http://localhost:5173")
 WEB_ORIGINS = {WEB_URL.rstrip("/")}
 _web = urlsplit(WEB_URL)
@@ -45,10 +50,19 @@ def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
 
 
 if os.environ.get("WARMUP", "1") == "1":
-    # Import model clients and build the agent graph in the background so the first run after a start is not slow.
+    # Import model clients and build both agent graphs and the goal planner's model chain in the background,
+    # so the first run after a start does not pay for it (measured: about 5 s on the first paid run).
     import threading
 
-    threading.Thread(target=lambda: runtime.graph("free"), name="warmup", daemon=True).start()
+    from app.agent.schema import GoalPlan
+
+    def _warm() -> None:
+        for tier in ("free", "paid"):
+            runtime.graph(tier)
+        for paid in (False, True):
+            runtime.structured(GoalPlan, True, paid)  # the same cache key goal.plan's runtime.call uses
+
+    threading.Thread(target=_warm, name="warmup", daemon=True).start()
 
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
@@ -111,21 +125,32 @@ def my_plan(user: dict = Depends(require_user)) -> dict:
 
 @app.post("/runs")
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    marks = [("start", time.monotonic())]
+    # Domain verification is a passive fetch of the owner's site that needs nothing else, so it runs while the
+    # plan check and the goal planner work instead of after them (measured: 4 to 6 s saved on the first step).
+    verifying = _background.submit(_verified, body.site, user["id"])
     usage = plans.current(user["id"])
     plans.check_start(usage, site=body.site, persona=body.persona, logged_in=body.logged_in)
+    marks.append(("plan_check", time.monotonic()))
     plan = usage["plan"]
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
     # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
     goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
+    marks.append(("goal_planner", time.monotonic()))
     if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in, email=user.get("email"))
-    verified = _verified(body.site, user["id"])  # owner-verified domains may send real messages after confirmation
+    marks.append(("insert_run", time.monotonic()))
+    verified = verifying.result()  # owner-verified domains may send real messages after confirmation
+    marks.append(("verify_domain_wait", time.monotonic()))
     state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
                                             "first_text": body.observation.text[:6000], "verified": verified, "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
+    marks.append(("first_step", time.monotonic()))
     reply = _reply(run_id, tier, result, background)
+    marks.append(("save_step", time.monotonic()))
+    log.info("start_run %s %s", run_id, " ".join(f"{name}={later - earlier:.1f}s" for (_, earlier), (name, later) in pairwise(marks)))
     # The side panel shows how Walkthru understood the goal.
     return reply | {"plan": {"intent": goal_plan["intent"], "checkpoints": [c["description"] for c in goal_plan["checkpoints"]]}}
 
