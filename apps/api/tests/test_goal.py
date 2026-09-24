@@ -35,7 +35,7 @@ def page(path, elements=(), **extra):
 
 
 def planned(monkeypatch, *checkpoints, intent="check the flow", feasible=True, refusal=None):
-    monkeypatch.setattr(goal, "plan", lambda site, g, obs: {
+    monkeypatch.setattr(goal, "plan", lambda site, g, obs, paid=False: {
         "intent": intent, "checkpoints": [{"description": d, "url_contains": u} for d, u in checkpoints], "feasible": feasible, "refusal": refusal})
 
 
@@ -108,7 +108,7 @@ def test_unsafe_goal_is_refused_before_a_run_is_used(monkeypatch, fake_db):
 
 
 def test_planner_outage_falls_back_to_the_typed_goal(monkeypatch):
-    def down(schema, messages, fast=False):
+    def down(schema, messages, fast=False, paid=False):
         raise RuntimeError("all models busy")
 
     monkeypatch.setattr(runtime, "call", down)

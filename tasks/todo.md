@@ -79,13 +79,13 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: pytest; the report shows "ignored" with the reason.
 
 ### Session 5 (10-04 to 10-05)
-- [ ] **V5 GEO fix pack** (S)
+- [x] **V5 GEO fix pack** (S), done 2026-09-24
   - Accept:
     - `app/scans/geo_fixes.py` returns a robots.txt block, JSON-LD (Organization, WebSite, SoftwareApplication), an llms.txt draft, and a rendering fix for the framework (Vite SPA, Next.js, Lovable, Astro).
     - Paid plans see all of it; free sees one fix.
     - Copy buttons.
   - Verify: pytest that the JSON-LD parses and the robots rules allow citation bots; the SPA fixture gets the Vite fix.
-- [ ] **V15 Agent fix prompt** (S)
+- [x] **V15 Agent fix prompt** (S), done 2026-09-24
   - Accept:
     - `app/agent/fix_prompt.py` builds `full` and `chat` prompts from a stored report and the fix pack, with no model call, skipping ignored findings.
     - `GET /runs/{id}/fix-prompt` returns 402 on free, text for paid owners, and `walkthru-fixes.md` with `download=1`.
@@ -94,7 +94,11 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
     - Copy and Download buttons; on free it is locked and shows a count.
   - Verify: pytest that every finding appears once, no unmasked secret appears, and free gets 402. The chat style stays under 4,000 characters (Estimate: the Lovable and Bolt chat limit; confirm before shipping).
 
+- [x] **Claude Haiku 4.5 for Pro and Plus, wired and off** (founder approved `anthropic[vertex]` on 2026-09-24): turns on with `CLAUDE_VERTEX_PROJECT`; free chain behind it; free plans never reach it.
+
 ### Session 6 (10-06 to 10-08)
+- [ ] Founder: Google Cloud project with billing prepaid by UPI (Rs 500 to 1,000); enable Vertex AI and Claude Haiku 4.5 in Model Garden; create a service account key; set `CLAUDE_VERTEX_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS`.
+- [ ] Measured comparison, about $1 to $2: Claude Haiku 4.5 against the free chain on the same hard and showcase journeys (trap recall, false dones, speed, cost). Decide what the pricing page may claim.
 - [ ] **V11 Production and store** (M)
   - Accept:
     - Domain and HTTPS.

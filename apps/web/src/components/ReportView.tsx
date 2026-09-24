@@ -3,6 +3,7 @@ import { EVIDENCE_RETENTION_DAYS, fingerprint, KIND_LABEL, PERSONA_LABEL, STATUS
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { FixPrompt } from './FixPrompt'
 import { GeoReadiness } from './GeoReadiness'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
@@ -45,6 +46,7 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
             <span>{PERSONA_LABEL[run.persona] ?? run.persona}</span>
             {!isScan && <StatusPill status={run.status} />}
             <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+            {r?.model && <span>Test user and report: {r.model}</span>}
           </div>
         </div>
         <AgentPresence activity={agentActivity} state={agentState} phase={0.32} />
@@ -86,6 +88,10 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
           )}
 
           {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}
+
+          {ignore && r.findings.length > 0 && (
+            <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[fingerprint(f)]).length} />
+          )}
 
           {r.geo && <GeoReadiness geo={r.geo} />}
 

@@ -2,18 +2,20 @@ import logging
 import os
 import time
 import uuid
+from typing import Literal
 from urllib.parse import urlsplit
 
+import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from langgraph.types import Command
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
 from app import auth, db, deliver, plans, retention
-from app.agent import compare, goal, report, runtime
+from app.agent import compare, fix_prompt, goal, report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
@@ -114,7 +116,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     plan = usage["plan"]
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
     # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
-    goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"))
+    goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
     if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
@@ -172,6 +174,24 @@ def unignore_finding(run_id: str, fingerprint: str, user: dict = Depends(require
     row = _owned(run_id, user)
     db.clear_ignored(user["id"], compare.origin(row["site"]), fingerprint)
     return {"cleared": fingerprint}
+
+
+@app.get("/runs/{run_id}/fix-prompt")
+def get_fix_prompt(run_id: str, style: Literal["full", "chat"] = "full", download: bool = False, user: dict = Depends(require_user)) -> Response:
+    """The agent fix prompt as Markdown (paid plans). Built on request, never stored in the report, so the free plan
+    cannot read it through the report row."""
+    row = _owned(run_id, user)
+    if plans.current(user["id"])["plan"].name == "free":
+        raise HTTPException(402, "The agent fix prompt is part of the paid plans.")
+    if not row.get("report"):
+        raise HTTPException(409, "The report is not ready yet.")
+    try:
+        ignored = db.ignored_fingerprints(user["id"], compare.origin(row["site"]))
+    except (httpx.HTTPError, db.DatabaseUnavailable):
+        ignored = {}
+    text = fix_prompt.build(row, row["report"], ignored, style)
+    headers = {"Content-Disposition": 'attachment; filename="walkthru-fixes.md"'} if download else {}
+    return Response(text, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
 class StopRequest(BaseModel):

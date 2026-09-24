@@ -19,7 +19,7 @@ Plus accessibility and mobile performance evidence, and one fix list ranked by i
 - **Secondary:** agencies handing sites to clients.
 
 **Product rules:**
-- **Free reports are exactly as good as paid ones.** Plans unlock where a test can go and what happens over time, never a better answer.
+- **Every plan gets the same checks and the same honesty rules.** Code runs every SEO, GEO, security, accessibility and email check on every plan, and grounding applies to all. Pro and Plus add Claude Haiku 4.5 as the goal planner, test user and report writer, plus features for where a test can go and what happens over time. Every report says which models ran. (Founder decision 2026-09-24.)
 - **Every claim is grounded.** Findings cite a step, a URL, a header or a snippet. Walkthru never blames the site for its own stops.
 - **GEO claims are honest.** Walkthru measures readiness (can AI search fetch and understand you). It does not promise citations or rankings, and it labels low-evidence checks such as `llms.txt` as low impact.
 
@@ -30,6 +30,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | | Free | Launch Pack | Pro | Plus |
 |---|---|---|---|---|
 | Price | $0 | $9 once | $19/mo ($15 founding) | $49/mo ($39 founding) |
+| Test user and report writer | Free models (gpt-oss-120b and backups) | Claude Haiku 4.5 | Claude Haiku 4.5 | Claude Haiku 4.5 |
 | Instant Scan (no install) | 5 an hour per address, 10 pages | Included | Included | Included |
 | **AI readiness score (GEO)** | Homepage score and top 3 fixes | Full site | Full site, up to 50 pages | Full site, up to 50 pages, every site |
 | **"What AI search sees"** | Yes | Yes | Yes | Yes |

@@ -67,7 +67,7 @@ def literal_goal(monkeypatch):
     """No planner model in tests: the typed goal becomes a one-item checklist. test_goal.py sets its own plans."""
     from app.agent import goal
 
-    monkeypatch.setattr(goal, "plan", lambda site, typed, observation: goal.fallback(typed))
+    monkeypatch.setattr(goal, "plan", lambda site, typed, observation, paid=False: goal.fallback(typed))
 
 
 @pytest.fixture(autouse=True)
