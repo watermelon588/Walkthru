@@ -34,6 +34,9 @@ class ReportState(TypedDict, total=False):
     seo_measured: bool
     security_measured: bool
     site_audit: dict
+    geo: list[dict]
+    geo_summary: dict
+    paid: bool  # paid plans get GEO scored on every audited page, free on the homepage
     production_like: bool
     final_controls: list[str]  # labels of the buttons, links and fields on the page where the journey ended
     synthesis: dict
@@ -102,9 +105,11 @@ def site_scan(state: ReportState) -> dict:
     try:
         fetch.assert_public(state["site"])
         with fetch.client() as c:
-            result = site.audit(state["site"], c, verified=state.get("verified", False))
+            result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=state.get("paid", False))
         return {
             "seo": [finding.model_dump() for finding in result.seo],
+            "geo": [finding.model_dump() for finding in result.geo.findings] if result.geo else [],
+            "geo_summary": result.geo.summary() if result.geo else {},
             "security": [finding.model_dump() for finding in result.security],
             "seo_measured": result.coverage.pages_scanned > 0,
             "security_measured": result.coverage.pages_scanned > 0,
@@ -266,18 +271,7 @@ def grounded_ux(ux: list[Finding], code: list[Finding], steps: list[dict], statu
     return kept
 
 
-def is_local_site(url: str) -> bool:
-    """Local development servers: production transport, headers and speed cannot be judged there."""
-    import ipaddress
-    from urllib.parse import urlsplit
-
-    host = (urlsplit(url).hostname or "").lower()
-    if host == "localhost" or host.endswith(".localhost"):
-        return True
-    try:
-        return not ipaddress.ip_address(host).is_global
-    except ValueError:
-        return False
+is_local_site = fetch.is_local_site  # moved to app/scans/fetch.py so scans can use it too
 
 
 SYNTHESIS_SYSTEM = (
@@ -298,7 +292,7 @@ def synthesis_inputs(state: ReportState) -> dict:
     journey_findings, browser_accessibility, browser_performance = browser_findings(state.get("steps", []))
     code_findings = journey_findings + [
         Finding.model_validate(f)
-        for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("security", [])
+        for f in state.get("accessibility", []) + state.get("performance", []) + state.get("seo", []) + state.get("geo", []) + state.get("security", [])
     ]
     local = is_local_site(state["site"]) and not state.get("production_like")
     if local:
@@ -367,8 +361,10 @@ def synthesize(state: ReportState) -> dict:
             "performance": "unavailable" if local else "complete" if state.get("performance_measured", False) or browser_performance else "unavailable",
             "seo": "complete" if state.get("seo_measured", False) else "unavailable",
             "security": "unavailable" if local else "complete" if state.get("security_measured", False) else "unavailable",
+            "geo": "complete" if state.get("geo_summary") else "unavailable",
         },
         site_audit=state.get("site_audit"),
+        geo=state.get("geo_summary") or None,
     )
     return {"synthesis": report.model_dump(), "tokens": used}
 
@@ -390,10 +386,10 @@ def build_graph():
 _graph = None
 
 
-def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None) -> Report:
+def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False) -> Report:
     global _graph
     _graph = _graph or build_graph()
-    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "tokens": 0, "notes": []})
+    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "tokens": 0, "notes": []})
     report = Report.model_validate(out["synthesis"])
     report.tokens = out["tokens"]
     return report

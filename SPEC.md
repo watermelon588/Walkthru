@@ -106,7 +106,7 @@ Deterministic scanner in `apps/api/app/scans/geo.py`. It reuses the pages, `robo
 
 - **Score bands:** 0 to 35 critical, 36 to 67 foundation, 68 to 85 good, 86 to 100 excellent.
 - **Reference:** the category model adapts [geo-optimizer-skill](https://github.com/auriti-labs/geo-optimizer-skill) (MIT). It is re-weighted toward checks with evidence, and implemented on Walkthru's SSRF-safe fetcher rather than added as a dependency.
-- **"What AI search sees":** the existing first-impression call already reads the HTML before JavaScript. The report labels it that way. On a JavaScript shell it says plainly that AI search sees an empty page.
+- **"What AI search sees":** the report quotes the homepage text a crawler gets before JavaScript runs, with its word count. It is deterministic, so it is true for scans and test runs alike (a run's first impression reads the page after JavaScript, so it is not relabelled). On a JavaScript shell it says plainly that AI search sees nothing.
 - **Fix pack:** deterministic templates filled from the audited pages. They cover robots.txt rules, JSON-LD blocks, an llms.txt draft, and a rendering fix for the detected framework (Vite single-page app, Next.js, Lovable, Astro).
 
 ## Agent design, safety, tech stack

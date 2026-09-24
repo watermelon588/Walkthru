@@ -80,7 +80,7 @@ class PersonaStep(BaseModel):
 class Finding(BaseModel):
     """One problem in the report. Deterministic scans and the synthesis LLM both produce these."""
 
-    kind: Literal["ux", "accessibility", "performance", "seo", "security"]
+    kind: Literal["ux", "accessibility", "performance", "seo", "security", "geo"]
     severity: Literal["high", "medium", "low"]
     title: str = Field(max_length=120)
     detail: str = Field(max_length=600)
@@ -117,6 +117,24 @@ class SiteAuditSummary(BaseModel):
     robots_respected: bool = True
 
 
+class GeoCategory(BaseModel):
+    id: str
+    label: str
+    earned: int = Field(ge=0)
+    max: int = Field(ge=1)
+
+
+class GeoSummary(BaseModel):
+    """AI search readiness (app/scans/geo.py). Findings live in the report's findings list with kind "geo"."""
+
+    score: int = Field(ge=0, le=100)
+    band: Literal["critical", "foundation", "good", "excellent"]
+    categories: list[GeoCategory]
+    ai_words: int = Field(ge=0, description="Words of homepage text an AI crawler gets before JavaScript runs.")
+    ai_view: str = Field(default="", description="The start of that text, as the crawler reads it.")
+    notes: list[str] = Field(default_factory=list)
+
+
 class Report(BaseModel):
     summary: str
     first_impression: FirstImpression | None = None
@@ -126,3 +144,4 @@ class Report(BaseModel):
     tokens: int = 0
     checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
     site_audit: SiteAuditSummary | None = None
+    geo: GeoSummary | None = None
