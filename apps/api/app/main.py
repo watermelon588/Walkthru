@@ -13,7 +13,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
 from app import auth, db, deliver, plans, retention
-from app.agent import goal, report, runtime
+from app.agent import compare, goal, report, runtime
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
@@ -152,6 +152,28 @@ def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
 
 
+class IgnoreFinding(BaseModel):
+    fingerprint: str = Field(min_length=3, max_length=300)
+    reason: str = Field(min_length=1, max_length=200)
+
+
+@app.post("/runs/{run_id}/findings/ignore")
+def ignore_finding(run_id: str, body: IgnoreFinding, user: dict = Depends(require_user)) -> dict:
+    """Mark a finding as accepted ("won't fix") for this site. It stays in the score but leaves compare lists."""
+    row = _owned(run_id, user)
+    if plans.current(user["id"])["plan"].name == "free":
+        raise HTTPException(402, "Ignoring findings is part of the paid plans.")
+    db.set_ignored(user["id"], compare.origin(row["site"]), body.fingerprint, body.reason.strip())
+    return {"ignored": body.fingerprint}
+
+
+@app.delete("/runs/{run_id}/findings/ignore")
+def unignore_finding(run_id: str, fingerprint: str, user: dict = Depends(require_user)) -> dict:
+    row = _owned(run_id, user)
+    db.clear_ignored(user["id"], compare.origin(row["site"]), fingerprint)
+    return {"cleared": fingerprint}
+
+
 class StopRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=300)  # why the browser ended early, shown to the report
 
@@ -218,6 +240,10 @@ def finish_run(run_id: str, values: dict) -> None:
             intent=(values.get("plan") or {}).get("intent", ""),
         )
         rep.tokens += values.get("tokens", 0)
+        try:
+            rep.comparison = compare.attach(row, rep.model_dump())
+        except Exception:  # a failed comparison must never lose the report
+            log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
         db.set_report(run_id, rep.model_dump())
         if row.get("email"):
             deliver.send_report(row["email"], f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
@@ -316,6 +342,7 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
         "runs": db.runs_for_user(user["id"]),
         "passes": db.entitlements_for_user(user["id"]),
+        "ignored_findings": db.ignored_for_user(user["id"]),
     }
 
 

@@ -60,11 +60,11 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Built 2026-09-24 |
 | `geo-scan` | AI readiness score, GEO findings, "what AI search sees" text | site audit (live) | Built 2026-09-24 |
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
-| `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
+| `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Built 2026-09-24 |
 | `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Planned |
 | `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Planned |
 | `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
-| `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Planned |
+| `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Built 2026-09-24 |
 | `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
 | `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
 | `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
@@ -129,8 +129,8 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - It ends with the fingerprints the next rerun should mark fixed. That makes the rerun the verification step.
 
 ### `rerun-compare`
-- **Data:** column `runs.parent_run_id text`. `POST /runs` and `POST /scans` accept `rerun_of`; the API checks the parent belongs to the caller and has the same origin.
-- **Fingerprint:** `kind | normalized title | URL path` of each finding. Evidence text is not part of it, so reworded evidence still matches.
+- **Built as automatic comparison** (`app/agent/compare.py`), with no rerun button or `parent_run_id`: when a paid run's report is written, it is compared with the owner's previous run of the same goal (case and spacing ignored) on the same origin. The first run of a goal has no comparison. A failed comparison never loses the report.
+- **Fingerprint:** `kind:title`, lower-cased, spacing collapsed and numbers replaced ("3 more pages" matches "5 more pages"). The same rule runs in `lib/runs.ts` for the web app. Model-written UX titles also match on 50% word overlap, because their wording varies between runs.
 - **Comparison:** `report.comparison = {fixed, still_broken, new}` is computed in code after synthesis, never by the LLM.
 - **Report page:** shows the three lists above the findings.
 

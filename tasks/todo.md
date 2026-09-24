@@ -63,7 +63,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 - [x] Tests, lint and builds green; crafted free requests cannot exceed limits; recall 80% or more (82%); founder reviews one GEO report
 
 ### Session 4 (10-02 to 10-03)
-- [ ] **V4 Rerun and compare** (M)
+- [x] **V4 Rerun and compare** (M), done 2026-09-24 as automatic comparison with the previous run of the same goal (no parent_run_id); live rerun on the hard fixture: 0 fixed, 0 new, 35 still broken
   - Accept:
     - New column `runs.parent_run_id`.
     - `rerun_of` on `/runs` and `/scans`, with owner and same origin checked.
@@ -71,7 +71,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
     - The report shows the three lists and a Rerun button.
   - Verify: pytest for fingerprint and diff; 3 fixture reruns match a hand check.
   - Files: `schema.sql`, `app/main.py`, `app/agent/report.py`, `ReportView.tsx`, `Report.tsx`.
-- [ ] **V17 Ignore a finding** (S)
+- [x] **V17 Ignore a finding** (S), done 2026-09-24 (`finding_states` table needs applying: see CURRENT_STATE.md)
   - Accept:
     - Table `finding_states`. The owner marks a finding ignored, with a reason. Paid plans only.
     - Ignored items leave the fix prompt, the "new" and "still broken" lists and watch emails.

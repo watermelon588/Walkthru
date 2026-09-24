@@ -134,6 +134,33 @@ def expire_entitlements(user_id: str) -> None:
     _request("PATCH", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "expires_at": f"gt.{now}"}, json_body={"expires_at": now}, prefer="return=minimal")
 
 
+def recent_reports(user_id: str, exclude_id: str, limit: int = 20) -> list[dict]:
+    """The user's latest finished test runs with a report, newest first: candidates for rerun comparison."""
+    return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "id": f"neq.{exclude_id}", "report": "not.is.null",
+                  "select": "id,site,goal,created_at,report", "order": "created_at.desc", "limit": str(limit)})
+
+
+# ---------- ignored findings (paid plans; SPEC.md "Ignore a finding") ----------
+
+
+def ignored_fingerprints(user_id: str, origin: str) -> dict[str, str]:
+    rows = _request("GET", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "origin": f"eq.{origin}", "select": "fingerprint,reason"}) or []
+    return {r["fingerprint"]: r["reason"] for r in rows}
+
+
+def set_ignored(user_id: str, origin: str, fingerprint: str, reason: str) -> None:
+    row = {"user_id": user_id, "origin": origin, "fingerprint": fingerprint, "reason": reason, "created_at": _now()}
+    _request("POST", "/rest/v1/finding_states", json_body=row, prefer="resolution=merge-duplicates,return=minimal")
+
+
+def clear_ignored(user_id: str, origin: str, fingerprint: str) -> None:
+    _request("DELETE", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "origin": f"eq.{origin}", "fingerprint": f"eq.{fingerprint}"})
+
+
+def ignored_for_user(user_id: str) -> list[dict]:
+    return _request("GET", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "select": "*"}) or []
+
+
 def run_ids_for_user(user_id: str) -> list[str]:
     return [r["id"] for r in _rows({"user_id": f"eq.{user_id}", "select": "id"})]
 
