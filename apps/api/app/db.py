@@ -135,6 +135,12 @@ def expire_entitlements(user_id: str) -> None:
     _request("PATCH", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "expires_at": f"gt.{now}"}, json_body={"expires_at": now}, prefer="return=minimal")
 
 
+def public_reports(user_id: str) -> list[dict]:
+    """The owner's shared reports, newest first: the badge follows the latest one for its site."""
+    return _rows({"user_id": f"eq.{user_id}", "public": "eq.true", "report": "not.is.null",
+                  "select": "id,site,status,kind,created_at,report", "order": "created_at.desc", "limit": "50"})
+
+
 def recent_reports(user_id: str, exclude_id: str, limit: int = 20) -> list[dict]:
     """The user's latest finished test runs with a report, newest first: candidates for rerun comparison."""
     return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "id": f"neq.{exclude_id}", "report": "not.is.null",

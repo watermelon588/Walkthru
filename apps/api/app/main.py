@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -10,14 +11,14 @@ from urllib.parse import urlsplit
 import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from langgraph.types import Command
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
 from app import auth, db, deliver, plans, retention
-from app.agent import compare, fix_prompt, goal, report, runtime
+from app.agent import compare, fix_prompt, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
@@ -358,6 +359,34 @@ def share_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     _owned(run_id, user)
     db.set_public(run_id, True)
     return {"url": f"{WEB_URL}/r/{run_id}"}
+
+
+# ---------- Launch Ready badge (public reports only; no login) ----------
+
+
+def _badge_run(run_id: str) -> dict:
+    """The embedded report, or the owner's newer public report of the same site, so a rerun updates the badge."""
+    row = db.get_run(run_id) if re.fullmatch(r"[0-9a-f]{32}", run_id) else None
+    if not row or not row.get("public") or not row.get("report"):
+        raise HTTPException(404, "No public report with that id.")
+    if row.get("user_id"):  # Instant Scans have no owner, so they always show themselves
+        origin = fetch.origin(row["site"])
+        same_site = [r for r in db.public_reports(str(row["user_id"])) if fetch.origin(r["site"]) == origin]
+        row = max([row, *same_site], key=lambda r: r.get("created_at") or "")
+    return row
+
+
+@app.get("/badge/{run_id}.svg")
+def badge(run_id: str) -> Response:
+    row = _badge_run(run_id)
+    stored = row["report"].get("launch_ready") or score.launch_ready(row["report"], "scan" if row.get("kind") == "scan" else row.get("status", ""))
+    return Response(score.badge_svg(stored.get("score")), media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/badge/{run_id}")
+def badge_link(run_id: str) -> RedirectResponse:
+    """Where a click on the badge goes: the latest public report for that site."""
+    return RedirectResponse(f"{WEB_URL}/r/{_badge_run(run_id)['id']}", status_code=302)
 
 
 @app.post("/runs/{run_id}/email")

@@ -118,7 +118,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: a clean Chrome profile runs the production build end to end.
 
 ### Session 7 (10-09 to 10-10)
-- [ ] **V8 Launch Ready score, badge and share loop** (S)
+- [x] **V8 Launch Ready score, badge and share loop** (S), done 2026-09-24: badge for every shared report (no opt-in table); keyed by report id, follows the latest shared report of that site
   - Accept:
     - The score counts measured areas only: UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15. An unmeasured area's weight is shared among the others.
     - `GET /badge/{site_id}.svg` shows the latest score, cached one hour, only when the owner turned it on. It links to the public report.

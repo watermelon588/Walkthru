@@ -62,7 +62,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Built 2026-09-24 |
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Built 2026-09-24 |
 | `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Built 2026-09-24 |
-| `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Planned |
+| `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Built 2026-09-24 |
 | `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
 | `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Built 2026-09-24 |
 | `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
@@ -147,7 +147,9 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 
   An area that was not measured is shown as "not measured" and its weight is shared among the others. An Instant Scan has no UX area.
 - **Ignored findings still count** in the score, so the badge cannot be gamed. They only stop repeating in lists.
-- `GET /badge/{site_id}.svg` is an SVG with the latest score, cached for one hour. It is served only when the owner turned the badge on. It links to the public report.
+- **Built 2026-09-24** (`app/agent/score.py`), with no new table. The score is stored as `report.launch_ready` when a report is written. Each area starts at 100 and loses 25, 10 or 3 points per high, medium or low finding; GEO uses its own score; UX starts from the journey outcome (done or safe stop 100, gave up, stuck or out of steps 50) and counts only when the site was really tested (the owner's Stop, a loop guard or a CAPTCHA leave it out).
+- `GET /badge/{run_id}.svg` serves the badge for a **public** report only (sharing is the owner's opt-in; Instant Scans are public), cached one hour. It shows the owner's latest public report for the same site, so a rerun that is shared updates every embedded badge. `GET /badge/{run_id}` redirects a click to that report. Private reports return 404.
+- The owner's report page shows the badge with copy-paste HTML and Markdown; the public page shows the score only. The public page title carries the score.
 
 ### `email-check`
 - `app/scans/email.py` reads DNS over HTTPS with the existing httpx client, from a fixed trusted resolver (`https://cloudflare-dns.com/dns-query`, `accept: application/dns-json`). No new dependency.

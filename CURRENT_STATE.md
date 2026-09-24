@@ -132,6 +132,13 @@ _Last updated: 2026-09-24_
 
 - **Slow first step fixed; Jev measured and kept off (2026-09-24).** Domain verification runs in parallel with the plan check and goal planner, and startup warms both agent graphs and the planner's model clients: the first API call went from 13 to 19 s to 7.6 to 8.8 s. The API now prints its own INFO lines, including per-phase `start_run` timings. Jev was never on (`PERSONA_DECISION_MODEL` unset); an A/B on the same journey took 64 s with Jev against 30.8 s without, because two of four Jev calls timed out. Details in docs/decisions.md.
 
+- **V8 Launch Ready score and badge (2026-09-24).**
+  - Every new report stores `launch_ready`: one 0 to 100 score from the areas it measured (UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15; unmeasured areas share their weight; ignored findings still count). Shown near the top of private, public and printed reports.
+  - Badge: `GET /badge/{run_id}.svg` for shared reports only, one-hour cache, always the owner's latest shared report for that site; `GET /badge/{run_id}` sends clicks there. No new table: sharing is the opt-in (founder: "badge on every report").
+  - The owner's report shows the badge with Copy HTML and Copy Markdown; strangers on `/r/` see the score only. The public page title carries the score.
+  - Verified: 175 API tests; web build and lint; a real Pro journey on the showcase scored 94 (security 75 for plain http); the badge SVG, its cache header and the click redirect work live; the public page shows the score without the badge block.
+  - Not verified in the browser: the owner's badge block (the browser pane is not signed in).
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
