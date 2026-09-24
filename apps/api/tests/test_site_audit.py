@@ -24,7 +24,7 @@ def test_site_audit_respects_robots_origin_cap_and_aggregates(monkeypatch):
         requested.append(str(request.url))
         if request.url.path == "/robots.txt":
             return httpx.Response(200, text="User-agent: WalkthruBot\nDisallow: /private\n", request=request)
-        if request.url.path == "/sitemap.xml":
+        if request.url.path in ("/sitemap.xml", "/llms.txt"):
             return httpx.Response(404, request=request)
         if request.url.path in pages:
             return httpx.Response(200, text=pages[request.url.path], headers={"content-type": "text/html"}, request=request)
@@ -102,7 +102,10 @@ def test_js_only_shell_is_reported_not_judged(monkeypatch):
     assert fetch.is_js_shell(shell) and not fetch.is_js_shell("<p>Small but real page with a sentence.</p><script src='a.js'></script>")
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         result = site.audit("https://spa.test/", client, verified=False, max_pages=2, time_limit=2)
-    assert any(f.title == "Homepage content only appears after JavaScript runs" for f in result.seo)
+    # Reported once, by GEO: the SEO section only qualifies its page checks.
+    assert any(f.title == "Homepage content only appears after JavaScript runs" for f in result.geo.findings)
+    assert not any(f.title == "Homepage content only appears after JavaScript runs" for f in result.seo)
+    assert result.geo.ai_words == 0
 
 
 def test_js_shell_findings_say_they_describe_pre_javascript_html(monkeypatch):

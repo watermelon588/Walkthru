@@ -12,7 +12,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import fetch, security, seo
+from app.scans import fetch, geo, security, seo
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
@@ -35,6 +35,7 @@ class SiteAudit:
     security: list[Finding]
     coverage: AuditCoverage
     production_like: bool = False  # a local host that deliberately serves production headers (the eval fixtures)
+    geo: geo.GeoResult | None = None
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -98,6 +99,7 @@ def audit(
     client: httpx.Client,
     *,
     verified: bool,
+    geo_full: bool = False,
     max_pages: int = DEFAULT_MAX_PAGES,
     time_limit: float = DEFAULT_TIME_LIMIT,
 ) -> SiteAudit:
@@ -163,16 +165,7 @@ def audit(
             if page == root_url else (f, page)
             for f, page in seo_records
         ]
-        seo_records.append((Finding(
-            kind="seo",
-            severity="medium",
-            title="Homepage content only appears after JavaScript runs",
-            detail=f"The server sends {len(root.text)} bytes of HTML with {len(fetch.page_text(root.text))} characters of visible text. "
-            "Link previews on WhatsApp, LinkedIn and Slack, most AI crawlers and slower search crawlers see an empty page, "
-            "and the other page checks in this report describe that pre-JavaScript HTML.",
-            fix="Prerender the homepage (static generation or server rendering), or at least put a real h1, description and Open Graph tags in index.html.",
-            evidence=root_url,
-        ), root_url))
+        # The shell itself is reported once, by the GEO section ("Homepage content only appears after JavaScript runs").
 
     if not pages:  # never report a clean audit when nothing was actually checked
         kind = root.headers.get("content-type", "unknown")
@@ -182,4 +175,17 @@ def audit(
     truncated = bool(queue) or (time.monotonic() >= deadline and len(pages) < len(queued))
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])
     production_like = root.headers.get("x-walkthru-fixture") == "production"
-    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage, production_like)
+    local = fetch.is_local_site(root_url) and not production_like
+    llms = fetch.get(client, f"{base}/llms.txt", same_origin=base)
+    probe = fetch.get(client, root_url, headers={"User-Agent": geo.PROBE_AGENT})
+    readiness = geo.audit(
+        root_url,
+        [(page_url, response.text) for page_url, response in pages] or [(root_url, root.text)],
+        robots_text,
+        # Single-page hosts answer every path with index.html; that is not an llms.txt.
+        (llms.status_code if "html" not in llms.headers.get("content-type", "") else 404, llms.text[:20000]) if llms is not None else None,
+        (probe.status_code, probe.text[:5000], dict(probe.headers)) if probe is not None else None,
+        full=geo_full,
+        local=local,
+    )
+    return SiteAudit(_aggregate(seo_records, len(pages)), _aggregate(security_records, len(pages)), coverage, production_like, readiness)

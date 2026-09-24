@@ -36,7 +36,7 @@ def client(timeout: float = 15) -> httpx.Client:
     return httpx.Client(follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
-def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.Response | None:
+def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: dict | None = None) -> httpx.Response | None:
     """Fetch with every redirect revalidated before the next network request."""
     current = url
     try:
@@ -44,7 +44,7 @@ def get(c: httpx.Client, url: str, *, same_origin: str | None = None) -> httpx.R
             assert_public(current)
             if same_origin is not None and origin(current) != same_origin:
                 return None
-            response = c.get(current)
+            response = c.get(current, headers=headers)
             if not response.is_redirect:
                 return response
             location = response.headers.get("location")
@@ -73,6 +73,17 @@ def is_js_shell(html: str) -> bool:
     """True for single-page apps whose served HTML is an empty shell filled in by JavaScript."""
     tree = HTMLParser(html)
     return len(page_text(html)) < MIN_TEXT and tree.css_first("script[src]") is not None
+
+
+def is_local_site(url: str) -> bool:
+    """Local development servers: production transport, headers and speed cannot be judged there."""
+    host = (urlsplit(url).hostname or "").lower()
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return not ipaddress.ip_address(host).is_global
+    except ValueError:
+        return False
 
 
 def origin(url: str) -> str:

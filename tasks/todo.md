@@ -26,7 +26,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Files: `apps/api/app/plans.py` (new), `app/main.py`, `app/db.py`, `schema.sql`, `scripts/grant_plan.py` (new), side panel `App.tsx`.
 
 ### Session 2 (09-27 to 09-29)
-- [ ] **V2 GEO readiness scanner** (M)
+- [x] **V2 GEO readiness scanner** (M), done 2026-09-24
   - Accept:
     - `app/scans/geo.py` scores the 7 categories in SPEC.md from pages the audit already fetched, plus `GET /llms.txt` and one citation-bot user-agent probe.
     - Findings use `kind="geo"`; `report.geo` has score, band and categories.
@@ -91,7 +91,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
     - Domain and HTTPS.
     - Vercel with SPA rewrites.
     - API on the VM under process supervision, with `CHECKPOINTER=postgres`.
-    - Postgres-backed scan limiter.
+    - Postgres-backed scan limiter, plus a global `FREE_SCANS_PER_DAY` cap: Instant Scans use the same free models as runs (2 calls each), and today only runs have a daily cap.
     - Production CORS and extension origin.
     - Secrets rotated.
     - Error logging and a health check.

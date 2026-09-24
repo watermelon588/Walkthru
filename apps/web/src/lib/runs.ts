@@ -46,7 +46,7 @@ export type StepEvidence = {
 }
 
 export type Finding = {
-  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security'
+  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security' | 'geo'
   severity: 'high' | 'medium' | 'low'
   title: string
   detail: string
@@ -61,7 +61,8 @@ export type Report = {
   top_fixes: string[]
   verified: boolean
   tokens: number
-  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
+  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', 'complete' | 'unavailable'>>
+  geo?: { score: number; band: 'critical' | 'foundation' | 'good' | 'excellent'; categories: { id: string; label: string; earned: number; max: number }[]; ai_words: number; ai_view: string; notes: string[] } | null
   site_audit?: {
     pages_scanned: number
     page_limit: number
@@ -106,7 +107,7 @@ export const PERSONA_LABEL: Record<string, string> = {
   stranger: 'Stranger, five seconds',
 }
 
-export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
+export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security', geo: 'GEO' }
 
 const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'

@@ -85,6 +85,14 @@ _Last updated: 2026-09-24_
   - Checked live: a free account claiming `tier: paid` got 403 on a logged-in run and 402 once its 3 runs were used; a Pro dev pass ran a logged-in skeptic journey and counted it.
   - 111 API tests, 27 extension tests; web and extension builds green.
 
+- **V2 GEO readiness scanner (2026-09-24).**
+  - `app/scans/geo.py` scores AI search readiness 0 to 100 from pages the site audit already fetched, plus `/llms.txt` and one homepage request with an AI search user agent. Categories: crawler access, content before JavaScript, structured data, answerability, name and trust, meta, llms.txt.
+  - Checks that could not run are left out of the score. Free plans score the homepage; paid plans score every audited page.
+  - Findings have kind `geo`; the report stores `report.geo` (score, band, categories, the text AI search sees). The JavaScript-shell finding moved from SEO to GEO so it appears once.
+  - New "AI search readiness" section on the report page.
+  - Live: the portfolio's Instant Scan scored 42 of 100 in 13.7 s (empty JavaScript shell, no structured data, no llms.txt; crawlers not blocked).
+  - 121 API tests; web build and lint green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -99,7 +107,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
 - **Plus opens:** 2026-11-22 at the latest.
 
-1. **Next session (2):** V2 GEO readiness scanner. V1 server-owned plans is done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
+1. **Next session (3):** V3 GEO traps and Checkpoint B trap recall, plus V16 signup email check. V1 and V2 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.

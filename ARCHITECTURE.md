@@ -58,7 +58,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | Module id | Responsibility | Depends on | Status |
 |---|---|---|---|
 | `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Built 2026-09-24 |
-| `geo-scan` | AI readiness score, GEO findings, "what AI search sees" label | site audit (live) | Planned |
+| `geo-scan` | AI readiness score, GEO findings, "what AI search sees" text | site audit (live) | Built 2026-09-24 |
 | `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Planned |
 | `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Planned |
 | `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Planned |

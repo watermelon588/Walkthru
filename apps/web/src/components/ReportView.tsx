@@ -2,6 +2,7 @@ import { EVIDENCE_RETENTION_DAYS, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type 
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { GeoReadiness } from './GeoReadiness'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
 
 /** The report body. Shared by the signed-in report page and the public share page. */
@@ -73,6 +74,8 @@ export function ReportView({ run }: { run: Run }) {
               </dl>
             </section>
           )}
+
+          {r.geo && <GeoReadiness geo={r.geo} />}
 
           {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 

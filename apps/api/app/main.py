@@ -207,6 +207,7 @@ def finish_run(run_id: str, values: dict) -> None:
             steps=values.get("steps", []),
             verified=verified,
             final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
+            paid=row.get("tier") == "paid",  # GEO on every audited page for paid plans (SPEC.md)
         )
         rep.tokens += values.get("tokens", 0)
         db.set_report(run_id, rep.model_dump())
