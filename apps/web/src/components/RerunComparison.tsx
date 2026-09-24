@@ -1,4 +1,3 @@
-import { ArrowsClockwiseIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router'
 import type { Compared, Report } from '../lib/runs'
 
@@ -35,9 +34,9 @@ export function RerunComparison({ comparison, linkPrevious }: { comparison: Comp
   const unchecked = comparison.not_rechecked ?? []
   return (
     <section aria-labelledby="compare-title" className="report-print-section mt-12">
-      <h2 id="compare-title" className="text-xl font-light tracking-tight flex items-center gap-2">
-            <ArrowsClockwiseIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />
-        Since your last run: {comparison.fixed.length} fixed, {comparison.new.length} new, {comparison.still_broken.length} still broken
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Since your last run</p>
+      <h2 id="compare-title" className="mt-2 text-xl font-light tracking-tight">
+        {comparison.fixed.length} fixed, {comparison.new.length} new, {comparison.still_broken.length} still broken
       </h2>
       <p className="mt-2 max-w-[64ch] text-sm leading-relaxed text-muted">
         Compared with the same goal on {linkPrevious ? <Link to={`/app/runs/${comparison.previous_run_id}`} className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">{when}</Link> : when}.

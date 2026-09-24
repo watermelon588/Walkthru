@@ -1,4 +1,3 @@
-import { SparkleIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { copyText } from '../lib/clipboard'
 import type { Report } from '../lib/runs'
@@ -17,10 +16,10 @@ export function GeoReadiness({ geo }: { geo: Geo }) {
   const band = BAND[geo.band]
   return (
     <section aria-labelledby="geo-title" className="report-print-section mt-12">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">AI search readiness (GEO)</p>
       <div className="mt-2 grid gap-6 border-y border-line py-5 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <div>
-          <h2 id="geo-title" className="text-xl font-light tracking-tight flex items-center gap-2">
-            <SparkleIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />AI search readiness</h2>
+          <h2 id="geo-title" className="text-xl font-light tracking-tight">Can AI search read and quote you?</h2>
           <p className="mt-3 flex items-baseline gap-3">
             <span className="text-5xl font-extralight tracking-[-0.03em]">{geo.score}</span>
             <span className="text-sm text-muted">of 100</span>

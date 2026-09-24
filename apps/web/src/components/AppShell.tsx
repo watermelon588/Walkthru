@@ -4,7 +4,6 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
 import { accountAvatar, accountProfile, signOut, useSession } from '../lib/auth'
 import { AccountAvatar } from './AccountAvatar'
-import { PlanMeterCompact } from './PlanMeter'
 import { Logo, SkipLink } from './Shared'
 
 const workspace: { to: string; label: string; icon: Icon; end?: boolean }[] = [
@@ -83,7 +82,6 @@ function SidebarNav() {
           </NavLink>
         ))}
       </nav>
-      <PlanMeterCompact />
 
       <nav aria-label="Help" className="mt-8 grid gap-1 border-t border-line pt-6">
         {help.map(({ href, label, icon: I }) => (
