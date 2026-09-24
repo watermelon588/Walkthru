@@ -133,26 +133,10 @@ _Last updated: 2026-09-24_
 - **Fresh T23 browser verification pending.** Rebuild and reload the extension, run the easy fixture once, then confirm the selected journey step shows axe status and any available LCP, CLS or INP values in the report inspector and PDF.
 
 ## Next up
-Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
-- **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
-- **Plus opens:** 2026-11-22 at the latest.
-
-1. **Founder, 30 seconds:** apply the `finding_states` table in the Supabase SQL editor (the block at the end of `apps/api/schema.sql`, from "-- Ignored findings"). Direct Postgres from this network timed out 8 times on 2026-09-24. Until then the Ignore button fails and comparisons run without ignored findings.
-2. **Next session (6):** production and store submission (V11), plus Google Cloud billing by UPI for Claude and the measured Claude comparison. Sessions 1 to 5 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
-2. **Then:**
-   - Session 2: V2 GEO scanner.
-   - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.
-   - Session 4: V4 rerun and compare, plus V17 ignore a finding.
-   - Session 5: V5 fix pack, plus V15 agent fix prompt.
-   - Session 6: deploy, and store submission on 10-08.
-3. **Founder, now:**
-   - Start Dodo live-mode verification.
-   - Buy the domain by 10-05.
-   - Chrome Web Store account.
-   - Oracle VM.
-   - Experiments A1 to A3.
-   - Enable OAuth.
-   - Rotate Supabase secrets before session 6.
+New sessions start with handoff.md. Founder's order (2026-09-24):
+1. **Polish and harden end to end** (session 6a): V6 50-page paid crawls, V8 Launch Ready score and badge, `FREE_SCANS_PER_DAY`, a shared Postgres-backed rate limiter, `CHECKPOINTER=postgres` readiness, the slow first step, and a UI pass with the design skills.
+2. **Payment gateway before launch:** V10 Dodo test mode per payment.md.
+3. **Later (6b):** deploy, Chrome Web Store, Google Cloud UPI billing with Claude switched on and the measured comparison, and OAuth, guided step by step.
 
 ## Known issues and notes
 - The first API call of a run can take 25 to 45 s when Groq's free tier is rate-limited: the goal planner and the first step fall through to slower models. Watch this before launch; a warm fast model for the planner is the fix.

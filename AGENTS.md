@@ -8,6 +8,7 @@ Walkthru: AI test users try a website's flows (signup, dashboard, checkout) in t
 ## Read before working
 | File | When |
 |---|---|
+| [handoff.md](handoff.md) | First, in a new session. The whole picture and the reading order. |
 | [CURRENT_STATE.md](CURRENT_STATE.md) | Always. What is done, what is next, known issues. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Any backend, extension, agent or data work. |
 | [DESIGN.md](DESIGN.md) | Any UI work. Tokens, type, motion rules. |
