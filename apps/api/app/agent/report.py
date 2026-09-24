@@ -21,6 +21,7 @@ class ReportState(TypedDict, total=False):
     goal: str
     persona: str
     status: str  # persona outcome, or "scan"
+    intent: str  # the goal as the planner understood it
     steps: list[dict]
     page_text: str  # visible homepage text (from the first observation, or fetched)
     verified: bool
@@ -244,8 +245,10 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
         note = (s.get("note_after") or "").lower()
         if s.get("safe_stop"):
             continue
-        if (s.get("confusion", 0) >= 2 or s.get("errors_after") or s.get("interrupted") or s.get("action") == "give_up"
-                or (note and not any(k in note for k in NOT_A_SITE_PROBLEM))):
+        walkthru_note = any(k in note for k in NOT_A_SITE_PROBLEM)
+        # An interruption is only evidence when the browser run broke, not when the owner pressed Stop.
+        if (s.get("confusion", 0) >= 2 or s.get("errors_after") or (s.get("interrupted") and not walkthru_note) or s.get("action") == "give_up"
+                or (note and not walkthru_note)):
             out.add(i)
     if status in ("stuck", "budget"):
         out |= set(range(max(1, len(steps) - 2), len(steps) + 1))
@@ -316,7 +319,12 @@ def synthesis_inputs(state: ReportState) -> dict:
         context.append("Context: the homepage is rendered by JavaScript. Google and screen readers do run JavaScript and see the content; "
                        "link previews (WhatsApp, LinkedIn, Slack), most AI crawlers and simpler search crawlers see an empty page. Do not overstate the impact.")
     if steps:
-        context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}. Outcome: {'stopped by Walkthru at the send button (by design)' if state.get('status') == 'safe_stop' else state.get('status')}.\nSteps:\n{render_steps(steps)}")
+        outcome = {
+            "safe_stop": "stopped by Walkthru at the send button (by design)",
+            "looping": "stopped by Walkthru because the test user started going in circles. That is Walkthru's own limit, not a site problem; never report the repeated visits as a site problem",
+        }.get(state.get("status", ""), state.get("status"))
+        intent = f" Understood as: {state['intent']}." if state.get("intent") else ""
+        context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}.{intent} Outcome: {outcome}.\nSteps:\n{render_steps(steps)}")
         context.append("Steps marked as stopped on purpose, or mentioning safe mode, were Walkthru's own choice. They are not site problems; never report them as findings.")
         if state.get("final_controls"):
             context.append("Controls visible on the page where the journey ended: " + "; ".join(state["final_controls"]) +
@@ -386,10 +394,10 @@ def build_graph():
 _graph = None
 
 
-def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False) -> Report:
+def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False, intent: str = "") -> Report:
     global _graph
     _graph = _graph or build_graph()
-    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "tokens": 0, "notes": []})
+    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "intent": intent, "tokens": 0, "notes": []})
     report = Report.model_validate(out["synthesis"])
     report.tokens = out["tokens"]
     return report

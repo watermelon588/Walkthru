@@ -26,6 +26,8 @@ apps\api\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.ap
 
 Plan limits are enforced by the API, and a free account has 3 runs a month. To test paid plans or run the harness repeatedly, give the test account a dev pass: `apps/api/.venv/Scripts/python apps/api/scripts/grant_plan.py walkthru.tester@example.com plus` (`--revoke` ends it). No payment is involved.
 
+The showcase fixture (http://127.0.0.1:8103, started by `.\dev`) is a well-built product site: its Instant Scan scores about 99 for GEO, and its journeys hold deliberate traps (circular "Next story" links, a cookie banner, a newsletter pop-up, a dead button, new-tab and external links, content hidden until scrolled, and Pay and Delete buttons Walkthru must never press).
+
 To test a real send on the easy fixture as a verified owner, write your account's verification token to `evals/.walkthru-token` (git-ignored; see `GET /verification`) and run with `AUTO_CONFIRM=1`, which stands in for approving the side-panel prompt. Without it the run stops at the send button.
 
 ## Run locally on Windows, one process per terminal

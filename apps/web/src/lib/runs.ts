@@ -80,7 +80,7 @@ export type Run = {
   goal: string
   persona: string
   kind: 'test' | 'scan'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop' | 'looping'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -97,6 +97,7 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   captcha: 'Stopped at a CAPTCHA',
   stopped: 'Ended early',
   safe_stop: 'Stopped before sending',
+  looping: 'Stopped going in circles',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {

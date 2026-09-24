@@ -99,3 +99,26 @@ def test_score_is_rounded_percentage_of_measured_points():
     earned, possible = sum(c["earned"] for c in r.categories), sum(c["max"] for c in r.categories)
     assert r.score == round(100 * earned / possible)
     json.dumps(r.summary())  # stored in the report as JSON
+
+
+def test_showcase_fixture_is_ready_for_ai_search(monkeypatch):
+    """The showcase site is built to score well; if this drops, the scanner or the fixture regressed."""
+    import os
+    import sys
+
+    import httpx
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "evals"))
+    from serve import start
+
+    from app.scans import site
+
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    srv = start("showcase", 8133)
+    try:
+        with httpx.Client(timeout=10, headers={"Accept": "text/html"}) as c:
+            result = site.audit("http://127.0.0.1:8133/", c, verified=False, geo_full=True)
+    finally:
+        srv.shutdown()
+    assert result.geo.score >= 86, (result.geo.score, [f.title for f in result.geo.findings])
+    assert not [f for f in result.geo.findings if f.severity == "high"]

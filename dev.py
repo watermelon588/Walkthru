@@ -3,7 +3,7 @@
     .\\dev            (Windows, from the repo root; dev.cmd calls this file)
     apps/api/.venv/Scripts/python dev.py
 
-Starts API :8010, web :5173, easy fixture :8101 and hard fixture :8102, builds the extension into
+Starts API :8010, web :5173, fixtures :8101 (easy), :8102 (hard) and :8103 (showcase), builds the extension into
 apps/extension/.output/chrome-mv3, prints the URLs, and stops everything on Ctrl+C.
 """
 
@@ -100,7 +100,7 @@ def stop_all() -> None:
 
 def main() -> int:
     busy = [f"{n} :{p}" for n, (_, _, p, _) in SERVERS.items() if port_busy(p, localhost_address() if n == "web" else "127.0.0.1")]
-    busy += ["fixtures :8102"] if port_busy(8102) else []
+    busy += [f"fixtures :{p}" for p in (8102, 8103) if port_busy(p)]
     if busy:
         say("dev", f"Already in use: {', '.join(busy)}. Stop those servers first (or close the other terminal).")
         return 1
@@ -127,6 +127,7 @@ def main() -> int:
         "  API            http://127.0.0.1:8010/docs\n"
         "  Easy fixture   http://127.0.0.1:8101\n"
         "  Hard fixture   http://127.0.0.1:8102\n"
+        "  Showcase site  http://127.0.0.1:8103  (strong GEO, journey traps)\n"
         f"  Extension      {'built' if ext_ok else 'BUILD FAILED, see [ext] lines'}: {out}\n"
         "                 chrome://extensions > Reload on Walkthru (first time: Load unpacked from the folder above)\n"
         + (f"  Still starting: {', '.join(pending)}\n" if pending else ""),

@@ -54,6 +54,8 @@ class Observation(BaseModel):
     notices: list[str] = Field(default_factory=list)  # visible confirmations, e.g. 'Message sent'
     note: str | None = None  # executor feedback: "element not found", "captcha", ...
     diagnostics: BrowserDiagnostics | None = None
+    scroll_pct: int | None = Field(default=None, ge=0, le=100)  # how far down the page the viewport is
+    at_end: bool | None = None  # the viewport reaches the bottom of the page
 
 
 class StepEvidence(BaseModel):
@@ -75,6 +77,21 @@ class PersonaStep(BaseModel):
     target_id: int | None = Field(default=None, description="Element id for click/type.")
     text: str | None = Field(default=None, description="Text to type, for type only.")
     confusion: int = Field(ge=0, le=3, description="0 clear, 1 hesitant, 2 confused, 3 stuck")
+    progress: int = Field(default=0, ge=0, le=4, description="How many checklist items are complete, counting what your previous actions achieved.")
+
+
+class Checkpoint(BaseModel):
+    description: str = Field(max_length=200, description="One observable milestone, in plain words.")
+    url_contains: str | None = Field(default=None, max_length=100, description="Part of the URL that is only true once this checkpoint is reached, e.g. '/pricing'. Null unless you are sure.")
+
+
+class GoalPlan(BaseModel):
+    """The owner's goal as intent plus an ordered checklist (app/agent/goal.py)."""
+
+    intent: str = Field(max_length=300, description="What the owner wants to learn about their site, in one sentence.")
+    checkpoints: list[Checkpoint] = Field(max_length=4, description="1 to 4 milestones in order; the last one finishes the test.")
+    feasible: bool = Field(description="False only if the goal asks to pay, delete, cancel, spam, attack or bypass security, or is about another website.")
+    refusal: str | None = Field(default=None, max_length=300, description="Why the goal cannot run, when feasible is false.")
 
 
 class Finding(BaseModel):

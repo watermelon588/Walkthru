@@ -149,7 +149,8 @@ function FindingRow({ f }: { f: Finding }) {
 }
 
 export function StatusPill({ status }: { status: Run['status'] }) {
-  const tone = status === 'done' || status === 'safe_stop' ? 'text-accent' : status === 'running' ? 'text-muted' : 'text-danger'
+  // looping is Walkthru's own stop, never the site's fault, so it is not shown as a failure.
+  const tone = status === 'done' || status === 'safe_stop' ? 'text-accent' : status === 'running' || status === 'looping' ? 'text-muted' : 'text-danger'
   return <span className={`rounded-full border border-line px-2.5 py-0.5 ${tone}`}>{STATUS_LABEL[status]}</span>
 }
 

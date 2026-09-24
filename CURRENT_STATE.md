@@ -93,6 +93,14 @@ _Last updated: 2026-09-24_
   - Live: the portfolio's Instant Scan scored 42 of 100 in 13.7 s (empty JavaScript shell, no structured data, no llms.txt; crawlers not blocked).
   - 121 API tests; web build and lint green.
 
+- **V22 goal intent and loop guards (2026-09-24).** From the portfolio run that circled "NEXT CASE" pages for 11 steps.
+  - **Goal planner:** `app/agent/goal.py` plans each run into an intent and a checklist (checked live: the portfolio goal became 3 checkpoints; "delete my account and buy pro" was refused in 0.5 s).
+  - **Stops:** code ends the run when the checklist is done; a third visit to a page ends as `looping`; scroll position and clicks that change nothing are visible to the test user.
+  - **Report:** the owner's Stop no longer counts against the site.
+  - **Side panel:** suggests goals from the page's links and shows how the goal was understood.
+  - **Showcase fixture** on :8103: its Instant Scan scored 99 of 100 for GEO through the live stack.
+  - 131 API tests and 30 extension tests; web and extension builds green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -107,7 +115,7 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
 - **Plus opens:** 2026-11-22 at the latest.
 
-1. **Next session (3):** V3 GEO traps and Checkpoint B trap recall, plus V16 signup email check. V1 and V2 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
+1. **Next:** founder live test on the showcase site (http://127.0.0.1:8103). Then session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check. V1, V2 and V22 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { getPlan, getSession, WEB_URL, type PlanSummary } from "../../lib/api";
+import { getPlan, getSession, WEB_URL, type GoalPlan, type PlanSummary } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
-import { runTest, type Progress, type RunOptions } from "./run";
+import { suggestGoals } from "../../lib/goals";
+import { runTest, snapshotActiveTab, type Progress, type RunOptions } from "./run";
 
 const PERSONAS = [
   ["first_timer", "First-time visitor"],
@@ -19,6 +20,7 @@ const STATUS_COPY: Record<string, string> = {
   captcha: "Stopped at a CAPTCHA.",
   stopped: "Ended early. A partial report is being prepared.",
   safe_stop: "Everything worked up to the send button. Walkthru only sends on verified domains, after you approve.",
+  looping: "Walkthru stopped the test user for going in circles. That is Walkthru's limit, not a problem with your site.",
 };
 
 export function App() {
@@ -29,6 +31,8 @@ export function App() {
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<PlanSummary | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [understood, setUnderstood] = useState<GoalPlan | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -49,6 +53,15 @@ export function App() {
     else setPlan(null);
   }, [signedIn, finished]);
   const canLogIn = plan?.logged_in ?? false;
+
+  // Goals this page can actually support, read from its links and buttons (like "Sign up" or "Pricing").
+  useEffect(() => {
+    if (!/^https?:\/\//.test(site)) {
+      setSuggestions([]);
+      return;
+    }
+    snapshotActiveTab().then((obs) => setSuggestions(obs ? suggestGoals(obs.elements) : []));
+  }, [site]);
 
   const running = progress.phase === "running" || progress.phase === "starting";
   const outOfRuns = plan?.runs_left === 0;
@@ -86,8 +99,12 @@ export function App() {
     e.preventDefault();
     if (!canStart) return;
     abort.current = new AbortController();
+    setUnderstood(null);
     const opts: RunOptions = { site, goal: goal.trim(), persona, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal: abort.current.signal };
-    await runTest(opts, setProgress);
+    await runTest(opts, (p) => {
+      if (p.plan) setUnderstood(p.plan);
+      setProgress(p);
+    });
   }
 
   return (
@@ -115,6 +132,13 @@ export function App() {
           Goal for the test user
           <textarea id="goal" value={goal} onChange={(e) => setGoal(e.target.value)} disabled={running} required />
         </label>
+        {suggestions.length > 0 && !running && (
+          <div className="suggestions" role="group" aria-label="Goals this page supports">
+            {suggestions.map((s) => (
+              <button key={s} type="button" className="chip" aria-pressed={goal === s} onClick={() => setGoal(s)}>{s}</button>
+            ))}
+          </div>
+        )}
         <label htmlFor="persona">
           Test user
           <select id="persona" value={persona} onChange={(e) => setPersona(e.target.value as typeof persona)} disabled={running}>
@@ -141,6 +165,15 @@ export function App() {
         </div>
         {blocked && <p className="hint" role="status">{blocked}</p>}
       </form>
+
+      {understood && (
+        <section className="notice" aria-label="How Walkthru understood the goal">
+          <p>Understood as: {understood.intent}</p>
+          <ol className="checklist">
+            {understood.checkpoints.map((c) => <li key={c}>{c}</li>)}
+          </ol>
+        </section>
+      )}
 
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
       {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}

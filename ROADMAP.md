@@ -41,6 +41,7 @@ Found in the 2026-09-24 review. Each fix has a task in `tasks/todo.md`.
 | 20 | No proof anyone will pay | 0 paying users | Experiment 1 before billing code: 5 of 100 Instant Scans convert to the $9 pack | A1 |
 | 21 | GEO can overpromise | llms.txt has weak evidence; a user-agent probe cannot prove real bot access | Weight llms.txt at 5 of 100 and label it; phrase the probe as "blocked for AI search user agents"; never promise citations | V2 |
 | 22 | Plus sold before it exists | Weekly scans not built | Launch Plus as a waitlist; open it when watch and branded PDF ship | V9, V12 |
+| 23 | The test user followed the typed goal literally and never knew when to stop | A real portfolio run circled four "NEXT CASE" pages for 11 steps, then the report blamed the site | Goal planner (intent plus checklist, finished in code), looping guard, scroll position, owner Stop never counted as a site problem, suggested goals | V22 (done 2026-09-24) |
 
 ## Scope (decided 2026-09-24)
 
@@ -90,6 +91,7 @@ Task details and acceptance criteria are in `tasks/todo.md`.
 |---|---|---|---|
 | 1 | 09-25 to 09-26 | V1 server-owned plans, dev grant script, `GET /me/plan`, runs left in side panel and dashboard | A crafted free request cannot exceed any limit; `grant_plan.py` switches a test account to Pro and back |
 | 2 | 09-27 to 09-29 | V2 GEO readiness scanner and report section | The portfolio's Instant Scan shows a GEO score and "What AI search sees" in 20 s or less |
+| 2b | 09-24 (done) | V22 goal intent and loop guards, suggested goals, showcase test site | Portfolio goal plans to 3 checkpoints; circles end as `looping`; showcase scores 99 |
 | 3 | 09-30 to 10-01 | V3 GEO traps and Checkpoint B; V16 signup email check | Trap recall 80% or more; Tripverse's email error maps to "use your own SMTP" |
 | 4 | 10-02 to 10-03 | V4 rerun and compare; V17 ignore a finding | 3 fixture reruns match a hand check; ignored items leave lists but stay in the score |
 | 5 | 10-04 to 10-05 | V5 GEO fix pack; V15 agent fix prompt | Fix prompt for the SPA fixture lists every finding once, secrets masked; free gets 402 |

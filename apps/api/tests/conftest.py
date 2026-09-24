@@ -53,6 +53,14 @@ def fake_db(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def literal_goal(monkeypatch):
+    """No planner model in tests: the typed goal becomes a one-item checklist. test_goal.py sets its own plans."""
+    from app.agent import goal
+
+    monkeypatch.setattr(goal, "plan", lambda site, typed, observation: goal.fallback(typed))
+
+
+@pytest.fixture(autouse=True)
 def passes(monkeypatch):
     """In-memory entitlements table: tests append {user_id, plan, starts_at, expires_at, runs_granted}."""
     table: list[dict] = []
