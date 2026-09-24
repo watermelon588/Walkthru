@@ -105,11 +105,10 @@ Dependency direction is one way. `entitlements` comes first because every paid p
   - One homepage `GET` with the `OAI-SearchBot` user agent, compared with the normal response. A 403 or challenge page becomes "blocked for AI search user agents".
   - A 200 is reported as "not blocked by user agent". Edge networks verify real bots by IP, so the probe cannot prove access.
 - **Free:** homepage and `robots.txt` categories only. **Paid:** every audited page.
-- **Pro's 50-page promise:**
-  - Today the crawler caps at 20 pages and 20 s.
-  - Pro scans run in a background task with `max_pages=50` and a 60 s budget.
-  - The result is written to the report when done.
-  - Instant Scan keeps 10 pages and 20 s.
+- **Pro's 50-page promise (built 2026-09-24):**
+  - Paid run reports crawl up to 50 pages with a 60 s budget (`site.PAID_MAX_PAGES`, `PAID_TIME_LIMIT`). Reports are already written in a background task after the run, so nothing waits on it.
+  - Instant Scan and free runs keep 10 pages and 20 s.
+  - Measured: 50 pages of python.org in 13.9 s with sequential fetches, so no parallel crawler.
 
 ### `fix-pack`
 - `app/scans/geo_fixes.py`: pure functions from `GeoResult` and the audited pages to text blocks:
@@ -236,7 +235,7 @@ or bounded action           |
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
-- Site audit (`app/scans/site.py`): pages the test user visited (up to 5) are audited on top of the crawl, past a robots.txt block only on an owner-verified domain; a homepage whose only sign-up link is in the footer is reported as a UX finding. GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
+- Site audit (`app/scans/site.py`): pages the test user visited (up to 5) are audited on top of the crawl, past a robots.txt block only on an owner-verified domain; a homepage whose only sign-up link is in the footer is reported as a UX finding. GET-only, same-origin, robots.txt honoured, 10 pages and 20 s by default, 50 pages and 60 s for paid run reports, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
 ## Runtime choices for this deployment stage
 - **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.

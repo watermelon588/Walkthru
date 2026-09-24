@@ -158,3 +158,44 @@ def test_signup_link_only_in_the_footer_is_reported(monkeypatch):
     with _site({"/": visible}, robots="") as c:
         fine = site.audit("https://site.test/", c, verified=False)
     assert not any("Sign-up is hidden" in f.title for f in fine.seo)
+
+
+def _big_site(n: int) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path in ("/robots.txt", "/sitemap.xml", "/llms.txt"):
+            return httpx.Response(404, request=request)
+        i = 0 if path == "/" else int(path.strip("/p"))
+        links = "".join(f'<a href="/p{j}">{j}</a>' for j in range(i + 1, min(i + 4, n)))
+        html = f"<html lang='en'><head><title>Page number {i} of the site</title></head><body><h1>Page {i}</h1>{links}</body></html>"
+        return httpx.Response(200, text=html, headers={"content-type": "text/html"}, request=request)
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_paid_reports_audit_50_pages_and_free_ones_10(monkeypatch):
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    with _big_site(60) as client:
+        paid = site.audit("https://site.test/", client, verified=False, max_pages=site.PAID_MAX_PAGES, time_limit=site.PAID_TIME_LIMIT)
+        free = site.audit("https://site.test/", client, verified=False)
+    assert (paid.coverage.pages_scanned, paid.coverage.page_limit, paid.coverage.truncated) == (50, 50, True)
+    assert (free.coverage.pages_scanned, free.coverage.page_limit) == (10, 10)
+
+
+def test_report_picks_the_crawl_size_from_the_plan(monkeypatch):
+    from app.agent import report
+
+    seen = []
+    monkeypatch.setattr(report.fetch, "assert_public", lambda url: None)
+    monkeypatch.setattr(report.email, "check", lambda *a, **k: ([], None))
+    monkeypatch.setattr(report.site, "audit", lambda *a, **k: seen.append((k["max_pages"], k["time_limit"])) or (_ for _ in ()).throw(RuntimeError("stop")))
+    report.site_scan({"site": "https://site.test/", "paid": True})
+    report.site_scan({"site": "https://site.test/", "paid": False})
+    assert seen == [(50, 60.0), (10, 20.0)]
+
+
+def test_report_schema_accepts_the_largest_paid_audit():
+    from app.agent.schema import SiteAuditSummary
+
+    most = site.PAID_MAX_PAGES + site.MAX_VISITED
+    SiteAuditSummary(pages_scanned=most, page_limit=site.MAX_MAX_PAGES, duration_ms=60000, truncated=True,
+                     urls=[f"https://site.test/p{i}" for i in range(most)])

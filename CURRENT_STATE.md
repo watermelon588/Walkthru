@@ -123,6 +123,12 @@ _Last updated: 2026-09-24_
 
 - **Fix loop tested by the founder (2026-09-24).** A real fix prompt was applied to the showcase fixture and the rerun compared correctly (2 fixed, 0 new, 3 still broken). Two gaps it exposed are fixed: the prompt now lists every affected page (it showed at most 3), and the comparison works page by page, with a "not re-checked" state so a crawl limit cannot make a finding look fixed. The comparison now shows first on the report. 167 API tests.
 
+- **Session 6a started: V6 50-page paid crawls (2026-09-24).**
+  - Paid run reports crawl up to 50 pages in 60 s; Instant Scans and free runs keep 10 pages and 20 s. Reports were already written in a background task, so nothing new was needed for that.
+  - Bug caught by the live check: the report schema capped crawl coverage at 20 pages, so the first paid report failed validation and was never saved. Fixed (50 pages, 55 scanned counting visited pages), with a test tying the schema to the crawler limits.
+  - Reports that checked more than 10 pages show the page list behind "Show all N pages checked".
+  - Verified: 50 pages of python.org in 13.9 s; a real Pro journey on the showcase fixture wrote a report covering all 13 pages; the public report opens the list with no overflow at 375 px and a clean console. 170 API tests, Ruff, web build and lint green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -139,6 +145,7 @@ New sessions start with handoff.md. Founder's order (2026-09-24):
 3. **Later (6b):** deploy, Chrome Web Store, Google Cloud UPI billing with Claude switched on and the measured comparison, and OAuth, guided step by step.
 
 ## Known issues and notes
+- Local fixtures crawl slowly (about 2.5 s a page) because `localhost` tries IPv6 first and the fixture servers listen on IPv4 only; a free scan of the showcase stops at 8 of its 13 pages. Real sites are unaffected (0.28 s a page). Dev only.
 - The first API call of a run can take 25 to 45 s when Groq's free tier is rate-limited: the goal planner and the first step fall through to slower models. Watch this before launch; a warm fast model for the planner is the fix.
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.

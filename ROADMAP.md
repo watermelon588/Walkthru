@@ -27,7 +27,7 @@ Found in the 2026-09-24 review. Each fix has a task in `tasks/todo.md`.
 | 6 | No GEO while search moves to AI answers | No module | Deterministic GEO scanner in every plan, fix pack in paid plans, GEO watch in Plus | V2, V5, V12 |
 | 7 | **Plan limits are not enforced** | The client sends `tier`; `logged_in` is open to everyone; the side panel hardcodes 12 steps | Server-owned entitlements; `POST /runs` clamps everything; `GET /me/plan` | V1 |
 | 8 | Pro at $15 is thin; Team at $39 with 250 runs loses money at $0.20 a run | $14.00 net against $12.00 worst-case cost; $37.04 net against $50.00 | Pro $19 (founding $15, 40 runs); Plus $49 (founding $39, 150 runs) | V9, V10 |
-| 9 | Pro promises 50-page SEO; the crawler caps at 20 pages and 20 s | `app/scans/site.py` `MAX_MAX_PAGES = 20` | Paid scans run in the background with 50 pages and a 60 s budget | V6 |
+| 9 | Pro promises 50-page SEO; the crawler caps at 20 pages and 20 s | `app/scans/site.py` `MAX_MAX_PAGES = 20` | Paid scans run in the background with 50 pages and a 60 s budget | V6 (done 2026-09-24) |
 | 10 | Only 4 test users, one per run; competitors run "flocks" | Side panel has 4 personas | Plus: custom test users and several test users merged in one report | V13 |
 | 11 | No trigger on deploy (CanaryUsers runs on every push) | None | Plus deploy webhook runs the server-side watch scan | V12 |
 | 12 | Free-model capacity has a ceiling | About 110 full runs a day across 3 Groq models | Global `FREE_RUNS_PER_DAY` guard with a clear message; paid runs keep the full chain; fund a paid model from revenue only | V1 |
