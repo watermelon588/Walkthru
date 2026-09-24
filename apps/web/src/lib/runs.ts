@@ -54,6 +54,8 @@ export type Finding = {
   evidence: string | null
 }
 
+export type Compared = { kind: Finding['kind']; severity: Finding['severity']; title: string; fingerprint: string }
+
 export type Report = {
   summary: string
   first_impression: { what: string; who: string; first_click: string; trust: string[]; clarity: number } | null
@@ -63,6 +65,7 @@ export type Report = {
   tokens: number
   checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', 'complete' | 'unavailable'>>
   geo?: { score: number; band: 'critical' | 'foundation' | 'good' | 'excellent'; categories: { id: string; label: string; earned: number; max: number }[]; ai_words: number; ai_view: string; notes: string[] } | null
+  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[] } | null
   site_audit?: {
     pages_scanned: number
     page_limit: number
@@ -166,6 +169,30 @@ export const exportAccount = () => api<Record<string, unknown>>('/account/export
 /** The server decides the plan (apps/api/app/plans.py). */
 export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
 export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
+/** Same rule as fingerprint() in apps/api/app/agent/compare.py: kind plus title, ignoring case, spacing and counts. */
+export function fingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
+  return `${f.kind}:${f.title.toLowerCase().replace(/\d+/g, '#').split(/\s+/).filter(Boolean).join(' ')}`
+}
+
+function siteOrigin(url: string): string {
+  try {
+    return new URL(url).origin.toLowerCase()
+  } catch {
+    return url
+  }
+}
+
+/** Findings the owner accepted for this site (fingerprint to reason). Read under RLS: only the owner's own rows. */
+export async function ignoredFindings(site: string): Promise<Record<string, string>> {
+  if (!supabase) return {}
+  const { data, error } = await supabase.from('finding_states').select('fingerprint, reason').eq('origin', siteOrigin(site))
+  if (error) throw new Error(error.message)
+  return Object.fromEntries((data ?? []).map((row) => [row.fingerprint as string, row.reason as string]))
+}
+
+export const ignoreFinding = (runId: string, fp: string, reason: string) => api<{ ignored: string }>(`/runs/${runId}/findings/ignore`, { fingerprint: fp, reason })
+export const unignoreFinding = (runId: string, fp: string) =>
+  api<{ cleared: string }>(`/runs/${runId}/findings/ignore?fingerprint=${encodeURIComponent(fp)}`, undefined, true, 'DELETE')
 export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)

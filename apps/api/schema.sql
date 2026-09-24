@@ -100,3 +100,22 @@ create policy "owner reads entitlements" on public.entitlements
   using (user_id = (select auth.uid()));
 
 grant select on public.entitlements to authenticated;
+
+-- Ignored findings (2026-09-24, paid plans). Kept per site origin, so an ignored finding stays ignored on reruns.
+create table if not exists public.finding_states (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  origin text not null,
+  fingerprint text not null,
+  reason text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, origin, fingerprint)
+);
+
+alter table public.finding_states enable row level security;
+
+drop policy if exists "owner reads finding states" on public.finding_states;
+create policy "owner reads finding states" on public.finding_states
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+
+grant select on public.finding_states to authenticated;

@@ -152,6 +152,23 @@ class GeoSummary(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class ComparedFinding(BaseModel):
+    kind: str
+    severity: str
+    title: str
+    fingerprint: str
+
+
+class Comparison(BaseModel):
+    """Against the previous run of the same goal on the same site (app/agent/compare.py). Paid plans only."""
+
+    previous_run_id: str
+    previous_at: str
+    fixed: list[ComparedFinding] = Field(default_factory=list)
+    still_broken: list[ComparedFinding] = Field(default_factory=list)
+    new: list[ComparedFinding] = Field(default_factory=list)
+
+
 class Report(BaseModel):
     summary: str
     first_impression: FirstImpression | None = None
@@ -162,3 +179,4 @@ class Report(BaseModel):
     checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
     site_audit: SiteAuditSummary | None = None
     geo: GeoSummary | None = None
+    comparison: Comparison | None = None

@@ -109,6 +109,12 @@ _Last updated: 2026-09-24_
   - **House style:** model-written report text is stripped of em and en dashes.
   - 145 API tests.
 
+- **Session 4: rerun and compare, ignore a finding (2026-09-24).**
+  - **Compare:** every paid run is compared automatically with the owner's previous run of the same goal on the same site: fixed, new and still broken, in code (`app/agent/compare.py`), shown as "Since your last run" on the report. Checked live: a rerun of the hard-fixture signup matched all 35 findings as still broken, including model-written UX findings.
+  - **Ignore:** paid owners can ignore a finding with a reason ("won't fix"); it stays ignored on reruns of that site, leaves the compare lists, and can be undone.
+  - **Safety:** a comparison failure never loses the report.
+  - 152 API tests; web build and lint green.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -123,7 +129,8 @@ Session plan and deadlines: ROADMAP.md. Tasks: tasks/todo.md.
 - **Launch:** target 2026-10-20, 2026-10-27 at the latest. Free, Launch Pack and Pro, with live Dodo passes.
 - **Plus opens:** 2026-11-22 at the latest.
 
-1. **Next session (4):** V4 rerun and compare, plus V17 ignore a finding. Sessions 1, 2, 2b and 3 are done. The local test account holds a Pro dev pass until 2026-09-26. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
+1. **Founder, 30 seconds:** apply the `finding_states` table in the Supabase SQL editor (the block at the end of `apps/api/schema.sql`, from "-- Ignored findings"). Direct Postgres from this network timed out 8 times on 2026-09-24. Until then the Ignore button fails and comparisons run without ignored findings.
+2. **Next session (5):** V5 GEO fix pack, plus V15 agent fix prompt. Sessions 1 to 4 are done. The local test account has used its 3 free runs this month: grant it a dev pass before live testing.
 2. **Then:**
    - Session 2: V2 GEO scanner.
    - Session 3: V3 GEO traps and Checkpoint B, plus V16 signup email check.

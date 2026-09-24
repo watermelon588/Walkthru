@@ -47,6 +47,16 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "mark_run_stopped", mark_run_stopped)
     monkeypatch.setattr(db, "set_report", set_report)
     monkeypatch.setattr(db, "set_public", lambda run_id, public=True: rows[run_id].__setitem__("public", public))
+    def recent_reports(user_id, exclude_id, limit=20):
+        found = [r for r in rows.values() if r.get("user_id") == user_id and r.get("kind") == "test" and r.get("report") and r["id"] != exclude_id]
+        return sorted(found, key=lambda r: r.get("created_at", ""), reverse=True)[:limit]
+
+    ignored: dict[tuple, str] = {}
+    monkeypatch.setattr(db, "recent_reports", recent_reports)
+    monkeypatch.setattr(db, "ignored_fingerprints", lambda user_id, origin: {fp: why for (u, o, fp), why in ignored.items() if (u, o) == (user_id, origin)})
+    monkeypatch.setattr(db, "set_ignored", lambda user_id, origin, fp, reason: ignored.__setitem__((user_id, origin, fp), reason))
+    monkeypatch.setattr(db, "clear_ignored", lambda user_id, origin, fp: ignored.pop((user_id, origin, fp), None))
+    monkeypatch.setattr(db, "ignored_for_user", lambda user_id: [{"origin": o, "fingerprint": fp, "reason": why} for (u, o, fp), why in ignored.items() if u == user_id])
     monkeypatch.setattr(db, "test_runs_since", test_runs_since)
     monkeypatch.setattr(db, "free_runs_today", free_runs_today)
     return rows
