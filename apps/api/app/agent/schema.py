@@ -126,11 +126,12 @@ class Synthesis(BaseModel):
 class SiteAuditSummary(BaseModel):
     """Bounded crawl coverage included with new reports. Absent on legacy reports."""
 
-    pages_scanned: int = Field(ge=0, le=20)
-    page_limit: int = Field(ge=1, le=20)
+    # Paid crawls reach 50 pages (site.PAID_MAX_PAGES), plus up to 5 pages the test user visited (site.MAX_VISITED).
+    pages_scanned: int = Field(ge=0, le=55)
+    page_limit: int = Field(ge=1, le=50)
     duration_ms: int = Field(ge=0)
     truncated: bool
-    urls: list[str] = Field(default_factory=list, max_length=20)
+    urls: list[str] = Field(default_factory=list, max_length=55)
     robots_respected: bool = True
 
 

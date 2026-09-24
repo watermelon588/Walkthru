@@ -17,8 +17,10 @@ from app.scans import fetch, geo, security, seo
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
-MAX_MAX_PAGES = 20
 DEFAULT_TIME_LIMIT = 20.0
+PAID_MAX_PAGES = 50  # paid run reports; they are written in a background task, so the longer budget waits on no one
+PAID_TIME_LIMIT = 60.0
+MAX_MAX_PAGES = PAID_MAX_PAGES
 MAX_VISITED = 5  # pages the test user visited, audited on top of the crawl
 SIGNUP = re.compile(r"\b(sign ?up|get started|start (for )?free|create (an )?account|register|join now)\b", re.IGNORECASE)
 

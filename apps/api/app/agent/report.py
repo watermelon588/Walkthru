@@ -109,7 +109,10 @@ def site_scan(state: ReportState) -> dict:
         fetch.assert_public(state["site"])
         with fetch.client() as c:
             visited = [u for s in state.get("steps", []) for u in (s.get("url"), s.get("result_url")) if u]
-            result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=state.get("paid", False), visited=visited)
+            paid = state.get("paid", False)
+            result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=paid, visited=visited,
+                                max_pages=site.PAID_MAX_PAGES if paid else site.DEFAULT_MAX_PAGES,
+                                time_limit=site.PAID_TIME_LIMIT if paid else site.DEFAULT_TIME_LIMIT)
             mail, mail_note = email.check(state["site"], c, full=state.get("paid", False))
         return {
             "seo": [finding.model_dump() for finding in result.seo],

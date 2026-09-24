@@ -123,7 +123,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
     - `GET /badge/{site_id}.svg` shows the latest score, cached one hour, only when the owner turned it on. It links to the public report.
     - Public report meta carries the score.
   - Verify: pytest for the weighting; the badge renders and updates after a rerun.
-- [ ] **V6 50-page paid audit** (S)
+- [x] **V6 50-page paid audit** (S), done 2026-09-24 (moved up from session 7; paid run reports were already background tasks)
   - Accept: paid scans use 50 pages and a 60 s budget in a background task; Instant Scan stays at 10 pages and 20 s; coverage shows what was checked.
   - Verify: pytest with a fake 60-page site.
 
