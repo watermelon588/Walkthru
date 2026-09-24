@@ -1,4 +1,3 @@
-import { MagicWandIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { copyText } from '../lib/clipboard'
 import { getFixPrompt } from '../lib/runs'
@@ -34,8 +33,8 @@ export function FixPrompt({ runId, paid, count }: { runId: string; paid: boolean
 
   return (
     <section aria-labelledby="fix-prompt-title" className="no-print mt-12 rounded-2xl border border-line px-5 py-5">
-      <h2 id="fix-prompt-title" className="text-xl font-light tracking-tight flex items-center gap-2">
-            <MagicWandIcon weight="light" className="size-5 shrink-0 text-accent" aria-hidden />One prompt for all {count} fixes</h2>
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Fix it with your coding agent</p>
+      <h2 id="fix-prompt-title" className="mt-2 text-xl font-light tracking-tight">One prompt for all {count} fixes</h2>
       <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted">
         {paid
           ? 'Paste it into Claude Code, Cursor or Codex, or save the file into your project. Lovable and Bolt get a shorter chat version. Ignored findings are left out; secrets are never included.'
