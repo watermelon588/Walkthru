@@ -220,3 +220,27 @@ This approves the official `mcp` Python SDK when V20 is built.
 **Built on 2026-09-24:** off until `CLAUDE_VERTEX_PROJECT` is set. The free chain always sits behind Claude.
 
 **Before marketing specific gains:** a measured comparison on the hard and showcase journeys (session 6).
+
+## 2026-09-24 Jev stays off; first-step latency fixed in our own code
+
+**Question (founder):** Jev calls never show in the usage dashboard. Is Jev still part of the system, and would it make Walkthru fast?
+
+**Finding:** Jev is wired but off. `runtime.make_model` only builds the hybrid when `PERSONA_DECISION_MODEL=jev`, and nothing sets it, so every step uses the free LLM chain.
+
+**Measured** (same easy-fixture signup journey through the real API, test account on a Pro pass):
+
+| | Free LLM chain | Jev hybrid |
+|---|---:|---:|
+| Server time per step after the first | 1.4 to 2.0 s | 1.8 s when Jev answered; 12.3 and 14.7 s when Jev timed out and fell back |
+| Whole journey | 30.8 s | 64.0 s |
+| Step narration | Written by the model | Template ("I will use Email because it looks like the clearest next step") |
+
+Steps arrive about 5 s apart even when the server answers in 1.5 s: the rest is the browser acting, the page settling and the screenshot upload. A 0.4 s decision model would save at most about 1 s of that, and only when it is reliable.
+
+**Decision:** keep Jev off. Its timeouts doubled the journey, and templated narration weakens the think-aloud that reports quote. Revisit if TypeSafe latency from this region is stable and it can return real narration, using the same A/B.
+
+**What made the first step slow, and the fix** (timed with the new `start_run` log line):
+- Before: plan check 0.7 to 1.8 s, goal planner 2.0 to 7.2 s, domain verification 4.4 to 6.0 s, first step 1.1 to 3.8 s, all one after another: 13 to 19 s.
+- Domain verification now runs in a background thread while the plan check and planner work (it needs only the site and the user).
+- Startup now warms both agent graphs and the planner's model clients, not just the free graph.
+- After: 7.6 to 8.8 s for the first call on the same machine. What remains is the database plan check and one planner model call.

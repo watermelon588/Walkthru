@@ -130,6 +130,8 @@ _Last updated: 2026-09-24_
   - Verified: 50 pages of python.org in 13.9 s; a real Pro journey on the showcase fixture wrote a report covering all 13 pages; the public report opens the list with no overflow at 375 px and a clean console. 170 API tests, Ruff, web build and lint green.
 - **Free Instant Scan daily cap (2026-09-24).** `FREE_SCANS_PER_DAY` (default 200; each scan makes 2 free-model calls) returns 429 "Free scan capacity is used up for today". Like `FREE_RUNS_PER_DAY` it counts today's `runs` rows, so every API process shares it with no new table (live count checked: 4 of 200). The per-address limit (5 an hour) stays in memory, valid while production runs one API process. 171 API tests.
 
+- **Slow first step fixed; Jev measured and kept off (2026-09-24).** Domain verification runs in parallel with the plan check and goal planner, and startup warms both agent graphs and the planner's model clients: the first API call went from 13 to 19 s to 7.6 to 8.8 s. The API now prints its own INFO lines, including per-phase `start_run` timings. Jev was never on (`PERSONA_DECISION_MODEL` unset); an A/B on the same journey took 64 s with Jev against 30.8 s without, because two of four Jev calls timed out. Details in docs/decisions.md.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -147,7 +149,7 @@ New sessions start with handoff.md. Founder's order (2026-09-24):
 
 ## Known issues and notes
 - Local fixtures crawl slowly (about 2.5 s a page) because `localhost` tries IPv6 first and the fixture servers listen on IPv4 only; a free scan of the showcase stops at 8 of its 13 pages. Real sites are unaffected (0.28 s a page). Dev only.
-- The first API call of a run can take 25 to 45 s when Groq's free tier is rate-limited: the goal planner and the first step fall through to slower models. Watch this before launch; a warm fast model for the planner is the fix.
+- The first API call of a run took 13 to 19 s; now 7.6 to 8.8 s (2026-09-24, see docs/decisions.md). It can still be slower when every Groq model is rate-limited and Gemini answers 503. The API logs `start_run ... plan_check= goal_planner= ...` for every run.
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
