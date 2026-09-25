@@ -150,6 +150,15 @@ _Last updated: 2026-09-25_
   - Web: nav shows Dashboard when signed in; landing, meta and footer copy rewritten for the launch-check positioning (text only, same design and images); prices match SPEC; the Instant Scan email field is gone until email delivery has a domain; docs and security page claims corrected (no cookie or TLS checks claimed).
   - Verified end to end on the production build with the Vercel headers: Instant Scan through the landing form (python.org, 10 pages, score 87), share link opened as a stranger, Email me fallback, owner-email lookup, Dashboard/Sign in nav, all internal links and anchors, no overflow at 375 and 1280 px, no console or CSP errors. 176 API tests, 30 extension tests, all builds and lints green.
 
+- **V10 billing with Dodo (2026-09-25, code complete, needs the founder's Dodo keys).** Runbook: [docs/billing.md](docs/billing.md).
+  - Flow per payment.md: a signed-in user requests a plan on the new `/app/billing` page; the founder approves an exact offer with `scripts/billing.py` (no admin endpoint exists); the user pays through a Dodo checkout the API creates; only a verified webhook grants the pass.
+  - Webhook (`POST /webhooks/dodo`): Standard Webhooks signature and 5-minute timestamp, business id, 256 kB cap, each webhook id once (`billing_events`), payment re-fetched from Dodo's API and matched to the offer (user, product, quantity, amount, no discount, paid before expiry). One pass per offer (unique `entitlements.offer_id`). Refunds and disputes revoke; a refund that arrives first blocks the grant. Transient failures return 500 so Dodo retries.
+  - Schema: `access_requests`, `billing_offers`, `billing_events`, `admin_audit_log`; `entitlements` gains `offer_id`, `payment_id`, `revoked_at`. Browser roles are revoked on all four tables; owners may read their own requests and offers. Not yet applied to Supabase: run `python -m app.db`.
+  - New dependencies (asked for by the founder): `dodopayments`, `standardwebhooks`. The SDK defaults to live mode, so `DODO_PAYMENTS_ENVIRONMENT` is always passed and defaults to test.
+  - Landing paid-plan buttons go to `/app/billing`. `scripts/grant_plan.py` still switches plans for free during development.
+  - Verified: 211 API tests (35 new, including a contract test with the real SDK over a mocked transport), Ruff, web build and oxlint, `schema.sql` applied twice to a local Postgres 16 with stubbed Supabase roles (one pending request per user, one pass per offer, webhook id once; browsers read only their own requests, offers and passes and cannot write any billing table), and the billing page rendered in Chromium at 1280 and 375 px in request, offer and paid states with no console errors or overflow. Not verified: a real Dodo test-mode payment (needs the keys and a tunnel).
+  - Not built: payment.md's cost ledger and run reservation; they matter once Claude runs for paid plans.
+
 ## In progress
 - **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
@@ -162,13 +171,13 @@ _Last updated: 2026-09-25_
 ## Next up
 New sessions start with handoff.md. Founder's order (2026-09-24):
 1. **Polish and harden end to end** (session 6a): ~~V6 50-page paid crawls~~, V8 Launch Ready score and badge, ~~`FREE_SCANS_PER_DAY`~~ (the shared limiter reduced to database-counted daily caps; see above), `CHECKPOINTER=postgres` readiness, the slow first step, and a UI pass with the design skills.
-2. **Payment gateway before launch:** V10 Dodo test mode per payment.md.
+2. **Payment gateway before launch:** V10 code is built; the founder adds Dodo test keys and products (docs/billing.md), then one real test-mode payment and refund closes it.
 3. **Later (6b):** deploy, Chrome Web Store, Google Cloud UPI billing with Claude switched on and the measured comparison, and OAuth, guided step by step.
 
 ## Known issues and notes
 - Local fixtures crawl slowly (about 2.5 s a page) because `localhost` tries IPv6 first and the fixture servers listen on IPv4 only; a free scan of the showcase stops at 8 of its 13 pages. Real sites are unaffected (0.28 s a page). Dev only.
 - The first API call of a run took 13 to 19 s; now 7.6 to 8.8 s (2026-09-24, see docs/decisions.md). It can still be slower when every Groq model is rate-limited and Gemini answers 503. The API logs `start_run ... plan_check= goal_planner= ...` for every run.
-- Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
+- Paid pricing buttons lead to `/app/billing` (request access). Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
 - `externally_connectable` follows `VITE_WEB_URL` at build time (`npm run zip:beta` for the beta).
 - Local extension testing must happen in regular Chrome with the unpacked build loaded and reloaded. The Codex in-app browser can render the web app and fixtures but does not host the user's Chrome extension, so its `/login` or `/app` tab cannot complete the session handoff.

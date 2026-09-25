@@ -60,9 +60,9 @@ export const safety = [
 
 export const plans = [
   { name: 'Free', price: '$0', per: 'forever', cta: 'Scan my site', features: ['Instant Scan, no install', 'SEO, AI search and security report', '3 test runs a month', 'Public pages'] },
-  { name: 'Launch Pack', price: '$9', per: 'one time, 30 days', cta: 'Scan my site', features: ['20 test runs', 'Logged-in pages', '50-page SEO audit', 'Fix prompt for your coding agent'] },
-  { name: 'Pro', price: '$19', per: 'per month, $15 for founding users', cta: 'Scan my site', highlight: true, features: ['40 test runs a month', 'Everything in Launch Pack', 'Rerun and compare', 'Ignore findings with a reason', '2 sites'] },
-  { name: 'Plus', price: '$49', per: 'per month, waitlist', cta: 'Scan my site', features: ['150 test runs a month', '5 sites', 'Weekly watch and alerts', 'Opens after launch'] },
+  { name: 'Launch Pack', price: '$9', per: 'one time, 30 days', cta: 'Request access', href: '/app/billing', features: ['20 test runs', 'Logged-in pages', '50-page SEO audit', 'Fix prompt for your coding agent'] },
+  { name: 'Pro', price: '$19', per: 'per month, $15 for founding users', cta: 'Request access', href: '/app/billing', highlight: true, features: ['40 test runs a month', 'Everything in Launch Pack', 'Rerun and compare', 'Ignore findings with a reason', '2 sites'] },
+  { name: 'Plus', price: '$49', per: 'per month, waitlist', cta: 'Join the waitlist', href: '/app/billing', features: ['150 test runs a month', '5 sites', 'Weekly watch and alerts', 'Opens after launch'] },
 ]
 
 // Absolute (/#...) so they work from docs and legal pages too.

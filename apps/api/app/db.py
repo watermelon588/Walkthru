@@ -116,7 +116,7 @@ def free_runs_today(kind: str = "test") -> int:
 
 def active_entitlement(user_id: str, now: str) -> dict | None:
     rows = _request("GET", "/rest/v1/entitlements", params={
-        "user_id": f"eq.{user_id}", "starts_at": f"lte.{now}", "expires_at": f"gt.{now}",
+        "user_id": f"eq.{user_id}", "starts_at": f"lte.{now}", "expires_at": f"gt.{now}", "revoked_at": "is.null",
         "select": "plan,starts_at,expires_at,runs_granted", "order": "expires_at.desc", "limit": "1"}) or []
     return rows[0] if rows else None
 
@@ -134,6 +134,114 @@ def grant_entitlement(user_id: str, plan: str, days: int, runs: int, source: str
 def expire_entitlements(user_id: str) -> None:
     now = _now()
     _request("PATCH", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "expires_at": f"gt.{now}"}, json_body={"expires_at": now}, prefer="return=minimal")
+
+
+# ---------- billing (V10, payment.md): requests, offers, webhook events, audit ----------
+
+
+class Conflict(Exception):
+    """A unique constraint refused the write (for example a second pending access request)."""
+
+
+def _insert(table: str, row: dict, *, on_conflict: str | None = None) -> dict | None:
+    """Insert and return the stored row. With `on_conflict`, a duplicate is skipped and None comes back."""
+    params = {"on_conflict": on_conflict} if on_conflict else None
+    prefer = "return=representation" + (",resolution=ignore-duplicates" if on_conflict else "")
+    try:
+        rows = _request("POST", f"/rest/v1/{table}", params=params, json_body=row, prefer=prefer) or []
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 409:
+            raise Conflict(table) from e
+        raise
+    return rows[0] if rows else None
+
+
+def _select(table: str, params: dict) -> list[dict]:
+    return _request("GET", f"/rest/v1/{table}", params={"select": "*"} | params) or []
+
+
+def _update(table: str, filters: dict, values: dict) -> list[dict]:
+    """Conditional update; the returned rows say whether anything matched (compare-and-set)."""
+    return _request("PATCH", f"/rest/v1/{table}", params=filters, json_body=values, prefer="return=representation") or []
+
+
+def create_access_request(user_id: str, plan: str, note: str) -> dict:
+    return _insert("access_requests", {"user_id": user_id, "plan": plan, "note": note}) or {}
+
+
+def access_requests_for_user(user_id: str, limit: int = 20) -> list[dict]:
+    return _select("access_requests", {"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": str(limit)})
+
+
+def get_access_request(request_id: str) -> dict | None:
+    rows = _select("access_requests", {"id": f"eq.{request_id}", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def pending_access_requests() -> list[dict]:
+    return _select("access_requests", {"status": "eq.pending", "order": "created_at.asc", "limit": "200"})
+
+
+def decide_access_request(request_id: str, status: str) -> bool:
+    """pending -> approved or rejected, once."""
+    return bool(_update("access_requests", {"id": f"eq.{request_id}", "status": "eq.pending"}, {"status": status, "decided_at": _now()}))
+
+
+def create_offer(row: dict) -> dict:
+    return _insert("billing_offers", row) or {}
+
+
+def get_offer(offer_id: str) -> dict | None:
+    rows = _select("billing_offers", {"id": f"eq.{offer_id}", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def offers_for_user(user_id: str, limit: int = 20) -> list[dict]:
+    return _select("billing_offers", {"user_id": f"eq.{user_id}", "order": "created_at.desc", "limit": str(limit)})
+
+
+def open_offers() -> list[dict]:
+    return _select("billing_offers", {"status": "eq.approved", "checkout_expires_at": f"gt.{_now()}", "order": "created_at.asc", "limit": "200"})
+
+
+def paid_founding_offers() -> int:
+    return len(_select("billing_offers", {"founding": "eq.true", "status": "eq.paid", "select": "id"}))
+
+
+def mark_offer(offer_id: str, from_status: str, values: dict) -> bool:
+    """Move an offer out of `from_status`. False when another request moved it first."""
+    return bool(_update("billing_offers", {"id": f"eq.{offer_id}", "status": f"eq.{from_status}"}, values))
+
+
+def record_billing_event(webhook_id: str, event_type: str, object_id: str | None, body_sha256: str) -> dict:
+    """Store a verified webhook once. Returns the stored row, which is the earlier one on redelivery."""
+    row = {"webhook_id": webhook_id, "event_type": event_type, "object_id": object_id, "body_sha256": body_sha256}
+    stored = _insert("billing_events", row, on_conflict="webhook_id")
+    if stored:
+        return stored
+    return _select("billing_events", {"webhook_id": f"eq.{webhook_id}", "limit": "1"})[0]
+
+
+def finish_billing_event(webhook_id: str, result: str) -> None:
+    _update("billing_events", {"webhook_id": f"eq.{webhook_id}"}, {"processed_at": _now(), "result": result[:200]})
+
+
+def grant_paid_entitlement(row: dict) -> bool:
+    """Insert the pass for an offer. False when that offer already granted one (a retry or a race)."""
+    return _insert("entitlements", row, on_conflict="offer_id") is not None
+
+
+def revoke_entitlement(payment_id: str, reason: str) -> list[dict]:
+    return _update("entitlements", {"payment_id": f"eq.{payment_id}", "revoked_at": "is.null"}, {"revoked_at": _now(), "revoked_reason": reason[:200]})
+
+
+def offer_for_payment(payment_id: str) -> dict | None:
+    rows = _select("billing_offers", {"payment_id": f"eq.{payment_id}", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def audit(actor: str, action: str, target: str, detail: dict) -> None:
+    _insert("admin_audit_log", {"actor": actor[:200], "action": action, "target": target, "detail": detail})
 
 
 def public_reports(user_id: str) -> list[dict]:

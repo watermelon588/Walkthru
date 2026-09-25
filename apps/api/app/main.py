@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from langgraph.types import Command
@@ -17,7 +18,7 @@ from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
-from app import auth, db, deliver, plans, retention
+from app import auth, billing, db, deliver, plans, retention
 from app.agent import compare, fix_prompt, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -419,6 +420,8 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
         "runs": db.runs_for_user(user["id"]),
         "passes": db.entitlements_for_user(user["id"]),
+        "access_requests": db.access_requests_for_user(user["id"], 100),
+        "billing_offers": [billing.public_offer(o) for o in db.offers_for_user(user["id"], 100)],
         "ignored_findings": db.ignored_for_user(user["id"]),
     }
 
@@ -436,6 +439,104 @@ def delete_account(body: DeleteAccount, user: dict = Depends(require_user)) -> d
     for token in [t for t, (u, _) in auth._cache.items() if u["id"] == user["id"]]:
         auth._cache.pop(token, None)
     return {"deleted": True}
+
+
+# ---------- billing (V10, payment.md): request access, pay an approved offer, Dodo webhook ----------
+
+
+class AccessRequest(BaseModel):
+    model_config = {"extra": "forbid"}  # price, product, runs and user come from the server only
+    plan: Literal["launch", "pro", "plus"]
+    note: str = Field(default="", max_length=500)
+
+
+_billing_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the scan limit
+BILLING_LIMIT, BILLING_WINDOW = 10, 3600
+WEBHOOK_MAX_BYTES = 256_000
+
+
+def _billing_rate_limit(user_id: str) -> None:
+    now = time.time()
+    hits = [t for t in _billing_hits.get(user_id, []) if now - t < BILLING_WINDOW]
+    if len(hits) >= BILLING_LIMIT:
+        raise HTTPException(429, "Too many billing requests. Try again in an hour.")
+    _billing_hits[user_id] = hits + [now]
+
+
+@app.get("/billing")
+def billing_status(user: dict = Depends(require_user)) -> dict:
+    """The caller's plan, latest access request, offers and passes. Never product ids or other users' data."""
+    passes = db.entitlements_for_user(user["id"])
+    return {
+        "checkout_enabled": billing.configured(),
+        "plan": plans.summary(plans.current(user["id"])),
+        "requests": [{k: r[k] for k in ("id", "plan", "note", "status", "created_at", "decided_at")} for r in db.access_requests_for_user(user["id"], 5)],
+        "offers": [billing.public_offer(o) for o in db.offers_for_user(user["id"], 10)],
+        "passes": [{k: p.get(k) for k in ("plan", "starts_at", "expires_at", "runs_granted", "source", "revoked_at", "revoked_reason")} for p in passes][-10:],
+        "prices": [{"plan": plan, "founding": founding, "price_cents": cents, "runs": plans.PLANS[plan].runs, "days": billing.PASS_DAYS}
+                   for (plan, founding), cents in billing.PRICES.items()],
+    }
+
+
+@app.post("/billing/access-requests")
+def request_access(body: AccessRequest, user: dict = Depends(require_user)) -> dict:
+    _billing_rate_limit(user["id"])
+    if any(billing.offer_open(o) for o in db.offers_for_user(user["id"], 10)):
+        raise HTTPException(409, "You already have an approved offer waiting. Pay it from this page before it expires.")
+    try:
+        row = db.create_access_request(user["id"], body.plan, body.note.strip())
+    except db.Conflict as e:
+        raise HTTPException(409, "Your request is already waiting for review.") from e
+    log.info("access request %s for %s", row.get("id"), body.plan)
+    return {"id": row.get("id"), "plan": body.plan, "status": "pending"}
+
+
+@app.post("/billing/offers/{offer_id}/checkout")
+def start_checkout(offer_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
+    """Open a Dodo checkout for the caller's own approved offer. Paying still grants nothing until the webhook."""
+    _billing_rate_limit(user["id"])
+    offer = db.get_offer(str(offer_id))
+    if offer is None or str(offer["user_id"]) != user["id"]:
+        raise HTTPException(404, "unknown offer")
+    if not billing.offer_open(offer):
+        raise HTTPException(410, "This offer is no longer open. Request access again.")
+    if not user.get("email"):
+        raise HTTPException(409, "Your account needs an email address for the receipt.")
+    try:
+        url = billing.create_checkout(offer, user, f"{WEB_URL}/app/billing?offer={offer['id']}")
+    except billing.NotConfigured as e:
+        log.warning("checkout unavailable: %s", e)
+        raise HTTPException(503, "Payments are not switched on yet.") from e
+    except Exception as e:  # Dodo errors carry request details; the browser gets a plain message
+        log.exception("dodo checkout failed for offer %s", offer["id"])
+        raise HTTPException(502, "Could not open the payment page. Try again in a minute.") from e
+    return {"checkout_url": url}
+
+
+@app.post("/webhooks/dodo")
+async def dodo_webhook(request: Request) -> JSONResponse:
+    """Public, signature-checked. 4xx means never retry (forged or not ours); 5xx asks Dodo to retry later."""
+    declared = request.headers.get("content-length", "0")
+    if not declared.isdigit() or int(declared) > WEBHOOK_MAX_BYTES:
+        return JSONResponse(status_code=413, content={"detail": "too large"})
+    body = b""
+    async for chunk in request.stream():  # bounded read, also for chunked bodies without a length
+        body += chunk
+        if len(body) > WEBHOOK_MAX_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "too large"})
+    headers = {k.lower(): v for k, v in request.headers.items() if k.lower().startswith("webhook-")}
+    try:
+        result = await run_in_threadpool(billing.handle, body, headers)
+    except billing.InvalidWebhook as e:
+        log.warning("dodo webhook refused: %s", e)
+        return JSONResponse(status_code=401, content={"detail": "invalid webhook"})
+    except billing.NotConfigured:
+        log.error("dodo webhook arrived but billing is not configured")
+        return JSONResponse(status_code=503, content={"detail": "not configured"})
+    except Exception:
+        log.exception("dodo webhook failed; Dodo will retry")
+        return JSONResponse(status_code=500, content={"detail": "retry"})
+    return JSONResponse({"received": True, "result": result})
 
 
 @app.get("/verification")

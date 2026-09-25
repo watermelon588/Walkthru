@@ -136,7 +136,7 @@ export function Pricing() {
             <ul className="mt-8 flex-1 space-y-3 text-sm text-muted">
               {p.features.map((f) => <li key={f}>{f}</li>)}
             </ul>
-            <a href="#scan" className={`mt-10 self-start ${p.highlight ? btnPrimary : btnGhost}`}>{p.cta}</a>
+            <a href={'href' in p ? p.href : '#scan'} className={`mt-10 self-start ${p.highlight ? btnPrimary : btnGhost}`}>{p.cta}</a>
           </div>
         ))}
       </div>

@@ -129,7 +129,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: pytest with a fake 60-page site.
 
 ### Session 8 (10-11 to 10-13)
-- [ ] **V10 Billing with Dodo** (M)
+- [ ] **V10 Billing with Dodo** (M). Code built 2026-09-25 with 35 tests; open until a real test-mode payment passes with the founder's keys (docs/billing.md).
   - Accept, all per payment.md:
     - Access request.
     - Founder approval creates an offer.

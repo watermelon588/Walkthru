@@ -16,6 +16,8 @@ dependencies = [
   "email-validator>=2",  # pydantic EmailStr on POST /scans
   "httpx>=0.28",
   "selectolax>=0.3",
+  "dodopayments>=1.117,<2",  # V10 billing: checkout sessions, payment lookups (payment.md)
+  "standardwebhooks>=1.1,<2",  # Dodo webhook signature and timestamp verification
 ]
 
 [project.optional-dependencies]

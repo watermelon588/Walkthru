@@ -21,6 +21,8 @@ Web on Vercel (free), API on Render (free), database and sign-in on Supabase (ex
    | `PAGESPEED_API_KEY` | optional (mobile speed findings) |
    | `RESEND_API_KEY`, `RESEND_FROM` | leave empty: without your own domain Resend cannot mail other people, and "Email me" opens the user's mail app instead |
 
+   Payments: the `DODO_*` variables, filled in by [docs/billing.md](billing.md). Leave them empty and checkout simply stays off.
+
    Never set `ALLOW_LOCAL_SCANS` in production.
 3. Deploy, then open `https://YOUR-API.onrender.com/health`. It should say `{"status":"ok"}`.
 
