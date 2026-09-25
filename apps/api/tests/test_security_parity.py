@@ -407,3 +407,24 @@ def test_vendored_data_loads_and_compiles():
     assert len(secrets._rules()[0]) > 200 and len(libraries._repo()) > 50 and len(takeover._services()) > 20
     with open(os.path.join(os.path.dirname(security.__file__), "data", "gitleaks.json"), encoding="utf-8") as f:
         assert not {"generic-api-key", "jwt"} & {r["id"] for r in json.load(f)["rules"]}
+
+
+def test_verified_checks_stay_on_the_verified_host(monkeypatch):
+    """A verified site that redirects to another host must not get that host's files and bundles probed."""
+    asked = []
+
+    def handler(request):
+        asked.append(f"{request.url.host}{request.url.path}")
+        if request.url.host == "mine.test":
+            return httpx.Response(301, headers={"location": "https://victim.test/"})
+        return httpx.Response(200, text='<script src="/app.js"></script>', headers={"content-type": "text/html"})
+
+    monkeypatch.setattr("app.scans.fetch.assert_public", lambda url: None)
+    monkeypatch.setattr("app.scans.security.assert_public", lambda url: None)
+    monkeypatch.setattr(tls, "check", lambda url, **k: [])
+    with httpx.Client(transport=httpx.MockTransport(handler)) as c:
+        site.audit("https://mine.test/", c, verified=True, max_pages=1, time_limit=5)
+    assert not [a for a in asked if a.startswith("victim.test/.") or a.endswith((".sql", ".zip", "server-status"))]
+    from app.scans import fetch
+
+    assert fetch.same_site("https://example.com/", "https://www.example.com/") and not fetch.same_site("https://a.test/", "https://b.test/")

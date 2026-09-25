@@ -70,7 +70,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, P0.4 (moved before launch) |
 | `rule-ids` | Stable `rule` id on every finding; compare, recipes and MCP key on it | none | Planned, P0.1 |
 | `backend-exposure` | Supabase and Firebase detection; read-only row-count probe on verified domains | site audit | Planned, P1.1 |
-| `security-parity` | Header quality, CSP, CORS, SRI, vulnerable JS libraries, source maps, secrets, TLS, CAA, takeovers | site audit | Planned, P1.2 |
+| `security-parity` | Header quality, CSP, CORS, SRI, vulnerable JS libraries, source maps, secrets, TLS, CAA, takeovers | site audit | Built 2026-09-25 (P1.2) |
 | `stack-detect` + `recipes` | Hosting, framework and backend from headers and HTML; per-rule, per-stack fixes in a data file | `rule-ids` | Planned, P1.3 |
 | `geo-depth` | Ported geo-optimizer checks, citability score, firewall blocking, entity checks | `geo-scan` | Planned, P1.5 |
 | `seo-depth` | Ported crawler checks, per-page Core Web Vitals on paid plans | site audit | Planned, P1.6 |
@@ -191,6 +191,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 
 ### `mcp` (built 2026-09-25)
 - **As built:** `app/mcp_server.py` on the official SDK (`mcp` 2.x, `MCPServer`), stateless JSON over streamable HTTP, registered as a plain route at `/mcp` (no mounted sub-app, so no trailing-slash redirect on POST). An ASGI wrapper checks the key and the Plus plan on every request and passes the user to the tools through a context variable; the SDK's OAuth resource-server mode was not used because it needs an authorization server. Tool errors use `ToolError` so the agent sees the reason. `scan_site` and `rerun` share `main.run_scan` with Instant Scan, store private owner scans on the paid tier (never the free capacity) and stop at 50 a day per user. Keys: `GET/POST /me/api-keys`, `DELETE /me/api-keys/{id}`, at most 5 active, table locked to the service role. Settings has an "API keys and MCP" section with copy-ready Claude Code and Cursor setup; docs `#mcp`.
+- **P1.4 (2026-09-25):** `get_finding(run_id, rule)` returns everything the report holds for one finding; `verify_finding(run_id, rule)` re-runs only the scanner family that produced it (security checks, the site audit for SEO and GEO, accessibility or PageSpeed) on the finding's pages and answers fixed, still broken or not re-checked. `rule` is the finding's `rule` id once P0.1 adds it, else its compare fingerprint or exact title; `get_report` prints each id. Journey (UX) findings are refused with a pointer to the extension. Checks share the daily cap with scans (per-process counter, one API process).
 - **Server:** a remote MCP server at `/mcp` over streamable HTTP, mounted in the FastAPI app with the official `mcp` Python SDK. The founder approved the MCP feature on 2026-09-24, and with it this new dependency. Nothing to install on the user's side: they paste the URL and key into Claude Code or Cursor.
 - **Auth:** a personal API key in a bearer header.
   - Table `api_keys(id, user_id, name, key_hash, created_at, last_used_at, revoked_at)`.

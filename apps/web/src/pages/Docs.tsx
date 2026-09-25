@@ -188,7 +188,7 @@ const sections: DocSection[] = [
           <li>Add the server to your editor with the command or file that page shows you, for example in Claude Code:</li>
         </ol>
         <pre><code>{'claude mcp add --transport http walkthru https://YOUR-WALKTHRU-API/mcp --header "Authorization: Bearer wt_..."'}</code></pre>
-        <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>rerun</code> and <code>list_runs</code>. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
+        <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>get_finding</code>, <code>verify_finding</code>, <code>rerun</code> and <code>list_runs</code>. After fixing one finding, <code>verify_finding</code> re-checks just that finding on its pages, which is faster than a full rerun. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
         <p>Revoke a key in Settings the moment you stop using it or think it leaked.</p>
       </>
     ),
