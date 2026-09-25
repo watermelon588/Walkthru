@@ -240,3 +240,10 @@ export function timeAgo(iso: string): string {
   if (s < 86400) return `${Math.floor(s / 3600)} h ago`
   return `${Math.floor(s / 86400)} d ago`
 }
+
+/** Personal API keys for the Walkthru MCP server (Plus). The key itself is only in the create response. */
+export type ApiKey = { id: string; name: string; created_at: string; last_used_at: string | null }
+export const listApiKeys = () => api<ApiKey[]>('/me/api-keys', undefined, true, 'GET')
+export const createApiKey = (name: string) => api<ApiKey & { key: string }>('/me/api-keys', { name })
+export const revokeApiKey = (id: string) => api<{ revoked: string }>(`/me/api-keys/${id}`, undefined, true, 'DELETE')
+export const MCP_URL = `${API}/mcp`

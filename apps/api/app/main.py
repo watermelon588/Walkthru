@@ -4,6 +4,7 @@ import re
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from itertools import pairwise
 from typing import Literal
 from urllib.parse import urlsplit
@@ -16,8 +17,9 @@ from langgraph.types import Command
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
+from starlette.routing import Route
 
-from app import auth, db, deliver, plans, retention
+from app import auth, db, deliver, mcp_server, plans, retention
 from app.agent import compare, fix_prompt, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -35,7 +37,15 @@ if _web.hostname in {"localhost", "127.0.0.1"}:
     _port = f":{_web.port}" if _web.port else ""
     WEB_ORIGINS.update({f"{_web.scheme}://localhost{_port}", f"{_web.scheme}://127.0.0.1{_port}"})
 
-app = FastAPI(title="Walkthru API")
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    async with mcp_server.server.session_manager.run():  # the MCP transport needs its task group running
+        yield
+
+
+app = FastAPI(title="Walkthru API", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(WEB_ORIGINS),
@@ -336,20 +346,59 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
         raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
     try:
-        fetch.assert_public(body.site)
+        run_id, rep = run_scan(body.site)
     except ValueError as e:
         raise HTTPException(422, str(e)) from e
+    if body.email:
+        deliver.send_report(body.email, f"{WEB_URL}/r/{run_id}", rep["site"], rep["report"])
+    return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep["report"]}
+
+
+def run_scan(site: str, *, user_id: str | None = None) -> tuple[str, dict]:
+    """One server-side scan, stored as a run. Anonymous Instant Scans are public; an owner's scan (MCP) is private.
+    Raises ValueError with a message for the caller when the site cannot be scanned."""
+    fetch.assert_public(site)
     with fetch.client() as c:
-        resp = fetch.get(c, body.site)
+        resp = fetch.get(c, site)
     if resp is None or resp.status_code >= 400:
-        raise HTTPException(422, "That site did not respond. Check the address and try again.")
+        raise ValueError("That site did not respond. Check the address and try again.")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, None, str(resp.url), "Instant Scan", "stranger", "free", False, kind="scan", public=True)
+    # Owners' scans use the paid tier so they never count against the free daily capacity.
+    db.insert_run(run_id, user_id, str(resp.url), "Instant Scan", "stranger", "paid" if user_id else "free", False, kind="scan", public=user_id is None)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text))
     db.set_report(run_id, rep.model_dump(), status="done")
-    if body.email:
-        deliver.send_report(body.email, f"{WEB_URL}/r/{run_id}", str(resp.url), rep.model_dump())
-    return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep.model_dump()}
+    return run_id, {"site": str(resp.url), "report": rep.model_dump()}
+
+
+# ---------- Walkthru MCP server and personal API keys (Plus) ----------
+
+app.router.routes.append(Route("/mcp", mcp_server.Endpoint(), methods=["GET", "POST", "DELETE"]))
+
+
+class NewApiKey(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+@app.get("/me/api-keys")
+def list_api_keys(user: dict = Depends(require_user)) -> list[dict]:
+    return db.api_keys_for_user(user["id"])
+
+
+@app.post("/me/api-keys")
+def create_api_key(body: NewApiKey, user: dict = Depends(require_user)) -> dict:
+    """The key is returned once and only its hash is stored."""
+    mcp_server.require_plus(user["id"])
+    if len(db.api_keys_for_user(user["id"])) >= mcp_server.MAX_KEYS:
+        raise HTTPException(409, f"You already have {mcp_server.MAX_KEYS} keys. Revoke one you no longer use.")
+    key, hashed = mcp_server.new_key()
+    return db.insert_api_key(user["id"], body.name.strip(), hashed) | {"key": key}
+
+
+@app.delete("/me/api-keys/{key_id}")
+def revoke_api_key(key_id: str, user: dict = Depends(require_user)) -> dict:
+    if not re.fullmatch(r"[0-9a-f-]{36}", key_id) or not db.revoke_api_key(user["id"], key_id):
+        raise HTTPException(404, "No active key with that id.")
+    return {"revoked": key_id}
 
 
 # ---------- sharing, email, verification ----------

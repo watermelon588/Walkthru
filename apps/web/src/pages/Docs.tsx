@@ -156,6 +156,22 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'mcp',
+    title: 'Connect your editor (MCP)',
+    body: (
+      <>
+        <p>On the Plus plan, Claude Code, Cursor and other MCP clients can use Walkthru directly: scan a site, read a report, pull the fix prompt into the codebase they are editing, and rerun after the fixes.</p>
+        <ol>
+          <li>Open <Link to="/app/settings#mcp">Settings</Link> and create an API key. Copy it right away: it is shown once.</li>
+          <li>Add the server to your editor with the command or file Settings shows you, for example in Claude Code:</li>
+        </ol>
+        <pre><code>{'claude mcp add --transport http walkthru https://YOUR-WALKTHRU-API/mcp --header "Authorization: Bearer wt_..."'}</code></pre>
+        <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>rerun</code> and <code>list_runs</code>. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
+        <p>Revoke a key in Settings the moment you stop using it or think it leaked.</p>
+      </>
+    ),
+  },
+  {
     id: 'your-data',
     title: 'Your data',
     body: (
