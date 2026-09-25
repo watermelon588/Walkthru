@@ -18,10 +18,15 @@ export default function Join() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!code) return
-    savePendingJoin(code)
-    window.history.replaceState(null, '', '/join')  // keep the code out of the address bar, screenshots and history
+    if (code) window.history.replaceState(null, '', '/join')  // keep the code out of the address bar, screenshots and history
   }, [code])
+  // Keep the code in this browser only while the invitee still has to sign in; once signed in, the page holds it,
+  // so leaving without joining never sends them back here again.
+  useEffect(() => {
+    if (!code || loading) return
+    if (session) clearPendingJoin()
+    else savePendingJoin(code)
+  }, [code, loading, session])
 
   useEffect(() => {
     if (!code || loading || !session) return

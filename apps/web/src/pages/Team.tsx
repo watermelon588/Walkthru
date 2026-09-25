@@ -30,8 +30,9 @@ export default function Team() {
 
 function Workspace({ id, tab }: { id: string; tab: string }) {
   const [state, setState] = useState<State>({ kind: 'loading' })
-  const [signal, setSignal] = useState(0)
-  const timer = useRef<number | undefined>(undefined)
+  const [signal, setSignal] = useState(0)  // shares, triage, members, activity changed: data tabs refetch
+  const [chatSignal, setChatSignal] = useState(0)  // a message or comment changed: open threads refetch
+  const timers = useRef<Record<string, number>>({})
 
   const load = useCallback(() =>
     getTeam(id)
@@ -39,17 +40,28 @@ function Workspace({ id, tab }: { id: string; tab: string }) {
       .catch((e: Error) => setState((s) => (/not a member|No workspace/i.test(e.message) ? { kind: 'missing' } : s.kind === 'ready' ? s : { kind: 'error', message: e.message }))), [id])
   useEffect(() => { load() }, [load])
 
-  // Realtime nudges: debounce, then refresh the header data and tell the open tab to refetch.
-  const live = useTeamLive(id, () => {
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => { setSignal((n) => n + 1); load() }, 600)
+  // Realtime nudges, debounced. Messages and presence (read markers, last seen) change often, so they refresh only the
+  // threads at once and the header counts after a pause; shares, triage and membership refresh everything quickly.
+  const later = (key: string, ms: number, fn: () => void) => {
+    window.clearTimeout(timers.current[key])
+    timers.current[key] = window.setTimeout(fn, ms)
+  }
+  const live = useTeamLive(id, (table) => {
+    if (table === 'team_messages') {
+      later('chat', 300, () => setChatSignal((n) => n + 1))
+      later('overview', 10_000, load)
+    } else if (table === 'team_members') {
+      later('overview', 10_000, () => { setSignal((n) => n + 1); load() })
+    } else {
+      later('overview', 600, () => { setSignal((n) => n + 1); load() })
+    }
   })
   useEffect(() => {
     if (live) return
     const poll = window.setInterval(() => { if (document.visibilityState === 'visible') load() }, 30_000)
     return () => window.clearInterval(poll)
   }, [live, load])
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  useEffect(() => () => Object.values(timers.current).forEach((t) => window.clearTimeout(t)), [])
 
   if (state.kind === 'missing') return <NotFound />
   const team = state.kind === 'ready' ? state.team : null
@@ -117,10 +129,10 @@ function Workspace({ id, tab }: { id: string; tab: string }) {
                   <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted">One channel for the whole workspace. It stays here for everyone who joins later. Reports and findings have their own comment threads.</p>
                 </div>
                 <Chat teamId={id} thread="general" me={team.me.user_id} members={team.members} canChat={team.me.can.chat} canModerate={team.me.can.manage_members}
-                  live={live} signal={signal} title={`${team.team.name} chat`} empty="No messages yet. Say hello, or share what you are working on." />
+                  live={live} signal={chatSignal} title={`${team.team.name} chat`} empty="No messages yet. Say hello, or share what you are working on." />
               </div>
             )}
-            {tab === 'findings' && <Findings teamId={id} me={team.me.user_id} members={team.members} live={live} signal={signal} canChat={team.me.can.chat} canModerate={team.me.can.manage_members} />}
+            {tab === 'findings' && <Findings teamId={id} me={team.me.user_id} members={team.members} live={live} signal={signal} chatSignal={chatSignal} canChat={team.me.can.chat} canModerate={team.me.can.manage_members} />}
             {tab === 'reports' && <Reports teamId={id} me={team.me.user_id} role={team.me.role} signal={signal} />}
             {tab === 'members' && <Members teamId={id} me={team.me.user_id} signal={signal} />}
             {tab === 'settings' && <Settings team={team} onChange={load} />}
