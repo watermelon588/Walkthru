@@ -91,6 +91,13 @@ def is_local_site(url: str) -> bool:
         return False
 
 
+def same_site(a: str, b: str) -> bool:
+    """Same host, ignoring a leading www. and the scheme. Verification covers the host the owner proved, so a
+    redirect to another host must not carry the owner-only checks with it."""
+    first, second = ((urlsplit(u).hostname or "").lower().removeprefix("www.") for u in (a, b))
+    return bool(first) and first == second
+
+
 def origin(url: str) -> str:
     p = urlsplit(url)
     return f"{p.scheme}://{p.netloc}"

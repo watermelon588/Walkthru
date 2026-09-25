@@ -62,7 +62,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
     - Fix recipe: the SQL to enable RLS and an owner-only policy per exposed table.
   - Verify: pytest against a recorded fixture API (open table, closed table, public bucket); an unverified domain never sends a probe request.
   - Files: `app/scans/backend.py` (new), `app/scans/site.py`, `app/agent/report.py`, `tests/test_backend.py` (new), `evals/fixtures/hard` traps.
-- [~] **P1.2 Security parity** (L), code and fixture tests merged 2026-09-25; owner-verified real-site false-positive checks still pending
+- [~] **P1.2 Security parity** (L), code built 2026-09-25 by Claude Code (`csp.py`, `libraries.py`, `secrets.py`, `tls.py`, `takeover.py`, data in `app/scans/data/`, 35 tests in `tests/test_security_parity.py`, hard-fixture traps X7 to X14). HSTS, TLS, CAA and takeover are covered by recorded-response and local-TLS tests, since an http fixture cannot serve them. Owner-verified real-site false-positive checks remain pending.
   - Reuse:
     - [mdn/mdn-http-observatory](https://github.com/mdn/mdn-http-observatory) (MPL-2.0): rewrite its header tests and scoring in Python (no code copied).
     - [google/csp-evaluator](https://github.com/google/csp-evaluator) (Apache-2.0): port the CSP checks (`unsafe-inline`, `unsafe-eval`, wildcards, missing `object-src`, `base-uri`).
@@ -88,7 +88,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
     - The chat version is split into batches of 4,000 characters or less instead of "and N more".
   - Verify: pytest that a Vercel and a Netlify fixture get different recipes for the same rule; no secret unmasked; every finding appears once.
   - Files: `app/agent/fix_prompt.py`, `app/agent/recipes.json` (new), `app/scans/stack.py` (new), tests.
-- [ ] **P1.4 MCP depth** (S, coordinate with the MCP owner first)
+- [x] **P1.4 MCP depth** (S), done 2026-09-25 by Claude Code (`get_finding`, `verify_finding`; the MCP test flips a security and an SEO finding after a fix through `/mcp`)
   - Accept: `get_finding(run_id, rule)` returns the full recipe; `verify_finding(run_id, rule)` re-runs only the check behind that rule and answers fixed or still broken; same plan checks and limits as `rerun`.
   - Verify: MCP client test flips one fixture finding after a fix.
 - [x] **P1.5 GEO depth pass** (L), done 2026-09-25 (Codex; 200 API tests, Ruff, web build and lint pass)
