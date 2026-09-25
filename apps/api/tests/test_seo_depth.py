@@ -83,8 +83,8 @@ def test_image_head_size_and_format_are_bounded_and_same_origin(monkeypatch):
 def test_canonical_to_audited_noindex_or_redirect_is_reported(monkeypatch):
     source = page("/article", '<link rel="canonical" href="https://site.test/target">')
     noindex = page("/target", '<meta name="robots" content="noindex">')
-    assert "Canonical points at a noindex page" in titles(run([source, noindex]))
     monkeypatch.setattr(seo_depth.fetch, "assert_public", lambda url: None)
+    assert "Canonical points at a noindex page" in titles(run([source, noindex], lambda request: httpx.Response(200, text='<meta name="robots" content="noindex">')))
 
     def handle(request):
         if request.url.path == "/target":
@@ -95,6 +95,7 @@ def test_canonical_to_audited_noindex_or_redirect_is_reported(monkeypatch):
     arrived_via_other_url = page("/target", "<html>Target is direct</html>")
     arrived_via_other_url[1].extensions["walkthru_hops"] = 1
     assert "Canonical points at a redirect" not in titles(run([source, arrived_via_other_url], lambda request: httpx.Response(200, text="<html>Target is direct</html>")))
+    assert "Canonical points at a noindex page" not in titles(run([source, noindex]))
 
 
 def test_one_inbound_link_only_when_crawl_is_complete():

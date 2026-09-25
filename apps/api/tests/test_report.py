@@ -49,6 +49,8 @@ def test_run_report_merges_branches():
     assert rep.first_impression and rep.first_impression.clarity == 3
     assert rep.top_fixes[0].startswith("Add a Sign up")
     assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
+    assert all(f.rule for f in rep.findings)  # every scanner and the model-written UX finding
+    assert rep.check_reasons["performance"] == "PageSpeed is not configured for this run."
     assert rep.verified is False and not any("publicly readable" in f.title for f in rep.findings)
     assert rep.checks == {"accessibility": "complete", "performance": "unavailable", "seo": "complete", "security": "complete", "geo": "complete"}
     assert rep.site_audit is not None

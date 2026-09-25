@@ -3,6 +3,7 @@ secrets in JS bundles only on verified domains (SPEC safety rule). Never sends p
 
 import hashlib
 import hmac
+import ipaddress
 import os
 import re
 from urllib.parse import urljoin, urlsplit
@@ -34,6 +35,17 @@ def _f(severity: str, title: str, detail: str, fix: str, evidence: str | None = 
     return Finding(kind="security", severity=severity, title=title, detail=detail, fix=fix, evidence=evidence)
 
 
+def _local_address(url: str) -> bool:
+    host = (urlsplit(url).hostname or "").lower()
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return address.is_private or address.is_loopback or address.is_link_local
+
+
 def verification_token(user_id: str) -> str:
     """Per-account token the site owner publishes to prove control of the domain."""
     key = os.environ.get("SUPABASE_SECRET_KEY", "dev").encode()
@@ -56,7 +68,7 @@ def check_headers(resp: httpx.Response) -> list[Finding]:
     h = {k.lower(): v for k, v in resp.headers.items()}
     https = resp.url.scheme == "https"
     out: list[Finding] = []
-    if https and "strict-transport-security" not in h:
+    if https and not _local_address(str(resp.url)) and "strict-transport-security" not in h:
         out.append(_f("high", "No HSTS header", "Browsers may still try plain http first, which allows downgrade attacks on public Wi-Fi.", "Send Strict-Transport-Security: max-age=63072000; includeSubDomains.", str(resp.url)))
     if "content-security-policy" not in h:
         out.append(_f("medium", "No Content-Security-Policy", "Without a CSP, any injected script runs with full access to the page.", "Start with default-src 'self' and add sources as needed; use report-only first.", str(resp.url)))
@@ -80,9 +92,12 @@ def check_headers(resp: httpx.Response) -> list[Finding]:
 
 def check_transport(url: str, resp: httpx.Response, c: httpx.Client) -> list[Finding]:
     if resp.url.scheme != "https":
+        if _local_address(str(resp.url)):
+            return [_f("low", "Local development uses plain http", "This address is local or private, so HTTPS is not required for this development check.",
+                       "Check HTTPS and redirects again on the deployed public domain.", str(resp.url))]
         return [_f("high", "Site is served over plain http", "Everything visitors type, including passwords, crosses the network unencrypted.", "Get a certificate (Let's Encrypt is free) and redirect http to https.", str(resp.url))]
     host = urlsplit(url).netloc
-    if host.startswith(("localhost", "127.")):
+    if _local_address(url):
         return []
     plain = get(c, f"http://{host}/")
     if plain is not None and plain.url.scheme != "https":
@@ -96,7 +111,11 @@ def check_content(html: str, page_url: str) -> list[Finding]:
     for form in tree.css("form"):
         action = form.attributes.get("action") or ""
         if action.startswith("http://"):
-            out.append(_f("high", "Form submits over plain http", "Whatever the visitor types in this form is sent unencrypted.", "Point the form action at an https URL.", action[:80]))
+            if _local_address(action):
+                out.append(_f("low", "Local form submits over plain http", "This form posts to a local or private address during development.",
+                              "Use HTTPS when the form is deployed on a public domain.", action[:80]))
+            else:
+                out.append(_f("high", "Form submits over plain http", "Whatever the visitor types in this form is sent unencrypted.", "Point the form action at an https URL.", action[:80]))
     if page_url.startswith("https://"):
         mixed = [n.attributes.get("src") for n in tree.css("script[src], img[src], iframe[src], link[href]") if (n.attributes.get("src") or n.attributes.get("href") or "").startswith("http://")]
         if mixed:

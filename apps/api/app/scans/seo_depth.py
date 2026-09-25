@@ -158,15 +158,17 @@ def _page(url: str, html: str) -> tuple[list[Finding], dict[str, str], list[str]
                                "Set width and height attributes, or verify that CSS reserves each image's aspect ratio.", f"{url}: {', '.join(unsized[:3])}"))
 
     pagination = [n for n in tree.css("nav") if "pagination" in (n.attributes.get("aria-label") or "").lower() or "pagination" in (n.attributes.get("class") or "").lower()]
+    button_only = False
     for nav in pagination:
         if any("next" in button.text(strip=True).lower() for button in nav.css("button")) and not any(
             "next" in link.text(strip=True).lower() and link.attributes.get("href") for link in nav.css("a")
         ):
             findings.append(seo._f("medium", "Pagination has no crawlable next link", "The next page is exposed as a button, which crawlers do not click to discover later pages.",
                                    "Add a normal <a href> link to the next page, with a distinct URL for that page.", url))
+            button_only = True
             break
     next_link = tree.css_first('link[rel="next"][href]')
-    if next_link and _normal(next_link.attributes.get("href") or "", url) not in internal:
+    if next_link and not button_only and _normal(next_link.attributes.get("href") or "", url) not in internal:
         findings.append(seo._f("medium", "Pagination next page lacks a crawlable link", "The page declares a next URL in metadata but has no ordinary content link to it. Google no longer uses rel=next for discovery.",
                                "Add an <a href> link to the next page in the visible pagination controls.", url))
     return findings, alternates, internal, images
@@ -249,7 +251,7 @@ def audit(pages: list[tuple[str, httpx.Response]], base: str, client: httpx.Clie
         if target not in probed and extra < 3 and time.monotonic() < deadline:
             probed[target] = fetch.get(client, target, same_origin=base, timeout=2)
             extra += 1
-        response = probed.get(target) or checked.get(target)
+        response = probed[target] if target in probed else checked.get(target)
         if response is None:
             continue
         if probed.get(target) is not None and (response.extensions.get("walkthru_hops", 0) or response.is_redirect):
