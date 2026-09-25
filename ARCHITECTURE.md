@@ -50,6 +50,7 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 14. **The server owns the plan.** The client never says which tier it is. `POST /runs` reads the caller's entitlement and clamps steps, logged-in access, test user, site and monthly runs before a LangGraph thread exists.
 15. **GEO is deterministic and reuses the site audit.** No new crawler, no LLM calls for the score. The SSRF-safe fetcher and the audited page set are shared by SEO, security and GEO.
 16. **Over time means comparison, not more runs.** Reruns and weekly watch compare finding fingerprints against the previous result for the same site. Only changes are reported and emailed.
+17. **Team workspaces: the API decides, RLS backs it up, Realtime only nudges.** Membership and role are read from the database on every team request (non-members get 404). Browsers only read team rows through RLS (`is_team_member`), shared runs and their screenshots through `shared_with_me(run)`, and never see invitations. Seats and ownership change inside locked SQL functions. See [docs/team-collaboration.md](docs/team-collaboration.md).
 
 ## v1.1 capability map
 
@@ -84,6 +85,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Branded PDF built 2026-09-25 (P4.3); V7 close-out open |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
 | `personas-plus` | Custom test users and several test users per report | `entitlements` | Built 2026-09-25 (P4.2): `app/plus.py`, `test_users`, `runs.group_id` |
+| `teams` | Plus team workspaces: roles, email invitations and invite links, shared reports, findings board with status and owner, chat and comment threads, activity, presence, auto-share | `entitlements`, auth, `rerun-compare` (fingerprints) | Built 2026-09-25 (P4.7): `app/teams.py`, seven `team_*` tables, docs/team-collaboration.md |
 | `cloud-runner` | Headless Chrome on the API VM driving the same `inject.js` for public journeys without an install | `entitlements` | Conditional on the extension funnel experiment |
 
 Dependency direction is one way. `entitlements` comes first because every paid promise depends on it.
@@ -231,6 +233,14 @@ Build rules and phases: ROADMAP.md. Licences: docs/decisions.md 2026-09-25. Ever
 - **`search-data`:** Google OAuth with the `webmasters.readonly` scope, refresh token stored encrypted server-side; Search Analytics and URL Inspection (2,000 a day per property). Bing Webmaster with the user's own API key.
 - **`citation-tracking`:** tables `prompts(site_id, text)` and `answers(prompt_id, engine, checked_at, text, sources, mentioned, cited, position)`. Engines: Gemini 2.5 Flash with Google Search grounding and Groq Compound, free quotas only, behind a database-counted daily cap like `FREE_RUNS_PER_DAY`. Mentions, citations, position and share of voice are computed in code; accuracy uses one free-chain call per answer. Runs from the `watch` job.
 
+### `teams` (built 2026-09-25)
+- **Routes:** `app/teams.py` (APIRouter in `main.py`), full reference in docs/team-collaboration.md section 6. `_member()` loads the caller's member row with the team embedded and answers 404, 403 or 402; `me.can` tells the web app which controls to show.
+- **Tables:** `teams`, `team_members`, `team_invites` (API only), `team_runs`, `team_findings`, `team_messages`, `team_events`. Members may `select` their workspace rows; nothing else is granted to browsers. `runs` and `storage.objects` gain a members-read policy through `shared_with_me(run)`.
+- **Plan:** a workspace is active while its owner has a Plus pass; otherwise it is read-only. Members need no plan. `TEAM_SEATS` (default 3) counts members plus open email invitations.
+- **Invitations:** 24-character base32 codes (120 bits), SHA-256 stored, in the URL fragment of `/join#CODE`. Email invitations need the matching verified email; links can require an email domain. `team_join()` re-checks everything under a row lock.
+- **Live updates:** the schema adds the team tables to `supabase_realtime`; `useTeamLive` subscribes with `postgres_changes` and refetches through the API, polling when the socket is down.
+- **Tests:** `tests/test_teams_live.py` runs against a real Postgres + PostgREST with Supabase's roles (`tests/live_stack.py`), skipped when the binaries are missing.
+
 ### `cloud-runner` (conditional)
 - **Why:** removes the install step for public-page journeys.
 - **Built only if** fewer than 25% of beta users who click "Run a test" finish a run.
@@ -284,7 +294,8 @@ or bounded action           |
 ## Data lifecycle
 - Screenshots in the private `run-evidence` bucket expire after 30 days (`EVIDENCE_RETENTION_DAYS`). Runs, steps and reports stay until the owner deletes them. Instant Scan emails are erased after the same window.
 - `app/retention.py` owns every deletion. Order is fixed: storage objects (Storage API, since Supabase blocks direct deletes from `storage.objects`), then LangGraph checkpoints (`delete_thread`), then `runs` rows, then the Supabase Auth user for account deletion. A failure stops the sequence with rows intact, so the delete can be retried.
-- Routes: `DELETE /runs/{id}` (owner only), `GET /account/export` (JSON of every run the user owns), `POST /account/delete` (body must repeat the account email).
+- Routes: `DELETE /runs/{id}` (owner only), `GET /account/export` (JSON of every run the user owns, plus team memberships and their own messages), `POST /account/delete` (body must repeat the account email).
+- Team workspaces: deleting a run removes it from every workspace. Account deletion is refused while the user owns a workspace with other members; otherwise their name becomes "Former member" in other people's workspaces, their memberships go, and workspaces they owned alone are deleted with the account.
 
 ## Safety rules (enforced in code, not prompts)
 Safe mode on logged-in pages (never click delete / remove / cancel subscription / pay / send / invite / transfer; confirm before any form submit), same-origin only, 25-step and 4-minute caps, stop at CAPTCHA, client-side PII masking before snapshot upload, form-control masking before screenshot capture, fake test identity for signups. Evidence capture is best-effort and never blocks the journey. Owner stop, time-limit, origin-exit and post-creation extension errors close the API run and preserve a partial report.

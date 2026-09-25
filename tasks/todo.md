@@ -170,6 +170,11 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 - [ ] **P4.1 Opt-in active scan of a staging URL** (Plus): [zaproxy/zaproxy](https://github.com/zaproxy/zaproxy) (Apache-2.0) in Docker on the worker; verified domain, an owner-entered staging URL, a signed confirmation per scan, one at a time. Never on production URLs.
 - [x] **P4.2 Custom test users and several test users per report (V13).** Done 2026-09-25 by Claude Code (`app/plus.py`, Settings > Your test users, side panel multi-select, `TestUsersCompared` on every report of a set). Ideas from [neuhai/UXAgent](https://github.com/neuhai/UXAgent) (no licence: ideas only) and [m-naw/ux-explore](https://github.com/m-naw/ux-explore) (Apache-2.0).
 - [x] **P4.3 Branded PDF for Plus.** Done 2026-09-25 by Claude Code (Settings > Branded PDF reports, `BrandCover`, print CSS; checked by rendering the PDF).
+- [x] **P4.7 Team workspaces (team collaboration).** Done 2026-09-25 by Claude Code (cloud): `app/teams.py`, seven `team_*` tables with RLS and Realtime, pages under `/app/team`, `/join`, Share to workspace. Reference and UI brief: docs/team-collaboration.md.
+  - [ ] UI polish pass by the local agent (docs/team-collaboration.md section 10).
+  - [ ] Founder: apply the schema, keep Supabase "Confirm email" on, decide seats and viewer pricing (section 11).
+  - [ ] Email notifications for mentions and assignments (Resend), after the sending domain exists.
+  - [ ] Shared run quota for teams (billing decision first).
 - [ ] **P4.4 Fix pull request** through the GitHub App (Contents and Pull requests write, a separate opt-in); the owner approves each PR.
 - [ ] **P4.5 Paid engines and Claude Haiku** (ChatGPT and Perplexity tracking; Haiku for journeys and reports) when payment.md's caps allow.
 - [ ] **P4.6 Cloud runner (V14)**, only if A2 missed its gate.
