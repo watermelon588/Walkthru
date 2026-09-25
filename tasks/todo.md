@@ -78,7 +78,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
     - Dangling DNS for subdomains found in the crawl, verified domains only.
   - Verify: one hard-fixture trap per new rule, none on the easy fixture; python.org and 2 other real sites show no false alarms.
   - Files: `app/scans/security.py`, `app/scans/tls.py` (new), `app/scans/data/` (retire.js and gitleaks data), `tests/test_security_parity.py` (new), `apps/api/THIRD_PARTY.md` (new).
-- [ ] **P1.3 Fix plan v2** (M)
+- [x] **P1.3 Fix plan v2** (M), done 2026-09-25 by Claude Code (`app/scans/stack.py`, `app/agent/recipes.json`, batched plan with stop and verify, manual steps, chat parts; `tests/test_fix_prompt.py`)
   - Accept:
     - Stack detection in code from headers and HTML: Vercel, Netlify, Cloudflare, Render; Next.js, Vite, Astro, Lovable, Bolt; Supabase, Firebase.
     - A recipe per `rule` and stack (for example HSTS in `vercel.json`, `next.config.js`, `netlify.toml` or `_headers`), in a data file, no model call.
@@ -112,7 +112,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
   - Verify: fixture traps and an owner-verified public site show no new depth false alarms. The founder's Vercel portfolio replaced python.org because an unverified production-site crawl was rejected by automatic approval review.
   - [x] Scanner, five-page paid mobile PageSpeed coverage, report UI, fixture tests, and docs implemented; 213 API tests pass, Ruff and web checks pass. The local easy fixture has no new depth findings.
   - [x] Read-only audit of `https://portfolio-web-six-psi-43.vercel.app/`: 1 page, crawl complete, no SEO depth findings; existing HTML-shell findings accurately identify missing server-rendered elements.
-- [ ] **P1.7 Agent readiness score** (S)
+- [x] **P1.7 Agent readiness score** (S), done 2026-09-25 by Claude Code (`score.agent_ready`, `app/scans/agent_signals.py`, report section; `tests/test_agent_ready.py`)
   - Accept: 0 to 100 from existing evidence: labelled fields and accessible names (axe), no CAPTCHA before value, stable controls across reruns, SearchAction schema, WebMCP-style labelled forms, and whether the journey reached its goal. Shown next to the GEO score as "Can AI agents use your site?".
   - Verify: pytest over stored runs; the showcase and hard fixtures score differently for the stated reasons.
 - [ ] **Checkpoint P1:** hard-fixture recall 85% or more including the new traps; easy fixture and 3 real sites have no false alarms; founder reviews one Pro report and one fix plan applied by a coding agent.
@@ -175,7 +175,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
   - [ ] Founder: apply the schema, keep Supabase "Confirm email" on, decide seats and viewer pricing (section 11).
   - [ ] Email notifications for mentions and assignments (Resend), after the sending domain exists.
   - [ ] Shared run quota for teams (billing decision first).
-- [ ] **P4.4 Fix pull request** through the GitHub App (Contents and Pull requests write, a separate opt-in); the owner approves each PR.
+- [x] **P4.4 Fix pull request** (done 2026-09-25 by Claude Code: `app/github.py`, Settings > GitHub, report > Open a fix pull request; config-only changes; `tests/test_github.py`) through the GitHub App (Contents and Pull requests write, a separate opt-in); the owner approves each PR.
 - [ ] **P4.5 Paid engines and Claude Haiku** (ChatGPT and Perplexity tracking; Haiku for journeys and reports) when payment.md's caps allow.
 - [ ] **P4.6 Cloud runner (V14)**, only if A2 missed its gate.
 
