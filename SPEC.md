@@ -59,7 +59,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | Steps per run | 12 | 30 | 30 | 30 |
 | Rerun and compare (fixed, still broken, new) | No | Yes | Yes | Yes |
 | SEO | 10 pages | 50 pages | 50 pages | 50 pages |
-| Security hygiene | Header quality (CSP, HSTS, CORS, SRI), cookies, https; TLS and certificate expiry from P1.2 | + exposed files, source maps, leaked keys (gitleaks patterns), vulnerable JavaScript libraries on verified domains (P1.2) | Same, + safe Nuclei templates on verified domains (P2.4) | Same as Pro |
+| Security hygiene | Header quality (CSP weaknesses, HSTS max-age and preload, CORS, SRI on public CDN scripts), cookies and cookie prefixes, https, TLS version and certificate expiry, CAA, vulnerable JavaScript libraries loaded from public CDNs | + exposed files, backups and dumps, source maps, leaked keys (gitleaks rules), library versions inside bundles and subdomain takeover, on verified domains | Same, + safe Nuclei templates on verified domains (P2.4) | Same as Pro |
 | One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
 | Evidence report with screenshots, PDF | Web report | PDF | PDF | PDF with your own logo, no Walkthru branding |
 | Sites tested per month or pass (local dev servers do not count) | 1 | 1 | 2 | 5 |

@@ -50,7 +50,9 @@ def test_security_hard_site_unverified_vs_verified():
         basic = titles(security.scan(HARD + "/", c, verified=False))
         full = titles(security.scan(HARD + "/", c, verified=True))
     assert "Site is served over plain http" in basic  # X1 (transport) on the http fixture
-    assert "No Content-Security-Policy" in basic and "Page can be framed" in basic  # X1 headers
+    assert "Page can be framed" in basic and "CSP allows inline scripts" in basic  # X1 headers; the homepage's CSP is weak (X7)
+    with fetch.client() as c:
+        assert "No Content-Security-Policy" in titles(security.check_headers(c.get(HARD + "/signup.html")))  # X1 on inner pages
     assert any(x.startswith('Cookie "session" is missing') for x in basic)  # X2
     assert "Server header reveals a version" in basic  # X6
     with fetch.client() as c:

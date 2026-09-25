@@ -78,7 +78,16 @@ def test_security_traps():
     hard, easy = get(HARD, "/"), get(EASY, "/")
     for h in ("strict-transport-security", "content-security-policy", "x-content-type-options", "x-frame-options"):
         assert h not in hard.headers and h in easy.headers  # X1
-    assert "httponly" not in hard.headers["set-cookie"].lower() and "httponly" in easy.headers["set-cookie"].lower()  # X2
+    session = next(c for c in hard.headers.get_list("set-cookie") if c.startswith("session="))
+    assert "httponly" not in session.lower() and "httponly" in easy.headers["set-cookie"].lower()  # X2
+    assert any(c.startswith("__Host-") and "secure" not in c.lower() for c in hard.headers.get_list("set-cookie"))  # X8
+    assert "unsafe-inline" in hard.text and "jquery-1.12.4.min.js" in hard.text and "integrity=" not in hard.text  # X7, X9, X10
+    cors = httpx.get(HARD + "/", headers={"Origin": "https://evil.test"})
+    assert cors.headers["access-control-allow-origin"] == "https://evil.test" and "access-control-allow-origin" not in httpx.get(EASY + "/", headers={"Origin": "https://evil.test"}).headers  # X11
+    assert get(HARD, "/.env.production").status_code == 200 and get(HARD, "/backup.sql").text.startswith("-- MySQL dump")  # X12
+    assert get(EASY, "/.env.production").status_code == 404 and get(EASY, "/backup.sql").status_code == 404
+    assert "sourceMappingURL=app.js.map" in get(HARD, "/app.js").text and '"mappings"' in get(HARD, "/app.js.map").text  # X13
+    assert re.search(r"SG\.[\w.-]{66}", get(HARD, "/app.js").text)  # X14
     assert get(HARD, "/.env").status_code == 200 and get(EASY, "/.env").status_code == 404  # X3
     assert get(HARD, "/.git/config").status_code == 200 and get(EASY, "/.git/config").status_code == 404
     assert re.search(r"sk_live_[A-Za-z0-9]{20,}", get(HARD, "/app.js").text)  # X4

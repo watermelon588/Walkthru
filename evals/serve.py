@@ -26,12 +26,14 @@ HEADERS = {
     },
     "hard": {
         "Server": "Apache/2.2.3 (CentOS)",  # X6 version leak
-        "Set-Cookie": "session=abc; Path=/",  # X2 no Secure / HttpOnly
+        # X2 no Secure / HttpOnly; X8 a __Host- cookie without Secure, which browsers silently drop
+        "Set-Cookie": ["session=abc; Path=/", "__Host-csrf=abc; Path=/; HttpOnly; SameSite=Lax"],
     },
 }
 HEADERS["showcase"] = HEADERS["easy"]  # a well-built site: good headers, strong GEO, deliberate journey traps
 # X3: exposed files. Stored under exposed/ because git ignores .env and cannot track a nested .git.
-EXPOSED = {"/.env": "/exposed/env", "/.git/config": "/exposed/git-config"}
+EXPOSED = {"/.env": "/exposed/env", "/.git/config": "/exposed/git-config",
+           "/.env.production": "/exposed/env-production", "/backup.sql": "/exposed/backup.sql"}  # X12
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -45,7 +47,12 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("X-Walkthru-Fixture", "production")
         for k, v in HEADERS[self.site].items():
             if k != "Server":
-                self.send_header(k, v)
+                for value in v if isinstance(v, list) else [v]:
+                    self.send_header(k, value)
+        origin = self.headers.get("Origin")
+        if self.site == "hard" and origin:  # X11: CORS echoes any origin and allows credentials
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
         super().end_headers()
 
     def send_head(self):
@@ -79,7 +86,8 @@ class Handler(SimpleHTTPRequestHandler):
         with open(os.path.join(ROOT, "hard", "app.js"), encoding="utf-8") as f:
             body = f.read()
         body = body.replace("__STRIPE_LIVE_KEY__", "sk_" + "live_" + "51FAKE" + "FAKE" * 8 + "00")
-        body = body.replace("__AWS_ACCESS_KEY__", "AKIA" + "FAKE" * 4)
+        body = body.replace("__AWS_ACCESS_KEY__", "AKIA" + "Z7Q2" + "WJ4X" + "K5N3" + "B6T2")
+        body = body.replace("__SENDGRID_KEY__", "SG." + "hF3kQ9zLm2Xw" + "Rt8Yp4Vb6N" + "." + "aZ3xQ7mK2pL9wR4tY8vB1nC6dF0gH5jS" + "3kE7uI2oW9q")
         data = body.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/javascript")
