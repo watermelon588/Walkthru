@@ -310,7 +310,11 @@ LOCAL_NOTE = (
     "those are judged on the deployed site."
 )
 # Only these security checks mean something on a dev server (they describe the code, not the host).
-CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle", "Local development uses plain http", "Local form submits over plain http")
+CODE_LEVEL_SECURITY = (
+    "is publicly readable", "are publicly readable", "in a JavaScript bundle",
+    "has known vulnerabilities", "without an integrity check",
+    "Local development uses plain http", "Local form submits over plain http",
+)
 
 
 # Error text a journey can show that comes from the auth provider's mailer, not from the site's own code.

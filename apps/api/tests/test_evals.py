@@ -34,8 +34,8 @@ def test_score_candidate_reports_overall_and_per_kind_recall():
     assert result.model == "fixture-model"
     assert result.found_ids == ["U1", "U2", "S1", "X1"]
     assert result.found == 4
-    assert result.total == 22
-    assert result.recall == pytest.approx(4 / 22)
+    assert result.total == 30
+    assert result.recall == pytest.approx(4 / 30)
     assert result.by_kind["ux"].found == 2
     assert result.by_kind["seo"].found == 1
     assert result.by_kind["security"].found == 1
@@ -89,7 +89,7 @@ def test_format_markdown_makes_unknown_cost_explicit():
 
     table = format_markdown([result])
 
-    assert "| free | 0/22 (0%) |" in table
+    assert "| free | 0/30 (0%) |" in table
     assert table.endswith("| unknown |")
 
 
@@ -119,7 +119,7 @@ def test_langsmith_publish_omits_unknown_cost_metric(monkeypatch):
 
     publish_to_langsmith(traps, result, "walkthru-test")
 
-    assert len(client.examples) == 22
+    assert len(client.examples) == 30
     assert [evaluator.__name__ for evaluator in client.evaluate_kwargs["summary_evaluators"]] == ["trap_recall"]
 
 

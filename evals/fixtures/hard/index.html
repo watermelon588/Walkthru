@@ -4,8 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home</title>
+  <!-- X7: a CSP that exists but protects little (inline, eval, any https host, no object-src) -->
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https:">
   <link rel="stylesheet" href="style.css">
   <script src="app.js"></script>
+  <!-- X9, X10: an outdated jQuery from a public CDN, without an integrity hash -->
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
 </head>
 <body>
   <header>

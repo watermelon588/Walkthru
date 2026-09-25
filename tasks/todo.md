@@ -62,7 +62,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
     - Fix recipe: the SQL to enable RLS and an owner-only policy per exposed table.
   - Verify: pytest against a recorded fixture API (open table, closed table, public bucket); an unverified domain never sends a probe request.
   - Files: `app/scans/backend.py` (new), `app/scans/site.py`, `app/agent/report.py`, `tests/test_backend.py` (new), `evals/fixtures/hard` traps.
-- [ ] **P1.2 Security parity** (L)
+- [~] **P1.2 Security parity** (L), code and fixture tests merged 2026-09-25; owner-verified real-site false-positive checks still pending
   - Reuse:
     - [mdn/mdn-http-observatory](https://github.com/mdn/mdn-http-observatory) (MPL-2.0): rewrite its header tests and scoring in Python (no code copied).
     - [google/csp-evaluator](https://github.com/google/csp-evaluator) (Apache-2.0): port the CSP checks (`unsafe-inline`, `unsafe-eval`, wildcards, missing `object-src`, `base-uri`).
