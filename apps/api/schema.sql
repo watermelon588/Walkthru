@@ -282,3 +282,232 @@ alter table public.report_brands enable row level security;
 revoke all on public.report_brands from anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---------- Plus: team workspaces (2026-09-25, docs/team-collaboration.md) ----------
+-- A Plus owner's workspace: members, invitations, shared reports, finding triage, chat and an activity log.
+-- The API writes every row with the secret key after checking the caller's membership and role on each request.
+-- Browsers only read, and only rows of workspaces they belong to: Supabase Realtime needs these select policies to
+-- push chat and activity live. No team table grants insert, update or delete to a browser role.
+
+create table if not exists public.teams (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 1 and 60),
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists teams_owner on public.teams (owner_id);
+
+-- name and email are a display copy of the member's profile, refreshed when they open the workspace.
+create table if not exists public.team_members (
+  team_id uuid not null references public.teams (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  role text not null check (role in ('owner', 'admin', 'member', 'viewer')),
+  name text not null default '' check (char_length(name) <= 80),
+  email text not null default '' check (char_length(email) <= 320),
+  auto_share boolean not null default false,
+  last_read_message_id bigint not null default 0,
+  last_seen_at timestamptz,
+  joined_at timestamptz not null default now(),
+  primary key (team_id, user_id)
+);
+create index if not exists team_members_user on public.team_members (user_id);
+create unique index if not exists team_members_one_owner on public.team_members (team_id) where role = 'owner';
+
+-- Email invitations (one address, one use) and invite links (a join code, several uses, optional email domain).
+-- Only the SHA-256 of a code is stored. API only: no browser grants and no policies.
+create table if not exists public.team_invites (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.teams (id) on delete cascade,
+  kind text not null check (kind in ('email', 'link')),
+  token_hash text not null unique,
+  email text check (email is null or char_length(email) <= 320),
+  email_domain text check (email_domain is null or char_length(email_domain) <= 253),
+  role text not null check (role in ('admin', 'member', 'viewer')),
+  max_uses integer not null default 1 check (max_uses between 1 and 100),
+  uses integer not null default 0 check (uses >= 0),
+  invited_by uuid references auth.users (id) on delete set null,
+  invited_by_name text not null default '',
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  revoked_at timestamptz,
+  check ((kind = 'email') = (email is not null)),
+  check (kind = 'link' or max_uses = 1),
+  check (kind = 'email' or role <> 'admin')
+);
+create index if not exists team_invites_team on public.team_invites (team_id) where revoked_at is null;
+create index if not exists team_invites_email on public.team_invites (email) where kind = 'email' and revoked_at is null;
+
+-- A report shared into a workspace. Deleting the run removes it from every workspace.
+create table if not exists public.team_runs (
+  team_id uuid not null references public.teams (id) on delete cascade,
+  run_id text not null references public.runs (id) on delete cascade,
+  shared_by uuid references auth.users (id) on delete set null,
+  shared_at timestamptz not null default now(),
+  primary key (team_id, run_id)
+);
+create index if not exists team_runs_run on public.team_runs (run_id);
+create index if not exists team_runs_team_shared on public.team_runs (team_id, shared_at desc);
+
+-- Triage of a finding across the workspace's reports, keyed like ignored findings: site origin plus fingerprint.
+create table if not exists public.team_findings (
+  team_id uuid not null references public.teams (id) on delete cascade,
+  origin text not null check (char_length(origin) <= 300),
+  fingerprint text not null check (char_length(fingerprint) <= 300),
+  status text not null default 'open' check (status in ('open', 'in_progress', 'fixed', 'wont_fix')),
+  assignee_id uuid references auth.users (id) on delete set null,
+  updated_by uuid references auth.users (id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (team_id, origin, fingerprint)
+);
+
+-- Chat. thread 'general' is the workspace channel; 'run:<id>' and 'finding:<key>' are comment threads.
+-- client_id makes a retried send land once. A deleted message keeps its row with an empty body.
+create table if not exists public.team_messages (
+  id bigint generated always as identity primary key,
+  team_id uuid not null references public.teams (id) on delete cascade,
+  thread text not null default 'general' check (thread ~ '^(general|run:[0-9a-f]{32}|finding:[0-9a-f]{32})$'),
+  author_id uuid references auth.users (id) on delete set null,
+  author_name text not null default '' check (char_length(author_name) <= 80),
+  body text not null check (char_length(body) <= 4000),
+  mentions uuid[] not null default '{}',
+  client_id uuid not null default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  edited_at timestamptz,
+  deleted_at timestamptz,
+  unique (team_id, client_id)
+);
+create index if not exists team_messages_thread on public.team_messages (team_id, thread, id);
+
+-- Activity feed and audit trail: who joined, shared, triaged, invited or changed a role.
+create table if not exists public.team_events (
+  id bigint generated always as identity primary key,
+  team_id uuid not null references public.teams (id) on delete cascade,
+  actor_id uuid references auth.users (id) on delete set null,
+  actor_name text not null default '' check (char_length(actor_name) <= 80),
+  type text not null check (char_length(type) <= 40),
+  detail jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists team_events_team on public.team_events (team_id, id desc);
+
+-- Membership checks for row-level security. SECURITY DEFINER so a policy never recurses into team_members' own
+-- policy; both only ever answer for the caller (auth.uid()).
+create or replace function public.is_team_member(p_team uuid) returns boolean
+  language sql stable security definer set search_path = ''
+  as $$ select exists (select 1 from public.team_members m where m.team_id = p_team and m.user_id = (select auth.uid())) $$;
+
+create or replace function public.shared_with_me(p_run text) returns boolean
+  language sql stable security definer set search_path = ''
+  as $$ select exists (select 1 from public.team_runs r join public.team_members m on m.team_id = r.team_id
+                       where r.run_id = p_run and m.user_id = (select auth.uid())) $$;
+
+revoke all on function public.is_team_member(uuid), public.shared_with_me(text) from public, anon;
+grant execute on function public.is_team_member(uuid), public.shared_with_me(text) to authenticated;
+
+-- Joining is one locked transaction, so two people can never take the last seat at once.
+-- Returns joined, member (already in), invalid (revoked, expired or used up), full (no seat) or limit (too many workspaces).
+create or replace function public.team_join(p_invite uuid, p_user uuid, p_name text, p_email text, p_seats integer, p_max_teams integer)
+  returns text language plpgsql set search_path = ''
+as $$
+declare
+  inv public.team_invites%rowtype;
+  taken integer;
+begin
+  select * into inv from public.team_invites where id = p_invite for update;
+  if not found or inv.revoked_at is not null or inv.expires_at <= now() or inv.uses >= inv.max_uses then
+    return 'invalid';
+  end if;
+  perform 1 from public.teams where id = inv.team_id for update;
+  if exists (select 1 from public.team_members where team_id = inv.team_id and user_id = p_user) then
+    if inv.kind = 'email' then
+      update public.team_invites set uses = uses + 1 where id = p_invite;
+    end if;
+    return 'member';
+  end if;
+  if (select count(*) from public.team_members where user_id = p_user) >= p_max_teams then
+    return 'limit';
+  end if;
+  select count(*) into taken from public.team_members where team_id = inv.team_id;
+  if inv.kind = 'link' then
+    taken := taken + (select count(*) from public.team_invites where team_id = inv.team_id and kind = 'email'
+                      and revoked_at is null and uses < max_uses and expires_at > now());
+  end if;
+  if taken >= p_seats then
+    return 'full';
+  end if;
+  insert into public.team_members (team_id, user_id, role, name, email) values (inv.team_id, p_user, inv.role, p_name, p_email);
+  update public.team_invites set uses = uses + 1 where id = p_invite;
+  return 'joined';
+end
+$$;
+
+-- Ownership moves in one transaction: the old owner becomes an admin, the new one the owner.
+create or replace function public.team_transfer(p_team uuid, p_from uuid, p_to uuid)
+  returns boolean language plpgsql set search_path = ''
+as $$
+begin
+  update public.teams set owner_id = p_to, updated_at = now() where id = p_team and owner_id = p_from;
+  if not found then
+    return false;
+  end if;
+  update public.team_members set role = 'admin' where team_id = p_team and user_id = p_from;
+  update public.team_members set role = 'owner' where team_id = p_team and user_id = p_to;
+  if not found then
+    raise exception 'the new owner is not a member of this workspace';
+  end if;
+  return true;
+end
+$$;
+
+revoke all on function public.team_join(uuid, uuid, text, text, integer, integer), public.team_transfer(uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.team_join(uuid, uuid, text, text, integer, integer), public.team_transfer(uuid, uuid, uuid) to service_role;
+
+alter table public.teams enable row level security;
+alter table public.team_members enable row level security;
+alter table public.team_invites enable row level security;
+alter table public.team_runs enable row level security;
+alter table public.team_findings enable row level security;
+alter table public.team_messages enable row level security;
+alter table public.team_events enable row level security;
+revoke all on public.teams, public.team_members, public.team_invites, public.team_runs, public.team_findings, public.team_messages, public.team_events from anon, authenticated;
+
+drop policy if exists "members read their teams" on public.teams;
+create policy "members read their teams" on public.teams for select to authenticated using (public.is_team_member(id));
+drop policy if exists "members read team members" on public.team_members;
+create policy "members read team members" on public.team_members for select to authenticated using (public.is_team_member(team_id));
+drop policy if exists "members read team runs" on public.team_runs;
+create policy "members read team runs" on public.team_runs for select to authenticated using (public.is_team_member(team_id));
+drop policy if exists "members read team findings" on public.team_findings;
+create policy "members read team findings" on public.team_findings for select to authenticated using (public.is_team_member(team_id));
+drop policy if exists "members read team messages" on public.team_messages;
+create policy "members read team messages" on public.team_messages for select to authenticated using (public.is_team_member(team_id));
+drop policy if exists "members read team events" on public.team_events;
+create policy "members read team events" on public.team_events for select to authenticated using (public.is_team_member(team_id));
+grant select on public.teams, public.team_members, public.team_runs, public.team_findings, public.team_messages, public.team_events to authenticated;
+
+-- Members read the reports shared into their workspaces, and those reports' screenshots.
+drop policy if exists "team members read shared runs" on public.runs;
+create policy "team members read shared runs" on public.runs for select to authenticated using (public.shared_with_me(id));
+
+drop policy if exists "team members read shared run evidence" on storage.objects;
+create policy "team members read shared run evidence" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'run-evidence' and public.shared_with_me(split_part(name, '/', 1)));
+
+-- Live updates through Supabase Realtime (the publication exists on every Supabase project).
+do $$
+declare
+  t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['teams', 'team_members', 'team_runs', 'team_findings', 'team_messages', 'team_events'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end
+$$;
+
+notify pgrst, 'reload schema';

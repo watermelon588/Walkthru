@@ -21,7 +21,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 from starlette.routing import Route
 
-from app import auth, billing, db, deliver, mcp_server, plans, plus, retention, watch
+from app import auth, billing, db, deliver, mcp_server, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Comparison, Observation, StepEvidence
@@ -158,6 +158,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, persona, tier, body.logged_in, group_id=group_id)
+    _background.submit(teams.auto_share, user["id"], run_id, body.site, "test")  # Plus workspaces with auto-share on
     marks.append(("insert_run", time.monotonic()))
     verified = verifying.result()  # owner-verified domains may send real messages after confirmation
     marks.append(("verify_domain_wait", time.monotonic()))
@@ -412,6 +413,8 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
     run_id = uuid.uuid4().hex
     # Owners' scans use the paid tier so they never count against the free daily capacity.
     db.insert_run(run_id, user_id, str(resp.url), "Instant Scan", "stranger", "paid" if user_id else "free", False, kind=kind, public=user_id is None)
+    if user_id and kind in ("scan", "watch"):
+        _background.submit(teams.auto_share, user_id, run_id, str(resp.url), kind)
     # Exposed files and keys only on a host this owner verified, checked after redirects (same rule as journey runs).
     verified = bool(user_id) and _verified(str(resp.url), user_id)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text), verified=verified)
@@ -422,6 +425,10 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
 # ---------- Walkthru MCP server and personal API keys (Plus) ----------
 
 app.router.routes.append(Route("/mcp", mcp_server.Endpoint(), methods=["GET", "POST", "DELETE"]))
+
+# ---------- Plus team workspaces: members, invitations, shared reports, triage, chat (app/teams.py) ----------
+
+app.include_router(teams.router)
 
 
 # ---------- Plus: custom test users (P4.2) and report branding for the PDF (P4.3) ----------
@@ -735,6 +742,7 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "access_requests": db.access_requests_for_user(user["id"], 100),
         "billing_offers": [billing.public_offer(o) for o in db.offers_for_user(user["id"], 100)],
         "ignored_findings": db.ignored_for_user(user["id"]),
+        "team_workspaces": teams.export(user["id"]),
     }
 
 
@@ -747,9 +755,9 @@ def delete_account(body: DeleteAccount, user: dict = Depends(require_user)) -> d
     """Permanent. The caller must type their account email to confirm."""
     if not user.get("email") or body.confirm.strip().lower() != user["email"].lower():
         raise HTTPException(422, "Type your account email exactly to confirm deletion.")
+    teams.before_account_delete(user["id"])
     retention.delete_account(user["id"])
-    for token in [t for t, (u, _) in auth._cache.items() if u["id"] == user["id"]]:
-        auth._cache.pop(token, None)
+    auth.forget(user["id"])
     return {"deleted": True}
 
 

@@ -61,3 +61,24 @@ def send_access_request(to: str, email: str, plan: str, note: str, request_id: s
     r = httpx.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}"},
                    json={"from": FROM, "to": [to], "subject": f"Walkthru: {plan} request from {email}", "html": body}, timeout=15)
     return r.status_code in (200, 201)
+
+
+ROLE_WORDS = {"admin": "an admin", "member": "a member", "viewer": "a viewer"}
+
+
+def send_team_invite(to: str, team: str, inviter: str, role: str, link: str, expires) -> bool:
+    """A workspace invitation (Plus teams). Every name is escaped; the link carries the code in its #fragment."""
+    key = os.environ.get("RESEND_API_KEY")
+    if not key:
+        return False
+    body = (
+        f"<p><strong>{html.escape(inviter)}</strong> invited you to join <strong>{html.escape(team)}</strong> on Walkthru "
+        f"as {ROLE_WORDS.get(role, 'a member')}.</p>"
+        "<p>The workspace shares launch reports, the findings the team is fixing, and a chat about them.</p>"
+        f'<p><a href="{html.escape(link)}">Accept the invitation</a></p>'
+        f"<p>It works once, for {html.escape(to)}, until {expires:%d %B %Y}. If you did not expect it, ignore this email.</p>"
+    )
+    subject = " ".join(f"{inviter} invited you to {team} on Walkthru".split())[:150]
+    r = httpx.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}"},
+                   json={"from": FROM, "to": [to], "subject": subject, "html": body}, timeout=15)
+    return r.status_code in (200, 201)
