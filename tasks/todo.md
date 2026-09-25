@@ -168,8 +168,8 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 
 ### Phase 4: Plus depth and paid engines (revenue-gated)
 - [ ] **P4.1 Opt-in active scan of a staging URL** (Plus): [zaproxy/zaproxy](https://github.com/zaproxy/zaproxy) (Apache-2.0) in Docker on the worker; verified domain, an owner-entered staging URL, a signed confirmation per scan, one at a time. Never on production URLs.
-- [ ] **P4.2 Custom test users and several test users per report (V13).** Ideas from [neuhai/UXAgent](https://github.com/neuhai/UXAgent) (no licence: ideas only) and [m-naw/ux-explore](https://github.com/m-naw/ux-explore) (Apache-2.0).
-- [ ] **P4.3 Branded PDF for Plus.**
+- [x] **P4.2 Custom test users and several test users per report (V13).** Done 2026-09-25 by Claude Code (`app/plus.py`, Settings > Your test users, side panel multi-select, `TestUsersCompared` on every report of a set). Ideas from [neuhai/UXAgent](https://github.com/neuhai/UXAgent) (no licence: ideas only) and [m-naw/ux-explore](https://github.com/m-naw/ux-explore) (Apache-2.0).
+- [x] **P4.3 Branded PDF for Plus.** Done 2026-09-25 by Claude Code (Settings > Branded PDF reports, `BrandCover`, print CSS; checked by rendering the PDF).
 - [ ] **P4.4 Fix pull request** through the GitHub App (Contents and Pull requests write, a separate opt-in); the owner approves each PR.
 - [ ] **P4.5 Paid engines and Claude Haiku** (ChatGPT and Perplexity tracking; Haiku for journeys and reports) when payment.md's caps allow.
 - [ ] **P4.6 Cloud runner (V14)**, only if A2 missed its gate.
@@ -344,11 +344,11 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 - [x] **V21 Competitor side by side** (M), done under P0.4 on 2026-09-25
   - Accept: `POST /compare` with up to 3 URLs; passive scans only, no deep security on unverified sites; side-by-side report.
   - Verify: pytest and one live comparison.
-- [ ] Branded PDF for Plus (your logo, no Walkthru branding), moved to P4.3 (ships with Plus in session 32)
+- [x] Branded PDF for Plus (your logo, no Walkthru branding), moved to P4.3, done 2026-09-25
 - [ ] Open Plus to the waitlist
 
 ### Session 14 (11-16 to 11-22)
-- [ ] **V13 Custom test users and several test users per report** (M, Plus), moved to P4.2
+- [x] **V13 Custom test users and several test users per report** (M, Plus), moved to P4.2, done 2026-09-25
 
 ### Session 15 (late November, conditional)
 - [ ] **V14 Cloud runner** (moved to P4.6), only if A2 missed its gate: headless Chrome on the VM drives the built `inject.js` over CDP; public pages only, one run at a time, same safety code.
