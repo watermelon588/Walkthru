@@ -48,7 +48,7 @@ const sections: DocSection[] = [
     title: 'Install the extension',
     body: (
       <>
-        <p>Test runs need the {brand.name} Chrome extension. It launches in the Chrome Web Store on October 20.</p>
+        <p>Test runs need the {brand.name} Chrome extension. During the beta you load it yourself: download the zip you were sent, unzip it, open <code>chrome://extensions</code>, turn on Developer mode and choose Load unpacked.</p>
         <ol>
           <li>Add {brand.name} to Chrome and pin the bird to your toolbar.</li>
           <li><Link to="/login">Sign in</Link> to your dashboard with Google, GitHub or an email link.</li>

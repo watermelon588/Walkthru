@@ -3,7 +3,7 @@
     .venv/Scripts/python scripts/test_user.py            # prints JSON {user_id, access_token, refresh_token, expires_at}
 
 Uses the secret key (admin API) to create the user, then the publishable key to sign in with a password.
-Dev only. The password is fixed and the account is throwaway.
+Dev only. The password comes from TEST_USER_PASSWORD in apps/api/.env and the account is throwaway.
 """
 
 import json
@@ -18,7 +18,7 @@ URL = os.environ["SUPABASE_URL"]
 PUB = os.environ["SUPABASE_PUBLISHABLE_KEY"]
 SECRET = os.environ["SUPABASE_SECRET_KEY"]
 EMAIL = os.environ.get("TEST_USER_EMAIL", "walkthru.tester@example.com")
-PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Walk-thru-2026-local!")
+PASSWORD = os.environ["TEST_USER_PASSWORD"]  # set in apps/api/.env; never commit it (the repo is public)
 
 
 def main() -> None:

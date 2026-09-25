@@ -19,8 +19,8 @@ USER = "00000000-0000-0000-0000-000000000001"
 def fake_db(monkeypatch):
     rows: dict[str, dict] = {}
 
-    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", email=None, public=False):
-        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "email": email, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat()}
+    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", public=False):
+        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat()}
 
     def test_runs_since(user_id, since):
         start = datetime.fromisoformat(since)
