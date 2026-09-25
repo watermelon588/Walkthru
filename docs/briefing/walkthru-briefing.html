@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Walkthru Founder Briefing</title>
+<style>
+@font-face { font-family: "Geist"; src: url("fonts/geist-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+:root { --bg:#f4f4f5; --surface:#e9e9eb; --ink:#1b1b1f; --muted:#63636b; --line:#dedee2; --accent:#4d7274; --danger:#a33b3b; --paper:#ffffff; }
+@page { size: A4; margin: 18mm 17mm 20mm 17mm;
+  @bottom-left { content: "Walkthru founder briefing, September 2026"; font: 7.5pt "Geist", sans-serif; color: #63636b; }
+  @bottom-right { content: counter(page); font: 7.5pt "Geist Mono", monospace; color: #63636b; } }
+@page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font-family: "Geist", "Segoe UI", sans-serif; font-size: 9.6pt; line-height: 1.55; color: var(--ink); background: var(--paper); }
+h1, h2, h3, h4 { font-weight: 400; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+h1 { font-size: 26pt; font-weight: 300; margin: 0 0 6mm; letter-spacing: -0.035em; }
+h2 { font-size: 14.5pt; margin: 7mm 0 2.5mm; }
+h3 { font-size: 11pt; font-weight: 500; margin: 5mm 0 1.5mm; }
+h2, h3 { break-after: avoid; }
+h4 { font-size: 9.6pt; font-weight: 600; margin: 3mm 0 1mm; }
+p { margin: 0 0 2.4mm; }
+ul, ol { margin: 0 0 2.6mm; padding-left: 5mm; }
+li { margin-bottom: 1mm; }
+a { color: var(--accent); text-decoration: none; }
+code, .mono { font-family: "Geist Mono", Consolas, monospace; font-size: 8.4pt; }
+code { background: var(--bg); padding: 0 1mm; border-radius: 1mm; }
+strong { font-weight: 600; }
+.chapter { break-before: page; }
+.eyebrow { font-family: "Geist Mono", monospace; font-size: 7.5pt; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 2mm; }
+.lead { font-size: 11.5pt; line-height: 1.5; font-weight: 300; color: var(--ink); margin-bottom: 4mm; }
+.muted { color: var(--muted); }
+.small { font-size: 8.3pt; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 8.4pt; line-height: 1.4; break-inside: auto; }
+th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--ink); padding: 1.4mm 1.6mm; vertical-align: bottom; }
+td { border-bottom: 1px solid var(--line); padding: 1.4mm 1.6mm; vertical-align: top; }
+tr { break-inside: avoid; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deep { border-left: 2px solid var(--accent); background: var(--bg); padding: 2.6mm 3.4mm; margin: 3mm 0 4mm; break-inside: avoid; font-size: 8.8pt; }
+.deep > .tag, .simple > .tag, .warn > .tag { font-family: "Geist Mono", monospace; font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 1mm; }
+.simple { border: 1px solid var(--line); padding: 2.6mm 3.4mm; margin: 3mm 0 4mm; break-inside: avoid; border-radius: 2mm; }
+.warn { border-left: 2px solid var(--danger); background: #f7eeee; padding: 2.6mm 3.4mm; margin: 3mm 0 4mm; break-inside: avoid; font-size: 8.8pt; }
+.warn > .tag { color: var(--danger); }
+figure { margin: 3mm 0 5mm; break-inside: avoid; }
+figure img { max-width: 100%; max-height: 150mm; width: auto; margin: 0 auto; display: block; border: 1px solid var(--line); border-radius: 1.5mm; }
+figcaption { font-size: 7.8pt; color: var(--muted); margin-top: 1.4mm; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.two-60 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6mm; align-items: start; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--line); margin: 3mm 0 5mm; }
+.kpis > div { padding: 2.4mm 2.6mm; border-right: 1px solid var(--line); }
+.kpis > div:last-child { border-right: 0; }
+.kpis .v { font-size: 17pt; font-weight: 300; letter-spacing: -0.03em; }
+.kpis .l { font-size: 7.6pt; color: var(--muted); line-height: 1.3; }
+.toc { columns: 2; column-gap: 8mm; font-size: 9pt; }
+.toc div { break-inside: avoid; padding: 1mm 0; border-bottom: 1px solid var(--line); display: flex; gap: 3mm; }
+.toc span.n { font-family: "Geist Mono", monospace; color: var(--accent); width: 7mm; flex: none; }
+.term { break-inside: avoid; padding: 1.8mm 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 34mm 1fr; gap: 4mm; font-size: 8.8pt; }
+.term b { font-weight: 600; }
+.pill { display: inline-block; font-family: "Geist Mono", monospace; font-size: 7pt; padding: 0.2mm 1.6mm; border: 1px solid var(--line); border-radius: 9mm; color: var(--muted); }
+.pill.ok { color: var(--accent); border-color: var(--accent); }
+.pill.no { color: var(--danger); border-color: var(--danger); }
+svg { display: block; width: 100%; height: auto; }
+.avoid { break-inside: avoid; }
+/* cover */
+.cover { page: cover; height: 297mm; width: 210mm; background: var(--bg); position: relative; padding: 26mm 20mm; overflow: hidden; }
+.cover .brand { display: flex; align-items: center; gap: 3mm; font-size: 12pt; }
+.cover h1 { font-size: 44pt; font-weight: 200; line-height: 1.02; margin: 44mm 0 8mm; letter-spacing: -0.045em; }
+.cover .sub { font-size: 13pt; font-weight: 300; max-width: 140mm; color: var(--ink); }
+.cover .meta { position: absolute; bottom: 24mm; left: 20mm; right: 20mm; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink); padding-top: 3mm; font-size: 8.4pt; }
+.cover .meta b { display: block; font-weight: 500; }
+.cover .shot { position: absolute; right: -24mm; top: 152mm; width: 125mm; border: 1px solid var(--line); border-radius: 2mm; box-shadow: 0 8mm 20mm rgba(27,27,31,.12); }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="brand">
+    <img src="img/mark.png" alt="" style="height:9mm">
+    <span>Walkthru</span>
+  </div>
+  <h1>The launch check<br>for apps built with AI.</h1>
+  <p class="sub">A complete briefing on what Walkthru is, how every part of it works, what each plan sells, where the business stands, and what a business co-founder would own.</p>
+  <img class="shot" src="img/s-report-top.png" alt="">
+  <div class="meta">
+    <div><b>Prepared for</b>A prospective co-founder, and the founder</div>
+    <div><b>State of the product</b>As of 24 September 2026, branch <span class="mono">1</span></div>
+    <div><b>Launch target</b>Tue 20 October 2026, 27 October at the latest</div>
+  </div>
+</section>
+
+<!-- ============ HOW TO READ ============ -->
+<section class="chapter">
+  <div class="eyebrow">Before you start</div>
+  <h1>How to read this document</h1>
+  <p class="lead">Every chapter is written twice over. The main text explains things in plain words, as if you have never built software. The grey boxes marked <b>Go deeper</b> give the technical detail for anyone who wants it. You can skip every grey box and still understand the whole business.</p>
+  <div class="two">
+    <div class="simple"><span class="tag">Plain version</span>Read the main text only. It takes about 45 minutes and tells you what the product does, who pays for it, what it costs to run and what happens next.</div>
+    <div class="deep"><span class="tag">Go deeper</span>Grey boxes name the actual files, numbers and rules in the code, for example <code>app/plans.py</code>, so an engineer can check every claim against the repository.</div>
+  </div>
+  <div class="warn"><span class="tag">Honesty note</span>Nothing here is invented. Numbers come from the code, from measured runs, or from sourced research. Anything that is a guess is labelled <b>Estimate</b> with the arithmetic shown. Walkthru has <b>no paying customers yet</b>, so every revenue figure is a scenario, not a result.</div>
+
+  <h2>Contents</h2>
+  <div class="toc">
+    <div><span class="n">01</span>Walkthru in one page</div>
+    <div><span class="n">02</span>The problem, and why now</div>
+    <div><span class="n">03</span>Glossary: every term explained</div>
+    <div><span class="n">04</span>Instant Scan</div>
+    <div><span class="n">05</span>The Chrome extension and AI test users</div>
+    <div><span class="n">06</span>The report, section by section</div>
+    <div><span class="n">07</span>The services: SEO, GEO, security, email, prompts, badges</div>
+    <div><span class="n">08</span>Reading the numbers</div>
+    <div><span class="n">09</span>Safety: how the agent contains itself</div>
+    <div><span class="n">10</span>The plans, in full</div>
+    <div><span class="n">11</span>Is the free report real? An honest audit</div>
+    <div><span class="n">12</span>Who benefits, and how</div>
+    <div><span class="n">13</span>How it is built</div>
+    <div><span class="n">14</span>Market and competitors</div>
+    <div><span class="n">15</span>Business model and unit economics</div>
+    <div><span class="n">16</span>Initial investment and running costs</div>
+    <div><span class="n">17</span>Go-to-market plan</div>
+    <div><span class="n">18</span>What we build next</div>
+    <div><span class="n">19</span>Risks and open decisions</div>
+    <div><span class="n">20</span>The co-founder role</div>
+    <div><span class="n">A</span>Sources</div>
+  </div>
+</section>
+
+<!-- ============ 01 ONE PAGE ============ -->
+<section class="chapter">
+  <div class="eyebrow">01</div>
+  <h1>Walkthru in one page</h1>
+  <p class="lead">Walkthru checks whether a website is ready for real visitors before and after it launches. A founder pastes an address, and Walkthru answers three questions in one report, with a ranked list of fixes.</p>
+  <table>
+    <tr><th style="width:34%">The question</th><th>How Walkthru answers it</th></tr>
+    <tr><td><b>1. Can a stranger get in?</b></td><td>An <b>AI test user</b> (a piece of software that behaves like a first-time visitor) tries a real task on the site, such as "sign up" or "find pricing", inside the owner's own Chrome browser. It thinks aloud, and the report shows exactly where it got stuck, with screenshots.</td></tr>
+    <tr><td><b>2. Can Google and AI search read you?</b></td><td><b>SEO</b> checks (can Google find and list the pages) plus <b>GEO</b> checks (can ChatGPT, Claude, Perplexity and Google's AI answers read and quote the site).</td></tr>
+    <tr><td><b>3. Are you leaking anything?</b></td><td><b>Passive security</b> checks: missing protective headers, weak cookies, exposed files, secret keys left in public code. Walkthru only looks; it never attacks.</td></tr>
+  </table>
+  <p>On top of that: accessibility and speed checks, a signup email check, a single <b>Launch Ready score</b> from 0 to 100 with a public badge, and for paid plans a ready-made <b>fix prompt</b> the founder pastes into their AI coding tool (Cursor, Claude Code, Lovable, Bolt) to fix everything, then reruns Walkthru to prove it worked.</p>
+
+  <div class="kpis">
+    <div><div class="v">~11 s</div><div class="l">Instant Scan of a small site, measured today (10-page limit)</div></div>
+    <div><div class="v">82%</div><div class="l">Seeded problems found on our hard test site (18 of 22)</div></div>
+    <div><div class="v">171</div><div class="l">Automated API tests passing, plus 30 extension tests</div></div>
+    <div><div class="v">$0</div><div class="l">Model cost today: every call runs on free AI providers</div></div>
+  </div>
+
+  <h3>Who it is for</h3>
+  <ul>
+    <li><b>Primary:</b> solo founders and two-person teams shipping apps they built with AI tools (Cursor, Lovable, Bolt, v0). No designer, no QA tester, often no idea whether a stranger can actually sign up.</li>
+    <li><b>Secondary:</b> small agencies that hand websites to clients and want proof the site works.</li>
+  </ul>
+  <h3>What makes it different</h3>
+  <ul>
+    <li><b>One report instead of four tools.</b> Competitors that send AI users do not check SEO, GEO or security. GEO tools never try a signup flow.</li>
+    <li><b>Logged-in pages without sharing a password.</b> The test runs in the owner's own browser, where they are already signed in. Every competitor we checked runs in its own cloud browser.</li>
+    <li><b>It does not lie.</b> Every finding must point at a real step, URL, header or snippet. When Walkthru stops itself for safety, it says so instead of blaming the site.</li>
+  </ul>
+  <h3>Where it stands (24 September 2026)</h3>
+  <ul>
+    <li>Built and working locally: Instant Scan, extension, AI test users, reports, GEO, fix pack, fix prompt, rerun and compare, plan limits, data deletion, legal page drafts.</li>
+    <li>Not done: payments (Dodo), deployment, domain, Chrome Web Store listing, the updated landing page. Plus-plan features (weekly watch, MCP server) come after launch.</li>
+    <li>Prices set: Free, Launch Pack $9 once, Pro $19 a month ($15 founding), Plus $49 a month ($39 founding).</li>
+  </ul>
+</section>
+
+<!-- ============ 02 PROBLEM ============ -->
+<section class="chapter">
+  <div class="eyebrow">02</div>
+  <h1>The problem, and why now</h1>
+  <p class="lead">Millions of people now build real web apps by describing them to an AI. They can ship in a weekend. What they cannot easily do is watch a stranger use it.</p>
+  <h3>The pain, in the founder's words</h3>
+  <ul>
+    <li>"I launched on Product Hunt, got 400 visitors and 3 signups. Was the signup broken, or is the product bad?"</li>
+    <li>"My app is a React single-page app. Does Google even see my text? Does ChatGPT?"</li>
+    <li>"Cursor wrote my auth. Did it leave an API key in the JavaScript?"</li>
+  </ul>
+  <p class="small muted">These are illustrative questions, not quotes from real users. Collecting real ones is one of the co-founder's first jobs (chapter 20).</p>
+  <h3>How they deal with it today</h3>
+  <table>
+    <tr><th>Today's option</th><th>Why it falls short</th></tr>
+    <tr><td>Ask friends to try it</td><td>Friends are polite, already know the product, and only do it once.</td></tr>
+    <tr><td>Paid user testing (UserTesting, Maze)</td><td>Priced for companies. UserTesting sold for $1.3B in 2022, proof the need is real, but far above an indie budget.</td></tr>
+    <tr><td>Free tools: Lighthouse, securityheaders.com, Google Search Console</td><td>Each covers one slice, speaks in jargon, and none tries the signup flow.</td></tr>
+    <tr><td>AI user-testing tools (Meerkat, CanaryUsers, Swarm)</td><td>Test journeys only. No SEO, GEO or security. Need credentials for logged-in pages.</td></tr>
+  </table>
+  <h3>Why now</h3>
+  <ul>
+    <li><b>AI app builders exploded.</b> Lovable passed $400M in annual revenue in February 2026 and was near 8 million users by late 2025; Cursor passed $2B in annual revenue in February 2026 (sources in the appendix). Estimates put the "vibe coding" tools market around $4.7B in 2026. Every one of those apps needs a launch check.</li>
+    <li><b>Search is moving into AI answers.</b> People ask ChatGPT and Perplexity instead of Google. Many AI-built apps are JavaScript shells that AI crawlers see as empty pages. Almost nobody checks this.</li>
+    <li><b>Browser agents became cheap and reliable</b> in 2025 and 2026, so a "robot visitor" is now affordable to run on free AI models.</li>
+  </ul>
+</section>
+
+<!-- ============ 03 GLOSSARY ============ -->
+<section class="chapter">
+  <div class="eyebrow">03</div>
+  <h1>Glossary: every term explained</h1>
+  <p class="lead">Read this once. The rest of the document uses these words freely.</p>
+  <h3>Product words</h3>
+  <div class="term"><b>AI persona / test user</b><span>A character the AI plays while using the site, such as "a busy first-time visitor who skims and gets impatient". Walkthru has four: <b>first-time visitor</b>, <b>phone user</b> (small screen, hates long forms), <b>careful buyer</b> (cares about pricing and trust), <b>skeptic</b> (a developer who reads error messages and distrusts vague copy). Different people get stuck in different places, so each persona finds different problems.</span></div>
+  <div class="term"><b>Journey / run</b><span>One test: one persona trying one goal on one site. A run is made of <b>steps</b>; each step is one action like a click or typing into a field. Plans are counted in runs.</span></div>
+  <div class="term"><b>Goal</b><span>What the test user tries to do, typed by the owner: "Sign up for an account", "Find the pricing plans". Walkthru turns it into a short checklist before starting.</span></div>
+  <div class="term"><b>Think-aloud</b><span>The test user's running commentary at each step, like "Both buttons look the same, I will try the first one." It is what makes the report feel like watching a real person.</span></div>
+  <div class="term"><b>Instant Scan</b><span>The free, no-install check. Paste a URL, get a report in seconds. It reads public pages but does not click through a journey.</span></div>
+  <div class="term"><b>Extension</b><span>A small add-on installed in Chrome. It lets Walkthru act inside the owner's own browser tab.</span></div>
+  <div class="term"><b>Finding</b><span>One problem in the report, with a <b>kind</b> (UX, SEO, GEO, security, accessibility, performance), a <b>severity</b> (high, medium, low), evidence (where exactly) and a fix.</span></div>
+  <div class="term"><b>Fix pack</b><span>Copy-paste code blocks that fix GEO problems, built from the site's own pages: robots.txt rules, structured data, an llms.txt file, a rendering fix for the framework.</span></div>
+  <div class="term"><b>Agent fix prompt</b><span>One long instruction, generated from the report, that the owner pastes into their AI coding tool so it fixes every finding in order. Paid plans only.</span></div>
+  <div class="term"><b>Launch Ready score</b><span>One number from 0 to 100 combining UX, security, GEO, SEO and speed. 85 or more is "Launch ready", 60 to 84 "Almost ready", below 60 "Needs work".</span></div>
+  <div class="term"><b>Badge</b><span>A small image ("Walkthru, Launch Ready 92") the owner puts in their site footer or GitHub README. It links to the public report and updates on rerun. It is social proof for the owner and a backlink for us.</span></div>
+  <div class="term"><b>Rerun and compare</b><span>Run the same goal again after fixing. The report marks every earlier finding as fixed, still broken, new, or not re-checked.</span></div>
+  <div class="term"><b>Domain verification</b><span>Proof that the person testing a site owns it: a meta tag in the homepage or a file at <code>/.well-known/walkthru.txt</code>. It unlocks deeper security checks and real form sends.</span></div>
+  <div class="term"><b>Safe stop</b><span>The run ended because the test user reached a button Walkthru will not press (pay, delete, send). This is Walkthru's rule, not the site's fault, and the report says so.</span></div>
+
+  <h3>Search words</h3>
+  <div class="term"><b>SEO</b><span>Search Engine Optimisation. Making pages easy for Google and Bing to find, understand and list: page titles, descriptions, headings, image descriptions, a sitemap, no accidental "do not index" rules.</span></div>
+  <div class="term"><b>GEO</b><span>Generative Engine Optimisation, also called AI search readiness. Making pages easy for AI assistants (ChatGPT, Claude, Perplexity, Google's AI Overviews) to fetch, understand and quote. Walkthru measures readiness; it never promises the site will be cited.</span></div>
+  <div class="term"><b>AI crawler / bot</b><span>The program an AI company sends to read web pages, such as OAI-SearchBot (ChatGPT search), ClaudeBot, PerplexityBot. Training bots (GPTBot, Google-Extended) are different: blocking them is a legitimate choice.</span></div>
+  <div class="term"><b>robots.txt</b><span>A text file at a site's root that tells crawlers what they may read. One wrong line can hide a whole site from Google and AI search.</span></div>
+  <div class="term"><b>llms.txt</b><span>A newer, optional file that summarises a site for AI models. Evidence of impact is weak, so Walkthru weights it only 5 of 100 points and labels it low impact.</span></div>
+  <div class="term"><b>Structured data / JSON-LD</b><span>A hidden block of machine-readable facts in a page ("this is a software product, its name is X, it costs Y"). Search engines and AI assistants use it to understand the page.</span></div>
+  <div class="term"><b>Content before JavaScript</b><span>Many AI-built sites send an empty page and draw the text with JavaScript afterwards. Most AI crawlers do not run JavaScript, so they see nothing. Walkthru shows exactly what they see.</span></div>
+
+  <h3>Security, speed and accessibility words</h3>
+  <div class="term"><b>Passive security</b><span>Only reading what any visitor already receives (headers, cookies, public files). No hacking attempts, no load tests. Legal and safe to run.</span></div>
+  <div class="term"><b>HTTPS / TLS</b><span>The padlock: an encrypted connection. A site on plain http sends passwords in the clear.</span></div>
+  <div class="term"><b>Security headers</b><span>Instructions a server sends with each page, like Content-Security-Policy (which scripts may run), X-Frame-Options (stops the page being embedded by a fake site).</span></div>
+  <div class="term"><b>Cookie flags</b><span>HttpOnly (JavaScript cannot read the login cookie), Secure (only sent over HTTPS), SameSite (not sent from other sites). Missing flags make session theft easier.</span></div>
+  <div class="term"><b>Leaked keys</b><span>Secret API keys accidentally shipped inside public JavaScript. Anyone can copy them and run up the owner's bill.</span></div>
+  <div class="term"><b>SPF, DMARC, MX</b><span>Email settings for a domain. Without them, signup and password-reset emails land in spam or never arrive.</span></div>
+  <div class="term"><b>Accessibility (a11y)</b><span>Whether people using screen readers or keyboards can use the site: labelled form fields, image descriptions, heading order. Checked with axe, the industry-standard tool, against WCAG A and AA rules.</span></div>
+  <div class="term"><b>Core Web Vitals</b><span>Google's speed and stability measures. <b>LCP</b> (Largest Contentful Paint): how long until the main content shows; good is under 2.5 s. <b>CLS</b> (Cumulative Layout Shift): how much the page jumps around; good is under 0.1. <b>INP</b> (Interaction to Next Paint): how fast it reacts to a click; good is under 200 ms.</span></div>
+  <div class="term"><b>Latency</b><span>How long something takes to respond. For Walkthru: seconds per step, seconds to the first step, seconds to a finished report.</span></div>
+
+  <h3>AI and engineering words</h3>
+  <div class="term"><b>LLM / model</b><span>Large language model: the AI that reads the page and decides the next step or writes the report. Walkthru uses free models today (Groq's gpt-oss-120b, Nemotron on OpenRouter, Gemini as backup) and has Claude Haiku 4.5 wired for paid plans.</span></div>
+  <div class="term"><b>Tokens</b><span>The unit AI providers charge by, roughly three quarters of a word. A Walkthru report uses about 9,000 to 12,000 tokens.</span></div>
+  <div class="term"><b>Grounding</b><span>Code that throws away any AI-written finding that does not point at a real step where something went wrong. It is how Walkthru stops the AI from inventing problems.</span></div>
+  <div class="term"><b>Deterministic</b><span>Plain code with a fixed answer, no AI involved. Every SEO, GEO, security, accessibility and email check in Walkthru is deterministic.</span></div>
+  <div class="term"><b>MCP</b><span>Model Context Protocol: a standard way for AI coding tools like Claude Code and Cursor to call outside services. A Walkthru MCP server lets a developer say "scan my site and fix what you find" without leaving the editor. Planned for Plus.</span></div>
+  <div class="term"><b>Webhook</b><span>A message one service sends another when something happens, for example Dodo telling Walkthru "this customer paid".</span></div>
+  <div class="term"><b>Entitlement</b><span>The database record that says which plan a user has and until when. The server reads it on every run; the browser cannot fake it.</span></div>
+
+  <h3>Business words</h3>
+  <div class="term"><b>MRR / ARR</b><span>Monthly or annual recurring revenue.</span></div>
+  <div class="term"><b>ARPU</b><span>Average revenue per paying user per month.</span></div>
+  <div class="term"><b>CAC</b><span>Customer acquisition cost: what it costs, in money or time, to win one paying customer.</span></div>
+  <div class="term"><b>Churn</b><span>The share of paying customers who stop paying each month.</span></div>
+  <div class="term"><b>Conversion</b><span>The share of people who move to the next stage, for example from free scan to paid.</span></div>
+</section>
+
+<!-- ============ 04 INSTANT SCAN ============ -->
+<section class="chapter">
+  <div class="eyebrow">04</div>
+  <h1>Instant Scan</h1>
+  <p class="lead">The front door. Anyone pastes a web address on the homepage and gets a full report in seconds, with no account and no install.</p>
+  <figure><img src="img/s-landing-hero.png" alt="" style="max-height:88mm"><figcaption>The live landing page on the local build. The "Scan my site" button starts an Instant Scan. The hero copy still reflects the older "where strangers get stuck" angle; the new "launch check" positioning lands with task V9.</figcaption></figure>
+  <h3>What happens, step by step</h3>
+  <ol>
+    <li>The visitor types an address and presses <b>Scan my site</b>.</li>
+    <li>Walkthru checks the address is a real public website (not a private network address; this blocks a class of attacks called SSRF).</li>
+    <li>It reads the homepage and follows up to <b>10 same-site links</b> within <b>20 seconds</b>, respecting robots.txt, using ordinary page requests only.</li>
+    <li>In parallel, plain code runs the SEO, GEO, security-header, accessibility and email checks on those pages.</li>
+    <li>One AI call writes the <b>first impression</b> ("what is this, who is it for, what would I click first, how clear is it from 0 to 3"). A second AI call writes the summary and ranks the fixes.</li>
+    <li>The report is saved as a public page with its own link, ready to share.</li>
+  </ol>
+  <h3>What it does not do</h3>
+  <ul>
+    <li>It does not click, type or sign up. That needs the extension.</li>
+    <li>It does not run the deep security checks (exposed files, leaked keys) because it cannot know the visitor owns the site.</li>
+    <li>It does not measure speed unless a Google PageSpeed key is configured (it was not in today's local runs, so speed showed "not measured" rather than a fake pass).</li>
+  </ul>
+  <div class="two">
+    <div class="simple"><span class="tag">Measured today</span>Hard test site: <b>26 findings in 11.3 s</b> (5 high, 9 medium, 12 low), Launch Ready 35, GEO 23. Showcase test site: <b>2 findings in 43 s</b>, Launch Ready 93, GEO 100. The second took longer because the free AI providers were rate-limiting.</div>
+    <div class="deep"><span class="tag">Go deeper</span><code>POST /scans</code> in <code>app/main.py</code>. Limits: 5 scans an hour per IP address (in memory) and <code>FREE_SCANS_PER_DAY</code> = 200 across all users (counted in the database). Crawler: <code>app/scans/site.py</code>. Report graph: <code>app/agent/report.py</code>, which fans out to the scans and joins at <code>synthesize</code>.</div>
+  </div>
+</section>
+
+<!-- ============ 05 EXTENSION ============ -->
+<section class="chapter">
+  <div class="eyebrow">05</div>
+  <h1>The Chrome extension and AI test users</h1>
+  <p class="lead">The extension is how Walkthru tests the real product: signup, onboarding, dashboard, settings, checkout up to the payment button. The browser does the clicking on the owner's computer; the thinking happens on Walkthru's server.</p>
+  <div class="two-60">
+    <div>
+      <h3>How a test run works</h3>
+      <ol>
+        <li>The owner installs the extension and opens the side panel next to their site.</li>
+        <li>They pick a <b>goal</b> (the panel suggests some from the page's own links) and a <b>test user</b>.</li>
+        <li>Walkthru's server plans the goal into a checklist of 1 to 4 checkpoints, and refuses unsafe goals ("delete my account", "buy Pro") before a run is even counted.</li>
+        <li>The extension takes a <b>snapshot</b> of the page: the address, a numbered list of visible buttons, links and fields, visible text and error messages. Emails, long numbers and key-like strings are masked <b>before</b> anything leaves the browser.</li>
+        <li>The server's AI, playing the persona, decides one action: click #12, type into #4, scroll, finished, or give up. It also says what it is thinking and how confused it is (0 to 3).</li>
+        <li>The extension performs the action in the real tab, waits for the page to settle, and captures a screenshot after meaningful actions (at most 8 per run, form fields masked).</li>
+        <li>Repeat until the checklist is done, the test user gives up, a safety rule stops it, or a limit is reached (12 steps free, 30 paid, 4 minutes).</li>
+        <li>The server writes the report in the background and the panel links to it.</li>
+      </ol>
+      <p>A small bird called <b>Scout</b> appears in the corner of the tested page while it runs, so the owner can see what the test user is doing. Scout is invisible to the snapshot, so it never confuses the test.</p>
+    </div>
+    <figure><img src="img/mock-extension-panel.png" alt=""><figcaption>Side panel during a run. This is a design mock with illustrative text, not a recorded run: the real panel only renders inside Chrome.</figcaption></figure>
+  </div>
+
+  <svg viewBox="0 0 760 210" role="img" aria-label="Step loop between the extension and the API">
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5 0 10z" fill="#4d7274"/></marker></defs>
+    <rect x="10" y="20" width="250" height="170" rx="8" fill="#f4f4f5" stroke="#dedee2"/>
+    <text x="24" y="44" font-family="Geist" font-size="13" fill="#1b1b1f" font-weight="600">Owner's Chrome (extension)</text>
+    <text x="24" y="70" font-family="Geist" font-size="11" fill="#63636b">1. Snapshot the page, mask personal data</text>
+    <text x="24" y="92" font-family="Geist" font-size="11" fill="#63636b">4. Perform the action in the real tab</text>
+    <text x="24" y="114" font-family="Geist" font-size="11" fill="#63636b">5. Run accessibility and speed checks</text>
+    <text x="24" y="136" font-family="Geist" font-size="11" fill="#63636b">6. Capture a masked screenshot</text>
+    <text x="24" y="170" font-family="Geist Mono" font-size="10" fill="#4d7274">stays logged in, no password shared</text>
+    <rect x="500" y="20" width="250" height="170" rx="8" fill="#f4f4f5" stroke="#dedee2"/>
+    <text x="514" y="44" font-family="Geist" font-size="13" fill="#1b1b1f" font-weight="600">Walkthru server (API)</text>
+    <text x="514" y="70" font-family="Geist" font-size="11" fill="#63636b">2. Check plan limits and safety rules</text>
+    <text x="514" y="92" font-family="Geist" font-size="11" fill="#63636b">3. AI persona picks one next action</text>
+    <text x="514" y="114" font-family="Geist" font-size="11" fill="#63636b">Loop guards: stuck, looping, budget</text>
+    <text x="514" y="136" font-family="Geist" font-size="11" fill="#63636b">End: write the grounded report</text>
+    <text x="514" y="170" font-family="Geist Mono" font-size="10" fill="#4d7274">one HTTP call per step</text>
+    <line x1="265" y1="75" x2="495" y2="75" stroke="#4d7274" stroke-width="1.5" marker-end="url(#a)"/>
+    <text x="300" y="66" font-family="Geist" font-size="10.5" fill="#1b1b1f">observation (masked text, no values)</text>
+    <line x1="495" y1="125" x2="265" y2="125" stroke="#4d7274" stroke-width="1.5" marker-end="url(#a)"/>
+    <text x="300" y="145" font-family="Geist" font-size="10.5" fill="#1b1b1f">action: click #12 / type #4 / done</text>
+  </svg>
+
+  <h3>The four test users</h3>
+  <table>
+    <tr><th>Test user</th><th>How the AI is told to behave</th><th>What they tend to find</th><th>Plans</th></tr>
+    <tr><td>First-time visitor</td><td>Never heard of the product, skims, gets impatient fast</td><td>Unclear headlines, hidden signup, confusing first steps</td><td>All</td></tr>
+    <tr><td>Phone user</td><td>Small screen, taps big obvious things, hates long forms</td><td>Tiny buttons, long forms, broken mobile menus</td><td>Paid</td></tr>
+    <tr><td>Careful buyer</td><td>Small-business owner deciding whether to pay; cares about pricing, trust, what happens next</td><td>Hidden pricing, missing trust signals, vague plans</td><td>Paid</td></tr>
+    <tr><td>Skeptic</td><td>Cautious developer who reads error messages, checks links, distrusts vague copy</td><td>Silent errors, dead links, marketing fluff</td><td>Paid</td></tr>
+  </table>
+  <p>Plus will add <b>custom test users</b> ("a 60-year-old first-time buyer on a phone") and several test users merged into one report.</p>
+
+  <div class="deep"><span class="tag">Go deeper</span>Extension: Chrome Manifest V3 built with WXT and React (<code>apps/extension</code>). <code>lib/snapshot.ts</code> numbers elements (open shadow roots included) and marks fields as filled, empty or checked, never their values. <code>lib/redact.ts</code> masks emails, long numbers and tokens. <code>lib/execute.ts</code> runs one action with the safety filter. The step loop lives in the side panel page, not the service worker, because Chrome suspends workers after about 30 s idle. Server: a LangGraph graph (<code>app/agent/persona.py</code>) with <code>decide → interrupt → check</code>; each step is one HTTP call to <code>POST /runs/{id}/observe</code>. Goal planner: <code>app/agent/goal.py</code>. Loop guards: three identical steps end as <code>stuck</code>, a third visit to the same page ends as <code>looping</code> (Walkthru's own stop, never a site finding). "Done" right after an action that changed nothing is questioned, then ends as <code>gave_up</code>. Permissions: activeTab, sidePanel, scripting, tabs, and an optional all-sites permission requested once at Start, used only for screenshots of the test tab.</div>
+
+  <h3>Why the browser runs on the owner's machine</h3>
+  <ul>
+    <li><b>Logged-in pages just work.</b> The owner is already signed in, including magic-link, Google sign-in and two-factor accounts. No password or cookie is handed to Walkthru.</li>
+    <li><b>Hosting stays almost free.</b> No fleet of cloud browsers to pay for.</li>
+    <li><b>The cost:</b> an install step. Every competitor starts from a URL. This is the biggest funnel risk, and it is measured by experiment A2 (chapter 17). If fewer than 25% of beta users finish a run, we build a <b>cloud runner</b> for public pages.</li>
+  </ul>
+</section>
+
+<!-- ============ 06 REPORT ============ -->
+<section class="chapter">
+  <div class="eyebrow">06</div>
+  <h1>The report, section by section</h1>
+  <p class="lead">Everything Walkthru does ends in one report page. The screenshots below are a real Instant Scan of our "hard" test site (Zentrix), a fake startup page seeded with 22 known problems, generated today on the local build.</p>
+  <figure><img src="img/fixture-hard.png" alt="" style="width:70%"><figcaption>The site being tested: the Zentrix fixture. Note the vague headline, two identical buttons and a signup link hidden in the footer.</figcaption></figure>
+  <h3>1. Header and summary</h3>
+  <p>The tested address, the date, the test user, and <b>which AI models ran</b> (every report states this). Then a plain-language paragraph summarising what was found, and three quick numbers: total findings by severity, first-impression clarity (0 to 3), and how deep the security scan went.</p>
+  <h3>2. Launch Ready score and badge</h3>
+  <p>The single number, with a bar for each area. Areas that were not measured are shown as "Not measured" and their weight moves to the others, so the score never punishes or rewards what was not checked. Below it, the badge with copy-ready HTML and Markdown.</p>
+  <figure><img src="img/s-report-top.png" alt=""><figcaption>Summary, Launch Ready score (35, Needs work) and the badge. An Instant Scan has no journey, so "Can a stranger get in" is Not measured.</figcaption></figure>
+
+  <h3>3. First impression, five seconds in</h3>
+  <p>What the site does, who it is for, what a visitor would click first, and which trust signals they noticed. This is the classic "5-second test" that UX researchers run with real people.</p>
+  <h3>4. AI search readiness (GEO)</h3>
+  <p>The GEO score out of 100 with its seven categories, then <b>"What AI search sees"</b>: the literal text an AI crawler receives before JavaScript runs, with a word count. Seeing "37 words" of buzzwords is usually the moment a founder understands the problem. Below it, the <b>GEO fix pack</b> with copy buttons (free shows one fix and says how many more exist).</p>
+  <figure><img src="img/s-report-geo.png" alt=""><figcaption>First impression, GEO score 23 (Critical) with category bars, the exact text AI search sees, the first fix from the fix pack (robots.txt rules) and crawl coverage.</figcaption></figure>
+
+  <h3>5. Crawl coverage</h3>
+  <p>Which pages were checked, the page limit, how long it took, and whether robots.txt was respected. Honest about what was <b>not</b> checked, so a clean report never falsely implies the whole site is fine.</p>
+  <h3>6. Technical launch checks and "Fix these first"</h3>
+  <figure><img src="img/s-report-checks.png" alt=""><figcaption>Four check cards (accessibility, performance, search, security) and the five prioritised fixes.</figcaption></figure>
+  <h3>7. All findings</h3>
+  <p>Every finding with its severity, category, a one-line explanation of why it matters, the fix, and the evidence (the URL, the header, the image file names). Repeated issues across pages are merged into one finding that names how many pages and which ones.</p>
+  <figure><img src="img/s-report-findings.png" alt=""><figcaption>The findings list. Each item names the evidence underneath, for example <code>Disallow: /</code> or <code>hero1.svg, hero2.svg</code>.</figcaption></figure>
+
+  <h3>8. Only in test-run reports (extension)</h3>
+  <ul>
+    <li><b>Journey replay:</b> a three-pane timeline of every step with the screenshot, what the test user thought, confusion level, and per-step accessibility and speed numbers. Play, pause and step controls.</li>
+    <li><b>Outcome:</b> reached the goal, gave up, stuck, looping, safe stop, or ran out of steps.</li>
+    <li><b>Since your last run</b> (paid): fixed, still broken, new, not re-checked, page by page.</li>
+    <li><b>Agent fix prompt</b> (paid): Copy, Download <code>walkthru-fixes.md</code>, or Copy chat version for Lovable and Bolt.</li>
+    <li><b>Ignore a finding</b> (paid): mark "won't fix" with a reason. It leaves the lists but still counts in the score, so the badge cannot be gamed.</li>
+  </ul>
+  <figure><img src="img/mock-stuck.png" alt=""><figcaption>How a stuck moment is presented in a journey report. Design mock used on the landing page, illustrative content.</figcaption></figure>
+  <p>Reports can be shared as a public link (<code>/r/&lt;id&gt;</code>), exported to CSV, emailed, and printed to PDF with every screenshot in a filmstrip. They work on phones too.</p>
+</section>
+
+<!-- ============ 07 SERVICES ============ -->
+<section class="chapter">
+  <div class="eyebrow">07</div>
+  <h1>The services, one by one</h1>
+  <p class="lead">What Walkthru actually delivers, in the order a founder meets it.</p>
+
+  <h2>7.1 Journey testing (UX)</h2>
+  <p>AI test users try the real flow and report where they hesitated or failed, with the step, the screenshot and their own words. A UX finding is only allowed into the report if it points at a step where something actually went wrong: confusion of 2 or more, a visible error, a click that changed nothing, giving up, or a loop. A journey where everything worked has <b>no</b> UX findings, instead of padding.</p>
+
+  <h2>7.2 SEO</h2>
+  <p>Checked on up to 10 pages (Instant Scan and free) or 50 pages (paid): page title length, meta description, one H1 heading, canonical link, mobile viewport, language, accidental "noindex", image alt text, Open Graph tags for link previews, robots.txt and sitemap. Pages the test user visited are audited too.</p>
+
+  <h2>7.3 GEO (AI search readiness)</h2>
+  <p>Scored 0 to 100 in seven categories. All deterministic, so it costs nothing in AI calls and is identical on every plan.</p>
+  <table>
+    <tr><th>Category</th><th class="n">Points</th><th>What is checked</th></tr>
+    <tr><td>AI crawler access</td><td class="n">25</td><td>robots.txt allows the AI search bots (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, ClaudeBot, PerplexityBot, Googlebot, Bingbot, Applebot); the homepage answers an AI user agent normally instead of blocking it</td></tr>
+    <tr><td>Content before JavaScript</td><td class="n">20</td><td>The homepage HTML contains real text before JavaScript runs; key pages are not empty shells</td></tr>
+    <tr><td>Structured data</td><td class="n">15</td><td>Valid JSON-LD, Organization or WebSite, a page-type schema (SoftwareApplication, Product, FAQPage, Article), enough useful properties</td></tr>
+    <tr><td>Easy to quote</td><td class="n">15</td><td>One H1, descriptive H2s, a plain answer paragraph near the top, lists or tables, concrete numbers</td></tr>
+    <tr><td>Name and trust</td><td class="n">10</td><td>Same name in title, og:site_name, schema and H1; about, contact, privacy or pricing links; public profile links</td></tr>
+    <tr><td>Title and description</td><td class="n">10</td><td>Reuses SEO signals (findings stay in SEO, so nothing is reported twice)</td></tr>
+    <tr><td>llms.txt</td><td class="n">5</td><td>Present and well formed; labelled "low measured impact"</td></tr>
+  </table>
+  <p><b>Bands:</b> 0 to 35 critical, 36 to 67 foundation, 68 to 85 good, 86 to 100 excellent. Blocking <i>training</i> bots is reported as a choice, not a fault. The user-agent probe is worded carefully: a 200 response means "not blocked by user agent", because real edge networks verify bots by IP and we cannot prove access.</p>
+  <p><b>Fix pack:</b> robots.txt rules, Organization, WebSite and SoftwareApplication JSON-LD filled from the site's own title and description, an llms.txt draft listing the audited pages, and a rendering fix picked by detecting the framework (Vite single-page app, Next.js, Lovable, Astro).</p>
+
+  <h2>7.4 Security hygiene (passive only)</h2>
+  <table>
+    <tr><th>Everyone, any site</th><th>Only on a domain the owner verified</th></tr>
+    <tr><td>HTTPS and redirect to HTTPS; security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS); cookie flags; server version leaks</td><td>Exposed files (<code>.env</code>, <code>.git</code>, backups); secret keys inside public JavaScript bundles, reported with the value masked</td></tr>
+  </table>
+  <p>Never: login brute force, injection attempts, port scans, load tests. The reason is legal and ethical: probing a site you do not own is an attack.</p>
+
+  <h2>7.5 Accessibility and speed</h2>
+  <p>Inside a journey, the extension runs <b>axe</b> WCAG A/AA checks on the real rendered page and records LCP, CLS and INP at each step, so a finding can say "at step 3 on /signup, the email field has no label". Server-side static checks and Google PageSpeed are fallbacks. When something cannot be measured, the report says "not measured", never a false pass.</p>
+
+  <h2>7.6 Signup email check</h2>
+  <p>Reads the domain's SPF and DMARC records (free) and MX records (paid) through DNS over HTTPS. It also recognises a common trap: Supabase's built-in mailer allows very few emails per hour, so a journey error "email rate limit exceeded" becomes the fix "set up your own SMTP".</p>
+
+  <h2>7.7 Agent fix prompt ("prompts")</h2>
+  <p>The paid feature that closes the loop. Walkthru turns the report into one instruction for the founder's AI coding tool. It is built by plain code from the stored report, <b>never by an AI</b>, so it cannot invent findings, and it costs nothing to make.</p>
+  <ul>
+    <li><b>Contains:</b> the detected tech stack, then every finding in priority order (security, UX blockers, GEO, SEO, accessibility, performance), each with what is wrong, where, the evidence, the required change and an acceptance check. Every affected page is listed.</li>
+    <li><b>Rules for the coding agent:</b> keep existing behaviour, ask before adding dependencies, never paste secrets.</li>
+    <li><b>Last step:</b> "rerun Walkthru to verify", with the list of findings expected to flip to fixed.</li>
+    <li><b>Formats:</b> full Markdown for Cursor, Claude Code and Codex; a short chat version for Lovable and Bolt; a <code>walkthru-fixes.md</code> download.</li>
+    <li><b>Tested end to end by the founder:</b> a real prompt applied to the showcase site, rerun compared correctly (2 fixed, 0 new, 3 still broken).</li>
+  </ul>
+
+  <h2>7.8 Badges</h2>
+  <p>The owner can embed a live "Walkthru | Launch Ready 92" badge in their footer or README. It links to the latest public report for that site and refreshes (cached one hour) when they rerun and share again. Ignored findings still count, so the badge cannot be gamed. For the owner it is proof of quality; for Walkthru it is a free, permanent backlink and ad on every site that uses it. This is the main built-in growth loop.</p>
+  <div class="deep"><span class="tag">Go deeper</span><code>app/agent/score.py</code> computes the score in code from the stored report (weights UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15; penalties per finding high 25, medium 10, low 3). <code>GET /badge/{run_id}.svg</code> and <code>GET /badge/{run_id}</code> in <code>app/main.py</code>. Status: built in the working copy on 24 September and visible in today's reports; not yet committed, so it counts as "in progress" (task V8).</div>
+
+  <h2>7.9 How founders validate their own product</h2>
+  <ol>
+    <li><b>Baseline:</b> run an Instant Scan and one journey before launch.</li>
+    <li><b>Fix:</b> paste the fix prompt into the coding tool, or apply the fix pack by hand.</li>
+    <li><b>Prove it:</b> rerun the same goal. The comparison shows, page by page, what is fixed, what is still broken, what is new and what was not re-checked. A finding only counts as fixed if its pages were actually checked again.</li>
+    <li><b>Show it:</b> share the public report and put the badge on the site.</li>
+    <li><b>Keep it (Plus, planned):</b> weekly watch and a deploy hook email them only when something breaks or gets fixed.</li>
+  </ol>
+  <p>Verifying the domain (meta tag or file) is also how they prove ownership, which unlocks the deeper security checks and one real form send.</p>
+</section>
+
+<!-- ============ 08 NUMBERS ============ -->
+<section class="chapter">
+  <div class="eyebrow">08</div>
+  <h1>Reading the numbers</h1>
+  <p class="lead">Every number in a report, and every performance number in this document, explained once.</p>
+  <table>
+    <tr><th style="width:26%">Number</th><th>What it describes</th><th style="width:30%">How to read it</th></tr>
+    <tr><td>Launch Ready score (0 to 100)</td><td>Weighted mix of measured areas: UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15</td><td>85+ Launch ready, 60 to 84 Almost ready, under 60 Needs work</td></tr>
+    <tr><td>Area bars (0 to 100)</td><td>Each area starts at 100 and loses 25 per high, 10 per medium, 3 per low finding. GEO uses its own score. UX starts at 100 if the goal was reached, 50 if the test user gave up or got stuck</td><td>Low bar = where to spend time first</td></tr>
+    <tr><td>GEO score (0 to 100)</td><td>Points earned in the seven GEO categories</td><td>0 to 35 critical, 36 to 67 foundation, 68 to 85 good, 86+ excellent</td></tr>
+    <tr><td>Clarity (0 to 3)</td><td>How quickly the AI understood what the site is from the first screen</td><td>3 = instantly clear, 0 = could not tell</td></tr>
+    <tr><td>Confusion (0 to 3, per step)</td><td>How lost the test user felt at that step</td><td>2 or more makes the step eligible for a UX finding</td></tr>
+    <tr><td>Severity</td><td>High: blocks users, leaks data or hides the site. Medium: hurts conversion or ranking. Low: polish</td><td>Fix high first; the fix prompt orders them for you</td></tr>
+    <tr><td>"AI search sees N words"</td><td>Words in the homepage before JavaScript runs</td><td>Under about 100 words usually means a thin page or a JavaScript shell</td></tr>
+    <tr><td>LCP / CLS / INP</td><td>Main content load time / layout jumping / click response</td><td>Good: under 2.5 s / under 0.1 / under 200 ms</td></tr>
+    <tr><td>Pages checked</td><td>Pages crawled vs the plan limit (10 or 50)</td><td>Anything not listed was not checked</td></tr>
+    <tr><td>Tokens</td><td>AI usage for the run</td><td>About 9,000 to 12,000 per report; a journey of 4 to 6 steps used 6,400 to 11,800</td></tr>
+  </table>
+  <h3>Speed of Walkthru itself (latency)</h3>
+  <table>
+    <tr><th>Measure</th><th class="n">Today</th><th>Notes</th></tr>
+    <tr><td>Instant Scan, small site</td><td class="n">11 to 43 s</td><td>Target is 20 s or less for 10 pages. Slower when free AI providers rate-limit</td></tr>
+    <tr><td>First step of a journey</td><td class="n">7.6 to 8.8 s</td><td>Was 13 to 19 s; cut by running domain verification in parallel and warming models at startup</td></tr>
+    <tr><td>Server time per later step</td><td class="n">1.4 to 6 s</td><td>Steps arrive about 5 s apart including the browser acting and the screenshot upload</td></tr>
+    <tr><td>Whole short journey</td><td class="n">25 to 33 s</td><td>4-step signup on the easy site; portfolio contact goal in 33 s</td></tr>
+    <tr><td>Report after a journey</td><td class="n">+ up to ~1 min</td><td>The careful free report writer (Nemotron Ultra) is slow but writes the most accurate summaries</td></tr>
+    <tr><td>50-page paid crawl</td><td class="n">13.9 s</td><td>python.org, 50 pages, measured</td></tr>
+  </table>
+  <h3>Quality numbers</h3>
+  <ul>
+    <li><b>Trap recall 82%:</b> our hard test site hides 22 known problems (6 UX, 6 SEO, 6 security, 4 GEO). Two real journeys found 18. By area: SEO 6 of 6, security 6 of 6, GEO 4 of 4, <b>UX only 2 of 6</b>. The machine checks are strong; judging UX from a journey is the weakest part and the main place Claude on paid plans should help.</li>
+    <li><b>Invented findings:</b> in a test of seven free models writing reports, the grounding code removed every invented UX finding from every model.</li>
+  </ul>
+</section>
+
+<!-- ============ 09 SAFETY ============ -->
+<section class="chapter">
+  <div class="eyebrow">09</div>
+  <h1>Safety: how the agent contains itself</h1>
+  <p class="lead">An AI clicking around inside someone's logged-in account is dangerous if it is careless. Walkthru's limits are written in code, in two places (server and extension), not left to the AI's good behaviour.</p>
+  <table>
+    <tr><th style="width:30%">Risk</th><th>Rule, enforced in code</th></tr>
+    <tr><td>Paying, deleting, cancelling</td><td>Buttons with words like pay, buy, purchase, checkout, delete, remove, cancel subscription, transfer, unsubscribe are <b>never clicked, on any page</b>. On logged-in pages the agent does not even type into them. The run ends as a <b>safe stop</b> at that button.</td></tr>
+    <tr><td>Sending a form or message to a real person</td><td>Send and invite buttons run <b>only</b> on a domain the signed-in owner has verified, <b>only</b> after the owner clicks confirm in the side panel, and <b>at most once per run</b>. Everywhere else the run ends as "Stopped before sending". (This rule exists because a portfolio contact form was submitted once during early testing.)</td></tr>
+    <tr><td>Anonymous or public forms on sites the user does not own</td><td>Same as above: without verification, submit is never pressed. The agent fills the fields to prove the form works, then stops.</td></tr>
+    <tr><td>Leaving the site</td><td><b>Same-origin only.</b> If a click leads to another domain (a new scheme, host or port), the extension stops the run and closes it with a reason. External links and new tabs are reported, not followed. <code>mailto:</code> and <code>tel:</code> links are reported as working contact methods and never opened.</td></tr>
+    <tr><td>Unsafe goals</td><td>The goal planner refuses goals that ask to pay, delete, cancel, spam, attack or visit another website, with an error, before a run is counted. Checked live: "delete my account and buy pro" was refused in 0.5 s.</td></tr>
+    <tr><td>CAPTCHAs and bot checks</td><td>The snapshot flags a CAPTCHA and the agent stops. It never tries to solve one.</td></tr>
+    <tr><td>Endless loops</td><td>Three identical steps end as stuck; a third visit to the same page ends as looping; 12 steps (free) or 30 (paid); 4 minutes total.</td></tr>
+    <tr><td>Personal data</td><td>Emails, long numbers and key-like strings are masked in the browser before upload. Field values are never sent, only "filled" or "empty". Screenshots mask form fields and hide Scout. Signups use a fake test identity.</td></tr>
+    <tr><td>Attacking sites</td><td>Security checks are passive only. Deep checks need domain verification. The scanner blocks private network addresses (SSRF protection) at every redirect.</td></tr>
+    <tr><td>Blaming the site for Walkthru's own stops</td><td>Safe stops, loops, the owner pressing Stop and CAPTCHA stops are Walkthru's limits and are never reported as site problems.</td></tr>
+    <tr><td>Data kept forever</td><td>Screenshots expire after 30 days. Owners can delete any run, export all their data, or delete their account.</td></tr>
+  </table>
+  <h3>Honest limits of the agent</h3>
+  <ul>
+    <li>It cannot test payment itself, only the path up to the pay button.</li>
+    <li>It cannot pass CAPTCHAs, SMS codes or email verification links.</li>
+    <li>With 12 free steps it covers short flows only; long onboarding needs a paid plan.</li>
+    <li>On free models, UX judgement is uneven (see chapter 11). It finds concrete breakage well, and subtle design confusion less reliably.</li>
+    <li>It tests one persona per run today; merged multi-persona reports are planned for Plus.</li>
+    <li>It needs Chrome on a desktop. No Firefox, Safari or native mobile apps.</li>
+  </ul>
+  <div class="deep"><span class="tag">Go deeper</span>Word lists in <code>app/agent/safety.py</code> (<code>DESTRUCTIVE</code>, <code>SENDING</code>) are mirrored in <code>apps/extension/lib/execute.ts</code>; the server's <code>persona._enforce</code> and the extension's executor both refuse, so a buggy or manipulated model cannot bypass one layer. Same-origin compares scheme and host. Domain verification: <code>GET /verification</code> returns a per-account token for a meta tag or <code>/.well-known/walkthru.txt</code>.</div>
+</section>
+
+<!-- ============ 10 PLANS ============ -->
+<section class="chapter">
+  <div class="eyebrow">10</div>
+  <h1>The plans, in full</h1>
+  <p class="lead">Prices confirmed by the founder on 24 September 2026. The founding price applies to the first 50 customers, locked for 12 months. At launch, paid access is sold as founder-approved 30-day passes through Dodo, with no automatic renewal (chapter 15 explains why).</p>
+  <table>
+    <tr><th></th><th>Free</th><th>Launch Pack</th><th>Pro</th><th>Plus</th></tr>
+    <tr><td><b>Price</b></td><td>$0</td><td>$9 once</td><td>$19/mo ($15 founding)</td><td>$49/mo ($39 founding)</td></tr>
+    <tr><td>AI for test user and report</td><td>Free models</td><td>Claude Haiku 4.5</td><td>Claude Haiku 4.5</td><td>Claude Haiku 4.5</td></tr>
+    <tr><td>Instant Scan</td><td>5 an hour, 10 pages</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Test runs</td><td>3 a month</td><td>20 in 30 days</td><td>40 a month</td><td>150 a month</td></tr>
+    <tr><td>Steps per run</td><td>12</td><td>30</td><td>30</td><td>30</td></tr>
+    <tr><td>Pages the test user may enter</td><td>Public only</td><td>Public + logged-in</td><td>Public + logged-in</td><td>Public + logged-in</td></tr>
+    <tr><td>Test users</td><td>First-time visitor</td><td>All 4</td><td>All 4</td><td>All 4 + custom</td></tr>
+    <tr><td>Sites per month or pass</td><td>1</td><td>1</td><td>2</td><td>5</td></tr>
+    <tr><td>GEO score</td><td>Homepage, top 3 fixes</td><td>Full site</td><td>Full site, 50 pages</td><td>Full site, 50 pages, every site</td></tr>
+    <tr><td>"What AI search sees"</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>GEO fix pack</td><td>1 fix preview</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Agent fix prompt</td><td>Locked (shows count)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Launch Ready score and badge</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>SEO</td><td>10 pages</td><td>50 pages</td><td>50 pages</td><td>50 pages</td></tr>
+    <tr><td>Security</td><td>Headers, TLS, cookies</td><td>+ exposed files, leaked keys (verified)</td><td>Same</td><td>Same</td></tr>
+    <tr><td>Signup email check</td><td>SPF, DMARC</td><td>Full</td><td>Full</td><td>Full</td></tr>
+    <tr><td>Rerun and compare</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Ignore a finding</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>One real form send (verified, confirmed)</td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Signup funnel numbers <span class="pill">planned</span></td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Landing copy review <span class="pill">planned</span></td><td>No</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Competitor side by side <span class="pill">planned</span></td><td>No</td><td>3 competitors</td><td>3 competitors</td><td>3 per site</td></tr>
+    <tr><td>Walkthru MCP server <span class="pill">planned</span></td><td>No</td><td>No</td><td>No</td><td>Yes</td></tr>
+    <tr><td>Weekly GEO/SEO watch + deploy hook <span class="pill">planned</span></td><td>No</td><td>No</td><td>No</td><td>Yes</td></tr>
+    <tr><td>Report export</td><td>Web report</td><td>PDF</td><td>PDF</td><td>PDF with your logo</td></tr>
+    <tr><td>Shareable public report</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+  </table>
+  <h3>Who each plan is for</h3>
+  <ul>
+    <li><b>Free:</b> the hook. "Can ChatGPT read your site?" in 20 seconds, plus three public-page journeys a month. Upgrade trigger: "the test stopped at my login screen" or "I fixed it, did it work?"</li>
+    <li><b>Launch Pack ($9 once):</b> the founder launching next Tuesday. Everything paid for 30 days, 20 runs. It is also the decoy: someone who expects to ship again sees that $19 a month for 40 runs and ongoing comparisons is better value.</li>
+    <li><b>Pro ($19):</b> the solo founder who keeps shipping. Logged-in flows, reruns, the fix prompt, 2 sites.</li>
+    <li><b>Plus ($49):</b> the agency or multi-product founder. 5 sites, 150 runs, white-label PDFs, weekly watch, MCP. Launches as a <b>waitlist</b> until watch and branded PDFs exist, so nothing is sold before it exists.</li>
+  </ul>
+  <div class="warn"><span class="tag">Mismatch to fix before launch</span>The landing page still shows the old plans (Pro $15, Team $39, 60 and 250 runs). The new table above lands with task V9. The docs page also still describes Instant Scan without GEO.</div>
+  <figure><img src="img/s-landing-pricing.png" alt=""><figcaption>Current pricing section on the landing page: old plans, to be replaced.</figcaption></figure>
+  <div class="deep"><span class="tag">Go deeper</span>The server owns every limit: <code>app/plans.py</code> holds the plans; <code>POST /runs</code> ignores whatever tier the browser claims and returns 403 (logged-in or persona not allowed), 402 (runs used up) or 429 (daily free capacity used). Checked live: a free account claiming to be paid was refused. <code>GET /me/plan</code> feeds the side panel. <code>scripts/grant_plan.py EMAIL pro</code> grants a free test pass. Claude Haiku 4.5 is wired through Google Cloud and switches on when <code>CLAUDE_VERTEX_PROJECT</code> is set; until then paid runs also use the free chain.</div>
+</section>
+
+<!-- ============ 11 HONEST AUDIT ============ -->
+<section class="chapter">
+  <div class="eyebrow">11</div>
+  <h1>Is the free report real? An honest audit</h1>
+  <p class="lead">Short answer: yes, it is a real report, not a placeholder. About 80% of it is solid, production-grade checking. The AI-written 20% is useful but uneven on free models, and that is exactly the part paid plans improve.</p>
+  <h3>What is genuinely strong</h3>
+  <ul>
+    <li><b>Every machine check is deterministic and correct by construction.</b> On today's hard-site scan all 26 findings were real and each named its evidence: <code>Disallow: /</code> in robots.txt, a title of 4 characters, the two image file names, the cookie called "session" missing HttpOnly and SameSite. These are the same facts Lighthouse or securityheaders.com would report, in plain language, in one place, with the fix.</li>
+    <li><b>GEO is the standout.</b> "What AI search sees" with a word count is concrete and rare. The showcase site, built correctly, scored 100; the broken one scored 23. The score moves for the right reasons.</li>
+    <li><b>Grounding works.</b> A journey where nothing went wrong produces no invented UX problems. Checkpoint B found 82% of seeded traps.</li>
+    <li><b>It is honest about gaps:</b> "Not measured", "before JavaScript runs", pages not checked, which models ran.</li>
+  </ul>
+  <h3>What is weak today (seen in today's scans)</h3>
+  <ul>
+    <li><b>AI judgement on free models is uneven.</b> The showcase homepage says clearly "Meeting notes that write themselves ... teams of 3 to 50 people". The first impression correctly described what it does and who it is for, yet rated clarity 0 of 3 and raised a <b>high</b> "Value proposition unclear" finding. That is a wrong call, and a founder would notice.</li>
+    <li><b>Local-site noise:</b> the same scan flagged plain http as high on a local test address while its own summary said that is expected locally. Real sites are unaffected, but it shows the writer can contradict itself.</li>
+    <li><b>Speed was "not measured"</b> in both scans because no PageSpeed API key is configured locally. Set the key before launch or the speed area stays empty.</li>
+    <li><b>Journey UX recall is 2 of 6</b> on the hard site. Free journeys are 12 steps on public pages with one persona, so they find blocking breakage (silent failed signup, dead button, hidden signup link) far better than subtle confusion.</li>
+    <li><b>Fixtures are not customers.</b> All quality numbers come from our own test sites and the founder's projects. No outside founder has used it yet.</li>
+  </ul>
+  <h3>Is it a big deal for a founder?</h3>
+  <table>
+    <tr><th>Part of the free report</th><th>Worth to a real founder</th><th>Could they get it free elsewhere?</th></tr>
+    <tr><td>GEO score + what AI sees + 1 fix</td><td><b>High.</b> Most founders have never checked it, and SPAs usually fail</td><td>Partly, via separate GEO tools, mostly paid</td></tr>
+    <tr><td>Security headers, cookies, HTTPS</td><td>Medium. Quick wins, good hygiene</td><td>Yes (securityheaders.com, Mozilla Observatory)</td></tr>
+    <tr><td>10-page SEO audit</td><td>Medium. Catches embarrassing mistakes like a blanket robots block</td><td>Yes (Lighthouse, many SEO checkers)</td></tr>
+    <tr><td>First impression</td><td>Medium, when correct; see the clarity miss above</td><td>Not in one click</td></tr>
+    <tr><td>3 public journeys a month</td><td><b>High</b> when it catches a broken signup; low for a flow that works</td><td>Competitors give more free runs (Meerkat about 170 in month one)</td></tr>
+    <tr><td>All of it in one link with a score and badge</td><td><b>The real value.</b> One place, plain words, shareable</td><td>No single tool combines these</td></tr>
+  </table>
+  <div class="simple"><span class="tag">Verdict</span>The free report is a credible, shareable product on its own, strongest on GEO and technical hygiene. It will not wow a founder whose site is already healthy, and a wrong AI judgement on clarity could cost trust. <b>Before launch:</b> tune the first-impression clarity rule so a finding requires the clarity score and the description to agree, suppress http findings on local addresses in scans, configure PageSpeed, and run the measured Claude comparison (about $1 to $2) before claiming paid reports are better.</div>
+</section>
+
+<!-- ============ 12 WHO BENEFITS ============ -->
+<section class="chapter">
+  <div class="eyebrow">12</div>
+  <h1>Who benefits, and how</h1>
+  <p class="lead">Four people, four stories. Details are illustrative, not real customers.</p>
+  <h3>The indie hacker, launching on Product Hunt next week</h3>
+  <p>Built a habit tracker with Lovable over three weekends. Runs a free Instant Scan: GEO 18, "AI search sees 6 words". The app is a JavaScript shell. Buys the $9 Launch Pack, runs the careful-buyer and phone-user journeys through signup and the first dashboard, finds the signup confirmation email never arrives (Supabase mailer limit), pastes the fix prompt into Lovable, reruns: 7 fixed, 1 new. Puts the Launch Ready badge in the footer before launch day.</p>
+  <h3>The small business founder</h3>
+  <p>Runs a booking site built by a freelancer. Not technical. Uses Instant Scan monthly; the plain-language report tells them what to ask the freelancer, and the fix prompt is something they can forward. The security section catches the login cookie without HttpOnly.</p>
+  <h3>The startup founder with a live product</h3>
+  <p>Two founders, 300 users, shipping every week. Pro plan. After each release they rerun "sign up and create a project" as a skeptic on staging, logged in, without handing any password to a vendor. The comparison tells them within minutes whether the release broke onboarding. Later, the MCP server lets their Claude Code agent run the check itself before each deploy.</p>
+  <h3>The small agency</h3>
+  <p>Hands 3 to 5 sites a month to clients. Plus plan. Every handover includes a white-label PDF with their own logo showing the Launch Ready score, SEO, GEO and security. Weekly watch emails them if a client's developer later blocks AI crawlers by accident. It is a reason to sell a maintenance retainer.</p>
+  <h3>The outcomes they buy</h3>
+  <ul>
+    <li>Fewer lost signups on launch day.</li>
+    <li>Being findable in Google and in AI answers.</li>
+    <li>No embarrassing leaked key or open file.</li>
+    <li>Proof (report, badge, comparison) they can show users, clients or investors.</li>
+    <li>Minutes instead of hours: the fix prompt does the typing.</li>
+  </ul>
+</section>
+
+<!-- ============ 13 ARCHITECTURE ============ -->
+<section class="chapter">
+  <div class="eyebrow">13</div>
+  <h1>How it is built</h1>
+  <p class="lead">Three parts: a website, a Chrome extension, and a server that holds the brain. A hosted database keeps accounts and reports. The design goal is near-zero running cost until there is revenue.</p>
+  <svg viewBox="0 0 760 300" role="img" aria-label="System architecture">
+    <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5 0 10z" fill="#4d7274"/></marker></defs>
+    <g font-family="Geist" font-size="11" fill="#1b1b1f">
+      <rect x="10" y="10" width="220" height="80" rx="8" fill="#f4f4f5" stroke="#dedee2"/><text x="24" y="34" font-weight="600" font-size="12.5">Web app (Vercel)</text><text x="24" y="54" fill="#63636b">React 19, Vite, Tailwind</text><text x="24" y="72" fill="#63636b">landing, dashboard, reports</text>
+      <rect x="10" y="200" width="220" height="80" rx="8" fill="#f4f4f5" stroke="#dedee2"/><text x="24" y="224" font-weight="600" font-size="12.5">Chrome extension</text><text x="24" y="244" fill="#63636b">WXT, React side panel, axe</text><text x="24" y="262" fill="#63636b">snapshot, act, screenshot</text>
+      <rect x="290" y="95" width="220" height="110" rx="8" fill="#ffffff" stroke="#1b1b1f"/><text x="304" y="120" font-weight="600" font-size="12.5">Walkthru API (VM)</text><text x="304" y="140" fill="#63636b">FastAPI + LangGraph</text><text x="304" y="158" fill="#63636b">plans, agent, scans, reports</text><text x="304" y="176" fill="#63636b">SEO, GEO, security in code</text><text x="304" y="194" fill="#63636b">SSRF-safe fetcher</text>
+      <rect x="570" y="10" width="180" height="80" rx="8" fill="#f4f4f5" stroke="#dedee2"/><text x="584" y="34" font-weight="600" font-size="12.5">Supabase</text><text x="584" y="54" fill="#63636b">auth, Postgres (RLS),</text><text x="584" y="72" fill="#63636b">screenshot storage</text>
+      <rect x="570" y="110" width="180" height="80" rx="8" fill="#f4f4f5" stroke="#dedee2"/><text x="584" y="134" font-weight="600" font-size="12.5">AI models</text><text x="584" y="154" fill="#63636b">Groq, OpenRouter, Gemini</text><text x="584" y="172" fill="#63636b">Claude via Google Cloud</text>
+      <rect x="570" y="210" width="180" height="80" rx="8" fill="#f4f4f5" stroke="#dedee2"/><text x="584" y="234" font-weight="600" font-size="12.5">Dodo, Resend</text><text x="584" y="254" fill="#63636b">payments (planned),</text><text x="584" y="272" fill="#63636b">report emails</text>
+    </g>
+    <g stroke="#4d7274" stroke-width="1.4" fill="none">
+      <line x1="230" y1="60" x2="288" y2="120" marker-end="url(#b)"/><line x1="230" y1="235" x2="288" y2="185" marker-end="url(#b)"/>
+      <line x1="510" y1="130" x2="568" y2="60" marker-end="url(#b)"/><line x1="510" y1="150" x2="568" y2="150" marker-end="url(#b)"/><line x1="510" y1="180" x2="568" y2="245" marker-end="url(#b)"/>
+      <path d="M230 40 C 400 -5, 480 0, 568 40" marker-end="url(#b)" stroke-dasharray="4 3"/>
+    </g>
+    <text x="330" y="16" font-family="Geist" font-size="10" fill="#63636b">web reads reports straight from the database (row-level security)</text>
+  </svg>
+  <table>
+    <tr><th>Part</th><th>Technology</th><th>State</th></tr>
+    <tr><td>Web</td><td>React 19, Vite, TypeScript, Tailwind v4, GSAP animation</td><td>Built: landing, login, dashboard, reports, docs, privacy, terms, security pages</td></tr>
+    <tr><td>Extension</td><td>Chrome MV3, WXT, React, axe-core</td><td>Built; not yet on the Chrome Web Store</td></tr>
+    <tr><td>API</td><td>Python, FastAPI, LangGraph</td><td>Built; runs locally, not deployed</td></tr>
+    <tr><td>Database, auth, files</td><td>Supabase (Postgres with row-level security, magic link, Google and GitHub sign-in)</td><td>Live on the free tier; OAuth providers still to enable</td></tr>
+    <tr><td>AI models</td><td>Free chain: Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini; Nemotron 3 Ultra on OpenRouter writes most reports. Paid: Claude Haiku 4.5 on Google Cloud</td><td>Free chain live; Claude wired, switched off</td></tr>
+    <tr><td>Payments</td><td>Dodo Payments</td><td>Designed (payment.md), not built</td></tr>
+    <tr><td>Hosting</td><td>Vercel (web), Oracle Always Free VM or a ~$5 VPS (API)</td><td>Not started</td></tr>
+    <tr><td>Evals</td><td>Fixture sites with seeded traps, a trap scorer, LangSmith tracing</td><td>Built</td></tr>
+  </table>
+  <h3>Principles that keep it cheap and honest</h3>
+  <ul>
+    <li><b>Plain code wherever possible.</b> AI only plans goals, plays the test user and writes prose. Every check is deterministic.</li>
+    <li><b>Browser on the user's machine, brain on our server.</b> No cloud browsers to pay for.</li>
+    <li><b>Text snapshots, not screenshots, for decisions.</b> Tokens are the main cost.</li>
+    <li><b>The server decides the plan.</b> Nothing the browser says about its tier is trusted.</li>
+    <li><b>Grounding and proof before "done".</b> The AI cannot claim success after an action that changed nothing.</li>
+  </ul>
+  <div class="deep"><span class="tag">Go deeper</span>Repository layout: <code>apps/web</code>, <code>apps/api</code>, <code>apps/extension</code>, <code>evals</code>. The API reaches Supabase over its HTTPS Data API because direct Postgres was unreliable from the founder's network. Agent state is in memory by default; <code>CHECKPOINTER=postgres</code> for production. Free-provider ceiling: Groq allows about 8,000 tokens a minute per model and about 1,000 requests a day, so free journeys are capped at <code>FREE_RUNS_PER_DAY</code> = 90 and scans at 200 a day. Tests: 171 API, 30 extension; builds and lint green.</div>
+</section>
+
+<!-- ============ 14 MARKET ============ -->
+<section class="chapter">
+  <div class="eyebrow">14</div>
+  <h1>Market and competitors</h1>
+  <p class="lead">"AI users test your site" is a crowded, young category. None of the players has won. Walkthru's opening is the combined launch check and logged-in testing without credentials.</p>
+  <h3>Market size, roughly</h3>
+  <ul>
+    <li>Vibe-coding tools market: about <b>$4.7B in 2026</b>, growing about 38% a year (industry estimates, sources in the appendix).</li>
+    <li>Lovable: about 8 million users (late 2025) and 100,000+ new projects a day; $400M annual revenue (Feb 2026). Cursor: $2B+ annual revenue (Feb 2026). Replit: $9B valuation (Mar 2026).</li>
+    <li><b>Estimate of reachable buyers:</b> if 1% of Lovable's 8 million users ship a public app a year, that is 80,000 launches a year from one builder alone. At a 1% paid conversion, 800 customers, about $20,000 MRR at $25. Real reach will be smaller; the point is that the pool is not the constraint, distribution is.</li>
+  </ul>
+  <h3>Direct and indirect competitors (prices checked 24 Sep 2026)</h3>
+  <table>
+    <tr><th>Name</th><th>Price</th><th>What they sell</th><th>Threat</th></tr>
+    <tr><td>CanaryUsers</td><td>Free 100 credits; $9, $19, $49/mo</td><td>A "flock" of AI users on every deploy; logged-in flows from $9</td><td><span class="pill no">high</span> same buyer, same price</td></tr>
+    <tr><td>Meerkat</td><td>Large free tier; $49, $199/mo</td><td>AI personas in a real browser; findings across releases</td><td><span class="pill no">high</span> generous free tier</td></tr>
+    <tr><td>Swarm</td><td>5 free runs; $150/mo</td><td>Feedback in 10 minutes, code fixes; VC-backed</td><td><span class="pill">medium</span> different buyer</td></tr>
+    <tr><td>Uxia</td><td>1 free test, custom</td><td>AI testers for prototypes and live sites</td><td><span class="pill">low</span></td></tr>
+    <tr><td>Octomind (indirect)</td><td>$89 to $589/mo</td><td>Automated QA test generation</td><td><span class="pill">low</span></td></tr>
+    <tr><td>Otterly.AI (indirect, GEO)</td><td>From $29/mo</td><td>AI visibility tracking and GEO audits</td><td><span class="pill">low</span> never tests flows</td></tr>
+  </table>
+  <table>
+    <tr><th>Feature</th><th>Meerkat</th><th>CanaryUsers</th><th>Swarm</th><th>Otterly</th><th>Walkthru</th></tr>
+    <tr><td>AI users in a real browser</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+    <tr><td>Logged-in flows</td><td>Yes</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes (paid)</td></tr>
+    <tr><td>No credentials shared</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>n/a</td><td><b>Yes</b></td></tr>
+    <tr><td>SEO</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Partial</td><td>Yes</td></tr>
+    <tr><td>GEO</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>Yes</td><td>Yes</td></tr>
+    <tr><td>Passive security</td><td>Unknown</td><td>Unknown</td><td>Unknown</td><td>No</td><td>Yes</td></tr>
+    <tr><td>Compare across releases</td><td>Yes</td><td>Partial</td><td>Unknown</td><td>No</td><td>Yes (paid)</td></tr>
+    <tr><td>Runs on deploy</td><td>Yes</td><td>Yes</td><td>Unknown</td><td>No</td><td>Planned (Plus)</td></tr>
+    <tr><td>Several personas per run</td><td>Yes</td><td>Yes</td><td>Yes (10)</td><td>No</td><td>1 today; planned</td></tr>
+    <tr><td>Free tier</td><td>~170 runs month one</td><td>~2 deep scans</td><td>5 lifetime</td><td>n/a</td><td>Instant Scan + 3 runs</td></tr>
+  </table>
+  <p class="small muted">"Unknown" means the competitor's public pages do not say. Meerkat's own comparison article claims no persona tool lists SEO or security; treat it as their claim.</p>
+  <h3>Where Walkthru can win</h3>
+  <ol>
+    <li><b>One launch-readiness report</b> (journeys + SEO + GEO + security). Head start estimate: 2 to 4 months; a competitor could bolt on checks quickly, so the lead comes from owning the message first.</li>
+    <li><b>Logged-in testing without a password.</b> Head start estimate: 6+ months (needs an extension, store review and a safety model). Matters most for agencies and apps with SSO or 2FA.</li>
+    <li><b>Reports that never blame the site for the tool's own failures.</b> A quality bar more than a headline.</li>
+  </ol>
+  <h3>Idea scorecard (founder skills review, 24 Sep)</h3>
+  <table>
+    <tr><th>Dimension</th><th class="n">Score /5</th><th>Why</th></tr>
+    <tr><td>Problem severity</td><td class="n">3</td><td>Real, but peaks around launch</td></tr>
+    <tr><td>Market size</td><td class="n">4</td><td>Millions building with AI, plus agencies</td></tr>
+    <tr><td>Willingness to pay</td><td class="n">2</td><td>Price-sensitive buyers; competitors anchor at $9</td></tr>
+    <tr><td>Competition gap</td><td class="n">2</td><td>Four direct competitors; gap is the combined report</td></tr>
+    <tr><td>Distribution</td><td class="n">3</td><td>Instant Scan is a strong hook; extension is friction</td></tr>
+    <tr><td>Timing</td><td class="n">4</td><td>AI-built apps and AI search both peak now</td></tr>
+    <tr><td>Founder fit</td><td class="n">3</td><td>Proven builder; little sales experience. The co-founder closes this gap</td></tr>
+    <tr><td><b>Total</b></td><td class="n"><b>21/35</b></td><td>Promising with gaps. Prove people will pay before building more</td></tr>
+  </table>
+  <div class="simple"><span class="tag">What this means</span>The technology is not the risk. <b>Distribution and a sharp reason to pay are.</b> That is precisely the job this document asks a co-founder to own. Realistic ceiling as an indie product: about 2,000 customers × $25 × 12 = <b>$600K a year</b> (Estimate). Going beyond that most likely runs through agencies and white-label reports.</div>
+</section>
+
+<!-- ============ 15 BUSINESS MODEL ============ -->
+<section class="chapter">
+  <div class="eyebrow">15</div>
+  <h1>Business model and unit economics</h1>
+  <p class="lead">Freemium: a genuinely useful free tier as the demo and the marketing, flat paid plans with a run allowance, and a one-time pack for people who launch once.</p>
+  <h3>How money flows</h3>
+  <ol>
+    <li>A customer pays Dodo Payments (a merchant of record, so Dodo handles card processing and sales tax).</li>
+    <li>Dodo keeps <b>4% + $0.40</b> per transaction and pays out twice a month (minimum about $50).</li>
+    <li>Walkthru pays its own AI provider (Google Cloud for Claude) separately, prepaid by UPI.</li>
+  </ol>
+  <table>
+    <tr><th>Offer</th><th class="n">Price</th><th class="n">Dodo fee</th><th class="n">Net</th><th class="n">Runs</th><th class="n">AI budget cap (25% of net)</th><th class="n">Worst case at $0.20/run</th></tr>
+    <tr><td>Launch Pack</td><td class="n">$9.00</td><td class="n">$0.76</td><td class="n">$8.24</td><td class="n">20</td><td class="n">$2.06</td><td class="n">$4.00</td></tr>
+    <tr><td>Pro, founding</td><td class="n">$15.00</td><td class="n">$1.00</td><td class="n">$14.00</td><td class="n">40</td><td class="n">$3.50</td><td class="n">$8.00</td></tr>
+    <tr><td>Pro</td><td class="n">$19.00</td><td class="n">$1.16</td><td class="n">$17.84</td><td class="n">40</td><td class="n">$4.46</td><td class="n">$8.00</td></tr>
+    <tr><td>Plus, founding</td><td class="n">$39.00</td><td class="n">$1.96</td><td class="n">$37.04</td><td class="n">150</td><td class="n">$9.26</td><td class="n">$30.00</td></tr>
+    <tr><td>Plus</td><td class="n">$49.00</td><td class="n">$2.36</td><td class="n">$46.64</td><td class="n">150</td><td class="n">$11.66</td><td class="n">$30.00</td></tr>
+  </table>
+  <p><b>Measured AI cost with Claude Haiku 4.5</b> (from real run sizes at about $1.10 per million input and $5.50 per million output tokens on Google Cloud, to be confirmed at setup): a typical run costs <b>$0.02 to $0.04</b>, a full 30-step run about $0.08. Pro used fully costs about <b>$1.40 a month</b> (worst $3.08) against $17.84 net. Plus about $5.43 (worst $11.73) against $46.64. Both inside the 25% cap. GEO and the fix prompt cost nothing, being plain code.</p>
+  <h3>Margins (Estimate)</h3>
+  <table>
+    <tr><th>Plan</th><th class="n">Net</th><th class="n">Likely AI cost</th><th class="n">Gross margin</th></tr>
+    <tr><td>Launch Pack</td><td class="n">$8.24</td><td class="n">~$0.60</td><td class="n">~85%</td></tr>
+    <tr><td>Pro</td><td class="n">$17.84</td><td class="n">~$1.40</td><td class="n">~87%</td></tr>
+    <tr><td>Plus</td><td class="n">$46.64</td><td class="n">~$5.43</td><td class="n">~84%</td></tr>
+  </table>
+  <p>Fixed cost is about <b>$6 a month</b> (a $5 VPS if Oracle's free VM does not work, plus the domain). <b>One Pro customer covers hosting.</b> A $1,000 a month founder income needs about <b>64 Pro</b> or <b>26 Plus</b> customers. At 80% Pro and 20% Plus the blended ARPU is <b>$25</b> at list price, about <b>$20</b> at founding prices.</p>
+  <h3>Why paid access starts as founder-approved passes</h3>
+  <p>The founder has no credit card and cannot risk an unknown AI bill before revenue. So at launch: a user requests paid access, the founder approves, the user gets a private one-time checkout link, and a verified Dodo webhook activates a <b>30-day pass</b> with a fixed number of runs and a hard AI cost cap. No auto-renewal, no overage, no surprise bills in either direction. Self-serve monthly subscriptions open only after 10 reconciled passes, 30 days of real cost data and a tested spend cap.</p>
+  <h3>Revenue scenarios (all Estimates, no customers yet)</h3>
+  <p class="small muted">Assumes the first 50 customers pay founding prices (blended $19.80) and later customers $25; excludes one-time Launch Packs; counts paying customers at month end after churn.</p>
+  <table>
+    <tr><th>Scenario</th><th class="n">Month 3 (Jan 2027)</th><th class="n">Month 6 (Apr 2027)</th><th class="n">Month 12 (Oct 2027)</th></tr>
+    <tr><td>Conservative</td><td class="n">10 paying, ~$200 MRR</td><td class="n">25, ~$500</td><td class="n">60, ~$1,240</td></tr>
+    <tr><td>Base</td><td class="n">25, ~$500</td><td class="n">70, ~$1,490</td><td class="n">200, ~$4,740</td></tr>
+    <tr><td>Optimistic</td><td class="n">50, ~$990</td><td class="n">150, ~$3,490</td><td class="n">450, ~$10,990</td></tr>
+  </table>
+  <p><b>What the base case requires:</b> at a 3% scan-to-paid conversion, 200 customers need roughly 6,700 Instant Scans over the year, about 560 a month. The free-capacity cap (200 scans a day, about 6,000 a month) supports that. Validation gate before anything else: <b>5 paid out of the first 100 scans</b>.</p>
+  <h3>Pricing rules already decided</h3>
+  <ul>
+    <li>Founding prices for the first 50 approved customers, locked 12 months.</li>
+    <li>Move to list prices when there are 20 paying customers with churn under 8%, scan-to-paid above 3%, and weekly watch has shipped.</li>
+    <li>Annual plans ("2 months free") only after self-serve billing exists.</li>
+    <li>Never sell a better model as the main reason to pay; sell reach (logged-in pages) and follow-up (compare, fix prompt, watch).</li>
+  </ul>
+</section>
+
+<!-- ============ 16 INVESTMENT ============ -->
+<section class="chapter">
+  <div class="eyebrow">16</div>
+  <h1>Initial investment and running costs</h1>
+  <p class="lead">Walkthru can launch for well under $100 in cash. The scarce resource is time, not money.</p>
+  <table>
+    <tr><th>Item</th><th class="n">Cost</th><th>When</th><th>Notes</th></tr>
+    <tr><td>Domain</td><td class="n">~$10 to $20 / year</td><td>By 5 Oct</td><td>Registrar-dependent; not a quote. Run a quick trademark search on "Walkthru" first</td></tr>
+    <tr><td>Chrome Web Store developer account</td><td class="n">$5 once</td><td>Now</td><td>Review can take days; submit by 8 Oct</td></tr>
+    <tr><td>Google Cloud prepayment (Claude)</td><td class="n">₹500 to ₹1,000</td><td>Session 6</td><td>UPI prepayment; covers the measured Claude comparison (~$1 to $2) and early paid runs</td></tr>
+    <tr><td>API server</td><td class="n">$0 or ~$5 / month</td><td>By 6 Oct</td><td>Oracle Always Free VM, or a small VPS</td></tr>
+    <tr><td>Supabase, Vercel, Resend</td><td class="n">$0</td><td>Now</td><td>Free tiers; watch quotas</td></tr>
+    <tr><td>Dodo Payments</td><td class="n">$0 setup</td><td>Start verification now</td><td>4% + $0.40 per sale; $1 per refund; $30 per dispute; payout fees below $1,000</td></tr>
+    <tr><td>Headline ad test (optional)</td><td class="n">$0 to $100</td><td>Oct</td><td>Experiment A3 on Reddit ads</td></tr>
+    <tr><td>OpenRouter credit (optional)</td><td class="n">$10</td><td>If report volume grows</td><td>Lifts the free model limit from 50 to 1,000 requests a day; needs an international card or crypto</td></tr>
+    <tr><td><b>Total to launch</b></td><td class="n"><b>~$30 to $150</b></td><td></td><td>Estimate, plus founder and co-founder time</td></tr>
+  </table>
+  <h3>Costs that grow with usage</h3>
+  <ul>
+    <li>Claude tokens for paid runs (about 8% of revenue at full use, capped at 25%).</li>
+    <li>Dodo fees (about 6% of a $19 sale).</li>
+    <li>Supabase Pro ($25/month) once the free database or storage fills; Resend and Vercel paid tiers much later.</li>
+    <li>Free-model capacity is the first ceiling: about 90 free journeys and 200 scans a day for all users combined. Beyond that, free usage waits for tomorrow or runs on paid capacity funded by revenue.</li>
+  </ul>
+  <div class="warn"><span class="tag">Housekeeping before launch</span>Rotate the Supabase database password and secret key (both were shared in a chat on 18 Sep). Turn on two-factor login for Supabase, Google Cloud, Dodo and GitHub. Have the legal pages (privacy, terms, security) reviewed.</div>
+</section>
+
+<!-- ============ 17 GTM ============ -->
+<section class="chapter">
+  <div class="eyebrow">17</div>
+  <h1>Go-to-market plan</h1>
+  <p class="lead">Built with the go-to-market founder skill for a $0 to $500 monthly budget and a 20 October launch. The short version: give away great scans in public, measure whether the extension kills the funnel, and let every shared report and badge advertise the product.</p>
+  <h3>Launch readiness check</h3>
+  <ul>
+    <li><b>Minimum to launch:</b> Instant Scan on a real domain, the extension on the Chrome Web Store, one public demo report, the new pricing page, and paid passes through Dodo. Plus features can wait.</li>
+    <li><b>Enough users?</b> Yes. The AI-builder communities below have hundreds of thousands of members between them.</li>
+    <li><b>Biggest launch risk:</b> the install step. If people scan but never install, paid plans have no path. Experiment A2 measures this before launch.</li>
+  </ul>
+  <h3>Pre-launch (now to 20 Oct): three experiments, no new code</h3>
+  <table>
+    <tr><th>#</th><th>Test</th><th>How</th><th>Pass if</th></tr>
+    <tr><td>A1</td><td>Will anyone pay once?</td><td>Post 30 free Instant Scans of real launches in Indie Hackers, r/SaaS and r/SideProject threads over 10 days, with one line: "Want AI users to test your signup? Founding Launch Pack, $9." Take payment by Dodo payment link or UPI.</td><td>5 paid of the first 100 scans</td></tr>
+    <tr><td>A2</td><td>Does the extension kill the funnel?</td><td>20 beta users load the unpacked extension with a 3-line guide; count clicked, installed, finished.</td><td>5 or more finish a run within 48 h (else build the cloud runner)</td></tr>
+    <tr><td>A3</td><td>Is GEO the stronger hook?</td><td>Same offer, two headlines: "Can ChatGPT read your site?" vs "Find where users get stuck". Count scan starts by link tag.</td><td>GEO headline gets 1.5x more starts, then leads the landing page</td></tr>
+  </table>
+  <p><b>Audience building posts (before launch):</b></p>
+  <ol>
+    <li>Indie Hackers: "I scanned 30 AI-built apps. 22 are invisible to ChatGPT. Here is why." (data post, links to public reports with owners' permission)</li>
+    <li>X / Twitter build-in-public thread: a real before-and-after rerun on the showcase site, with the fix prompt.</li>
+    <li>r/SideProject: the tool itself, as a free scan, with the story of building it.</li>
+    <li>Lovable and Bolt communities (Discord, r/lovable): "How to make your Lovable app readable by Google and ChatGPT", with the Vite rendering fix.</li>
+    <li>dev.to / Hashnode: "The 7 things AI crawlers need from your site", from our GEO categories.</li>
+  </ol>
+  <p><b>Waitlist:</b> only for Plus ("weekly watch and MCP, opening in November"). Everything else is usable on day one.</p>
+  <p><b>Assets:</b> a 60 to 90 second demo video (paste URL → GEO shock "AI sees 6 words" → extension journey → fix prompt → rerun shows fixed); one public demo report; 3 beta quotes collected from A1 and A2 users with permission.</p>
+
+  <h3>Launch day (Tue 20 Oct)</h3>
+  <table>
+    <tr><th style="width:18%">Platform</th><th>Tactic</th></tr>
+    <tr><td>Hacker News</td><td><b>Show HN</b> (it is usable without sign-up, which HN rules favour): "Show HN: Walkthru, a launch check that shows what ChatGPT sees on your site". The founder answers every technical comment for the first 3 hours: the safety model, grounding, passive-only security. Never ask for upvotes; HN rules forbid it.</td></tr>
+    <tr><td>Product Hunt</td><td>Launch at 12:01 am Pacific (Tuesday to Thursday are busiest). A hunter is not required. Prepare gallery images from the real report, the demo video, a founding-price offer and a maker comment telling the story. The co-founder runs the day: replies, thank-yous, sharing to communities.</td></tr>
+    <tr><td>Reddit</td><td>r/SaaS limits self-promotion to once every 60 days and has a weekly share thread: use the thread. r/SideProject and r/indiehackers accept projects with a story. Format: problem, what we found scanning 30 apps, free link, no hard sell.</td></tr>
+    <tr><td>X</td><td>Thread: 1) the GEO shock screenshot, 2) how the test user works, 3) safety rules, 4) before/after rerun, 5) link. Tag the builder communities (Lovable, Bolt, Cursor) only where the content genuinely helps their users.</td></tr>
+  </table>
+
+  <h3>First 90 days: channels ranked</h3>
+  <table>
+    <tr><th>#</th><th>Channel</th><th>CAC (Estimate)</th><th>Time to results</th><th>First action this week</th></tr>
+    <tr><td>1</td><td>Free scans posted in founder communities (IH, r/SaaS weekly thread, r/SideProject, Lovable and Bolt communities)</td><td class="n">$0, ~1 h per customer</td><td>Days</td><td>Scan 10 apps from this week's launches and send owners their report</td></tr>
+    <tr><td>2</td><td>Badge and public-report backlinks</td><td class="n">$0</td><td>Weeks to months</td><td>Ship V8 and ask every beta user to add the badge</td></tr>
+    <tr><td>3</td><td>Launch platforms (Show HN, Product Hunt)</td><td class="n">$0</td><td>One day spike</td><td>Draft the Show HN text and PH gallery</td></tr>
+    <tr><td>4</td><td>Search content around GEO ("can ChatGPT read my site", "Lovable SEO")</td><td class="n">$0, writing time</td><td>2 to 3 months</td><td>Publish one guide with a free-scan call to action</td></tr>
+    <tr><td>5</td><td>Agency outreach (small web agencies, Webflow and Framer freelancers)</td><td class="n">$0 to $50</td><td>1 to 2 months</td><td>Send 20 agencies a free white-label-style report of one client site</td></tr>
+  </table>
+  <p><b>Content ideas:</b> "What ChatGPT sees on 30 AI-built apps" (data study); "Lovable/Bolt SEO and GEO checklist"; "Why your Supabase signup emails never arrive"; "Security headers in 5 minutes for Vercel apps"; "We let an AI try to sign up to 20 Product Hunt launches". Each becomes an X thread, a Reddit post and a newsletter pitch.</p>
+  <p><b>Partnerships:</b> (1) template and course creators in the Lovable, Bolt and Cursor ecosystems, who can bundle a free scan in their launch checklists; (2) MCP directories and the Cursor/Claude Code tool listings once the MCP server ships. <b>Product-specific tactic:</b> "Launch Ready" badge leaderboard of the week's launches, with owners' permission.</p>
+
+  <h3>Metrics for the first 90 days</h3>
+  <table>
+    <tr><th>Metric</th><th class="n">Day 30</th><th class="n">Day 60</th><th class="n">Day 90</th><th>Tool</th><th>If below target</th></tr>
+    <tr><td>Instant Scans per week</td><td class="n">150</td><td class="n">300</td><td class="n">500</td><td>Supabase <code>runs</code> table</td><td>Post more public scans; test the GEO headline</td></tr>
+    <tr><td>Scan → signup</td><td class="n">15%</td><td class="n">20%</td><td class="n">25%</td><td>Supabase auth + runs</td><td>Make the locked fix prompt more visible in reports</td></tr>
+    <tr><td>Install → first finished run</td><td class="n">25%</td><td class="n">35%</td><td class="n">40%</td><td>Runs by user</td><td>Onboarding video; build the cloud runner</td></tr>
+    <tr><td>Paying customers</td><td class="n">5</td><td class="n">15</td><td class="n">30</td><td>Dodo dashboard</td><td>Interview 5 non-payers; revisit the offer</td></tr>
+    <tr><td>Paid users who rerun within 14 days</td><td class="n">40%</td><td class="n">50%</td><td class="n">60%</td><td>Runs with a comparison</td><td>Rerun reminder email; weekly watch sooner</td></tr>
+  </table>
+  <p class="small muted">All targets are Estimates. Walkthru has no product analytics yet; these numbers come from the database. Adding privacy-safe analytics is a pre-launch task.</p>
+  <h3>Budget ($0 to $500 a month)</h3>
+  <ul>
+    <li><b>Free:</b> community posts, launches, content, badge loop, founder-led outreach. This is 90% of the plan.</li>
+    <li><b>Worth paying for:</b> the domain ($15/yr), Chrome Web Store ($5), Claude comparison (~$2), and later a $25/month Supabase upgrade.</li>
+    <li><b>Best single spend under $200:</b> <b>$100 on the A3 Reddit headline test.</b> It decides the landing page headline, which every later visitor sees, so it compounds.</li>
+  </ul>
+</section>
+
+<!-- ============ 18 NEXT ============ -->
+<section class="chapter">
+  <div class="eyebrow">18</div>
+  <h1>What we build next</h1>
+  <p class="lead">Quality first, then payments, then deploy and launch, then Plus. Dates are from the roadmap; the buffer week exists for Chrome Web Store review and Dodo verification, which are outside our control.</p>
+  <table>
+    <tr><th style="width:14%">When</th><th style="width:28%">Work</th><th>What it means</th></tr>
+    <tr><td>Now to 8 Oct</td><td><b>Polish and harden</b></td><td>Commit the Launch Ready score and badge (V8); production-ready agent state (<code>CHECKPOINTER=postgres</code>); a UI spacing pass; fix the free-model clarity misfire and local http noise; configure PageSpeed.</td></tr>
+    <tr><td>6 to 8 Oct</td><td><b>Deploy, domain, store</b></td><td>Buy the domain; web on Vercel; API on the Oracle VM with process supervision; production CORS and extension origin; error logging and health checks; submit to the Chrome Web Store on 8 Oct.</td></tr>
+    <tr><td>6 to 8 Oct</td><td><b>Security tightening</b></td><td>Rotate Supabase secrets; two-factor on every admin account; one API process so the per-address scan limit holds (or move it to the database); verify row-level security on every table; audit extension permissions; legal pages reviewed; Google and GitHub sign-in enabled.</td></tr>
+    <tr><td>11 to 13 Oct</td><td><b>Dodo payments (V10)</b></td><td>Test mode first: access request → founder approval → private one-use checkout → signed, idempotent webhook inserts the pass → refunds suspend it. Tests prove duplicate, forged and out-of-order webhooks do nothing and a redirect without a webhook grants nothing. Then live mode once Dodo verifies the business.</td></tr>
+    <tr><td>6 to 15 Oct</td><td><b>Claude on for paid plans</b></td><td>Google Cloud project with UPI prepayment; measured comparison of Claude Haiku 4.5 vs the free chain on the same journeys ($1 to $2); only then claim paid reports are better.</td></tr>
+    <tr><td>14 to 18 Oct</td><td><b>Close-out</b></td><td>Evidence and PDF verified with real screenshots (V7); signup funnel numbers (V18); landing copy review (V19); new landing page and pricing (V9); stranger test in production.</td></tr>
+    <tr><td><b>20 Oct</b></td><td><b>Launch</b></td><td>Show HN, Product Hunt, Indie Hackers, r/SaaS, r/SideProject. 27 Oct at the latest.</td></tr>
+    <tr><td>21 Oct to 1 Nov</td><td><b>Weekly watch + deploy hook (V12)</b></td><td>A weekly server-side scan per saved site; a Vercel or Netlify deploy hook; email only when something changes.</td></tr>
+    <tr><td>2 to 8 Nov</td><td><b>Walkthru MCP server (V20)</b></td><td>Plus users paste a URL and a personal API key into Claude Code or Cursor. Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>rerun</code>, <code>list_runs</code>. Keys shown once, stored hashed, revocable, same limits as the web.</td></tr>
+    <tr><td>9 to 15 Nov</td><td><b>Competitor side by side (V21), branded PDF, open Plus</b></td><td>Passive scans of up to 3 competitor URLs next to yours; white-label PDFs; Plus waitlist opens by 22 Nov.</td></tr>
+    <tr><td>16 to 22 Nov</td><td><b>Custom test users (V13)</b></td><td>Define your own persona; several personas merged in one report.</td></tr>
+    <tr><td>Late Nov (if needed)</td><td><b>Cloud runner (V14)</b></td><td>Only if fewer than 25% of beta users finish a run: public journeys without installing anything.</td></tr>
+    <tr><td>Dec onward</td><td><b>Self-serve checkout</b></td><td>After 10 reconciled passes and 30 days of cost data. Then: preview-deploy check (GitHub Action), findings to GitHub Issues or Linear, AI citation tracking as a Plus add-on.</td></tr>
+  </table>
+  <h3>Team collaboration on Plus</h3>
+  <p>The pricing research suggested Plus include <b>3 seats sharing reports</b>; the current plan table does not list seats. Today each account is one person, and reports are shared by public link. Shared team workspaces (invite teammates, shared sites and runs, roles) would need a new team table and permission rules. <b>Open decision:</b> add seats to Plus before it opens in November, or keep Plus single-seat and use MCP plus shared links as the "team" story. Recommendation: ship Plus with shared links and MCP first, add 3 seats only if agencies on the waitlist ask for it.</p>
+</section>
+
+<!-- ============ 19 RISKS ============ -->
+<section class="chapter">
+  <div class="eyebrow">19</div>
+  <h1>Risks and open decisions</h1>
+  <table>
+    <tr><th style="width:26%">Risk</th><th class="n" style="width:10%">Level</th><th>Mitigation</th></tr>
+    <tr><td>Nobody pays</td><td class="n">High</td><td>A1 before billing code: 5 of 100 scans at $9. If it fails, change the offer before building more.</td></tr>
+    <tr><td>Extension install kills the funnel</td><td class="n">High</td><td>A2 gate at 25%; cloud runner for public journeys.</td></tr>
+    <tr><td>CanaryUsers or Meerkat add SEO and GEO</td><td class="n">Medium</td><td>Ship first, own "launch check" and the no-password logged-in story, build the badge loop.</td></tr>
+    <tr><td>A platform (Vercel, Lovable) builds this in</td><td class="n">Medium</td><td>Be the neutral check across all builders; partner with their ecosystems.</td></tr>
+    <tr><td>Free AI capacity runs out</td><td class="n">Medium</td><td>Daily caps with clear messages; paid runs on paid capacity funded by revenue.</td></tr>
+    <tr><td>A wrong AI judgement damages trust</td><td class="n">Medium</td><td>Grounding; tune the clarity rule; Claude for paid; "which models ran" on every report.</td></tr>
+    <tr><td>The agent does something harmful</td><td class="n">Low</td><td>Two-layer code rules, verified domains, one confirmed send, passive security only.</td></tr>
+    <tr><td>Chrome Web Store or Dodo delays</td><td class="n">Medium</td><td>Submit 8 Oct; start Dodo verification now; one buffer week.</td></tr>
+    <tr><td>Name or trademark conflict</td><td class="n">Unknown</td><td>Search before buying the domain.</td></tr>
+  </table>
+  <h3>Decisions still open</h3>
+  <ul>
+    <li>Keep list prices at $19 and $49, or adjust after A1.</li>
+    <li>Refund policy and legal wording.</li>
+    <li>Team seats on Plus.</li>
+    <li>Whether Launch Pack and Plus are visible while paid access is request-only.</li>
+    <li>The funded AI balance and daily and monthly platform caps.</li>
+    <li>Which claims the pricing page may make about Claude, after the measured comparison.</li>
+  </ul>
+</section>
+
+<!-- ============ 20 COFOUNDER ============ -->
+<section class="chapter">
+  <div class="eyebrow">20</div>
+  <h1>The co-founder role</h1>
+  <p class="lead">The product is built. The hardest remaining problem is not code; it is getting founders to try it, pay for it and tell others. Walkthru is looking for a business co-founder to own everything that is not engineering.</p>
+  <div class="two">
+    <div>
+      <h3>What the technical founder owns</h3>
+      <ul>
+        <li>The product, the code, the AI and the safety model.</li>
+        <li>Infrastructure, security, payments integration, the Chrome extension.</li>
+        <li>Shipping the roadmap in chapter 18.</li>
+        <li>Answering technical questions in launches (Show HN).</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What the business co-founder owns</h3>
+      <ul>
+        <li><b>Customers:</b> finding, talking to and signing the first 50.</li>
+        <li><b>Distribution:</b> communities, launches, content, partnerships.</li>
+        <li><b>Rollout:</b> launch day, onboarding emails, the support inbox.</li>
+        <li><b>Business:</b> pricing tests, Dodo operations, refunds, legal review, metrics.</li>
+        <li><b>Voice of the customer:</b> turning conversations into the next feature.</li>
+      </ul>
+    </div>
+  </div>
+  <h3>The first 90 days</h3>
+  <table>
+    <tr><th style="width:18%">Period</th><th>Focus</th><th style="width:28%">Done when</th></tr>
+    <tr><td>Weeks 1 to 2</td><td>Run experiment A1: post 30 free scans of real launches, collect replies, take the first $9 payments by payment link. Recruit 20 beta users for A2. Talk to 10 founders about how they check a launch today.</td><td>100 scans done, first payments or a clear "no", 10 interview notes</td></tr>
+    <tr><td>Weeks 3 to 4</td><td>Launch prep: Product Hunt page, Show HN draft, demo video script, 3 beta quotes, launch-day community list, onboarding email sequence.</td><td>Launch kit ready by 18 Oct</td></tr>
+    <tr><td>Week 5</td><td>Launch week: run Product Hunt and communities; the technical founder handles HN and bugs.</td><td>First 10 paying customers</td></tr>
+    <tr><td>Weeks 6 to 13</td><td>Weekly content, agency outreach (20 a week), badge adoption, founder-approved pass operations, churn interviews, Plus waitlist.</td><td>30 paying, Plus waitlist of 50</td></tr>
+  </table>
+  <h3>How we would measure the partnership</h3>
+  <ul>
+    <li>Weekly: scans, signups, installs, finished runs, paying customers, revenue, churn (the chapter 17 table).</li>
+    <li>A shared Monday review of numbers; one written decision log (the repo already keeps one in <code>docs/decisions.md</code>).</li>
+  </ul>
+  <h3>Terms to discuss</h3>
+  <p>Equity and vesting are for the two founders to agree, ideally with advice. Common practice among early-stage startups is founder equity vesting over 4 years with a 1-year cliff, so both people earn their share over time. A trial project first (for example, running A1 together over two weeks) is a low-risk way to test the working relationship.</p>
+  <div class="simple"><span class="tag">What you get on day one</span>A working product with 171 passing tests, a clear position against named competitors, a pricing model with healthy margins, a launch date, near-zero running cost, and a technical partner who ships daily. What is missing is exactly the part you would own.</div>
+  <p class="small muted">[Placeholders for the founder to fill: founder bio and track record, links to past projects, contact details, preferred working hours and location.]</p>
+</section>
+
+<!-- ============ APPENDIX ============ -->
+<section class="chapter">
+  <div class="eyebrow">Appendix</div>
+  <h1>Sources and notes</h1>
+  <h3>Project sources (in the repository)</h3>
+  <ul class="small">
+    <li><code>SPEC.md</code> (plans, GEO rules), <code>ROADMAP.md</code> (weak points, dates), <code>ARCHITECTURE.md</code> (modules), <code>payment.md</code> (billing and costs), <code>CURRENT_STATE.md</code> (what is done), <code>docs/decisions.md</code> (measurements: model bakeoff, Checkpoint B, Claude costs, latency).</li>
+    <li><code>founder/competitor-matrix.md</code>, <code>founder/pricing-strategy.md</code>, <code>founder/validate-idea.md</code>, plus <code>founder/go-to-market.md</code> and <code>founder/product-brief.md</code> written with this briefing.</li>
+    <li>Screenshots: captured on 24 Sep 2026 from the local build with headless Edge. The two reports are real Instant Scans of the fixture sites on ports 8102 and 8103. The extension panel and "stuck" images are design mocks, labelled where used.</li>
+  </ul>
+  <h3>External sources</h3>
+  <ul class="small">
+    <li>Competitor pricing: <a href="https://runmeerkat.com/pricing">runmeerkat.com/pricing</a>, <a href="https://www.canaryusers.ai/">canaryusers.ai</a>, <a href="https://www.useswarm.co/">useswarm.co</a>, <a href="https://www.uxia.app/">uxia.app</a>, <a href="https://www.test-lab.ai/blog/ai-testing-pricing">test-lab.ai (Octomind)</a>, <a href="https://www.frase.io/blog/the-10-best-ai-visibility-tools-in-2026">frase.io (Otterly)</a>. Checked 24 Sep 2026.</li>
+    <li>UserTesting acquisition: <a href="https://www.thomabravo.com/press-releases/usertesting-to-be-acquired-by-thoma-bravo-and-sunstone-partners-for-1.3bn">Thoma Bravo press release</a>.</li>
+    <li>Lovable users and revenue: <a href="https://en.wikipedia.org/wiki/Lovable_(company)">Wikipedia: Lovable</a>, <a href="https://www.getpanto.ai/blog/lovable-statistics">getpanto.ai Lovable statistics</a>.</li>
+    <li>Vibe-coding market size, Cursor and Replit figures: <a href="https://findskill.ai/blog/vibe-coding-by-the-numbers/">findskill.ai</a>, <a href="https://www.taskade.com/blog/state-of-vibe-coding">Taskade</a>, <a href="https://www.hostinger.com/blog/vibe-coding-statistics/">Hostinger</a>. Industry estimates; treat as directional.</li>
+    <li>Show HN rules: <a href="https://news.ycombinator.com/newsfaq.html">Hacker News FAQ</a>; <a href="https://syften.com/blog/hacker-news-marketing/">Syften guide</a>.</li>
+    <li>r/SaaS self-promotion rule (once every 60 days, weekly share thread): <a href="https://oneup.today/blogs/reddit-self-promotion-rules-saas">OneUp</a>, <a href="https://www.soar.sh/blog/r-saas-rules-decoded-mod-enforcement">Soar</a>. Check each subreddit's current rules before posting.</li>
+    <li>Dodo pricing and payouts: <a href="https://dodopayments.com/pricing">dodopayments.com/pricing</a>, <a href="https://docs.dodopayments.com/features/payouts/payout-structure">payout structure</a>.</li>
+    <li>Google Cloud UPI billing: <a href="https://docs.cloud.google.com/billing/docs/resources/upi-payment-india">Google Cloud docs</a>. llms.txt evidence: <a href="https://otterly.ai/blog/the-llms-txt-experiment/">Otterly study</a>.</li>
+  </ul>
+  <h3>How to regenerate this PDF</h3>
+  <p class="small">The source is <code>docs/briefing/walkthru-briefing.html</code> with images in <code>docs/briefing/img</code>. Print it with headless Edge: <code>msedge --headless=new --no-pdf-header-footer --print-to-pdf=Walkthru-Briefing.pdf docs/briefing/walkthru-briefing.html</code>.</p>
+</section>
+
+</body>
+</html>

@@ -122,6 +122,17 @@ export function CompareResult() {
   }, [id])
 
   const sites = run?.report?.compare ?? []
+  const yours = sites.find((site) => site.yours)
+  const beaten = (row: typeof ROWS[number]) => {
+    if (!yours || yours.error) return false
+    const own = row.value(yours)
+    return own != null && sites.some((site) => {
+      if (site.yours || site.error) return false
+      const rival = row.value(site)
+      return rival != null && (row.better === 'high' ? rival > own : rival < own)
+    })
+  }
+  const rows = [...ROWS].sort((a, b) => Number(beaten(b)) - Number(beaten(a)))
   return (
     <AppShell title="Comparison">
       <PageHeader kicker="Competitor side by side" title={run ? run.site : 'Comparison'}>
@@ -147,7 +158,7 @@ export function CompareResult() {
               </tr>
             </thead>
             <tbody>
-              {ROWS.map((row) => {
+              {rows.map((row) => {
                 const values = sites.map((s) => (s.error ? null : row.value(s) ?? null))
                 const known = values.filter((v): v is number => v != null)
                 const best = known.length > 1 ? (row.better === 'high' ? Math.max(...known) : Math.min(...known)) : null
@@ -168,7 +179,7 @@ export function CompareResult() {
               </tr>
             </tbody>
           </table>
-          <p className="mt-4 text-xs text-muted">The best value in each row is highlighted. Open any site for its full report.</p>
+          <p className="mt-4 text-xs text-muted">Checks where a competitor is ahead appear first. The best value in each row is highlighted. Open any site for its full report.</p>
         </div>
       )}
     </AppShell>

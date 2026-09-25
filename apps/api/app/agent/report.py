@@ -68,8 +68,13 @@ def _scan(state: ReportState, which: str) -> dict:
         fetch.assert_public(state["site"])
         with fetch.client() as c:
             if which == "performance":
-                findings, measured = performance.scan(state["site"], c)
-                return {which: [f.model_dump() for f in findings], "performance_measured": measured}
+                audit = state.get("site_audit") or {}
+                urls = (audit.get("urls") or [state["site"]])[:5] if state.get("paid", False) else [state["site"]]
+                findings, measured, vitals = performance.scan_pages(urls, c, limit=5 if state.get("paid", False) else 1)
+                result = {which: [f.model_dump() for f in findings], "performance_measured": measured}
+                if audit:
+                    result["site_audit"] = {**audit, "mobile_vitals": vitals}
+                return result
             resp = fetch.get(c, state["site"])
             if resp is None:
                 return {which: [], f"{which}_measured": False, "notes": [f"{which} scan: site did not respond"]}
@@ -424,9 +429,10 @@ def build_graph():
     g.add_node("accessibility_scan", accessibility_scan)
     g.add_node("performance_scan", performance_scan)
     g.add_node("synthesize", synthesize)
-    for n in ("first_impression", "accessibility_scan", "performance_scan", "site_scan"):
+    for n in ("first_impression", "accessibility_scan", "site_scan"):
         g.add_edge(START, n)
-        g.add_edge(n, "synthesize")
+    g.add_edge("site_scan", "performance_scan")
+    g.add_edge(["first_impression", "accessibility_scan", "performance_scan"], "synthesize")
     g.add_edge("synthesize", END)
     return g.compile()
 

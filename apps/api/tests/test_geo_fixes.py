@@ -42,8 +42,12 @@ def test_a_vite_shell_gets_a_framework_specific_rendering_fix():
     assert "Vite" in f["title"] + f["note"] and "<h1>" in f["code"] and "Describe a trip" in f["code"]
 
 
-def test_a_ready_site_needs_no_fixes():
-    assert fixes([("https://trip.test/", READY)], llms=(200, "# Acme Notes\n> x\n## Docs\n- [a](https://acme.test/)")) == []
+def test_a_ready_site_only_gets_optional_indexing_guidance():
+    result = by_id(fixes([("https://trip.test/", READY)], llms=(200, "# Acme Notes\n> x\n## Docs\n- [a](https://acme.test/)")))
+    assert set(result) == {"indexnow", "bing"}
+    key = result["indexnow"]["code"].strip()
+    assert len(key) == 32 and result["indexnow"]["file"] == f"public/{key}.txt"
+    assert result["bing"]["code"] == "https://trip.test/sitemap.xml"
 
 
 def test_free_reports_keep_one_fix_and_the_count():
