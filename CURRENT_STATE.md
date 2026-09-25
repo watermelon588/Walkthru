@@ -73,6 +73,18 @@ Read this block first. It describes the founder's local machine as of this push,
   - A browser run against a fake Gemini.
 - **Not verified:** the real Gemini API, which this sandbox cannot reach.
 
+### Added 2026-09-25 by Claude Code (cloud): P1.3, P1.7, P4.4
+- **P1.3 fix plan v2:** every new report stores its detected stack (`report.stack`). The fix prompt is a batched plan with per-stack recipes from `app/agent/recipes.json`, stop-and-verify checks, manual steps and chat parts of at most 4,000 characters. MCP `get_finding` returns the same recipe.
+- **P1.7 agent readiness:** `report.agent_ready`, shown after the GEO block.
+- **P4.4 fix pull requests:** Walkthru GitHub App (Settings > GitHub, then Open a fix pull request on a report). Config-only changes, never merged by Walkthru. New table `github_installations` and dependency `PyJWT[crypto]`.
+- **Founder:**
+  1. Apply the schema.
+  2. Create the GitHub App: permissions Contents read and write, Pull requests read and write, Metadata read. Turn on "Request user authorization (OAuth) during installation". Set the callback and setup URL to `<WEB_URL>/app/settings`.
+  3. Set `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET`.
+- **Verified:** 345 API tests (fake GitHub with real RS256 signing), web build and lint.
+- **Not verified:** against real GitHub.
+- **P4.1 (active staging scan) was not built.**
+
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.
