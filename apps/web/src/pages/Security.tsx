@@ -47,8 +47,8 @@ const sections: DocSection[] = [
     title: 'What our scanner does',
     body: (
       <>
-        <p>The security check is a hygiene review, not a penetration test. It reads response headers, https redirects and, on verified domains only, a handful of well-known public paths and your JavaScript bundles, using ordinary page requests. It follows at most 10 same-site links (50 on paid plans) while honouring <code>robots.txt</code>.</p>
-        <p>Checks for exposed files and keys leaked into JavaScript only run on domains whose owner has <Link to="/docs#verify">verified them</Link>. The scanner refuses private and local network addresses, and re-checks every redirect before following it.</p>
+        <p>The security check is a hygiene review, not a penetration test. It reads response headers, https redirects, the certificate from one normal TLS handshake (plus one that offers only TLS 1.0 and 1.1), your CAA record over DNS and one ordinary request with an Origin header to see how CORS answers. On verified domains only, it also reads a list of well-known public paths (environment files, backups, database dumps, server status pages), your JavaScript bundles and their source maps, and the DNS of subdomains your pages link to. Every request is an ordinary read. It follows at most 10 same-site links (50 on paid plans) while honouring <code>robots.txt</code>.</p>
+        <p>Checks for exposed files, keys leaked into JavaScript, public source maps and subdomain takeover only run on domains whose owner has <Link to="/docs#verify">verified them</Link>. The scanner refuses private and local network addresses, and re-checks every redirect before following it.</p>
       </>
     ),
   },

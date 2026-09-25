@@ -127,7 +127,7 @@ const sections: DocSection[] = [
     title: 'Verify your domain',
     body: (
       <>
-        <p>Verifying proves you own a site. It unlocks additional read-only security checks for exposed files and keys leaked into JavaScript, and lets approved send actions run during tests.</p>
+        <p>Verifying proves you own a site. It unlocks the full security check (exposed files and backups, keys leaked into JavaScript, public source maps and subdomain takeover) and lets approved send actions run during tests.</p>
         <ol>
           <li>Open <Link to="/app/settings#verify">Settings</Link> and copy your verification tag.</li>
           <li>Add it to the <code>&lt;head&gt;</code> of your homepage, or put the token alone in a file at <code>/.well-known/walkthru.txt</code>.</li>

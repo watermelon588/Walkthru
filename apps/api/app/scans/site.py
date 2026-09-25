@@ -14,7 +14,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import backend, fetch, geo, geo_depth, security, seo, seo_depth
+from app.scans import backend, fetch, geo, geo_depth, security, seo, seo_depth, takeover, tls
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
@@ -271,9 +271,17 @@ def audit(
     sitemap_status = sitemap_response.status_code if sitemap_response is not None else None
     seo_records.extend((finding, None) for finding in seo.check_sitemap(sitemap_status, robots_text))
     security_records.extend((finding, root_url) for finding in security.check_transport(url, root, client))
+    # Site-wide passive checks (P1.2): one CORS request, the TLS handshake and CAA lookup. Each fails quietly.
+    site_checks = [lambda: security.check_cors(root_url, client), lambda: tls.check(root_url), lambda: tls.check_caa(root_url, client)]
     if verified:
         security_records.extend((finding, None) for finding in security.check_exposed(base, client))
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
+        site_checks.append(lambda: takeover.check([(u, r.text) for u, r in pages], root_url, client))
+    for run in site_checks:
+        try:
+            security_records.extend((finding, root_url) for finding in run())
+        except Exception:
+            logging.getLogger("walkthru").warning("security check failed for %s", root_url, exc_info=True)
     try:  # Supabase or Firebase from the browser: explained on every plan, probed read-only on verified domains (P1.1)
         security_records.extend((finding, root_url) for finding in backend.check(root.text, root_url, client, verified=verified))
     except Exception:

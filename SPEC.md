@@ -61,7 +61,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | Steps per run | 12 | 30 | 30 | 30 |
 | Rerun and compare (fixed, still broken, new) | No | Yes | Yes | Yes |
 | SEO | 10 pages | 50 pages | 50 pages | 50 pages |
-| Security hygiene | Current: CSP, HSTS, content type, framing and referrer headers; cookie flags, HTTP redirects and mixed content. CORS, SRI, TLS and certificate expiry coming 2026-10-07 (P1.2) | + exposed files and JS key patterns on verified domains now; source maps and vulnerable JS libraries coming 2026-10-07 | Same current checks; safe Nuclei templates coming 2026-11-17 (P2.4) | Same as Pro |
+| Security hygiene | Header quality (CSP weaknesses, HSTS max-age and preload, CORS, SRI on public CDN scripts), cookies and cookie prefixes, https, TLS version and certificate expiry, CAA, vulnerable JavaScript libraries loaded from public CDNs | + exposed files, backups and dumps, source maps, leaked keys (gitleaks rules), library versions inside bundles and subdomain takeover, on verified domains | Same, + safe Nuclei templates on verified domains (P2.4) | Same as Pro |
 | One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
 | Evidence report with screenshots, PDF | Web report | Web report with screenshots when captured; PDF closeout coming 2026-10-23 (V7) | Same as Launch Pack | Branded PDF coming 2026-12-08 (P4.3) |
 | Sites tested per month or pass (local dev servers do not count) | 1 | 1 | 2 | 5 |
