@@ -12,10 +12,10 @@ executes the action in the real tab
 masks fields + captures bounded JPEG    ── private Storage object + evidence metadata ─▶ exact run step
                                         ... loop until done / give_up / step budget ...
                                                                synthesize report ─▶ Supabase ─▶ report page + email
-Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
+Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), GEO readiness (AI crawler access, content before JavaScript, structured data, answerability), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
 
-Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call
-Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits table
+Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call; the API decides the plan
+Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webhook ─▶ API ─▶ entitlements table
 ```
 
 ## Components
@@ -39,13 +39,177 @@ Payments: Dodo Payments checkout ─▶ signed webhook ─▶ API ─▶ credits
 4. **Text snapshot first, screenshots rarely** (first impression and when stuck). Tokens are the main cost.
 5. **Plain code wherever possible.** Accessibility, performance, SEO and security checks are deterministic integrations. LLMs explain and prioritize the evidence; only the persona session is an agent.
 6. **Passive security only, on verified domains** (meta tag, DNS TXT or well-known file).
-7. **Credits, not tokens,** for billing. One credit = one persona run. Tokens logged per run for margins.
+7. **Runs, not tokens,** for billing. One run = one persona journey; plans include a run allowance (SPEC.md). Tokens logged per run for margins.
 8. **react-router** for `/`, `/login`, `/app`, `/app/runs/:id`. Production host must rewrite all paths to `index.html` (Vercel: `rewrites` in vercel.json).
 9. **Reads bypass the API.** The web app reads `runs` straight from Supabase under RLS; only the API (postgres role) writes. Fewer endpoints, and the DB enforces ownership.
 10. **Extension session handoff.** The dashboard sends the Supabase session to the extension id in `VITE_EXTENSION_ID` through `externally_connectable`; the extension refreshes it against Supabase and sends it as a bearer token.
 11. **Decision providers are replaceable, LangGraph is not.** The persona graph owns state, interrupts, budgets, and termination. A Jev provider may choose bounded operations and targets; the existing LLM remains responsible for open-ended generation and fallback. Safety stays in deterministic code.
 12. **Step evidence is private and bounded.** The extension captures at most eight JPEG frames per run after meaningful actions, hides Scout and masks form controls for the captured paint, then uploads directly to the private `run-evidence` bucket with the user's JWT. The API only accepts a screenshot path beneath the current run id. Reports request one-hour signed URLs; public reports can read evidence only when the owning run is public.
 13. **Browser diagnostics belong to journey steps.** The injected script runs bounded axe WCAG A/AA checks and observes LCP, CLS and INP in the tested tab. Each post-action observation is validated by the API and attached to the exact LangGraph step. Deterministic report code turns failing thresholds into prioritized findings; the LLM explains and ranks but does not invent these measurements.
+
+14. **The server owns the plan.** The client never says which tier it is. `POST /runs` reads the caller's entitlement and clamps steps, logged-in access, test user, site and monthly runs before a LangGraph thread exists.
+15. **GEO is deterministic and reuses the site audit.** No new crawler, no LLM calls for the score. The SSRF-safe fetcher and the audited page set are shared by SEO, security and GEO.
+16. **Over time means comparison, not more runs.** Reruns and weekly watch compare finding fingerprints against the previous result for the same site. Only changes are reported and emailed.
+
+## v1.1 capability map
+
+Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.md).
+
+| Module id | Responsibility | Depends on | Status |
+|---|---|---|---|
+| `entitlements` | Plans in code, active pass per user, server-side limits, usage counts, global free-capacity cap | auth (live) | Built 2026-09-24 |
+| `geo-scan` | AI readiness score, GEO findings, "what AI search sees" text | site audit (live) | Built 2026-09-24 |
+| `fix-pack` | Copy-paste robots.txt, JSON-LD, llms.txt and framework rendering fixes | `geo-scan` | Built 2026-09-24 |
+| `rerun-compare` | Fingerprint findings; fixed, still broken, new | `entitlements` | Built 2026-09-24 |
+| `fix-prompt` | Paid prompt for the user's coding agent built from the report | `entitlements`, `fix-pack` | Built 2026-09-24 |
+| `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Built 2026-09-24 |
+| `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
+| `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Built 2026-09-24 |
+| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
+| `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
+| `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
+| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Planned, post-launch |
+| `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
+| `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
+| `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
+| `personas-plus` | Custom test users and several test users per report | `entitlements` | Planned, post-launch |
+| `cloud-runner` | Headless Chrome on the API VM driving the same `inject.js` for public journeys without an install | `entitlements` | Conditional on the extension funnel experiment |
+
+Dependency direction is one way. `entitlements` comes first because every paid promise depends on it.
+
+### `entitlements`
+- `app/plans.py`: one dict of plans (free, launch, pro, plus) with limits: runs per period, max steps, logged-in allowed, test users, verified sites, SEO and GEO pages, compare, watch, pdf, white label. No config classes.
+- Table `entitlements(id, user_id, plan, starts_at, expires_at, runs_granted, source, created_at)`, owner-readable under RLS, deleted with the account. `scripts/grant_plan.py` grants dev and founder passes.
+  - `source` is `founder`, `dodo` or `promo`.
+  - V1 rows are inserted by the founder (payment.md concierge flow). Later a verified Dodo webhook writes them.
+  - Balances follow payment.md's append-only ledger when billing lands.
+- `effective_plan(user_id)`: the active, unexpired row, otherwise free.
+- Monthly usage: count of the user's `runs` rows with `kind='test'` since the period start, through PostgREST `Prefer: count=exact`. No counter table.
+- `POST /runs` ignores client `tier`.
+  - Rejects `logged_in` on free.
+  - Clamps `max_steps` to the plan.
+  - Rejects a persona outside the plan.
+  - Rejects a new site beyond the plan's site count for the month or pass. Local dev servers never count.
+  - Returns 402 with a plain message when runs are used up.
+- `GET /me/plan` returns the plan, its limits and runs left, so the side panel and dashboard show them.
+- The persona graph's `tier` (`free` or `paid`) is now derived from the plan and only selects model routing.
+- Global free-capacity guard: `FREE_RUNS_PER_DAY` (default 90, about 80% of the Groq free budget of 3 models × 1,000 requests a day ÷ about 27 calls per run). Past it, free runs get "Free test capacity is used up for today"; paid runs continue on the full chain.
+- `FREE_SCANS_PER_DAY` (default 200, 2 model calls each) caps Instant Scans the same way. Both caps count today's `runs` rows, so every API process shares them with no extra table. The per-address limit (5 scans an hour) stays in process memory: production runs one API process; move it to a table only if that changes.
+
+### `geo-scan`
+- `app/scans/geo.py`: `audit(root, pages, robots_text, llms, bot_probe) -> GeoResult(score, categories, findings)`. It uses pages the site audit already fetched.
+  - `Finding.kind` gains `"geo"`.
+  - The report gains `geo: {score, band, categories}`.
+  - The report is stored as JSON in `runs.report`, so no SQL migration is needed.
+- **Two extra passive requests:**
+  - `GET /llms.txt`.
+  - One homepage `GET` with the `OAI-SearchBot` user agent, compared with the normal response. A 403 or challenge page becomes "blocked for AI search user agents".
+  - A 200 is reported as "not blocked by user agent". Edge networks verify real bots by IP, so the probe cannot prove access.
+- **Free:** homepage and `robots.txt` categories only. **Paid:** every audited page.
+- **Pro's 50-page promise (built 2026-09-24):**
+  - Paid run reports crawl up to 50 pages with a 60 s budget (`site.PAID_MAX_PAGES`, `PAID_TIME_LIMIT`). Reports are already written in a background task after the run, so nothing waits on it.
+  - Instant Scan and free runs keep 10 pages and 20 s.
+  - Measured: 50 pages of python.org in 13.9 s with sequential fetches, so no parallel crawler.
+
+### `fix-pack`
+- `app/scans/geo_fixes.py`: pure functions from `GeoResult` and the audited pages to text blocks:
+  - a `robots.txt` section allowing citation bots;
+  - `Organization`, `WebSite` and `SoftwareApplication` JSON-LD filled from title, description and Open Graph tags;
+  - an `llms.txt` draft listing audited pages;
+  - a rendering fix picked by framework markers: `id="root"` plus `/assets/index-*.js` means a Vite SPA (prerender or SSG); `__NEXT_DATA__` means Next.js (keep pages server-rendered); Lovable and Astro have their own markers.
+- No model calls. Shown in the report with copy buttons.
+
+### `fix-prompt`
+- `app/agent/fix_prompt.py`: `build(report, style) -> str`. `style` is `full` or `chat`.
+  - A pure function over the stored report JSON and the fix pack. No model call.
+  - It uses only findings already in the report, so it cannot add claims.
+  - Leaked key values stay masked.
+- `GET /runs/{id}/fix-prompt?style=full|chat` (owner only, paid plan) returns text, or a file with `download=1`.
+- Not written into `runs.report`. The web app reads reports straight from Supabase under RLS, so anything stored there would be free to read.
+- It ends with the fingerprints the next rerun should mark fixed. That makes the rerun the verification step.
+
+### `rerun-compare`
+- **Built as automatic comparison** (`app/agent/compare.py`), with no rerun button or `parent_run_id`: when a paid run's report is written, it is compared with the owner's previous run of the same goal (case and spacing ignored) on the same origin. The first run of a goal has no comparison. A failed comparison never loses the report.
+- **Fingerprint:** `kind:title`, lower-cased, spacing collapsed and numbers replaced ("3 more pages" matches "5 more pages"). The same rule runs in `lib/runs.ts` for the web app. Model-written UX titles also match on 50% word overlap, because their wording varies between runs.
+- **Comparison:** `report.comparison = {fixed, still_broken, new, not_rechecked}` is computed in code after synthesis, never by the LLM. Reports keep every affected page per finding (`report.pages`, from the site audit and GEO), so still-broken findings say which pages were fixed, which are new and which were not re-checked; a finding that vanished only because its pages were not audited again is `not_rechecked`, never `fixed`.
+- **Report page:** shows the three lists above the findings.
+
+### `share-loop` (Launch Ready score and badge)
+- The score is computed in code from categories the report actually measured:
+
+  | Area | Weight | Basis |
+  |---|---:|---|
+  | UX | 30 | Journey outcome and UX finding severity |
+  | Security | 20 | Security findings |
+  | GEO | 20 | The GEO score |
+  | SEO | 15 | SEO findings |
+  | Speed and accessibility | 15 | Performance and accessibility findings |
+
+  An area that was not measured is shown as "not measured" and its weight is shared among the others. An Instant Scan has no UX area.
+- **Ignored findings still count** in the score, so the badge cannot be gamed. They only stop repeating in lists.
+- **Built 2026-09-24** (`app/agent/score.py`), with no new table. The score is stored as `report.launch_ready` when a report is written. Each area starts at 100 and loses 25, 10 or 3 points per high, medium or low finding; GEO uses its own score; UX starts from the journey outcome (done or safe stop 100, gave up, stuck or out of steps 50) and counts only when the site was really tested (the owner's Stop, a loop guard or a CAPTCHA leave it out).
+- `GET /badge/{run_id}.svg` serves the badge for a **public** report only (sharing is the owner's opt-in; Instant Scans are public), cached one hour. It shows the owner's latest public report for the same site, so a rerun that is shared updates every embedded badge. `GET /badge/{run_id}` redirects a click to that report. Private reports return 404.
+- The owner's report page shows the badge with copy-paste HTML and Markdown; the public page shows the score only. The public page title carries the score.
+
+### `email-check`
+- `app/scans/email.py` reads DNS over HTTPS with the existing httpx client, from a fixed trusted resolver (`https://cloudflare-dns.com/dns-query`, `accept: application/dns-json`). No new dependency.
+- **Checks:** MX, SPF (`v=spf1`), DMARC (`_dmarc.<domain>`, policy). DKIM is only checked when the user names a selector, because selectors cannot be listed.
+- **Journey errors map to causes:**
+  - "email rate limit exceeded" is Supabase's built-in mailer limit. The fix is your own SMTP.
+  - Similar patterns for Firebase and Clerk are added only after one is seen in a real run.
+- **Free:** SPF and DMARC. **Paid:** everything above.
+
+### `finding-states`
+- Table `finding_states(user_id, origin, fingerprint, state, reason, created_at)`. `state` is `ignored` for now.
+- **Report:** shows "ignored" with the reason.
+- **Where ignored items are left out:** the fix prompt, rerun "new" and "still broken" lists, and watch emails. They are always kept in the score (see `share-loop`).
+
+### `funnel-metrics`
+- A pure function over stored steps: number of steps to reach the goal, fields typed, errors seen, safe stops, and time to the first useful screen from step timestamps.
+- Stored in `report.funnel` on paid runs. Compared across reruns through `rerun-compare`.
+
+### `copy-review`
+- One `runtime.call(CopyReview, ...)` on the homepage and pricing-page text, using the same free writer chain as the report.
+- **Output:** a verdict on the headline, call to action and pricing clarity, plus up to 3 rewrite options, labeled as suggestions.
+- Generated only when the run's plan includes it, so free reports never contain it.
+
+### `competitor-compare` (post-launch)
+- `POST /compare {site, competitors[<=3]}` runs the Instant Scan pipeline on each URL: 10-page audit, GEO, first impression, and public headers only. Deep security checks never run on sites the user has not verified.
+- **Storage:** a `kind='compare'` run with side-by-side categories.
+- **Cost:** one model call per URL (first impression). Rate limited per plan.
+
+### `mcp` (post-launch)
+- **Server:** a remote MCP server at `/mcp` over streamable HTTP, mounted in the FastAPI app with the official `mcp` Python SDK. The founder approved the MCP feature on 2026-09-24, and with it this new dependency. Nothing to install on the user's side: they paste the URL and key into Claude Code or Cursor.
+- **Auth:** a personal API key in a bearer header.
+  - Table `api_keys(id, user_id, name, key_hash, created_at, last_used_at, revoked_at)`.
+  - The key is shown once and stored as SHA-256.
+  - Plus plan only.
+- **Tools:**
+  - `scan_site(url)`.
+  - `get_report(run_id)`.
+  - `get_fix_prompt(run_id)`.
+  - `rerun(run_id)`: server-side checks. Journeys rerun in the extension until the cloud runner exists.
+  - `list_runs(site)`.
+- **Limits:** every tool goes through the same entitlement and rate-limit checks as the web API.
+
+### Testing paid plans in development (no spend)
+- **Plans are data.** `apps/api/scripts/grant_plan.py EMAIL PLAN DAYS` inserts an `entitlements` row with `source='dev'` for a test account. Expiring the row reverts the account to free. The dev stack has a test account for each plan.
+- **No plan uses a paid model.** Paid features are deterministic code, or use the same free chain as free reports. Testing Pro and Plus costs $0 in model calls.
+- **pytest** fakes every model call (existing pattern). Plan limits are tested with crafted requests.
+- **Dodo test mode:** test products and test cards, no real money. Webhooks fire for test payments like live ones. Locally they reach the API through a tunnel (cloudflared or ngrok); after deploy, through the VM URL. Sources: [Dodo testing process](https://docs.dodopayments.com/miscellaneous/testing-process).
+- **Live model checks stay small:** a few runs a day on the free chain. The bakeoff and trap scorer replay saved runs.
+
+### `watch` (post-launch)
+- Table `sites(id, user_id, origin, verified_at, watch boolean, deploy_token_hash, last_watch_run_id)`.
+- A weekly job thread, the same pattern as `app/retention.py`, runs a server-side scan for due sites (`kind='watch'`). It is compared with `last_watch_run_id` via `rerun-compare`, and an email goes through Resend only when something is new or fixed.
+- `POST /hooks/deploy/{token}` (Vercel or Netlify deploy hook) triggers the same scan. It is rate limited to one scan every 10 minutes per site.
+- Journeys on deploy need `cloud-runner`, so watch covers the server-side checks only.
+
+### `cloud-runner` (conditional)
+- **Why:** removes the install step for public-page journeys.
+- **Built only if** fewer than 25% of beta users who click "Run a test" finish a run.
+- **How:** the Oracle ARM VM runs headless Chrome. A worker drives the built `inject.js` over CDP, the same way `evals/e2e_extension.py` already does, and calls the same `/runs` step API.
+- **Limits:** public pages only, one concurrent run, and the same safety code. Logged-in journeys always stay in the owner's browser.
 
 ## Experimental TypeSafe decision path
 
@@ -74,15 +238,18 @@ or bounded action           |
 - `test_run`: preflight (limits, ownership) → first_impression → persona_session per persona → synthesize → deliver.
 - `persona_session`: decide (one `PersonaStep`: thought, action, target_id, confusion 0-3) → interrupt for observation → check (goal met, looping, budget) → decide.
 - `site_scan`: accessibility_scan, performance_scan and one bounded site audit in parallel. A missing PageSpeed key is recorded as unavailable, never as a false pass.
-- Site audit (`app/scans/site.py`): GET-only, same-origin, robots.txt honoured, 10 pages by default (hard cap 20) and a 20 s budget, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
+- Site audit (`app/scans/site.py`): pages the test user visited (up to 5) are audited on top of the crawl, past a robots.txt block only on an owner-verified domain; a homepage whose only sign-up link is in the footer is reported as a UX finding. GET-only, same-origin, robots.txt honoured, 10 pages and 20 s by default, 50 pages and 60 s for paid run reports, all fixed in code rather than request input. Redirects are followed manually and each hop passes the SSRF guard before it is requested. Findings repeated across pages are merged into one root cause that keeps the affected-page count and URLs. Exposed-file and bundle-secret checks run only on verified domains. Coverage (`site_audit`) is stored in the report so readers see what was and was not checked.
 
 ## Runtime choices for this deployment stage
 - **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.
 - **Agent state:** LangGraph uses an in-memory checkpointer unless `CHECKPOINTER=postgres`. Use Postgres when the API runs next to the database or on more than one instance.
 - **Models:** free chain of Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite (`GROQ_MODELS`, `GEMINI_MODELS`). Each Groq model has its own 8k tokens/min budget; zero retries so a 429 moves on instantly.
+- **Pro and Plus model:** Claude Haiku 4.5 on Google Cloud (Vertex AI) through the `anthropic[vertex]` SDK (approved 2026-09-24), wrapped like the OpenRouter runner: a forced tool call returns the schema. When `CLAUDE_VERTEX_PROJECT` is set, paid runs put Claude first for the goal planner, test user and report writer, with the free chain behind it; free runs never reach it. Each report's `model` field states which models ran. Auth uses Google application default credentials.
 - **Report writer:** the report calls (`runtime.call`, first impression and synthesis) try Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (`OPENROUTER_MODELS`, 90 s budget, plain httpx), then the rest of the chain. Persona steps never wait on OpenRouter. Chosen by `evals/model_bakeoff.py`; see docs/decisions.md.
 
 ## Journey safety and grounding
+- **Goal intent** (`app/agent/goal.py`): before the first step, one fast model call turns the typed goal into an intent and 1 to 4 checkpoints, or refuses it (pay, delete, cancel, spam, attack, another website) with 422 before a run is counted. The persona prompt shows the checklist; `check` ends the run as `done` when the last checkpoint is reached, by an optional URL marker or the model's `progress`. A planner outage falls back to the typed goal.
+- **Loop guards** (`persona.check`): three identical steps (including scroll position) end as `stuck`; a third arrival at the same page ends as `looping`, Walkthru's own stop, never reported as a site problem. Observations carry `scroll_pct` and `at_end`; a click that changes nothing is recorded as `no_change` and shown to the test user.
 - **Destructive** (pay, buy, checkout, delete, remove, cancel subscription, transfer, unsubscribe): never clicked as a button on any page; on logged-in pages not even typed into. **Sending** (send, invite): only on a domain the signed-in owner verified (meta tag or `/.well-known/walkthru.txt`), only after the owner confirms in the side panel, at most once per run. Plain links may navigate. Enforced in both `app/agent/persona.py::_enforce` and `apps/extension/lib/execute.ts`.
 - A run ended at such a button has status `safe_stop`. `mailto:`/`tel:` links are reported as contact methods and never opened.
 - Report grounding (`app/agent/report.py`): `problem_steps` defines where something went wrong; `grounded_ux` drops UX findings that cite no such step or restate a scan finding; the writer sees step outcomes, the final page's controls and a local-dev note, and the system prompt forbids unsupported claims.

@@ -21,6 +21,25 @@ Walkthru V1 will **not** offer instant, public access to paid AI capacity.
 
 This is intentionally a concierge paid beta, not a normal open SaaS subscription launch.
 
+## Update 2026-09-24: plans from SPEC.md v1.1
+
+The founder asked for the finalized plan on 2026-09-24. SPEC.md is the source of truth for plan contents. The price sections below keep the original analysis, and this table supersedes their plan list.
+
+| Offer | Gross | Dodo fee | Net | Runs | 25% provider allowance | Worst case if every run cost $0.20 |
+|---|---:|---:|---:|---:|---:|---:|
+| Launch Pack | $9.00 | $0.76 | $8.24 | 20 | $2.06 | $4.00 |
+| Pro, founding | $15.00 | $1.00 | $14.00 | 40 | $3.50 | $8.00 |
+| Pro | $19.00 | $1.16 | $17.84 | 40 | $4.46 | $8.00 |
+| Plus, founding | $39.00 | $1.96 | $37.04 | 150 | $9.26 | $30.00 |
+| Plus | $49.00 | $2.36 | $46.64 | 150 | $11.66 | $30.00 |
+
+- **Team is replaced by Plus.** Plus has 150 runs, not 250, because 250 × $0.20 exceeded net revenue.
+- **Plus is a waitlist** until weekly watch ships.
+- **Runs use the free model chain by default.** The worst-case column always exceeds the 25% allowance, so premium model escalation must stay inside the allowance through the cost ledger. That is the "stricter limit wins" rule below.
+- **GEO costs nothing in model calls.** GEO scoring and the fix pack are deterministic.
+
+The founding price applies to the first 50 approved customers, locked for 12 months while their pass stays active.
+
 ## Why this decision exists
 
 The founder does not currently have a credit card and cannot safely finance unknown model usage before revenue exists. Dodo also does not split a customer's payment directly between Walkthru and Google, Anthropic or OpenAI. Dodo collects customer money for Walkthru; Walkthru remains responsible for paying its model providers.

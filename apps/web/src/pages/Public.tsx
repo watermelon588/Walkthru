@@ -27,8 +27,7 @@ export default function Public() {
 
   return (
     <div className="min-h-[100dvh] bg-bg text-ink">
-      <title>{state.kind === 'ready' ? `${state.run.site} report · ${brand.name}` : `Report · ${brand.name}`}</title>
-      <SkipLink />
+      <title>{state.kind === 'ready' ? `${state.run.site} report${state.run.report?.launch_ready?.score != null ? `, Launch Ready ${state.run.report.launch_ready.score}` : ''} · ${brand.name}` : `Report · ${brand.name}`}</title>      <SkipLink />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-10">
         <Logo />
         <Link to="/" className="text-sm text-muted hover:text-ink">Tested with {brand.name}</Link>

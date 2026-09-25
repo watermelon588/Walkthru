@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fieldnote: meeting notes that write themselves</title>
+  <meta name="description" content="Fieldnote records your calls, writes the notes and sends the action items to your team. Free for 5 meetings a month.">
+  <link rel="canonical" href="http://127.0.0.1:8103/">
+  <meta property="og:site_name" content="Fieldnote">
+  <meta property="og:title" content="Fieldnote: meeting notes that write themselves">
+  <meta property="og:description" content="Recorded calls become notes and action items in 2 minutes.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="/style.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@graph":[
+    {"@type":"Organization","name":"Fieldnote","url":"http://127.0.0.1:8103/","logo":"http://127.0.0.1:8103/logo.svg","email":"hello@fieldnote.test","sameAs":["https://github.com/fieldnote-test","https://x.com/fieldnote_test"]},
+    {"@type":"WebSite","name":"Fieldnote","url":"http://127.0.0.1:8103/"},
+    {"@type":"SoftwareApplication","name":"Fieldnote","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Meeting recorder that writes notes and action items.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  ]}
+  </script>
+</head>
+<body>
+  <!-- Test fixture: a well-built site for GEO, with deliberate distractions and traps for the test user.
+       Traps: cookie banner, newsletter pop-up, a dead "Watch the demo" button, a new-tab link, an external link,
+       a section hidden until scrolled, circular "Next story" links, a Pay button and a Delete account button. -->
+  <header>
+    <a href="/" class="brand">Fieldnote</a>
+    <nav aria-label="Main">
+      <a href="/pricing.html">Pricing</a>
+      <a href="/stories/atlas.html">Customer stories</a>
+      <a href="/docs.html">Docs</a>
+      <a href="/contact.html">Contact</a>
+      <a href="/login.html">Log in</a>
+      <a href="/signup.html" class="btn">Start free</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Meeting notes that write themselves</h1>
+    <p>Fieldnote joins your Zoom, Meet and Teams calls, writes clear notes and sends every action item to the right person within 2 minutes of hanging up. Teams of 3 to 50 people use it so nobody has to take notes again.</p>
+    <p><a href="/signup.html" class="btn big">Start free, no card needed</a> <button type="button" class="btn ghost" id="demo">Watch the 2-minute demo</button></p>
+
+    <h2>How it works</h2>
+    <ol>
+      <li>Connect your calendar in one click.</li>
+      <li>Fieldnote joins the calls you choose and records them.</li>
+      <li>Notes, decisions and action items arrive in your inbox and in Slack.</li>
+    </ol>
+
+    <h2>Who it is for</h2>
+    <p>Founders, sales teams and agencies who spend 10 or more hours a week in calls. On average teams save 4 hours a week per person, measured across 1,200 teams in 2026.</p>
+
+    <h2>Customer stories</h2>
+    <p>See how three teams changed the way they run meetings.</p>
+    <ul>
+      <li><a href="/stories/atlas.html">Atlas Studio: 40% fewer follow-up meetings</a></li>
+      <li><a href="/stories/beacon.html">Beacon Health: notes ready before the next patient</a></li>
+      <li><a href="/stories/cirrus.html">Cirrus Labs: every sales call in the CRM</a></li>
+    </ul>
+
+    <h2>Pricing in one line</h2>
+    <p>Free for 5 meetings a month. Team is $12 per person a month with unlimited meetings. See <a href="/pricing.html">all plans</a>.</p>
+
+    <section class="reveal" id="features">
+      <h2>Every feature</h2>
+      <p>Speaker names, 30 languages, search across every call, and exports to Notion, Google Docs and HubSpot.</p>
+      <p><a href="/docs.html">See all features in the docs</a></p>
+    </section>
+
+    <h2>Security</h2>
+    <p>Recordings are encrypted and deleted after 30 days unless you keep them. Fieldnote never trains models on your calls.</p>
+  </main>
+  <footer>
+    <a href="/about.html">About</a> · <a href="/pricing.html">Pricing</a> · <a href="/contact.html">Contact</a> · <a href="/changelog.html" target="_blank" rel="noopener">Changelog</a> ·
+    <a href="https://github.com/fieldnote-test">GitHub</a> · <a href="/privacy.html">Privacy</a>
+  </footer>
+
+  <div class="cookie" role="dialog" aria-label="Cookie choices">
+    <p>We use one cookie to keep you signed in.</p>
+    <button type="button" id="cookie-ok">Accept</button> <button type="button" id="cookie-no">Decline</button>
+  </div>
+  <div class="modal" id="newsletter" role="dialog" aria-label="Newsletter" hidden>
+    <p>Get one tip a week on shorter meetings.</p>
+    <label for="nl-email">Email</label><input id="nl-email" type="email" autocomplete="email">
+    <button type="button" id="nl-join">Subscribe</button> <button type="button" id="nl-close">No thanks</button>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

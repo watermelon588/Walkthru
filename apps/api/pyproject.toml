@@ -9,13 +9,17 @@ dependencies = [
   "langgraph-checkpoint-postgres>=3",
   "langsmith>=0.12",
   "langchain-anthropic>=1",
+  "anthropic[vertex]>=1",  # Claude Haiku 4.5 on Google Cloud for Pro and Plus (approved 2026-09-24)
   "langchain-google-genai>=4",
+  "langchain-groq>=1",
+  "python-dotenv>=1",
+  "email-validator>=2",  # pydantic EmailStr on POST /scans
   "httpx>=0.28",
   "selectolax>=0.3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "email-validator>=2"]
+dev = ["pytest>=8", "ruff>=0.6"]
 
 [tool.setuptools]
 packages = ["app", "app.agent", "app.scans"]

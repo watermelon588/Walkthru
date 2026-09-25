@@ -1,26 +1,33 @@
 import logging
 import os
+import re
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from itertools import pairwise
 from typing import Literal
 from urllib.parse import urlsplit
 
+import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from langgraph.types import Command
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 
-from app import auth, db, deliver, retention
-from app.agent import report, runtime
+from app import auth, db, deliver, plans, retention
+from app.agent import compare, fix_prompt, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
+logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s")  # libraries stay at WARNING
 log = logging.getLogger("walkthru")
+log.setLevel(logging.INFO)  # Walkthru's own INFO lines (step timings, retention) reach the console
+_background = ThreadPoolExecutor(max_workers=8, thread_name_prefix="start-run")  # short side tasks of a request
 WEB_URL = os.environ.get("WEB_URL", "http://localhost:5173")
 WEB_ORIGINS = {WEB_URL.rstrip("/")}
 _web = urlsplit(WEB_URL)
@@ -44,10 +51,19 @@ def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
 
 
 if os.environ.get("WARMUP", "1") == "1":
-    # Import model clients and build the agent graph in the background so the first run after a start is not slow.
+    # Import model clients and build both agent graphs and the goal planner's model chain in the background,
+    # so the first run after a start does not pay for it (measured: about 5 s on the first paid run).
     import threading
 
-    threading.Thread(target=lambda: runtime.graph("free"), name="warmup", daemon=True).start()
+    from app.agent.schema import GoalPlan
+
+    def _warm() -> None:
+        for tier in ("free", "paid"):
+            runtime.graph(tier)
+        for paid in (False, True):
+            runtime.structured(GoalPlan, True, paid)  # the same cache key goal.plan's runtime.call uses
+
+    threading.Thread(target=_warm, name="warmup", daemon=True).start()
 
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
@@ -66,12 +82,13 @@ def health() -> dict[str, str]:
 
 
 class StartRun(BaseModel):
+    # No tier field: the plan comes from the caller's entitlement (app/plans.py). Older clients that
+    # still send `tier` are accepted and ignored.
     site: str = Field(pattern=r"^https?://", max_length=2000)
     goal: str = Field(min_length=1, max_length=500)
     persona: str = Field(default="first_timer", max_length=40)
-    tier: Literal["free", "paid"] = "free"
     logged_in: bool = False
-    max_steps: int = Field(default=12, ge=1, le=MAX_STEPS)
+    max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)  # clamped to the plan
     observation: Observation
 
 
@@ -102,14 +119,41 @@ def _owned(run_id: str, user: dict) -> dict:
     return row
 
 
+@app.get("/me/plan")
+def my_plan(user: dict = Depends(require_user)) -> dict:
+    return plans.summary(plans.current(user["id"]))
+
+
 @app.post("/runs")
 def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    marks = [("start", time.monotonic())]
+    # Domain verification is a passive fetch of the owner's site that needs nothing else, so it runs while the
+    # plan check and the goal planner work instead of after them (measured: 4 to 6 s saved on the first step).
+    verifying = _background.submit(_verified, body.site, user["id"])
+    usage = plans.current(user["id"])
+    plans.check_start(usage, site=body.site, persona=body.persona, logged_in=body.logged_in)
+    marks.append(("plan_check", time.monotonic()))
+    plan = usage["plan"]
+    tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
+    # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
+    goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
+    marks.append(("goal_planner", time.monotonic()))
+    if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
+        raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, body.tier, body.logged_in, email=user.get("email"))
-    verified = _verified(body.site, user["id"])  # owner-verified domains may send real messages after confirmation
-    state = body.model_dump(exclude={"tier"}, mode="json") | {"run_id": run_id, "steps": [], "status": "running", "tokens": 0, "first_text": body.observation.text[:6000], "verified": verified}
-    result = runtime.invoke(body.tier, state, _cfg(run_id))
-    return _reply(run_id, body.tier, result, background)
+    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in)
+    marks.append(("insert_run", time.monotonic()))
+    verified = verifying.result()  # owner-verified domains may send real messages after confirmation
+    marks.append(("verify_domain_wait", time.monotonic()))
+    state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
+                                            "first_text": body.observation.text[:6000], "verified": verified, "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
+    result = runtime.invoke(tier, state, _cfg(run_id))
+    marks.append(("first_step", time.monotonic()))
+    reply = _reply(run_id, tier, result, background)
+    marks.append(("save_step", time.monotonic()))
+    log.info("start_run %s %s", run_id, " ".join(f"{name}={later - earlier:.1f}s" for (_, earlier), (name, later) in pairwise(marks)))
+    # The side panel shows how Walkthru understood the goal.
+    return reply | {"plan": {"intent": goal_plan["intent"], "checkpoints": [c["description"] for c in goal_plan["checkpoints"]]}}
 
 
 @app.post("/runs/{run_id}/observe")
@@ -134,6 +178,46 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
 def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     row = _owned(run_id, user)
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
+
+
+class IgnoreFinding(BaseModel):
+    fingerprint: str = Field(min_length=3, max_length=300)
+    reason: str = Field(min_length=1, max_length=200)
+
+
+@app.post("/runs/{run_id}/findings/ignore")
+def ignore_finding(run_id: str, body: IgnoreFinding, user: dict = Depends(require_user)) -> dict:
+    """Mark a finding as accepted ("won't fix") for this site. It stays in the score but leaves compare lists."""
+    row = _owned(run_id, user)
+    if plans.current(user["id"])["plan"].name == "free":
+        raise HTTPException(402, "Ignoring findings is part of the paid plans.")
+    db.set_ignored(user["id"], compare.origin(row["site"]), body.fingerprint, body.reason.strip())
+    return {"ignored": body.fingerprint}
+
+
+@app.delete("/runs/{run_id}/findings/ignore")
+def unignore_finding(run_id: str, fingerprint: str, user: dict = Depends(require_user)) -> dict:
+    row = _owned(run_id, user)
+    db.clear_ignored(user["id"], compare.origin(row["site"]), fingerprint)
+    return {"cleared": fingerprint}
+
+
+@app.get("/runs/{run_id}/fix-prompt")
+def get_fix_prompt(run_id: str, style: Literal["full", "chat"] = "full", download: bool = False, user: dict = Depends(require_user)) -> Response:
+    """The agent fix prompt as Markdown (paid plans). Built on request, never stored in the report, so the free plan
+    cannot read it through the report row."""
+    row = _owned(run_id, user)
+    if plans.current(user["id"])["plan"].name == "free":
+        raise HTTPException(402, "The agent fix prompt is part of the paid plans.")
+    if not row.get("report"):
+        raise HTTPException(409, "The report is not ready yet.")
+    try:
+        ignored = db.ignored_fingerprints(user["id"], compare.origin(row["site"]))
+    except (httpx.HTTPError, db.DatabaseUnavailable):
+        ignored = {}
+    text = fix_prompt.build(row, row["report"], ignored, style)
+    headers = {"Content-Disposition": 'attachment; filename="walkthru-fixes.md"'} if download else {}
+    return Response(text, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
 class StopRequest(BaseModel):
@@ -198,11 +282,18 @@ def finish_run(run_id: str, values: dict) -> None:
             steps=values.get("steps", []),
             verified=verified,
             final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
+            paid=row.get("tier") == "paid",  # GEO on every audited page for paid plans (SPEC.md)
+            intent=(values.get("plan") or {}).get("intent", ""),
         )
         rep.tokens += values.get("tokens", 0)
+        try:
+            rep.comparison = compare.attach(row, rep.model_dump())
+        except Exception:  # a failed comparison must never lose the report
+            log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
         db.set_report(run_id, rep.model_dump())
-        if row.get("email"):
-            deliver.send_report(row["email"], f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
+        to = db.user_email(str(row["user_id"])) if row.get("user_id") and os.environ.get("RESEND_API_KEY") else None
+        if to:
+            deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
     except Exception:
         log.exception("report failed for run %s", run_id)
 
@@ -224,7 +315,7 @@ class ScanRequest(BaseModel):
     email: EmailStr | None = None
 
 
-_scan_hits: dict[str, list[float]] = {}  # ponytail: per-process rate limit; move to Postgres when there is more than one instance
+_scan_hits: dict[str, list[float]] = {}  # ponytail: per-process; production runs one API process. The daily cap (plans.FREE_SCANS_PER_DAY) is in the database.
 SCAN_LIMIT, SCAN_WINDOW = 5, 3600
 
 
@@ -242,6 +333,8 @@ def _rate_limit(ip: str) -> None:
 def instant_scan(body: ScanRequest, request: Request) -> dict:
     """Free homepage scan: first impression, SEO basics, security headers. Public report, no login."""
     _rate_limit(request.client.host if request.client else "?")
+    if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
+        raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
     try:
         fetch.assert_public(body.site)
     except ValueError as e:
@@ -251,7 +344,7 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     if resp is None or resp.status_code >= 400:
         raise HTTPException(422, "That site did not respond. Check the address and try again.")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, None, str(resp.url), "Instant Scan", "stranger", "free", False, kind="scan", email=body.email, public=True)
+    db.insert_run(run_id, None, str(resp.url), "Instant Scan", "stranger", "free", False, kind="scan", public=True)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text))
     db.set_report(run_id, rep.model_dump(), status="done")
     if body.email:
@@ -269,10 +362,38 @@ def share_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     return {"url": f"{WEB_URL}/r/{run_id}"}
 
 
+# ---------- Launch Ready badge (public reports only; no login) ----------
+
+
+def _badge_run(run_id: str) -> dict:
+    """The embedded report, or the owner's newer public report of the same site, so a rerun updates the badge."""
+    row = db.get_run(run_id) if re.fullmatch(r"[0-9a-f]{32}", run_id) else None
+    if not row or not row.get("public") or not row.get("report"):
+        raise HTTPException(404, "No public report with that id.")
+    if row.get("user_id"):  # Instant Scans have no owner, so they always show themselves
+        origin = fetch.origin(row["site"])
+        same_site = [r for r in db.public_reports(str(row["user_id"])) if fetch.origin(r["site"]) == origin]
+        row = max([row, *same_site], key=lambda r: r.get("created_at") or "")
+    return row
+
+
+@app.get("/badge/{run_id}.svg")
+def badge(run_id: str) -> Response:
+    row = _badge_run(run_id)
+    stored = row["report"].get("launch_ready") or score.launch_ready(row["report"], "scan" if row.get("kind") == "scan" else row.get("status", ""))
+    return Response(score.badge_svg(stored.get("score")), media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/badge/{run_id}")
+def badge_link(run_id: str) -> RedirectResponse:
+    """Where a click on the badge goes: the latest public report for that site."""
+    return RedirectResponse(f"{WEB_URL}/r/{_badge_run(run_id)['id']}", status_code=302)
+
+
 @app.post("/runs/{run_id}/email")
 def email_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     row = _owned(run_id, user)
-    to = row.get("email") or user.get("email")
+    to = user.get("email")
     if not row.get("report") or not to:
         raise HTTPException(409, "report not ready")
     sent = deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], row["report"])
@@ -297,6 +418,8 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "evidence_retention_days": retention.RETENTION_DAYS,
         "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
         "runs": db.runs_for_user(user["id"]),
+        "passes": db.entitlements_for_user(user["id"]),
+        "ignored_findings": db.ignored_for_user(user["id"]),
     }
 
 

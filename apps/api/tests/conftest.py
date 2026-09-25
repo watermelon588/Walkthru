@@ -1,6 +1,7 @@
 """Shared fakes: in-memory runs table and a fixed signed-in user. Tests never touch Supabase."""
 
 import os
+from datetime import UTC, datetime
 
 import pytest
 
@@ -18,8 +19,15 @@ USER = "00000000-0000-0000-0000-000000000001"
 def fake_db(monkeypatch):
     rows: dict[str, dict] = {}
 
-    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", email=None, public=False):
-        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "email": email, "public": public, "report": None, "tokens": 0}
+    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", public=False):
+        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat()}
+
+    def test_runs_since(user_id, since):
+        start = datetime.fromisoformat(since)
+        return [r for r in rows.values() if r.get("user_id") == user_id and r.get("kind") == "test" and datetime.fromisoformat(r.get("created_at", since)) >= start]
+
+    def free_runs_today(kind="test"):
+        return sum(1 for r in rows.values() if r.get("kind") == kind and r.get("tier") == "free")
 
     def update_run(run_id, status, steps, tokens=0):
         rows[run_id] |= {"status": status, "steps": steps, "tokens": tokens}
@@ -39,7 +47,41 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "mark_run_stopped", mark_run_stopped)
     monkeypatch.setattr(db, "set_report", set_report)
     monkeypatch.setattr(db, "set_public", lambda run_id, public=True: rows[run_id].__setitem__("public", public))
+    def recent_reports(user_id, exclude_id, limit=20):
+        found = [r for r in rows.values() if r.get("user_id") == user_id and r.get("kind") == "test" and r.get("report") and r["id"] != exclude_id]
+        return sorted(found, key=lambda r: r.get("created_at", ""), reverse=True)[:limit]
+
+    ignored: dict[tuple, str] = {}
+    monkeypatch.setattr(db, "recent_reports", recent_reports)
+    monkeypatch.setattr(db, "ignored_fingerprints", lambda user_id, origin: {fp: why for (u, o, fp), why in ignored.items() if (u, o) == (user_id, origin)})
+    monkeypatch.setattr(db, "set_ignored", lambda user_id, origin, fp, reason: ignored.__setitem__((user_id, origin, fp), reason))
+    monkeypatch.setattr(db, "clear_ignored", lambda user_id, origin, fp: ignored.pop((user_id, origin, fp), None))
+    monkeypatch.setattr(db, "ignored_for_user", lambda user_id: [{"origin": o, "fingerprint": fp, "reason": why} for (u, o, fp), why in ignored.items() if u == user_id])
+    monkeypatch.setattr(db, "test_runs_since", test_runs_since)
+    monkeypatch.setattr(db, "free_runs_today", free_runs_today)
     return rows
+
+
+@pytest.fixture(autouse=True)
+def literal_goal(monkeypatch):
+    """No planner model in tests: the typed goal becomes a one-item checklist. test_goal.py sets its own plans."""
+    from app.agent import goal
+
+    monkeypatch.setattr(goal, "plan", lambda site, typed, observation, paid=False: goal.fallback(typed))
+
+
+@pytest.fixture(autouse=True)
+def passes(monkeypatch):
+    """In-memory entitlements table: tests append {user_id, plan, starts_at, expires_at, runs_granted}."""
+    table: list[dict] = []
+
+    def active_entitlement(user_id, now):
+        live = [p for p in table if p["user_id"] == user_id and p["starts_at"] <= now < p["expires_at"]]
+        return max(live, key=lambda p: p["expires_at"], default=None)
+
+    monkeypatch.setattr(db, "active_entitlement", active_entitlement)
+    monkeypatch.setattr(db, "entitlements_for_user", lambda user_id: [p for p in table if p["user_id"] == user_id])
+    return table
 
 
 @pytest.fixture(autouse=True)

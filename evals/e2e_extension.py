@@ -30,7 +30,7 @@ from websockets.sync.client import connect
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(ROOT, "apps", "api", ".env"))
-API = os.environ.get("WALKTHRU_API", "http://127.0.0.1:8000")
+API = os.environ.get("WALKTHRU_API", "http://127.0.0.1:8010")
 WEB = os.environ.get("WEB_URL", "http://localhost:5173")
 SB, PUB = os.environ["SUPABASE_URL"], os.environ["SUPABASE_PUBLISHABLE_KEY"]
 INJECT = os.path.join(ROOT, "apps", "extension", ".output", "chrome-mv3", "inject.js")
@@ -107,7 +107,7 @@ class Tab:
 
 def session() -> tuple[str, str]:
     email = os.environ.get("TEST_USER_EMAIL", "walkthru.tester@example.com")
-    password = os.environ.get("TEST_USER_PASSWORD", "Walk-thru-2026-local!")
+    password = os.environ["TEST_USER_PASSWORD"]  # apps/api/.env; the repo is public
     r = httpx.post(
         f"{SB}/auth/v1/token?grant_type=password",
         headers={"apikey": PUB},
@@ -287,6 +287,12 @@ def main() -> int:
                 for f in rep["findings"][:10]:
                     print(f"  - {f['severity']:6} {f['kind']:13} {f['title']}")
                 print(f"  open: {WEB}/app/runs/{run_id}")
+                # Saved for the trap scorer: apps/api/.venv/Scripts/python evals/runner.py evals/results/e2e-*.json
+                out = os.path.join(ROOT, "evals", "results", f"e2e-{run_id}.json")
+                os.makedirs(os.path.dirname(out), exist_ok=True)
+                with open(out, "w", encoding="utf-8") as f:
+                    json.dump({"model": f"{persona}:{goal[:40]}", "report": rep, "steps": row["steps"], "usage": {"tokens": rep.get("tokens", 0)}}, f, indent=1)
+                print(f"  saved: {out}")
                 return 0
             time.sleep(3)
         print("report not ready after 3 minutes")

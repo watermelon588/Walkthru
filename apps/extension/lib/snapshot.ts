@@ -14,6 +14,8 @@ export type Observation = {
   notices?: string[];
   note?: string;
   diagnostics?: BrowserDiagnostics;
+  scroll_pct?: number; // how far down the page the viewport is, so scrolling reads as progress
+  at_end?: boolean;
 };
 
 export const ID_ATTR = "data-walkthru-id";
@@ -128,6 +130,12 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     text,
     errors: errors(doc, geometry).map(redact),
   };
+  const win = doc.defaultView;
+  if (geometry && win) {
+    const room = (doc.scrollingElement ?? doc.documentElement).scrollHeight - win.innerHeight;
+    obs.scroll_pct = room <= 0 ? 100 : Math.min(100, Math.max(0, Math.round((100 * win.scrollY) / room)));
+    obs.at_end = room <= 0 || win.scrollY >= room - 4;
+  }
   const confirmations = notices(doc, geometry, obs.errors).map(redact);
   if (confirmations.length) obs.notices = confirmations;
   if (captcha(doc)) obs.note = "captcha detected";

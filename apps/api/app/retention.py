@@ -44,7 +44,6 @@ def purge_expired(days: int = RETENTION_DAYS) -> dict:
     for run in runs:
         removed += delete_objects(db.evidence_objects([run["id"]]))
         db.mark_evidence_purged(run["id"], strip_evidence(run["steps"] or []))
-    db.forget_scan_emails(days)
     return {"runs": len(runs), "objects": removed}
 
 

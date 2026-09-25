@@ -1,0 +1,39 @@
+# Render Blueprint for the API (free web service). Dashboard: New > Blueprint > this repo.
+# Free instances sleep after 15 idle minutes and take about a minute to wake; see docs/deploy.md.
+services:
+  - type: web
+    name: walkthru-api
+    runtime: python
+    plan: free
+    rootDir: apps/api
+    buildCommand: pip install .
+    # --proxy-headers with FORWARDED_ALLOW_IPS below: behind Render's proxy the visitor's address comes from
+    # X-Forwarded-For, so the per-address scan limit counts visitors, not the proxy.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      # Set these in the Render dashboard (sync: false keeps them out of this file).
+      - key: WEB_URL            # https://YOUR-SITE.vercel.app, no trailing slash (CORS and links in emails)
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: PAGESPEED_API_KEY
+        sync: false
+      - key: RESEND_API_KEY     # optional: without it "Email me" opens the user's mail app
+        sync: false
+      - key: RESEND_FROM
+        sync: false

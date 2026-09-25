@@ -12,6 +12,7 @@ from app.agent.safety import is_dangerous
 from app.agent.schema import PersonaStep
 from app.agent.typesafe import JevDecision
 from app.main import app
+from tests.conftest import USER
 
 
 class FakeModel:
@@ -241,7 +242,8 @@ def test_stuck_loop(monkeypatch):
     assert r["status"] == "stuck" and len(r["steps"]) == 3
 
 
-def test_safe_mode_blocks_dangerous_click(monkeypatch):
+def test_safe_mode_blocks_dangerous_click(monkeypatch, passes):
+    passes.append({"user_id": USER, "plan": "pro", "starts_at": "2000-01-01T00:00:00+00:00", "expires_at": "2999-01-01T00:00:00+00:00", "runs_granted": 40})  # logged-in pages need a paid plan
     use([PersonaStep(thought="delete", action="click", target_id=1, confusion=0)], monkeypatch)
     c = TestClient(app)
     settings = page("https://fixture.test/settings", [{"id": 1, "tag": "button", "text": "Delete account"}])
@@ -305,7 +307,8 @@ def test_field_state_is_shown_and_step_outcomes_are_recorded(monkeypatch):
     shown = render_observation(page("https://fixture.test/contact", [{"id": 1, "tag": "input", "type": "text", "state": "filled", "text": "What's your name?"}]))
     assert "[1] input (text) [filled]: What's your name?" in shown
 
-    use([PersonaStep(thought="contact", action="click", target_id=1, confusion=0), PersonaStep(thought="type", action="type", target_id=2, text="Test Walker", confusion=0), PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)
+    use([PersonaStep(thought="contact", action="click", target_id=1, confusion=0), PersonaStep(thought="type", action="type", target_id=2, text="Test Walker", confusion=0), PersonaStep(thought="ok", action="done", confusion=0),
+         PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)  # asked twice: done right after typing needs proof
     c = TestClient(app)
     home = page("https://fixture.test/", [{"id": 1, "tag": "a", "text": "Contact"}])
     contact = page("https://fixture.test/contact", [{"id": 2, "tag": "input", "type": "text", "state": "empty", "text": "Name"}])
@@ -321,7 +324,6 @@ def test_field_state_is_shown_and_step_outcomes_are_recorded(monkeypatch):
 
 
 def test_stop_reason_is_recorded_for_the_report(monkeypatch, fake_db):
-    from tests.conftest import USER
 
     fake_db["r9"] = {"id": "r9", "user_id": USER, "status": "running", "tier": "free", "tokens": 0,
                      "steps": [{"thought": "send", "action": "click", "target_id": 5, "text": None, "confusion": 0, "url": "https://fixture.test/contact"}]}

@@ -1,6 +1,6 @@
 # Current State
 
-_Last updated: 2026-09-24_
+_Last updated: 2026-09-25_
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
@@ -44,7 +44,7 @@ _Last updated: 2026-09-24_
 
 - **T24 full-site launch audit closed (2026-09-23).** `app/scans/site.py` crawls up to 10 same-origin HTML pages (hard cap 20, 20 s budget) with robots.txt honoured and every redirect SSRF-checked before the request. One shared branch feeds SEO and passive-security findings; repeated issues collapse into one finding that names how many pages and which URLs. Exposed-file and bundle-secret checks still run only on verified domains. Reports carry optional `site_audit` coverage, shown by `SiteAuditCoverage` in private, public and PDF views. Verified: 71 API tests, web build and lint, a live Instant Scan of the easy fixture (4 pages, 336 ms), a passive three-page smoke of python.org, and no overflow at four widths. The `web` launch config now starts Vite through Node because this machine's `npm` launcher is broken.
 
-- **Phase 2 data lifecycle (2026-09-23).** Journey screenshots expire after `EVIDENCE_RETENTION_DAYS` (30). `app/retention.py` deletes expired objects through the Storage API, strips the dead links from steps, stamps `runs.evidence_purged_at` and erases Instant Scan emails after the same window. It runs inside the API one minute after boot and every six hours, or manually with `python -m app.retention`. Owners can `DELETE /runs/{id}`, download everything with `GET /account/export`, and delete their account with `POST /account/delete` (they must type their email). Deletion always removes storage files first, then LangGraph checkpoints, then rows, then the Supabase user, so a failed storage call never strands unreachable files. Web: a "Your data" section in Settings (policy, Export my data, Delete account), a Delete run action on reports, and a retention date under the evidence timeline. The extension panel states the 30-day policy. Verified: 76 API tests, web build and lint, real Storage listing and deletion calls, live export, and the settings and report UI in the browser. Not yet verified live: run and account deletion through the running API, because this machine's database connection kept timing out; both attempts failed cleanly with nothing deleted. A throwaway account `walkthru.delete-check@example.com` (password `Walk-thru-2026-local!`, local test only) holds one run and one screenshot for that test.
+- **Phase 2 data lifecycle (2026-09-23).** Journey screenshots expire after `EVIDENCE_RETENTION_DAYS` (30). `app/retention.py` deletes expired objects through the Storage API, strips the dead links from steps, stamps `runs.evidence_purged_at` and erases Instant Scan emails after the same window. It runs inside the API one minute after boot and every six hours, or manually with `python -m app.retention`. Owners can `DELETE /runs/{id}`, download everything with `GET /account/export`, and delete their account with `POST /account/delete` (they must type their email). Deletion always removes storage files first, then LangGraph checkpoints, then rows, then the Supabase user, so a failed storage call never strands unreachable files. Web: a "Your data" section in Settings (policy, Export my data, Delete account), a Delete run action on reports, and a retention date under the evidence timeline. The extension panel states the 30-day policy. Verified: 76 API tests, web build and lint, real Storage listing and deletion calls, live export, and the settings and report UI in the browser. Not yet verified live: run and account deletion through the running API, because this machine's database connection kept timing out; both attempts failed cleanly with nothing deleted. A throwaway account `walkthru.delete-check@example.com` (password in the founder's local .env, local test only) holds one run and one screenshot for that test.
 
 - **One-command dev stack (2026-09-23, dev only).** `.\dev` (`dev.cmd` runs `dev.py`) builds the extension and starts API, web and both fixture sites, waits for all of them, prints URLs, and stops the whole process tree on Ctrl+C. The `stack` launch config runs the same script. Remove both files before production.
 - **Live-site fix (2026-09-23).** Vercel serves Markdown to clients that do not ask for HTML, so the crawler audited 0 pages on nextjs.org and reported a clean result. The fetcher now sends a browser `Accept` header, and an audit that finds no HTML pages says so as a finding. nextjs.org now crawls 3 pages. 78 API tests.
@@ -78,7 +78,80 @@ _Last updated: 2026-09-24_
   - Runs that end as `safe_stop` now point the owner to `/docs#verify`, in the report (screen only) and in the side-panel result. Not seen rendered yet: needs a real safe_stop run.
   - Verified: web build and oxlint clean, extension tsc/oxlint/27 vitest/WXT build clean, Impeccable detector clean, browser check of docs, privacy, 404, landing menu, app shell (phone drawer and desktop sidebar via a temporary unguarded route, since removed) and the extension panel. Not verified live: the verification panel's ready state (needs a signed-in session; error state checked).
 
+- **V1 server-owned plans (2026-09-24).**
+  - `app/plans.py` holds the plan limits. `POST /runs` ignores the client's tier and enforces logged-in access, test users, steps (12 free, 30 paid), runs per month or pass, sites per plan, and a `FREE_RUNS_PER_DAY` capacity guard.
+  - `GET /me/plan` feeds the side panel (runs left, locked options) and the dashboard.
+  - New `entitlements` table, applied to Supabase. `scripts/grant_plan.py` gives dev passes.
+  - Checked live: a free account claiming `tier: paid` got 403 on a logged-in run and 402 once its 3 runs were used; a Pro dev pass ran a logged-in skeptic journey and counted it.
+  - 111 API tests, 27 extension tests; web and extension builds green.
+
+- **V2 GEO readiness scanner (2026-09-24).**
+  - `app/scans/geo.py` scores AI search readiness 0 to 100 from pages the site audit already fetched, plus `/llms.txt` and one homepage request with an AI search user agent. Categories: crawler access, content before JavaScript, structured data, answerability, name and trust, meta, llms.txt.
+  - Checks that could not run are left out of the score. Free plans score the homepage; paid plans score every audited page.
+  - Findings have kind `geo`; the report stores `report.geo` (score, band, categories, the text AI search sees). The JavaScript-shell finding moved from SEO to GEO so it appears once.
+  - New "AI search readiness" section on the report page.
+  - Live: the portfolio's Instant Scan scored 42 of 100 in 13.7 s (empty JavaScript shell, no structured data, no llms.txt; crawlers not blocked).
+  - 121 API tests; web build and lint green.
+
+- **V22 goal intent and loop guards (2026-09-24).** From the portfolio run that circled "NEXT CASE" pages for 11 steps.
+  - **Goal planner:** `app/agent/goal.py` plans each run into an intent and a checklist (checked live: the portfolio goal became 3 checkpoints; "delete my account and buy pro" was refused in 0.5 s).
+  - **Stops:** code ends the run when the checklist is done; a third visit to a page ends as `looping`; scroll position and clicks that change nothing are visible to the test user.
+  - **Report:** the owner's Stop no longer counts against the site.
+  - **Side panel:** suggests goals from the page's links and shows how the goal was understood.
+  - **Showcase fixture** on :8103: its Instant Scan scored 99 of 100 for GEO through the live stack.
+  - 131 API tests and 30 extension tests; web and extension builds green.
+
+- **Session 3: Checkpoint B passed and signup email check (2026-09-24).**
+  - **Trap recall:** 18 of 22 traps (82%) found by two real journeys on the hard fixture scored together. Details in docs/decisions.md.
+  - **Email check:** `app/scans/email.py` checks SPF, DMARC and (paid) MX over DNS-over-HTTPS, and skips shared hosting domains and local addresses. A journey error "email rate limit exceeded" becomes "use your own SMTP".
+  - **Audit coverage:** pages the test user visited are audited (past robots.txt only on verified domains), and a sign-up link found only in the footer is reported.
+  - **Proof before done:** "done" right after a click or typing that changed nothing is questioned, then ends as gave up; a click that changed nothing is report evidence.
+  - **House style:** model-written report text is stripped of em and en dashes.
+  - 145 API tests.
+
+- **Session 4: rerun and compare, ignore a finding (2026-09-24).**
+  - **Compare:** every paid run is compared automatically with the owner's previous run of the same goal on the same site: fixed, new and still broken, in code (`app/agent/compare.py`), shown as "Since your last run" on the report. Checked live: a rerun of the hard-fixture signup matched all 35 findings as still broken, including model-written UX findings.
+  - **Ignore:** paid owners can ignore a finding with a reason ("won't fix"); it stays ignored on reruns of that site, leaves the compare lists, and can be undone.
+  - **Safety:** a comparison failure never loses the report.
+  - 152 API tests; web build and lint green.
+
+- **Session 5: GEO fix pack, agent fix prompt, Claude wiring (2026-09-24).**
+  - **GEO fix pack:** `app/scans/geo_fixes.py` builds copy-paste fixes from the site's own pages: a rendering fix for the detected framework, robots.txt rules, JSON-LD, og:site_name and an llms.txt draft. Free reports show one fix and the count. Live on the portfolio: a Vite rendering fix with its real name and description.
+  - **Agent fix prompt:** `app/agent/fix_prompt.py` and `GET /runs/{id}/fix-prompt` (paid; `style=chat` for Lovable and Bolt; `download=1` for `walkthru-fixes.md`). Plain code, ignored findings left out, secrets masked. The report page has Copy, Download and Copy chat version.
+  - **Claude Haiku 4.5:** wired for Pro and Plus through Google Cloud (`anthropic[vertex]`, approved), off until `CLAUDE_VERTEX_PROJECT` is set. Reports state which models ran. The spec's product rule is reworded (see docs/decisions.md).
+  - 164 API tests; web build and lint green.
+
+- **Fix loop tested by the founder (2026-09-24).** A real fix prompt was applied to the showcase fixture and the rerun compared correctly (2 fixed, 0 new, 3 still broken). Two gaps it exposed are fixed: the prompt now lists every affected page (it showed at most 3), and the comparison works page by page, with a "not re-checked" state so a crawl limit cannot make a finding look fixed. The comparison now shows first on the report. 167 API tests.
+
+- **Session 6a started: V6 50-page paid crawls (2026-09-24).**
+  - Paid run reports crawl up to 50 pages in 60 s; Instant Scans and free runs keep 10 pages and 20 s. Reports were already written in a background task, so nothing new was needed for that.
+  - Bug caught by the live check: the report schema capped crawl coverage at 20 pages, so the first paid report failed validation and was never saved. Fixed (50 pages, 55 scanned counting visited pages), with a test tying the schema to the crawler limits.
+  - Reports that checked more than 10 pages show the page list behind "Show all N pages checked".
+  - Verified: 50 pages of python.org in 13.9 s; a real Pro journey on the showcase fixture wrote a report covering all 13 pages; the public report opens the list with no overflow at 375 px and a clean console. 170 API tests, Ruff, web build and lint green.
+- **Free Instant Scan daily cap (2026-09-24).** `FREE_SCANS_PER_DAY` (default 200; each scan makes 2 free-model calls) returns 429 "Free scan capacity is used up for today". Like `FREE_RUNS_PER_DAY` it counts today's `runs` rows, so every API process shares it with no new table (live count checked: 4 of 200). The per-address limit (5 an hour) stays in memory, valid while production runs one API process. 171 API tests.
+
+- **Slow first step fixed; Jev measured and kept off (2026-09-24).** Domain verification runs in parallel with the plan check and goal planner, and startup warms both agent graphs and the planner's model clients: the first API call went from 13 to 19 s to 7.6 to 8.8 s. The API now prints its own INFO lines, including per-phase `start_run` timings. Jev was never on (`PERSONA_DECISION_MODEL` unset); an A/B on the same journey took 64 s with Jev against 30.8 s without, because two of four Jev calls timed out. Details in docs/decisions.md.
+
+- **V8 Launch Ready score and badge (2026-09-24).**
+  - Every new report stores `launch_ready`: one 0 to 100 score from the areas it measured (UX 30, security 20, GEO 20, SEO 15, speed and accessibility 15; unmeasured areas share their weight; ignored findings still count). Shown near the top of private, public and printed reports.
+  - Badge: `GET /badge/{run_id}.svg` for shared reports only, one-hour cache, always the owner's latest shared report for that site; `GET /badge/{run_id}` sends clicks there. No new table: sharing is the opt-in (founder: "badge on every report").
+  - The owner's report shows the badge with Copy HTML and Copy Markdown; strangers on `/r/` see the score only. The public page title carries the score.
+  - Verified: 175 API tests; web build and lint; a real Pro journey on the showcase scored 94 (security 75 for plain http); the badge SVG, its cache header and the click redirect work live; the public page shows the score without the badge block.
+  - Not verified in the browser: the owner's badge block (the browser pane is not signed in).
+
+- **Founder and co-founder briefing (2026-09-24).** `Walkthru-Briefing.pdf` at the repo root (45 pages): product, glossary, every service and report section with real screenshots, safety limits, plans, an honest audit of the free report, architecture, market, unit economics, investment, go-to-market, roadmap and the co-founder role. Source `docs/briefing/walkthru-briefing.html` (printed with headless Edge). New founder-skill outputs `founder/go-to-market.md` and `founder/product-brief.md`. Audit findings to fix before launch: the free first impression rated a clear page 0 of 3 and raised a high "value proposition unclear" finding; scans of local addresses still flag plain http as high; PageSpeed shows "not measured" until its key is set.
+
+- **Whole-crawl SEO checks from OpenSEO's audit (2026-09-24).** Broken internal links, server errors, blocked or rate-limited pages (now reported, previously skipped silently), duplicate titles, descriptions and content, thin content, dead ends, redirect chains, canonical conflicts, slow HTML, deep pages, sitemap orphans and short descriptions. Plain code in `site.py`; 176 API tests; a live python.org crawl showed no false alarms. See docs/decisions.md.
+
+- **v0.5 friends beta readiness (2026-09-25).** Deploy guide: [docs/deploy.md](docs/deploy.md). Decisions and audit: docs/decisions.md 2026-09-25.
+  - Hosting: Vercel (web, `apps/web/vercel.json` with SPA routing and a strict CSP) and Render free (API, `render.yaml`).
+  - Security fixes: public reports no longer expose contact emails (emails not stored; the column drop is in schema.sql, founder applies); test account passwords removed from the public repo (founder rotates); undeclared runtime dependencies declared (clean install verified); per-address scan limit works behind a proxy.
+  - Extension: fixed id `cilngbcfpoojecjoiklimnjnomjglcdo` via a committed public key; allowed page from `VITE_WEB_URL`; `npm run zip:beta` builds the friends' zip.
+  - Web: nav shows Dashboard when signed in; landing, meta and footer copy rewritten for the launch-check positioning (text only, same design and images); prices match SPEC; the Instant Scan email field is gone until email delivery has a domain; docs and security page claims corrected (no cookie or TLS checks claimed).
+  - Verified end to end on the production build with the Vercel headers: Instant Scan through the landing form (python.org, 10 pages, score 87), share link opened as a stranger, Email me fallback, owner-email lookup, Dashboard/Sign in nav, all internal links and anchors, no overflow at 375 and 1280 px, no console or CSP errors. 176 API tests, 30 extension tests, all builds and lints green.
+
 ## In progress
+- **v1.1 plan written (2026-09-24).** SPEC.md, ARCHITECTURE.md (capability map and module designs), ROADMAP.md, tasks/todo.md, payment.md and docs/decisions.md updated after the founder-skill review in `founder/`. Landing page prices still show the old plans until V9.
 - **Checkpoint A passed:** the extension completed the easy signup flow through `/welcome.html`; the API stored a five-step `done` run and generated its report. Reload the rebuilt extension and perform one fresh run to close the screenshot evidence check.
 - Auth wiring: needs a Supabase project (founder).
 - Agent loop verified against a real model (Groq gpt-oss-120b) with the Supabase Postgres checkpointer on 2026-09-18: two-step signup flow, sensible actions, state persisted.
@@ -87,15 +160,17 @@ _Last updated: 2026-09-24_
 - **Fresh T23 browser verification pending.** Rebuild and reload the extension, run the easy fixture once, then confirm the selected journey step shows axe status and any available LCP, CLS or INP values in the report inspector and PDF.
 
 ## Next up
-1. Founder: in the Supabase dashboard enable Google and GitHub providers and add the local and future production redirect URLs. Rotate the DB password and secret key before launch.
-2. Rebuild/reload the extension and run the easy fixture once to verify private screenshot capture plus per-step axe and Web Vitals evidence.
-3. Inspect that run privately and publicly, then print the real evidence report to PDF and close T18-T21.
-4. Test Phase 2 in the browser (export, delete a run, delete a throwaway account). Then follow `ROADMAP.md`: T13 store/legal, T14 billing, T15 production reliability, then T16 launch wiring. T17B remains intentionally deferred.
+New sessions start with handoff.md. Founder's order (2026-09-24):
+1. **Polish and harden end to end** (session 6a): ~~V6 50-page paid crawls~~, V8 Launch Ready score and badge, ~~`FREE_SCANS_PER_DAY`~~ (the shared limiter reduced to database-counted daily caps; see above), `CHECKPOINTER=postgres` readiness, the slow first step, and a UI pass with the design skills.
+2. **Payment gateway before launch:** V10 Dodo test mode per payment.md.
+3. **Later (6b):** deploy, Chrome Web Store, Google Cloud UPI billing with Claude switched on and the measured comparison, and OAuth, guided step by step.
 
 ## Known issues and notes
+- Local fixtures crawl slowly (about 2.5 s a page) because `localhost` tries IPv6 first and the fixture servers listen on IPv4 only; a free scan of the showcase stops at 8 of its 13 pages. Real sites are unaffected (0.28 s a page). Dev only.
+- The first API call of a run took 13 to 19 s; now 7.6 to 8.8 s (2026-09-24, see docs/decisions.md). It can still be slower when every Groq model is rate-limited and Gemini answers 503. The API logs `start_run ... plan_check= goal_planner= ...` for every run.
 - Pricing buttons are front end only until T14 wires checkout. Instant Scan is live through `POST /scans`.
 - Sign-in is email magic link or OAuth only; the throwaway password account from `scripts/test_user.py` is for local testing.
-- `externally_connectable` only allows `http://localhost:5173`; add the production origin before launch.
+- `externally_connectable` follows `VITE_WEB_URL` at build time (`npm run zip:beta` for the beta).
 - Local extension testing must happen in regular Chrome with the unpacked build loaded and reloaded. The Codex in-app browser can render the web app and fixtures but does not host the user's Chrome extension, so its `/login` or `/app` tab cannot complete the session handoff.
 - Privacy, Terms and Security pages exist (2026-09-24) but are drafts: review the legal copy and replace the placeholder contact domain before launch.
 - Domain not bought yet (`brand.domain` is a placeholder). `agent-eye.jpg` is 735px wide, a bit soft on large screens.

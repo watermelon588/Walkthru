@@ -27,7 +27,7 @@ def server():
 
 @pytest.fixture(autouse=True)
 def fake_llm(monkeypatch):
-    def call(schema, messages):
+    def call(schema, messages, fast=False, paid=False):
         if schema is FirstImpression:
             return FirstImpression(what="A vague platform for synergy.", who="Unclear, maybe enterprises.", first_click="Log in, since there is no sign-up.", trust=["no pricing shown"], clarity=3), 100
         return Synthesis(
@@ -43,13 +43,14 @@ def test_run_report_merges_branches():
     steps = [{"thought": "Looking for sign up", "action": "scroll", "target_id": None, "text": None, "confusion": 2, "url": HARD + "/"}]
     rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps)
     kinds = {f.kind for f in rep.findings}
-    assert kinds == {"ux", "accessibility", "seo", "security"}
+    assert kinds == {"ux", "accessibility", "seo", "security", "geo"}
+    assert rep.geo and 0 <= rep.geo.score <= 100 and rep.checks["geo"] == "complete"
     assert rep.findings[0].severity == "high" and rep.findings[-1].severity == "low"  # sorted
     assert rep.first_impression and rep.first_impression.clarity == 3
     assert rep.top_fixes[0].startswith("Add a Sign up")
     assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
     assert rep.verified is False and not any("publicly readable" in f.title for f in rep.findings)
-    assert rep.checks == {"accessibility": "complete", "performance": "unavailable", "seo": "complete", "security": "complete"}
+    assert rep.checks == {"accessibility": "complete", "performance": "unavailable", "seo": "complete", "security": "complete", "geo": "complete"}
     assert rep.site_audit is not None
     assert rep.site_audit.pages_scanned == 1  # hard fixture blocks crawling beyond the supplied homepage
     assert rep.site_audit.robots_respected is True
@@ -74,6 +75,17 @@ def test_instant_scan_rejects_bad_input_and_rate_limits(fake_db, monkeypatch):
     main._scan_hits.clear()
     assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200
     assert c.post("/scans", json={"site": HARD + "/"}).status_code == 429
+
+
+def test_instant_scans_stop_at_the_daily_free_cap(fake_db, monkeypatch):
+    from app import plans
+
+    c = TestClient(app)
+    main._scan_hits.clear()
+    monkeypatch.setattr(plans, "FREE_SCANS_PER_DAY", 1)
+    assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200
+    r = c.post("/scans", json={"site": HARD + "/"})
+    assert r.status_code == 429 and "capacity" in r.json()["detail"]
 
 
 def test_share_and_email(fake_db, monkeypatch):
@@ -142,7 +154,7 @@ def test_local_dev_server_skips_host_level_findings():
 def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
     seen = []
 
-    def call(schema, messages):
+    def call(schema, messages, fast=False, paid=False):
         seen.append(messages[-1][1])
         if schema is FirstImpression:
             return FirstImpression(what="w", who="w", first_click="c", trust=[], clarity=0), 0
@@ -152,3 +164,9 @@ def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
     steps = [{"thought": "no other way to sign up", "action": "give_up", "target_id": None, "text": None, "confusion": 3, "url": HARD + "/"}]
     report.run_report(HARD + "/", "Some page text that is long enough.", goal="sign up", status="gave_up", steps=steps, final_controls=["button: Continue with Google"])
     assert any("Continue with Google" in m and "Never claim a button" in m for m in seen)
+
+
+def test_report_text_never_contains_em_or_en_dashes():
+    from app.agent.report import plain
+
+    assert plain("Fix HTTPS first — then the forms – and the 6–53 s load") == "Fix HTTPS first, then the forms, and the 6-53 s load"

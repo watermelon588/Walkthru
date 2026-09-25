@@ -46,12 +46,22 @@ export type StepEvidence = {
 }
 
 export type Finding = {
-  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security'
+  kind: 'ux' | 'accessibility' | 'performance' | 'seo' | 'security' | 'geo'
   severity: 'high' | 'medium' | 'low'
   title: string
   detail: string
   fix: string
   evidence: string | null
+}
+
+export type Compared = {
+  kind: Finding['kind']
+  severity: Finding['severity']
+  title: string
+  fingerprint: string
+  pages_fixed?: string[]
+  pages_new?: string[]
+  pages_unchecked?: string[]
 }
 
 export type Report = {
@@ -61,7 +71,20 @@ export type Report = {
   top_fixes: string[]
   verified: boolean
   tokens: number
-  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security', 'complete' | 'unavailable'>>
+  checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', 'complete' | 'unavailable'>>
+  geo?: {
+    score: number
+    band: 'critical' | 'foundation' | 'good' | 'excellent'
+    categories: { id: string; label: string; earned: number; max: number }[]
+    ai_words: number
+    ai_view: string
+    notes: string[]
+    fixes?: { id: string; title: string; file: string; code: string; note: string }[]
+    fixes_total?: number
+  } | null
+  model?: string | null
+  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[] } | null
+  pages?: Record<string, string[]>
   site_audit?: {
     pages_scanned: number
     page_limit: number
@@ -70,6 +93,8 @@ export type Report = {
     urls: string[]
     robots_respected: boolean
   } | null
+  /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
+  launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
 export type Run = {
@@ -79,7 +104,7 @@ export type Run = {
   goal: string
   persona: string
   kind: 'test' | 'scan'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop' | 'looping'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -96,6 +121,7 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   captcha: 'Stopped at a CAPTCHA',
   stopped: 'Ended early',
   safe_stop: 'Stopped before sending',
+  looping: 'Stopped going in circles',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {
@@ -106,9 +132,9 @@ export const PERSONA_LABEL: Record<string, string> = {
   stranger: 'Stranger, five seconds',
 }
 
-export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security' }
+export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security', geo: 'GEO' }
 
-const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
 const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'
 
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */
@@ -161,6 +187,42 @@ export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
 export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`, undefined, true, 'DELETE')
 export const exportAccount = () => api<Record<string, unknown>>('/account/export', undefined, true, 'GET')
+/** The server decides the plan (apps/api/app/plans.py). */
+export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
+export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
+/** Same rule as fingerprint() in apps/api/app/agent/compare.py: kind plus title, ignoring case, spacing and counts. */
+export function fingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
+  return `${f.kind}:${f.title.toLowerCase().replace(/\d+/g, '#').split(/\s+/).filter(Boolean).join(' ')}`
+}
+
+function siteOrigin(url: string): string {
+  try {
+    return new URL(url).origin.toLowerCase()
+  } catch {
+    return url
+  }
+}
+
+/** Findings the owner accepted for this site (fingerprint to reason). Read under RLS: only the owner's own rows. */
+export async function ignoredFindings(site: string): Promise<Record<string, string>> {
+  if (!supabase) return {}
+  const { data, error } = await supabase.from('finding_states').select('fingerprint, reason').eq('origin', siteOrigin(site))
+  if (error) throw new Error(error.message)
+  return Object.fromEntries((data ?? []).map((row) => [row.fingerprint as string, row.reason as string]))
+}
+
+export const ignoreFinding = (runId: string, fp: string, reason: string) => api<{ ignored: string }>(`/runs/${runId}/findings/ignore`, { fingerprint: fp, reason })
+export const unignoreFinding = (runId: string, fp: string) =>
+  api<{ cleared: string }>(`/runs/${runId}/findings/ignore?fingerprint=${encodeURIComponent(fp)}`, undefined, true, 'DELETE')
+/** The agent fix prompt as Markdown (paid plans; 402 on free). */
+export async function getFixPrompt(runId: string, style: 'full' | 'chat'): Promise<string> {
+  const token = (await supabase?.auth.getSession())?.data.session?.access_token
+  if (!token) throw new Error('Sign in first')
+  const res = await fetch(`${API}/runs/${runId}/fix-prompt?style=${style}`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { detail?: string }).detail ?? `Request failed (${res.status})`)
+  return res.text()
+}
+
 export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)

@@ -144,3 +144,20 @@ def test_graph_call_retries_one_interrupted_database_connection(monkeypatch):
 
     assert runtime.invoke("free", {}, {"configurable": {"thread_id": "r1"}}) == {"ok": True}
     assert graph.calls == 2
+
+
+
+def test_paid_runs_put_claude_first_only_when_it_is_configured(monkeypatch):
+    monkeypatch.setitem(sys.modules, "langchain_groq", SimpleNamespace(ChatGroq=lambda model, **kw: Tagged(model)))
+    monkeypatch.setitem(sys.modules, "langchain_google_genai", SimpleNamespace(ChatGoogleGenerativeAI=lambda model, **kw: Tagged(model)))
+    monkeypatch.setattr(runtime, "GROQ_MODELS", ["groq-a"])
+    monkeypatch.setattr(runtime, "GEMINI_MODELS", ["gem"])
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(runtime, "claude", lambda schema: Tagged("claude"))
+    monkeypatch.delenv("CLAUDE_VERTEX_PROJECT", raising=False)
+    assert runtime.free_pool(PersonaStep, paid=True) == ["groq-a", "gem"]
+    assert runtime.model_label(True).startswith("Free models")
+    monkeypatch.setenv("CLAUDE_VERTEX_PROJECT", "walkthru-prod")
+    assert runtime.free_pool(PersonaStep, paid=True) == ["claude", "groq-a", "gem"]
+    assert runtime.free_pool(PersonaStep, paid=False) == ["groq-a", "gem"]  # free plans never reach Claude
+    assert runtime.model_label(True) == "Claude Haiku 4.5, with free models as backup"

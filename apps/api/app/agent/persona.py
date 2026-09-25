@@ -13,10 +13,12 @@ from typing import Any, Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from app.agent import goal as goals
 from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_destructive, is_sending
 from app.agent.schema import Observation, PersonaStep
 
-Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "safe_stop"]
+# looping: Walkthru stopped the test user for going in circles (its own limit, never a site problem).
+Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "safe_stop", "looping"]
 
 PERSONAS = {
     "first_timer": "a first-time visitor who has never heard of this product, skims, and gets impatient fast",
@@ -41,13 +43,27 @@ class SessionState(TypedDict, total=False):
     steps: list[dict]  # PersonaStep dumps + url
     status: Status
     tokens: int  # LLM tokens used so far
+    plan: dict  # GoalPlan dump: intent and checklist (app/agent/goal.py)
+    plan_done: int  # checklist items complete
+    start_url: str
 
 
 def system_prompt(state: SessionState) -> str:
     who = PERSONAS.get(state["persona"], state["persona"])
     identity = TEST_IDENTITY.format(run_id=state["run_id"])
+    plan = state.get("plan") or goals.fallback(state["goal"])
+    done = state.get("plan_done", 0)
+    checklist = "\n".join(
+        f"  {i}. {c['description']}" + (" (done)" if i <= done else " (current)" if i == done + 1 else "")
+        for i, c in enumerate(plan["checkpoints"], start=1)
+    )
     return (
-        f"You are {who}. You are trying to: {state['goal']}\n"
+        f"You are {who}. The site owner typed this goal: {state['goal']}\n"
+        f"What they want to learn: {plan['intent']}\n"
+        f"Your checklist, in order (the last item finishes the test):\n{checklist}\n"
+        "Work only on the current item. Set progress to how many items are complete, counting what your previous actions "
+        "achieved (read where each step led). When every item is complete, answer done: never repeat a completed item and "
+        "never go further than the checklist asks.\n"
         "You see a text snapshot of the current page with numbered interactive elements. "
         "Think aloud in character, then choose exactly one action. Prefer the obvious path a real "
         "person would take. Do not repeat an action that already failed. If you reach the goal, "
@@ -71,6 +87,8 @@ def render_observation(obs: dict) -> str:
         lines.append("Visible errors: " + " | ".join(o.errors))
     if o.notices:
         lines.append("Visible confirmations: " + " | ".join(o.notices))
+    if o.scroll_pct is not None:
+        lines.append(f"Scroll position: {o.scroll_pct}% down the page" + (" (this is the end of the page)" if o.at_end else ""))
     lines.append("Elements:")
     for e in o.elements:
         kind = f" ({e.type})" if e.type else ""
@@ -91,6 +109,10 @@ def render_history(steps: list[dict]) -> str:
         if s.get("text"):
             line += f' "{s["text"]}"'
         line += f" on {s.get('url', '?')}: {s['thought']}"
+        if s.get("result_url") and s["result_url"] != s.get("url"):
+            line += f" -> led to {s['result_url']}"
+        elif s.get("no_change"):
+            line += " -> nothing visible changed"
         out.append(line)
     return "\n".join(out)
 
@@ -107,19 +129,38 @@ def build_graph(model: Any, checkpointer: Any):
         ]
         from app.agent.runtime import unwrap  # local import: runtime imports this module
 
-        if hasattr(model, "decide"):
-            decision = model.decide(state, messages)
-            step, used, metadata = decision.step, decision.tokens, decision.metadata
-        else:
-            step, used = unwrap(model.invoke(messages))
-            metadata = {"provider": "llm"}
+        def ask(msgs: list) -> tuple[PersonaStep, int, dict]:
+            if hasattr(model, "decide"):
+                decision = model.decide(state, msgs)
+                return decision.step, decision.tokens, decision.metadata
+            answer, spent = unwrap(model.invoke(msgs))
+            return answer, spent, {"provider": "llm"}
+
+        step, used, metadata = ask(messages)
+        confirmed = _confirmed(state)
+        if step.action == "done" and not confirmed:
+            # "Done" right after a click or typing that changed nothing is a guess (a real run declared a signup
+            # complete without ever submitting it). Ask once more; if the test user insists, say so plainly.
+            retry, more, metadata = ask(messages + [("human", NOT_CONFIRMED)])
+            used += more
+            step = retry if retry.action != "done" else PersonaStep(
+                thought=f"{retry.thought} (Walkthru could not confirm the goal was reached: the last action did not move the page on or show a confirmation.)",
+                action="give_up", confusion=max(retry.confusion, 2), progress=retry.progress)
+        total = len((state.get("plan") or {}).get("checkpoints", []))
+        # The model's own count only moves the checklist forward when the last action visibly worked.
+        plan_done = max(state.get("plan_done", 0), min(step.progress, total)) if confirmed else state.get("plan_done", 0)
+        if total and plan_done >= total and step.action not in ("done", "give_up"):
+            # The test user says the checklist is complete but chose another action anyway: the goal is met, stop here.
+            step = PersonaStep(thought=f"{step.thought} (Walkthru: every checkpoint of the goal is complete, so the test ends here.)",
+                               action="done", confusion=step.confusion, progress=plan_done)
         step, safe_stop = _enforce(step, state)
-        record = step.model_dump() | {"url": state["observation"]["url"]} | metadata | ({"safe_stop": True} if safe_stop else {})
+        observed = state["observation"]
+        record = step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | metadata | ({"safe_stop": True} if safe_stop else {})
         if step.action == "click" and state.get("verified"):
             target = next((e for e in state["observation"].get("elements", []) if e["id"] == step.target_id), {})
             if is_sending(target.get("text", "")) and target.get("tag") != "a":
                 record["sent"] = True  # the owner still confirms in the side panel; this marks the one allowed send
-        return {"steps": state.get("steps", []) + [record], "tokens": state.get("tokens", 0) + used}
+        return {"steps": state.get("steps", []) + [record], "tokens": state.get("tokens", 0) + used, "plan_done": plan_done}
 
     def act(state: SessionState) -> dict:
         resumed = interrupt(state["steps"][-1])
@@ -135,6 +176,10 @@ def build_graph(model: Any, checkpointer: Any):
             outcome["notices_after"] = after["notices"][:3]
         if after.get("note"):
             outcome["note_after"] = after["note"][:200]
+        before = state["observation"]
+        unchanged = all(after.get(k) == before.get(k) for k in ("url", "text", "elements", "scroll_pct"))
+        if steps[-1]["action"] == "click" and unchanged and len(outcome) == 1:
+            outcome["no_change"] = True  # shown to the test user as "nothing visible changed"
         steps[-1] = steps[-1] | outcome
         if resumed.get("evidence"):
             steps[-1] = steps[-1] | {"evidence": resumed["evidence"]}
@@ -152,16 +197,27 @@ def build_graph(model: Any, checkpointer: Any):
             return {"status": "done"}
         if last["action"] == "give_up":
             return {"status": "gave_up"}
+        checkpoints = (state.get("plan") or {}).get("checkpoints", [])
+        plan_done = state.get("plan_done", 0)
+        url = state["observation"].get("url", "")
+        while plan_done < len(checkpoints) and goals.reached(checkpoints[plan_done], url, state.get("start_url", "")):
+            plan_done += 1
+        if checkpoints and plan_done >= len(checkpoints):
+            return {"status": "done", "plan_done": plan_done}
         if len(steps) >= state.get("max_steps", MAX_STEPS):
             return {"status": "budget"}
         note = (state["observation"].get("note") or "").lower()
         if "captcha" in note:
             return {"status": "captcha"}
         tail = steps[-LOOP_LIMIT:]
-        keys = {json.dumps({k: s.get(k) for k in ("action", "target_id", "text", "url")}) for s in tail}
+        keys = {json.dumps({k: s.get(k) for k in ("action", "target_id", "text", "url", "scroll_pct")}) for s in tail}
         if len(tail) == LOOP_LIMIT and len(keys) == 1:
             return {"status": "stuck"}
-        return {"status": "running"}
+        # Going in circles: arriving at the same page for the third time (the start page counts as the first visit).
+        visits = [_page(state.get("start_url", ""))] + [_page(s["result_url"]) for s in steps if s.get("result_url") and s["result_url"] != s.get("url")]
+        if visits.count(_page(url)) >= LOOP_LIMIT:
+            return {"status": "looping", "plan_done": plan_done}
+        return {"status": "running", "plan_done": plan_done}
 
     def after_decide(state: SessionState) -> str:
         return "check" if state["steps"][-1]["action"] in ("done", "give_up") else "act"
@@ -178,6 +234,24 @@ def build_graph(model: Any, checkpointer: Any):
     g.add_edge("act", "check")
     g.add_conditional_edges("check", after_check)
     return g.compile(checkpointer=checkpointer)
+
+
+NOT_CONFIRMED = (
+    "Walkthru check: your goal is not confirmed yet. Your last action did not move the page on or show a confirmation, "
+    "so it may not have worked. Look at the page again and choose the next action, or answer give_up if you cannot continue."
+)
+
+
+def _confirmed(state: SessionState) -> bool:
+    """Did the last action visibly work? False only after a click or typing that left the page where it was, with no confirmation."""
+    last = next((s for s in reversed(state.get("steps", [])) if s["action"] not in ("done", "give_up")), None)
+    if last is None or last["action"] not in ("click", "type"):
+        return True
+    return bool(last.get("notices_after")) or bool(last.get("result_url") and last["result_url"] != last.get("url"))
+
+
+def _page(url: str) -> str:
+    return url.split("#")[0].rstrip("/").lower()
 
 
 def _identity_value(label: str, input_type: str | None, run_id: str) -> str:
