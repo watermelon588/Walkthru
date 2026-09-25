@@ -57,13 +57,13 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
 | Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
 | Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
-| Test users | First-time visitor | All 4 | All 4 | All 4; custom users coming after launch (P4.2) |
+| Test users | First-time visitor | All 4 | All 4 | All 4 + up to 10 custom test users; several test users on one goal, side by side in one report (P4.2) |
 | Steps per run | 12 | 30 | 30 | 30 |
 | Rerun and compare (fixed, still broken, new) | No | Yes | Yes | Yes |
 | SEO | 10 pages | 50 pages | 50 pages | 50 pages |
 | Security hygiene | Header quality (CSP weaknesses, HSTS max-age and preload, CORS, SRI on public CDN scripts), cookies and cookie prefixes, https, TLS version and certificate expiry, CAA, vulnerable JavaScript libraries loaded from public CDNs | + exposed files, backups and dumps, source maps, leaked keys (gitleaks rules), library versions inside bundles and subdomain takeover, on verified domains | Same, + safe Nuclei templates on verified domains (P2.4) | Same as Pro |
 | One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
-| Evidence report with screenshots, PDF | Web report | Web report with screenshots when captured; PDF closeout coming 2026-10-23 (V7) | Same as Launch Pack | Branded PDF coming 2026-12-08 (P4.3) |
+| Evidence report with screenshots, PDF | Web report | Web report with screenshots when captured; PDF closeout coming 2026-10-23 (V7) | Same as Launch Pack | Branded PDF: your name, logo and color, no Walkthru branding (P4.3) |
 | Sites tested per month or pass (local dev servers do not count) | 1 | 1 | 2 | 5 |
 | Shareable public report with AI readiness badge | Yes | Yes | Yes | Yes |
 

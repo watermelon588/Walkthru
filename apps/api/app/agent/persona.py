@@ -35,6 +35,7 @@ class SessionState(TypedDict, total=False):
     site: str
     goal: str
     persona: str
+    persona_prompt: str  # a Plus owner's custom test user, in their own words (app/plus.py); built-in ones use PERSONAS
     logged_in: bool
     verified: bool  # the signed-in owner proved control of this domain
     max_steps: int
@@ -49,7 +50,7 @@ class SessionState(TypedDict, total=False):
 
 
 def system_prompt(state: SessionState) -> str:
-    who = PERSONAS.get(state["persona"], state["persona"])
+    who = state.get("persona_prompt") or PERSONAS.get(state["persona"], state["persona"])
     identity = TEST_IDENTITY.format(run_id=state["run_id"])
     plan = state.get("plan") or goals.fallback(state["goal"])
     done = state.get("plan_done", 0)

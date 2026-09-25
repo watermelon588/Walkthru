@@ -64,9 +64,12 @@ def _patch(filters: dict, values: dict, *, returning: bool = False) -> list[dict
     return _request("PATCH", "/rest/v1/runs", params=filters | ({"select": "id"} if returning else {}), json_body=values, prefer=prefer) or []
 
 
-def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", public: bool = False) -> None:
+def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", public: bool = False,
+               group_id: str | None = None) -> None:
     # No email here: public reports are readable with the public key, so contact details never live in this table.
     row = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "kind": kind, "public": public}
+    if group_id:
+        row["group_id"] = group_id
     _request("POST", "/rest/v1/runs", json_body=row, prefer="resolution=ignore-duplicates,return=minimal")
 
 
@@ -406,3 +409,41 @@ def claim_hook(site_id: str, not_before: str) -> bool:
     rows = _request("PATCH", "/rest/v1/sites", params={"id": f"eq.{site_id}", "or": f"(last_hook_at.is.null,last_hook_at.lt.{not_before})", "select": "id"},
                     json_body={"last_hook_at": _now()}, prefer="return=representation") or []
     return bool(rows)
+
+
+# ---------- Plus: custom test users, run groups (P4.2) and report branding (P4.3) ----------
+
+
+def test_users_for(user_id: str) -> list[dict]:
+    return _select("test_users", {"user_id": f"eq.{user_id}", "select": "id,name,description,created_at", "order": "created_at.asc"})
+
+
+def get_test_user(user_id: str, test_user_id: str) -> dict | None:
+    rows = _select("test_users", {"id": f"eq.{test_user_id}", "user_id": f"eq.{user_id}", "select": "id,name,description", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def create_test_user(user_id: str, name: str, description: str) -> dict:
+    return _insert("test_users", {"user_id": user_id, "name": name, "description": description}) or {}
+
+
+def delete_test_user(user_id: str, test_user_id: str) -> bool:
+    return bool(_request("DELETE", "/rest/v1/test_users", params={"id": f"eq.{test_user_id}", "user_id": f"eq.{user_id}"}, prefer="return=representation"))
+
+
+def runs_in_group(group_id: str) -> list[dict]:
+    return _rows({"group_id": f"eq.{group_id}", "select": "id,user_id,site,goal"})
+
+
+def get_brand(user_id: str) -> dict | None:
+    rows = _select("report_brands", {"user_id": f"eq.{user_id}", "select": "name,color,footer,logo,updated_at", "limit": "1"})
+    return rows[0] if rows else None
+
+
+def save_brand(user_id: str, values: dict) -> None:
+    row = {"user_id": user_id, **values, "updated_at": _now()}
+    _request("POST", "/rest/v1/report_brands", params={"on_conflict": "user_id"}, json_body=row, prefer="resolution=merge-duplicates,return=minimal")
+
+
+def delete_brand(user_id: str) -> None:
+    _request("DELETE", "/rest/v1/report_brands", params={"user_id": f"eq.{user_id}"})

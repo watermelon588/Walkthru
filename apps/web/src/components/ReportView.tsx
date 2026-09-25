@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { EVIDENCE_RETENTION_DAYS, ignoredKey, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { EVIDENCE_RETENTION_DAYS, ignoredKey, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Brand, type Finding, type Run } from '../lib/runs'
+import { BrandClosing, BrandCover } from './BrandCover'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
@@ -8,6 +9,7 @@ import { FixPrompt } from './FixPrompt'
 import { GeoReadiness } from './GeoReadiness'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
+import { TestUsersCompared } from './TestUsersCompared'
 
 /** Owner-only controls for accepting ("won't fix") findings. The public share page passes none. */
 export type IgnoreControls = {
@@ -17,8 +19,9 @@ export type IgnoreControls = {
   onClear: (fp: string) => Promise<void>
 }
 
-/** The report body. Shared by the signed-in report page and the public share page. */
-export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls }) {
+/** The report body. Shared by the signed-in report page and the public share page. `brand` (Plus, owner only) prints
+ *  the report in the owner's branding: their cover and color, no Walkthru marks. The screen view does not change. */
+export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreControls; brand?: Brand | null }) {
   const r = run.report
   const steps = run.steps ?? []
   const peak = Math.max(0, ...steps.map((s) => s.confusion))
@@ -37,7 +40,8 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
         : 'Testing this flow'
 
   return (
-    <article className="report-root">
+    <article className="report-root" data-branded={brand ? '' : undefined} style={brand ? ({ '--brand': brand.color } as React.CSSProperties) : undefined}>
+      {brand && <BrandCover run={run} brand={brand} />}
       <header className="report-cover grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
           <p className="report-kicker font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Launch readiness report</p>
@@ -81,8 +85,10 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
               <a href="/docs#verify" className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">Verify your domain</a> to test the full flow.
             </p>
           )}
-          {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
+          {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} branded={!!brand} />}
           {!isScan && steps.length > 0 && <RetentionNote run={run} />}
+
+          {run.group_id && <TestUsersCompared run={run} owner={!!ignore} />}
 
           {r.first_impression && (
             <section aria-label="First impression" className="report-print-section mt-12">
@@ -131,6 +137,7 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
               </ul>
             )}
           </section>
+          {brand && <BrandClosing brand={brand} scan={isScan} />}
         </>
       ) : (
         <>

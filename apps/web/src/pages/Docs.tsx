@@ -88,6 +88,7 @@ const sections: DocSection[] = [
             </div>
           ))}
         </dl>
+        <p>On the Plus plan you can also describe your own test users in <Link to="/app/settings#test-users">Settings</Link> (up to 10), and tick several in the extension. They run one after another on the same goal, each starting on the same page, and every report of the set shows them side by side with the problems more than one of them hit. Each test user uses one run.</p>
       </>
     ),
   },
@@ -151,6 +152,7 @@ const sections: DocSection[] = [
           <li><strong>All findings</strong> are marked high, medium or low, each with a suggested fix and the evidence behind it.</li>
         </ul>
         <p>From a report you can share a public link, export findings as CSV, save a PDF, email it to yourself or delete the run.</p>
+        <p>On the Plus plan, add your name, logo and color under <Link to="/app/settings#branding">Settings, Branded PDF reports</Link>. Save PDF then prints your cover page and color with no Walkthru branding, ready to hand to a client. The report on screen does not change.</p>
         <p>If a run was interrupted, for example because the tab closed, it stays "Running". Select <strong>End and report</strong> to keep its steps and build a partial report.</p>
       </>
     ),

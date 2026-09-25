@@ -19,8 +19,8 @@ USER = "00000000-0000-0000-0000-000000000001"
 def fake_db(monkeypatch):
     rows: dict[str, dict] = {}
 
-    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", public=False):
-        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat()}
+    def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", public=False, group_id=None):
+        rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat(), "group_id": group_id}
 
     def test_runs_since(user_id, since):
         start = datetime.fromisoformat(since)
@@ -58,6 +58,9 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "clear_ignored", lambda user_id, origin, fp: ignored.pop((user_id, origin, fp), None))
     monkeypatch.setattr(db, "ignored_for_user", lambda user_id: [{"origin": o, "fingerprint": fp, "reason": why} for (u, o, fp), why in ignored.items() if u == user_id])
     monkeypatch.setattr(db, "test_runs_since", test_runs_since)
+    monkeypatch.setattr(db, "runs_in_group", lambda group_id: [r for r in rows.values() if r.get("group_id") == group_id])
+    monkeypatch.setattr(db, "test_users_for", lambda user_id: [])  # tests/test_plus.py fakes these tables
+    monkeypatch.setattr(db, "get_brand", lambda user_id: None)
     monkeypatch.setattr(db, "free_runs_today", free_runs_today)
     return rows
 

@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react'
 import { AccountAvatar } from '../components/AccountAvatar'
 import { AppShell } from '../components/AppShell'
 import { DomainVerification } from '../components/DomainVerification'
+import { ReportBranding } from '../components/ReportBranding'
+import { TestUsers } from '../components/TestUsers'
 import { YourData } from '../components/YourData'
 import { AgentPresence } from '../components/AgentPresence'
 import { btnPrimary } from '../components/Shared'
@@ -168,6 +170,8 @@ function SettingsContent({ session }: { session: Session }) {
         </aside>
       </div>
       <DomainVerification />
+      <TestUsers />
+      <ReportBranding />
       <YourData email={session.user.email ?? ''} />
     </>
   )

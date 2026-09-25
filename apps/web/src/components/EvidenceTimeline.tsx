@@ -14,7 +14,7 @@ const ACTION_LABEL: Record<Step['action'], string> = {
   give_up: 'Stopped',
 }
 
-export function EvidenceTimeline({ steps }: { steps: Step[] }) {
+export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; branded?: boolean }) {
   const [selected, setSelected] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [imageResult, setImageResult] = useState<{ key: string; urls: Record<string, string> }>({ key: '', urls: {} })
@@ -157,12 +157,12 @@ export function EvidenceTimeline({ steps }: { steps: Step[] }) {
         </div>
       </div>
     </section>
-    <PrintEvidenceJourney steps={steps} images={images} />
+    <PrintEvidenceJourney steps={steps} images={images} branded={branded} />
     </>
   )
 }
 
-function PrintEvidenceJourney({ steps, images }: { steps: Step[]; images: Record<string, string> }) {
+function PrintEvidenceJourney({ steps, images, branded }: { steps: Step[]; images: Record<string, string>; branded: boolean }) {
   const frames = steps
     .map((step, index) => ({ step, index, evidence: step.evidence }))
     .filter((item): item is { step: Step; index: number; evidence: NonNullable<Step['evidence']> } => Boolean(item.evidence))
@@ -172,10 +172,10 @@ function PrintEvidenceJourney({ steps, images }: { steps: Step[]; images: Record
       <header className="report-print-section-heading">
         <div>
           <p className="report-print-kicker">Visual evidence</p>
-          <h2>What Scout saw</h2>
+          <h2>{branded ? 'What the test user saw' : 'What Scout saw'}</h2>
           <p>Each frame was captured after the action shown. Form values were masked before capture.</p>
         </div>
-        <AgentBird variant="solid" className="report-print-bird" phase={0.4} title="Scout, the Walkthru test agent" />
+        {!branded && <AgentBird variant="solid" className="report-print-bird" phase={0.4} title="Scout, the Walkthru test agent" />}
       </header>
 
       {frames.length === 0 ? (

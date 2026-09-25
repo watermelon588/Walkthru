@@ -21,7 +21,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 from starlette.routing import Route
 
-from app import auth, billing, db, deliver, mcp_server, plans, retention, watch
+from app import auth, billing, db, deliver, mcp_server, plans, plus, retention, watch
 from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Comparison, Observation, StepEvidence
@@ -99,7 +99,8 @@ class StartRun(BaseModel):
     # still send `tier` are accepted and ignored.
     site: str = Field(pattern=r"^https?://", max_length=2000)
     goal: str = Field(min_length=1, max_length=500)
-    persona: str = Field(default="first_timer", max_length=40)
+    persona: str = Field(default="first_timer", max_length=60)  # a built-in key, or "custom:<id>" for a Plus test user
+    group_id: uuid.UUID | None = None  # Plus: several test users on one goal share this id (the side panel makes it)
     logged_in: bool = False
     max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)  # clamped to the plan
     observation: Observation
@@ -144,7 +145,9 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     # plan check and the goal planner work instead of after them (measured: 4 to 6 s saved on the first step).
     verifying = _background.submit(_verified, body.site, user["id"])
     usage = plans.current(user["id"])
-    plans.check_start(usage, site=body.site, persona=body.persona, logged_in=body.logged_in)
+    persona, persona_prompt = _persona(body, usage, user["id"])
+    plans.check_start(usage, site=body.site, persona=persona if not persona_prompt else usage["plan"].personas[0], logged_in=body.logged_in)
+    group_id = _group(body, usage, user["id"])
     marks.append(("plan_check", time.monotonic()))
     plan = usage["plan"]
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
@@ -154,11 +157,12 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in)
+    db.insert_run(run_id, user["id"], body.site, body.goal, persona, tier, body.logged_in, group_id=group_id)
     marks.append(("insert_run", time.monotonic()))
     verified = verifying.result()  # owner-verified domains may send real messages after confirmation
     marks.append(("verify_domain_wait", time.monotonic()))
-    state = body.model_dump(mode="json") | {"max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
+    state = body.model_dump(mode="json", exclude={"group_id"}) | {"persona": persona, **({"persona_prompt": persona_prompt} if persona_prompt else {}),
+                                                              "max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
                                             "first_text": body.observation.text[:6000], "verified": verified, "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
     marks.append(("first_step", time.monotonic()))
@@ -167,6 +171,37 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     log.info("start_run %s %s", run_id, " ".join(f"{name}={later - earlier:.1f}s" for (_, earlier), (name, later) in pairwise(marks)))
     # The side panel shows how Walkthru understood the goal.
     return reply | {"plan": {"intent": goal_plan["intent"], "checkpoints": [c["description"] for c in goal_plan["checkpoints"]]}}
+
+
+def _persona(body: StartRun, usage: dict, user_id: str) -> tuple[str, str | None]:
+    """(what the run stores as its test user, the custom prompt or None). Custom test users are Plus only."""
+    if not body.persona.startswith(plus.CUSTOM_PREFIX):
+        return body.persona, None
+    if usage["plan"].name != "plus":
+        raise HTTPException(403, "Custom test users are part of the Plus plan.")
+    try:
+        test_user_id = str(uuid.UUID(body.persona.removeprefix(plus.CUSTOM_PREFIX)))
+    except ValueError as e:
+        raise HTTPException(404, "unknown test user") from e
+    found = db.get_test_user(user_id, test_user_id)
+    if found is None:
+        raise HTTPException(404, "That test user no longer exists. Pick another one.")
+    return found["name"], plus.persona_prompt(found["name"], found["description"])
+
+
+def _group(body: StartRun, usage: dict, user_id: str) -> str | None:
+    """Several test users per report (Plus): every run in a group must be the caller's, and a group stays small."""
+    if body.group_id is None:
+        return None
+    if usage["plan"].name != "plus":
+        raise HTTPException(403, "Several test users per report are part of the Plus plan.")
+    group_id = str(body.group_id)
+    runs = db.runs_in_group(group_id)
+    if any(str(r["user_id"]) != user_id for r in runs):
+        raise HTTPException(409, "That group id is already in use. Start the test users again.")
+    if len(runs) >= plus.MAX_GROUP:
+        raise HTTPException(409, f"One report can hold at most {plus.MAX_GROUP} test users.")
+    return group_id
 
 
 @app.post("/runs/{run_id}/observe")
@@ -387,6 +422,73 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
 # ---------- Walkthru MCP server and personal API keys (Plus) ----------
 
 app.router.routes.append(Route("/mcp", mcp_server.Endpoint(), methods=["GET", "POST", "DELETE"]))
+
+
+# ---------- Plus: custom test users (P4.2) and report branding for the PDF (P4.3) ----------
+
+
+class NewTestUser(BaseModel):
+    model_config = {"extra": "forbid"}
+    name: str = Field(max_length=200)
+    description: str = Field(max_length=1000)
+
+
+@app.get("/me/test-users")
+def list_test_users(user: dict = Depends(require_user)) -> list[dict]:
+    """The caller's custom test users; the side panel offers them as `custom:<id>`."""
+    return db.test_users_for(user["id"])
+
+
+@app.post("/me/test-users")
+def create_test_user(body: NewTestUser, user: dict = Depends(require_user)) -> dict:
+    plus.require(user["id"], "Custom test users")
+    name, description = plus.clean_test_user(body.name, body.description)
+    existing = db.test_users_for(user["id"])
+    if len(existing) >= plus.MAX_TEST_USERS:
+        raise HTTPException(409, f"You already have {plus.MAX_TEST_USERS} custom test users. Delete one you no longer use.")
+    if any(t["name"].lower() == name.lower() for t in existing):
+        raise HTTPException(409, "You already have a test user with that name.")
+    try:
+        return db.create_test_user(user["id"], name, description)
+    except db.Conflict as e:
+        raise HTTPException(409, "You already have a test user with that name.") from e
+
+
+@app.delete("/me/test-users/{test_user_id}")
+def delete_test_user(test_user_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
+    if not db.delete_test_user(user["id"], str(test_user_id)):
+        raise HTTPException(404, "unknown test user")
+    return {"deleted": str(test_user_id)}
+
+
+class Branding(BaseModel):
+    model_config = {"extra": "forbid"}
+    name: str = Field(max_length=200)
+    color: str = Field(default="#1b1b1f", max_length=20)
+    footer: str = Field(default="", max_length=400)
+    logo: str | None = Field(default=None, max_length=300_000)  # data URL; None keeps no logo
+
+
+@app.get("/me/branding")
+def get_branding(user: dict = Depends(require_user)) -> dict:
+    """Saved branding, and whether it applies now: printed reports carry it only while the account is on Plus."""
+    brand = db.get_brand(user["id"])
+    active = bool(brand) and plans.current(user["id"])["plan"].name == "plus"
+    return {"active": active, "brand": brand}
+
+
+@app.post("/me/branding")
+def save_branding(body: Branding, user: dict = Depends(require_user)) -> dict:
+    plus.require(user["id"], "Branded PDF reports")
+    brand = plus.clean_brand(body.name, body.color, body.footer, body.logo)
+    db.save_brand(user["id"], brand)
+    return {"active": True, "brand": brand}
+
+
+@app.delete("/me/branding")
+def delete_branding(user: dict = Depends(require_user)) -> dict:
+    db.delete_brand(user["id"])
+    return {"active": False, "brand": None}
 
 
 class NewApiKey(BaseModel):
@@ -628,6 +730,8 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "note": "Screenshots are listed by storage path; open them from the report while they are retained.",
         "runs": db.runs_for_user(user["id"]),
         "passes": db.entitlements_for_user(user["id"]),
+        "test_users": db.test_users_for(user["id"]),
+        "report_branding": db.get_brand(user["id"]),
         "access_requests": db.access_requests_for_user(user["id"], 100),
         "billing_offers": [billing.public_offer(o) for o in db.offers_for_user(user["id"], 100)],
         "ignored_findings": db.ignored_for_user(user["id"]),

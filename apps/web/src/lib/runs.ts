@@ -122,6 +122,7 @@ export type Run = {
   public: boolean
   created_at: string
   updated_at: string
+  group_id?: string | null // Plus: several test users on one goal (P4.2)
 }
 
 export const STATUS_LABEL: Record<Run['status'], string> = {
@@ -147,7 +148,7 @@ export const PERSONA_LABEL: Record<string, string> = {
 export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security', geo: 'GEO' }
 
 export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
-const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at'
+const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at, group_id'
 
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */
 export const EVIDENCE_RETENTION_DAYS = 30
@@ -315,3 +316,24 @@ export type CompareSite = {
 export const startCompare = (site: string, competitors: string[]) => api<{ run_id: string }>('/compare', { site, competitors })
 
 export type Funnel = { steps_to_goal: number | null; fields_typed: number; errors_seen: number; safe_stops: number; first_useful_step: number | null; seconds_to_first_useful: number | null }
+
+/** The other runs in a Plus group, oldest first. Row-level security returns only runs this viewer may read. */
+export async function groupRuns(groupId: string): Promise<Run[]> {
+  if (!supabase) return []
+  const { data, error } = await supabase.from('runs').select(COLUMNS).eq('group_id', groupId).order('created_at', { ascending: true }).limit(10)
+  if (error) throw error
+  return data as Run[]
+}
+
+/** Plus: the owner's own test users (P4.2). The side panel offers them next to the four built-in ones. */
+export type TestUser = { id: string; name: string; description: string; created_at: string }
+export const listTestUsers = () => api<TestUser[]>('/me/test-users', undefined, true, 'GET')
+export const createTestUser = (name: string, description: string) => api<TestUser>('/me/test-users', { name, description })
+export const deleteTestUser = (id: string) => api<{ deleted: string }>(`/me/test-users/${id}`, undefined, true, 'DELETE')
+
+/** Plus: branding for printed reports (P4.3). `active` is false when the account is no longer on Plus. */
+export type Brand = { name: string; color: string; footer: string; logo: string | null }
+export type Branding = { active: boolean; brand: Brand | null }
+export const getBranding = () => api<Branding>('/me/branding', undefined, true, 'GET')
+export const saveBranding = (brand: Brand) => api<Branding>('/me/branding', brand)
+export const deleteBranding = () => api<Branding>('/me/branding', undefined, true, 'DELETE')

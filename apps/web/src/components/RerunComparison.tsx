@@ -59,7 +59,7 @@ export function RerunComparison({ comparison, linkPrevious }: { comparison: Comp
       </div>
       {unchecked.length > 0 && (
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          Not re-checked: {unchecked.map((item) => item.title).join(', ')}. Its pages were outside this run's crawl, so Walkthru does not call it fixed.
+          Not re-checked: {unchecked.map((item) => item.title).join(', ')}. Its pages were outside this run's crawl, so it is not marked fixed.
         </p>
       )}
     </section>

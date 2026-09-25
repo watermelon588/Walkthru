@@ -140,3 +140,35 @@ p { text-wrap: pretty; }
   .bird-agent--scout-rust { right: 3%; top: 72%; }
   .bird-agent--scout-plum { left: 24%; top: 85%; }
 }
+
+/* Plus: branded print (P4.3). On paper only, the owner's color replaces the accent and their cover replaces
+   Walkthru's header; the screen keeps Walkthru's palette (DESIGN.md: one accent). */
+@media print {
+  :root { --bg: #fff; }  /* paper is white: the app shell's grey background must not print */
+  .report-root[data-branded] { --accent: var(--brand); }
+  .report-root[data-branded] > .report-cover { display: none !important; }
+
+  .brand-cover { display: flex !important; flex-direction: column; height: 262mm; border-top: 2.5mm solid var(--brand); break-after: page; }
+  .brand-cover-top { display: flex; align-items: center; gap: 5mm; padding-top: 12mm; }
+  .brand-cover-logo { max-height: 15mm; max-width: 70mm; object-fit: contain; }
+  .brand-cover-monogram { display: grid; place-items: center; width: 13mm; height: 13mm; border-radius: 3mm; background: var(--brand); color: white; font: 500 15pt/1 var(--font-sans); }
+  .brand-cover-name { color: var(--ink); font-size: 10pt; letter-spacing: .01em; }
+  .brand-cover-title { margin-top: auto; padding-bottom: 16mm; }
+  .brand-cover-kicker { color: var(--brand); font: 600 8pt/1.2 var(--font-mono); letter-spacing: .22em; text-transform: uppercase; }
+  .brand-cover-title h1 { margin-top: 6mm; font-size: 42pt; font-weight: 200; letter-spacing: -.035em; line-height: 1.02; overflow-wrap: anywhere; }
+  .brand-cover-goal { margin-top: 6mm; max-width: 150mm; font-size: 13pt; font-weight: 300; line-height: 1.35; }
+  .brand-cover-meta { margin-top: 3mm; color: var(--muted); font-size: 9.5pt; }
+  .brand-cover-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 9mm 0; }
+  .brand-cover-label { color: var(--muted); font: 500 7.5pt/1.2 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; }
+  .brand-cover-score, .brand-cover-count { margin-top: 3.5mm; font-size: 36pt; font-weight: 200; letter-spacing: -.03em; line-height: 1; }
+  .brand-cover-score { color: var(--brand); }
+  .brand-cover-score span { color: var(--muted); font-size: 13pt; letter-spacing: 0; }
+  .brand-cover-band { margin-top: 2.5mm; color: var(--muted); font-size: 9pt; }
+  .brand-cover-foot { display: flex; justify-content: space-between; gap: 8mm; padding-top: 7mm; color: var(--muted); font-size: 8.5pt; }
+
+  .brand-close { display: flex !important; gap: 6mm; align-items: flex-start; margin-top: 16mm; border-top: 1.2mm solid var(--brand); padding-top: 7mm; break-inside: avoid; color: var(--muted); font-size: 9pt; line-height: 1.55; }
+  .brand-close-logo { max-height: 10mm; max-width: 40mm; flex: none; object-fit: contain; }
+  .brand-close-monogram { display: grid; place-items: center; width: 10mm; height: 10mm; flex: none; border-radius: 2mm; background: var(--brand); color: white; font: 500 11pt/1 var(--font-sans); }
+  .brand-close-name { margin-bottom: 1.5mm; color: var(--ink); font-size: 10.5pt; }
+  .brand-close p + p { margin-top: 1.5mm; }
+}

@@ -85,3 +85,10 @@ button:not(:disabled):active { transform: scale(.98); }
   .step { animation: none; }
   button { transition: none; }
 }
+
+fieldset.people { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+fieldset.people legend { padding: 0; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+fieldset.people .hint a { color: var(--ink); }
+.results { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.results li { display: flex; justify-content: space-between; gap: 12px; }
+.results li span { color: var(--muted); }
