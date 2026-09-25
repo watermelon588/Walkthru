@@ -107,7 +107,7 @@ class Tab:
 
 def session() -> tuple[str, str]:
     email = os.environ.get("TEST_USER_EMAIL", "walkthru.tester@example.com")
-    password = os.environ.get("TEST_USER_PASSWORD", "Walk-thru-2026-local!")
+    password = os.environ["TEST_USER_PASSWORD"]  # apps/api/.env; the repo is public
     r = httpx.post(
         f"{SB}/auth/v1/token?grant_type=password",
         headers={"apikey": PUB},

@@ -64,8 +64,9 @@ def _patch(filters: dict, values: dict, *, returning: bool = False) -> list[dict
     return _request("PATCH", "/rest/v1/runs", params=filters | ({"select": "id"} if returning else {}), json_body=values, prefer=prefer) or []
 
 
-def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", email: str | None = None, public: bool = False) -> None:
-    row = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "kind": kind, "email": email, "public": public}
+def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", public: bool = False) -> None:
+    # No email here: public reports are readable with the public key, so contact details never live in this table.
+    row = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "kind": kind, "public": public}
     _request("POST", "/rest/v1/runs", json_body=row, prefer="resolution=ignore-duplicates,return=minimal")
 
 
@@ -193,9 +194,12 @@ def mark_evidence_purged(run_id: str, steps: list[dict]) -> None:
     _patch({"id": f"eq.{run_id}"}, {"steps": steps, "evidence_purged_at": _now()})
 
 
-def forget_scan_emails(days: int) -> None:
-    """Instant Scan emails are only needed to deliver the report."""
-    _patch({"kind": "eq.scan", "email": "not.is.null", "created_at": f"lt.{_cutoff(days)}"}, {"email": None})
+def user_email(user_id: str) -> str | None:
+    """The account's email from Supabase Auth, read only when a report email is sent."""
+    try:
+        return (_request("GET", f"/auth/v1/admin/users/{user_id}") or {}).get("email")
+    except httpx.HTTPStatusError:
+        return None
 
 
 def delete_runs(run_ids: list[str]) -> None:

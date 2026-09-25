@@ -74,8 +74,19 @@ export function SkipLink() {
   )
 }
 
+/** Signed in? Reads Supabase's saved session key directly, so marketing pages need not load the Supabase library. */
+function hasSession(): boolean {
+  try {
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+    return !!url && !!localStorage.getItem(`sb-${new URL(url).hostname.split('.')[0]}-auth-token`)
+  } catch {
+    return false
+  }
+}
+
 export function Nav() {
   const menu = useRef<HTMLDetailsElement>(null)
+  const [account] = useState(() => (hasSession() ? { label: 'Dashboard', href: '/app' } : { label: 'Sign in', href: '/login' }))
   const close = () => menu.current?.removeAttribute('open')
   return (
     <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-md">
@@ -86,7 +97,7 @@ export function Nav() {
           {navLinks.map((l) => <a key={l.href} href={l.href} className="transition hover:text-ink">{l.label}</a>)}
         </div>
         <div className="flex items-center gap-3 sm:gap-5">
-          <a href="/login" className="hidden text-sm text-ink transition hover:opacity-70 sm:block">Sign in</a>
+          <a href={account.href} className="hidden text-sm text-ink transition hover:opacity-70 sm:block">{account.label}</a>
           <a href="/#scan" className={btnPrimary.replace('px-6 py-3', 'px-5 py-2.5')}>{hero.primary}</a>
           <details ref={menu} className="group md:hidden">
             <summary aria-label="Menu" className="grid size-10 cursor-pointer list-none place-items-center rounded-full border border-line transition hover:bg-surface [&::-webkit-details-marker]:hidden">
@@ -95,7 +106,7 @@ export function Nav() {
             </summary>
             <div onClick={close} className="absolute inset-x-0 top-16 border-y border-line bg-bg px-5 pb-6 shadow-[0_24px_40px_-32px_rgba(27,27,31,0.4)]">
               <ul className="grid text-lg font-light">
-                {[...navLinks, { label: 'Sign in', href: '/login' }].map((l) => (
+                {[...navLinks, account].map((l) => (
                   <li key={l.href} className="border-b border-line last:border-b-0">
                     <a href={l.href} className="flex min-h-12 items-center py-2 text-ink">{l.label}</a>
                   </li>
@@ -162,7 +173,6 @@ export function ScanForm() {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
     const raw = String(data.get('url')).trim()
-    const email = String(data.get('email') ?? '').trim()
     let site: string
     try {
       const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`)
@@ -177,7 +187,7 @@ export function ScanForm() {
     try {
       // Loaded on submit so the landing page does not ship the Supabase client.
       const { instantScan } = await import('../lib/runs')
-      const { run_id } = await instantScan(site, email || undefined)
+      const { run_id } = await instantScan(site)
       navigate(`/r/${run_id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The scan failed. Try again in a minute.')
@@ -187,18 +197,14 @@ export function ScanForm() {
 
   const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-ink focus:outline-none disabled:opacity-60'
   return (
-    <form onSubmit={submit} noValidate aria-busy={busy} className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+    <form onSubmit={submit} noValidate aria-busy={busy} className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
       <div className="grid gap-2">
         <label htmlFor="url" className="text-sm text-muted">Website</label>
         <input id="url" name="url" type="text" inputMode="url" placeholder="yoursite.com" disabled={busy} className={input} aria-invalid={!!error} aria-describedby="url-error" />
       </div>
-      <div className="grid gap-2">
-        <label htmlFor="email" className="text-sm text-muted">Email for the report (optional)</label>
-        <input id="email" name="email" type="email" placeholder="you@yoursite.com" disabled={busy} className={input} />
-      </div>
       <button type="submit" disabled={busy} className={`${btnPrimary} disabled:opacity-60`}>{busy ? 'Scanning...' : hero.primary}</button>
-      <p id="url-error" role="status" className="min-h-5 text-sm sm:col-span-3">
-        {error ? <span className="text-danger">{error}</span> : busy ? <span className="text-muted">Reading the homepage, checking SEO and headers, writing the report. About 20 seconds.</span> : ''}
+      <p id="url-error" role="status" className="min-h-5 text-sm sm:col-span-2">
+        {error ? <span className="text-danger">{error}</span> : busy ? <span className="text-muted">Reading your pages, checking SEO, AI search and security, writing the report. About 20 seconds.</span> : ''}
       </p>
     </form>
   )
@@ -213,7 +219,7 @@ export function Closing({ title = 'Your next visitor is a stranger. Test like on
         </div>
         <div>
           <h2 className={`${h2} reveal max-w-[18ch]`}>{title}</h2>
-          <p className={`${lead} reveal`}>Start with a free Instant Scan of your homepage. No install, about a minute.</p>
+          <p className={`${lead} reveal`}>Start with a free Instant Scan. No install, about 20 seconds.</p>
           <div className="reveal mt-12">
             <ScanForm />
           </div>
@@ -231,7 +237,7 @@ export function Footer() {
           <Logo />
           <p className="mt-5 text-sm text-ink">{brand.tagline}</p>
           <p className="mt-3 max-w-[42ch] text-sm leading-relaxed text-muted">{brand.description}</p>
-          <p className="mt-5 text-sm text-ink">Chrome extension launches October 20.</p>
+          <p className="mt-5 text-sm text-ink">The Chrome extension is in beta. Install it from the docs.</p>
         </div>
         {footer.columns.map((c) => (
           <nav key={c.title} aria-label={c.title}>

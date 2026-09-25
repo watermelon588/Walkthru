@@ -78,7 +78,7 @@ export default function Landing() {
 
         <section id="report" className="mx-auto grid max-w-7xl scroll-mt-16 gap-16 px-5 py-32 md:px-10 lg:grid-cols-[1fr_1.4fr]">
           <div className="lg:sticky lg:top-28 lg:self-start">
-            <h2 className={`${h2} reveal`}>One report. Everything a first visitor would tell you.</h2>
+            <h2 className={`${h2} reveal`}>One report. Journeys, SEO, AI search and security.</h2>
             <ul className="reveal mt-10 space-y-6">
               {reportParts.map((r) => (
                 <li key={r.title} className="border-t border-line pt-5">

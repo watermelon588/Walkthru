@@ -141,7 +141,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in, email=user.get("email"))
+    db.insert_run(run_id, user["id"], body.site, body.goal, body.persona, tier, body.logged_in)
     marks.append(("insert_run", time.monotonic()))
     verified = verifying.result()  # owner-verified domains may send real messages after confirmation
     marks.append(("verify_domain_wait", time.monotonic()))
@@ -291,8 +291,9 @@ def finish_run(run_id: str, values: dict) -> None:
         except Exception:  # a failed comparison must never lose the report
             log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
         db.set_report(run_id, rep.model_dump())
-        if row.get("email"):
-            deliver.send_report(row["email"], f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
+        to = db.user_email(str(row["user_id"])) if row.get("user_id") and os.environ.get("RESEND_API_KEY") else None
+        if to:
+            deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
     except Exception:
         log.exception("report failed for run %s", run_id)
 
@@ -343,7 +344,7 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     if resp is None or resp.status_code >= 400:
         raise HTTPException(422, "That site did not respond. Check the address and try again.")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, None, str(resp.url), "Instant Scan", "stranger", "free", False, kind="scan", email=body.email, public=True)
+    db.insert_run(run_id, None, str(resp.url), "Instant Scan", "stranger", "free", False, kind="scan", public=True)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text))
     db.set_report(run_id, rep.model_dump(), status="done")
     if body.email:
@@ -392,7 +393,7 @@ def badge_link(run_id: str) -> RedirectResponse:
 @app.post("/runs/{run_id}/email")
 def email_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     row = _owned(run_id, user)
-    to = row.get("email") or user.get("email")
+    to = user.get("email")
     if not row.get("report") or not to:
         raise HTTPException(409, "report not ready")
     sent = deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], row["report"])

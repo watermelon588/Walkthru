@@ -252,3 +252,15 @@ Steps arrive about 5 s apart even when the server answers in 1.5 s: the rest is 
 **Adopted** (rewritten in Python in `app/scans/site.py` `_site_checks`, no code copied): broken internal links, server errors, pages blocked by bot protection or rate limits (reported as "not checked" instead of silently skipped), duplicate titles, descriptions and content, thin content, dead-end pages, redirect chains, conflicting canonicals, slow HTML (production only), pages 5+ clicks deep, orphan pages from the sitemap (only when the crawl finished), and short meta descriptions. All plain code, every plan.
 
 **Not adopted:** anything that needs DataForSEO. It costs per call, needs a card, and OpenSEO already sells that data at cost plus 28%. Revisit: Google Search Console (free, the owner's real queries and indexing) after launch.
+
+## 2026-09-25 Friends beta hosting and the audit before it
+
+**Hosting (free, no card):** web on Vercel, API on Render's free web service (`render.yaml`). Hugging Face Spaces was ruled out: Docker Spaces now need a paid plan. The API used 147 MB, inside Render's free limits. Trade-offs accepted for a beta: sleeps after 15 idle minutes (about a minute to wake) and a restart ends any test mid-run. Production still moves to an always-on VM with `CHECKPOINTER=postgres`.
+
+**Fixed before deploy:**
+- Public reports leaked contact emails: the `anon` role can read every column of a public run, and `runs.email` held Instant Scan and owner addresses (5 readable live). Emails are no longer stored; report emails look the owner up in Supabase Auth when sending. Column grants were not used because the screenshot storage policy reads `runs.user_id` as `anon`.
+- The public repo held test account passwords (code defaults and CURRENT_STATE.md). Removed; the accounts must be rotated or deleted (docs/deploy.md step 0).
+- `langchain-groq`, `python-dotenv` and `email-validator` were imported but undeclared; a clean install crashed. Declared, and a clean install was verified.
+- The extension only accepted sessions from localhost and had a machine-specific id. A committed public key fixes the id; the allowed page comes from `VITE_WEB_URL` (`npm run zip:beta`).
+- Behind a proxy every visitor shared one address, so 5 scans an hour would have been the limit for everyone. uvicorn trusts the proxy's forwarded address. A spoofed header only bypasses the per-address limit; the database-counted daily cap still holds.
+- Vercel gets SPA routing and security headers, including a strict CSP (`script-src 'self'`), tested against the production build.
