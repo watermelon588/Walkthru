@@ -205,6 +205,7 @@ class GeoSummary(BaseModel):
     trust: dict[str, bool] = Field(default_factory=dict)
     discovery: dict[str, bool | None] = Field(default_factory=dict)
     entities: dict[str, dict] = Field(default_factory=dict)
+    agent: dict = Field(default_factory=dict)  # homepage signals for the agent readiness score (app/scans/agent_signals.py)
 
 
 class ComparedFinding(BaseModel):
@@ -228,6 +229,13 @@ class Comparison(BaseModel):
     not_rechecked: list[ComparedFinding] = Field(default_factory=list)  # gone only because its pages were not audited
 
 
+class AgentReady(BaseModel):
+    """Can AI agents use the site (P1.7, app/agent/score.py). Parts that were not measured are left out."""
+
+    score: int | None = Field(default=None, ge=0, le=100)
+    parts: list[dict] = Field(default_factory=list)  # {id, label, earned, max, note}
+
+
 class LaunchReady(BaseModel):
     score: int | None = Field(default=None, ge=0, le=100)  # None when no area was measured
     areas: dict[str, int | None] = Field(default_factory=dict)  # ux, security, geo, seo, speed; None = not measured
@@ -248,5 +256,6 @@ class Report(BaseModel):
     model: str | None = None  # which models ran the test and wrote the report, shown on the report
     pages: dict[str, list[str]] = Field(default_factory=dict)  # finding fingerprint -> every affected page
     launch_ready: LaunchReady | None = None  # app/agent/score.py; absent on reports written before 2026-09-24
+    agent_ready: AgentReady | None = None  # P1.7, shown next to the GEO score
     stack: dict | None = None  # app/scans/stack.py: hosting, framework, backend and the evidence for each (P1.3)
     funnel: dict | None = None  # app/agent/funnel.py, paid runs only; `previous` holds the last run of the same goal

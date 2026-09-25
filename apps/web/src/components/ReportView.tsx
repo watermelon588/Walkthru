@@ -6,6 +6,7 @@ import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
 import { LaunchReady } from './LaunchReady'
 import { FixPrompt } from './FixPrompt'
+import { AgentReadiness } from './AgentReadiness'
 import { GeoReadiness } from './GeoReadiness'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
@@ -107,6 +108,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
           )}
 
           {r.geo && <GeoReadiness geo={r.geo} />}
+          {r.agent_ready && <AgentReadiness agent={r.agent_ready} />}
 
           {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 

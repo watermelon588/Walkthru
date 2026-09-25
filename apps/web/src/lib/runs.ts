@@ -106,6 +106,10 @@ export type Report = {
   compare?: CompareSite[]
   /** Signup funnel numbers, paid runs only (apps/api/app/agent/funnel.py). null means not measured. */
   funnel?: Funnel & { previous?: Funnel }
+  /** Can AI agents use the site (P1.7, apps/api/app/agent/score.py). Absent on reports before 2026-09-25. */
+  agent_ready?: { score: number | null; parts: { id: string; label: string; earned: number; max: number; note: string }[] } | null
+  /** Detected hosting, framework and backend (P1.3). */
+  stack?: { hosting: string | null; framework: string | null; backend: string | null; evidence: Record<string, string> } | null
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
