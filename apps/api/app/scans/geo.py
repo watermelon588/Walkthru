@@ -17,7 +17,7 @@ from urllib.robotparser import RobotFileParser
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import fetch, geo_depth, geo_fixes
+from app.scans import agent_signals, fetch, geo_depth, geo_fixes
 
 # Bots that fetch pages to answer and cite. Blocking any of these hides the site from that assistant.
 CITATION_BOTS = ("OAI-SearchBot", "ChatGPT-User", "Claude-SearchBot", "ClaudeBot", "PerplexityBot", "Googlebot", "Bingbot", "Applebot")
@@ -45,13 +45,14 @@ class GeoResult:
     trust: dict = field(default_factory=dict)
     discovery: dict = field(default_factory=dict)
     entities: dict = field(default_factory=dict)
+    agent: dict = field(default_factory=dict)  # app/scans/agent_signals.py, for the agent readiness score (P1.7)
 
     def summary(self) -> dict:
         """The part stored in `report.geo`; findings go to the report's findings list. Free reports keep one fix and the count."""
         shown = self.fixes if self.full else self.fixes[:1]
         return {"score": self.score, "band": self.band, "categories": self.categories, "ai_words": self.ai_words, "ai_view": self.ai_view,
                 "notes": self.notes, "fixes": shown, "fixes_total": len(self.fixes), "citability": self.citability,
-                "trust": self.trust, "discovery": self.discovery, "entities": self.entities}
+                "trust": self.trust, "discovery": self.discovery, "entities": self.entities, "agent": self.agent}
 
 
 def _f(severity: str, title: str, detail: str, fix: str, evidence: str | None = None) -> Finding:
@@ -285,4 +286,4 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
                             llms_ok=llms_ok, indexing=full and not local)
     depth = geo_depth.analyze(root_url, list(scope), sitemap_text)
     return GeoResult(total, band, cats, findings + depth["findings"], 0 if shell else words, view, notes, fixes, full,
-                     page_map + depth["pages"], depth["citability"], depth["trust"], discovery, entities)
+                     page_map + depth["pages"], depth["citability"], depth["trust"], discovery, entities, agent_signals.homepage(root_html))

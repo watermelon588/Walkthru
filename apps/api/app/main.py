@@ -24,7 +24,7 @@ from starlette.routing import Route
 from app import auth, billing, db, deliver, mcp_server, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
-from app.agent.schema import Comparison, Observation, StepEvidence
+from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
@@ -340,9 +340,12 @@ def finish_run(run_id: str, values: dict) -> None:
             rep.comparison = Comparison.model_validate(comparison) if comparison else None
         except Exception:  # a failed comparison must never lose the report
             log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
+        before_run = db.get_run(rep.comparison.previous_run_id) if rep.comparison else None
+        if before_run:  # a rerun of the same goal: the agent readiness score can now say whether the path held
+            rep.agent_ready = AgentReady.model_validate(score.agent_ready(rep.model_dump(), values.get("status", row["status"]), values.get("steps", []), before_run))
         if row.get("tier") == "paid":
             rep.funnel = funnel.metrics(values.get("steps", []), values.get("status", row["status"]))
-            before = db.get_run(rep.comparison.previous_run_id) if rep.comparison else None
+            before = before_run
             if before and (before.get("report") or {}).get("funnel"):
                 rep.funnel["previous"] = {k: v for k, v in before["report"]["funnel"].items() if k != "previous"}
         db.set_report(run_id, rep.model_dump())
