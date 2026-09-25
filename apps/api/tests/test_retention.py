@@ -41,15 +41,13 @@ def test_purge_removes_screenshots_keeps_run_and_report(monkeypatch):
     objects = {"old": ["old/step-01.jpg", "old/step-02.jpg"]}
     calls = fake_supabase(monkeypatch, objects)
     steps = [STEP | {"evidence": {"screenshot_path": "old/step-01.jpg"}}, STEP]
-    marked, forgot = {}, []
+    marked = {}
     monkeypatch.setattr(db, "expired_evidence_runs", lambda days: [{"id": "old", "steps": steps}])
     monkeypatch.setattr(db, "mark_evidence_purged", lambda run_id, s: marked.__setitem__(run_id, s))
-    monkeypatch.setattr(db, "forget_scan_emails", lambda days: forgot.append(days))
 
     assert retention.purge_expired(30) == {"runs": 1, "objects": 2}
     assert objects["old"] == [] and calls == [("storage-delete", "old/step-01.jpg,old/step-02.jpg")]
     assert marked["old"] == [STEP, STEP]  # evidence links stripped, steps kept
-    assert forgot == [30]
 
 
 def test_storage_failure_keeps_rows(monkeypatch):

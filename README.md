@@ -14,7 +14,7 @@ From the repository root in PowerShell or cmd:
 .\dev
 ```
 
-This builds the extension and starts the API (:8000), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
+This builds the extension and starts the API (:8010), web app (:5173), easy fixture (:8101) and hard fixture (:8102) with labelled, coloured output. Ctrl+C stops all of them. After it starts, reload Walkthru on `chrome://extensions` (first time: Load unpacked from `apps/extension/.output/chrome-mv3`). `dev.py` and `dev.cmd` are development conveniences and must be removed before production.
 
 ### Test any live site end to end (development)
 
@@ -24,17 +24,21 @@ With `.\dev` running, this drives the built extension's page script in headless 
 apps\api\.venv\Scripts\python evals\e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
 ```
 
+Plan limits are enforced by the API, and a free account has 3 runs a month. To test paid plans or run the harness repeatedly, give the test account a dev pass: `apps/api/.venv/Scripts/python apps/api/scripts/grant_plan.py walkthru.tester@example.com plus` (`--revoke` ends it). No payment is involved.
+
+The showcase fixture (http://127.0.0.1:8103, started by `.\dev`) is a well-built product site: its Instant Scan scores about 99 for GEO, and its journeys hold deliberate traps (circular "Next story" links, a cookie banner, a newsletter pop-up, a dead button, new-tab and external links, content hidden until scrolled, and Pay and Delete buttons Walkthru must never press).
+
 To test a real send on the easy fixture as a verified owner, write your account's verification token to `evals/.walkthru-token` (git-ignored; see `GET /verification`) and run with `AUTO_CONFIRM=1`, which stands in for approving the side-panel prompt. Without it the run stops at the send button.
 
 ## Run locally on Windows, one process per terminal
 
 Copy each block into a separate PowerShell terminal from the repository root. Copy `apps/api/.env.example` and `apps/web/.env.example` to `.env` and fill in the required keys first.
 
-### 1. API: http://127.0.0.1:8000
+### 1. API: http://127.0.0.1:8010
 
 ```powershell
 cd apps/api
-.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8010
 ```
 
 ### 2. Web app: http://127.0.0.1:5173
@@ -70,7 +74,7 @@ After rebuilding, click **Reload** on the Walkthru extension card.
 
 ## End-to-end test
 
-1. Confirm API health at http://127.0.0.1:8000/health.
+1. Confirm API health at http://127.0.0.1:8010/health.
 2. Sign in at http://127.0.0.1:5173/login.
 3. Open http://127.0.0.1:8101 for the easy flow or http://127.0.0.1:8102 for the hard flow.
 4. Open the Walkthru side panel from its Chrome toolbar icon.

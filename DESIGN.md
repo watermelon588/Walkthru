@@ -94,3 +94,7 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 - The tested-page version lives in a closed shadow root so page styles cannot break it and the test agent cannot include its own status UI in a snapshot. Evaluation fixtures stay untouched; Scout appears there only while the extension runs an evaluation.
 - State colours reuse the core palette: ink for ready or acting, accent for observing or complete, danger for stopped or failed. Changes fade rather than snap.
 - GSAP Observe is the single motion language: slow body attention, a small connected tail counter-shift and an occasional blink. State text fades between actions. All motion stops under `prefers-reduced-motion`.
+
+## Launch Ready badge
+- A 20px pill for other people's sites: "Walkthru" on ink, "Launch Ready NN" on accent (85 and up), muted (60 to 84) or danger (under 60). Verdana, because Geist is not available on the sites that embed it. The SVG carries hex copies of the tokens for the same reason.
+- The owner's report shows it with copy buttons; strangers on the public report see only the score.

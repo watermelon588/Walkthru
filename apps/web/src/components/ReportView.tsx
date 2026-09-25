@@ -1,11 +1,24 @@
-import { EVIDENCE_RETENTION_DAYS, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { useState } from 'react'
+import { EVIDENCE_RETENTION_DAYS, fingerprint, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
+import { LaunchReady } from './LaunchReady'
+import { FixPrompt } from './FixPrompt'
+import { GeoReadiness } from './GeoReadiness'
+import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
 
+/** Owner-only controls for accepting ("won't fix") findings. The public share page passes none. */
+export type IgnoreControls = {
+  ignored: Record<string, string>
+  canIgnore: boolean
+  onIgnore: (fp: string, reason: string) => Promise<void>
+  onClear: (fp: string) => Promise<void>
+}
+
 /** The report body. Shared by the signed-in report page and the public share page. */
-export function ReportView({ run }: { run: Run }) {
+export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls }) {
   const r = run.report
   const steps = run.steps ?? []
   const peak = Math.max(0, ...steps.map((s) => s.confusion))
@@ -34,6 +47,7 @@ export function ReportView({ run }: { run: Run }) {
             <span>{PERSONA_LABEL[run.persona] ?? run.persona}</span>
             {!isScan && <StatusPill status={run.status} />}
             <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
+            {r?.model && <span>Test user and report: {r.model}</span>}
           </div>
         </div>
         <AgentPresence activity={agentActivity} state={agentState} phase={0.32} />
@@ -52,6 +66,12 @@ export function ReportView({ run }: { run: Run }) {
             )}
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
           </section>
+
+          {/* `ignore` is only passed on the owner's page, so strangers on /r/ see the score but not the badge code. */}
+          {r.launch_ready && <LaunchReady score={r.launch_ready} runId={run.id} isPublic={run.public} isScan={isScan} isOwner={!!ignore} />}
+
+          {/* The first thing a rerun owner wants to know. */}
+          {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}
 
           {run.status === 'safe_stop' && (
             <p className="no-print mt-6 max-w-[64ch] rounded-2xl border border-line px-5 py-4 text-sm leading-relaxed text-muted">
@@ -73,6 +93,12 @@ export function ReportView({ run }: { run: Run }) {
               </dl>
             </section>
           )}
+
+          {ignore && r.findings.length > 0 && (
+            <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[fingerprint(f)]).length} />
+          )}
+
+          {r.geo && <GeoReadiness geo={r.geo} />}
 
           {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 
@@ -99,7 +125,7 @@ export function ReportView({ run }: { run: Run }) {
               <p role="status" className="mt-4 text-sm text-muted">Nothing to report. Nice.</p>
             ) : (
               <ul className="mt-4 border-t border-line">
-                {r.findings.map((f, i) => <FindingRow key={i} f={f} />)}
+                {r.findings.map((f, i) => <FindingRow key={i} f={f} ignore={ignore} />)}
               </ul>
             )}
           </section>
@@ -127,10 +153,12 @@ function RetentionNote({ run }: { run: Run }) {
   )
 }
 
-function FindingRow({ f }: { f: Finding }) {
+function FindingRow({ f, ignore }: { f: Finding; ignore?: IgnoreControls }) {
   const tone = f.severity === 'high' ? 'text-danger' : f.severity === 'medium' ? 'text-ink' : 'text-muted'
+  const fp = fingerprint(f)
+  const reason = ignore?.ignored[fp]
   return (
-    <li className="grid gap-2 border-b border-line py-5 sm:grid-cols-[7rem_1fr]">
+    <li className={`grid gap-2 border-b border-line py-5 sm:grid-cols-[7rem_1fr] ${reason ? 'opacity-60' : ''}`}>
       <div className="flex gap-2 text-xs sm:flex-col sm:gap-1">
         <span className={`font-medium ${tone}`}>{f.severity}</span>
         <span className="text-muted">{KIND_LABEL[f.kind]}</span>
@@ -140,13 +168,62 @@ function FindingRow({ f }: { f: Finding }) {
         <p className="mt-1 leading-relaxed text-muted">{f.detail}</p>
         <p className="mt-2 leading-relaxed"><span className="text-muted">Fix: </span>{f.fix}</p>
         {f.evidence && <p className="mt-2 truncate font-mono text-xs text-muted">{f.evidence}</p>}
+        {ignore && <IgnoreControl fp={fp} reason={reason} controls={ignore} />}
       </div>
     </li>
   )
 }
 
+function IgnoreControl({ fp, reason, controls }: { fp: string; reason?: string; controls: IgnoreControls }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true)
+    setError(null)
+    try {
+      await action()
+      setOpen(false)
+      setText('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'That did not work. Try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  const link = 'text-xs text-muted underline decoration-line underline-offset-4 transition hover:text-ink hover:decoration-ink disabled:opacity-50'
+  if (reason) {
+    return (
+      <p className="no-print mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+        <span>Ignored: {reason}</span>
+        <button type="button" className={link} disabled={busy} onClick={() => run(() => controls.onClear(fp))}>Stop ignoring</button>
+        {error && <span role="alert" className="text-danger">{error}</span>}
+      </p>
+    )
+  }
+  if (!controls.canIgnore) return null
+  if (!open) {
+    return <button type="button" className={`no-print mt-3 ${link}`} onClick={() => setOpen(true)}>Ignore</button>
+  }
+  const field = `ignore-${fp}`
+  return (
+    <form className="no-print mt-3 grid gap-2 sm:max-w-md" onSubmit={(e) => { e.preventDefault(); if (text.trim()) void run(() => controls.onIgnore(fp, text.trim())) }}>
+      <label htmlFor={field} className="text-xs text-muted">Why is this fine for your site? Reruns will leave it out.</label>
+      <input id={field} value={text} onChange={(e) => setText(e.target.value)} maxLength={200} required autoFocus
+        className="rounded-xl border border-line bg-bg px-3 py-2 text-sm text-ink" />
+      <div className="flex gap-3">
+        <button type="submit" className="text-xs font-medium text-ink disabled:opacity-50" disabled={busy || !text.trim()}>{busy ? 'Saving...' : 'Ignore this finding'}</button>
+        <button type="button" className={link} onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+    </form>
+  )
+}
+
 export function StatusPill({ status }: { status: Run['status'] }) {
-  const tone = status === 'done' || status === 'safe_stop' ? 'text-accent' : status === 'running' ? 'text-muted' : 'text-danger'
+  // looping is Walkthru's own stop, never the site's fault, so it is not shown as a failure.
+  const tone = status === 'done' || status === 'safe_stop' ? 'text-accent' : status === 'running' || status === 'looping' ? 'text-muted' : 'text-danger'
   return <span className={`rounded-full border border-line px-2.5 py-0.5 ${tone}`}>{STATUS_LABEL[status]}</span>
 }
 

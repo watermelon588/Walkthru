@@ -6,7 +6,7 @@ export const brand = {
   name: 'Walkthru',
   tagline: 'See where strangers get stuck.',
   description:
-    'Walkthru sends AI test users through your website and tells you where real visitors would get stuck, plus SEO and security checks. Built for indie developers, small startups and agencies.',
+    'Walkthru is the launch check for apps built with AI: test users try your real flows, and one report adds SEO, AI search readiness and passive security. Built for indie developers, small startups and agencies.',
   mark, // walking bird, transparent PNG, ink on clear
   domain: 'walkthru.dev', // placeholder until the domain is bought
   year: 2026,

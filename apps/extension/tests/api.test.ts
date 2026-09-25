@@ -26,7 +26,7 @@ test("stops an interrupted run through the authenticated API", async () => {
 
   expect(result.status).toBe("stopped");
   expect(fetchMock).toHaveBeenCalledWith(
-    "http://localhost:8000/runs/run-1/stop",
+    "http://localhost:8010/runs/run-1/stop",
     expect.objectContaining({ method: "POST", body: "{}" }),
   );
 });

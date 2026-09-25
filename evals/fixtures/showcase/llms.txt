@@ -1,0 +1,13 @@
+# Fieldnote
+
+> Fieldnote records Zoom, Meet and Teams calls and writes the notes and action items for you. Free for 5 meetings a month.
+
+## Product
+- [Home](http://127.0.0.1:8103/): what Fieldnote does and who it is for
+- [Pricing](http://127.0.0.1:8103/pricing.html): Free, Team ($12) and Business ($24) plans
+- [Docs](http://127.0.0.1:8103/docs.html): set up in 3 minutes
+
+## Customers
+- [Atlas Studio](http://127.0.0.1:8103/stories/atlas.html)
+- [Beacon Health](http://127.0.0.1:8103/stories/beacon.html)
+- [Cirrus Labs](http://127.0.0.1:8103/stories/cirrus.html)

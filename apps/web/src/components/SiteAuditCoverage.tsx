@@ -27,17 +27,31 @@ export function SiteAuditCoverage({ audit }: { audit: Audit }) {
           <Stat term="Scope" value="Same origin" />
         </dl>
       </div>
-      {audit.urls.length > 0 && (
-        <ol className="mt-4 grid gap-2 text-xs text-muted sm:grid-cols-2">
-          {audit.urls.map((url, index) => (
-            <li key={url} className="min-w-0 rounded-xl border border-line px-3 py-2">
-              <span className="mr-2 font-mono">{String(index + 1).padStart(2, '0')}</span>
-              <span className="break-all font-mono">{url}</span>
-            </li>
-          ))}
-        </ol>
+      {audit.urls.length > 10 ? (
+        // Paid audits reach 50 pages; keep the list one click away instead of a wall of cards.
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
+            Show all {audit.urls.length} pages checked
+          </summary>
+          <UrlList urls={audit.urls} />
+        </details>
+      ) : (
+        audit.urls.length > 0 && <UrlList urls={audit.urls} />
       )}
     </section>
+  )
+}
+
+function UrlList({ urls }: { urls: string[] }) {
+  return (
+    <ol className="mt-4 grid gap-2 text-xs text-muted sm:grid-cols-2">
+      {urls.map((url, index) => (
+        <li key={url} className="min-w-0 rounded-xl border border-line px-3 py-2">
+          <span className="mr-2 font-mono">{String(index + 1).padStart(2, '0')}</span>
+          <span className="break-all font-mono">{url}</span>
+        </li>
+      ))}
+    </ol>
   )
 }
 

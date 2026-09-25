@@ -82,7 +82,51 @@ def openrouter(schema: type[BaseModel], model: str, timeout: float = 90):
     return RunnableLambda(run, name=f"openrouter:{model}")
 
 
-def free_pool(schema: type[BaseModel], writer: bool = False):
+# Pro and Plus: Claude Haiku 4.5 on Google Cloud (Vertex AI, payable by UPI prepay; payment.md). Off until
+# CLAUDE_VERTEX_PROJECT is set; the free chain always stays behind it as the fallback.
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5@20251001")
+CLAUDE_LABEL = "Claude Haiku 4.5"
+
+
+def claude_enabled() -> bool:
+    return bool(os.environ.get("CLAUDE_VERTEX_PROJECT"))
+
+
+def model_label(paid: bool) -> str:
+    """Said in every report, so the Claude selling point stays honest."""
+    return f"{CLAUDE_LABEL}, with free models as backup" if paid and claude_enabled() else "Free models (gpt-oss-120b and backups)"
+
+
+def claude(schema: type[BaseModel], timeout: float = 30):
+    """Claude on Google Cloud as a runnable. A forced tool call returns the schema's JSON, like openrouter()."""
+    from anthropic import AnthropicVertex
+    from langchain_core.runnables import RunnableLambda
+
+    client = AnthropicVertex(project_id=os.environ["CLAUDE_VERTEX_PROJECT"], region=os.environ.get("CLAUDE_VERTEX_REGION", "global"),
+                             timeout=timeout, max_retries=0)
+    tool = {"name": "answer", "description": "Return the answer.", "input_schema": schema.model_json_schema()}
+
+    def run(messages: list) -> dict:
+        system = "\n\n".join(text for role, text in messages if role == "system")
+        chat: list[dict] = []
+        for role, text in messages:
+            if role == "system":
+                continue
+            role = "user" if role == "human" else "assistant"
+            if chat and chat[-1]["role"] == role:  # the API wants turns to alternate
+                chat[-1]["content"] += "\n\n" + text
+            else:
+                chat.append({"role": role, "content": text})
+        msg = client.messages.create(model=CLAUDE_MODEL, max_tokens=2048, temperature=0, system=system, messages=chat,
+                                     tools=[tool], tool_choice={"type": "tool", "name": "answer"})
+        block = next(b for b in msg.content if b.type == "tool_use")
+        raw = SimpleNamespace(usage_metadata={"total_tokens": msg.usage.input_tokens + msg.usage.output_tokens})
+        return {"raw": raw, "parsed": schema.model_validate(block.input), "parsing_error": None}
+
+    return RunnableLambda(run, name=f"claude:{CLAUDE_MODEL}")
+
+
+def free_pool(schema: type[BaseModel], writer: bool = False, paid: bool = False):
     """Try each free model in order and move on instantly when one is rate-limited, overloaded or slow.
 
     max_retries=0 everywhere: a 429 or 503 falls through to the next model in milliseconds instead of
@@ -102,6 +146,8 @@ def free_pool(schema: type[BaseModel], writer: bool = False):
     gemini = [ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True) for name in GEMINI_MODELS]
     slow = [openrouter(schema, name) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
     chain = groq[:1] + slow + groq[1:] + gemini
+    if paid and claude_enabled():
+        chain = [claude(schema)] + chain  # Pro and Plus: Claude first, the free chain behind it
     return chain[0].with_fallbacks(chain[1:])
 
 
@@ -121,6 +167,8 @@ def make_model(tier: str):
 
 
 def _llm_model(tier: str):
+    if tier == "paid" and claude_enabled():
+        return free_pool(PersonaStep, paid=True)
     if tier == "paid" and os.environ.get("ANTHROPIC_API_KEY"):
         from langchain_anthropic import ChatAnthropic
 
@@ -142,14 +190,15 @@ def unwrap(result: Any) -> tuple[Any, int]:
     return result, 0
 
 
-@lru_cache(maxsize=8)
-def structured(schema: type[BaseModel]):
-    return free_pool(schema, writer=True)  # only the report calls come through here
+@lru_cache(maxsize=16)
+def structured(schema: type[BaseModel], fast: bool = False, paid: bool = False):
+    return free_pool(schema, writer=not fast, paid=paid)  # report text waits for the careful writer; fast calls do not
 
 
-def call(schema: type[BaseModel], messages: list) -> tuple[Any, int]:
-    """One LLM call returning (parsed schema instance, tokens used)."""
-    return unwrap(structured(schema).invoke(messages))
+def call(schema: type[BaseModel], messages: list, fast: bool = False, paid: bool = False) -> tuple[Any, int]:
+    """One LLM call returning (parsed schema instance, tokens used). fast=True skips the slow report writer
+    (used before a run starts, where the owner is waiting). paid=True puts Claude first when it is configured."""
+    return unwrap(structured(schema, fast, paid).invoke(messages))
 
 
 def make_checkpointer():

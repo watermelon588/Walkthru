@@ -34,8 +34,8 @@ def test_score_candidate_reports_overall_and_per_kind_recall():
     assert result.model == "fixture-model"
     assert result.found_ids == ["U1", "U2", "S1", "X1"]
     assert result.found == 4
-    assert result.total == 18
-    assert result.recall == pytest.approx(4 / 18)
+    assert result.total == 22
+    assert result.recall == pytest.approx(4 / 22)
     assert result.by_kind["ux"].found == 2
     assert result.by_kind["seo"].found == 1
     assert result.by_kind["security"].found == 1
@@ -89,7 +89,7 @@ def test_format_markdown_makes_unknown_cost_explicit():
 
     table = format_markdown([result])
 
-    assert "| free | 0/18 (0%) |" in table
+    assert "| free | 0/22 (0%) |" in table
     assert table.endswith("| unknown |")
 
 
@@ -119,5 +119,16 @@ def test_langsmith_publish_omits_unknown_cost_metric(monkeypatch):
 
     publish_to_langsmith(traps, result, "walkthru-test")
 
-    assert len(client.examples) == 18
+    assert len(client.examples) == 22
     assert [evaluator.__name__ for evaluator in client.evaluate_kwargs["summary_evaluators"]] == ["trap_recall"]
+
+
+def test_combine_scores_several_runs_of_one_site_together():
+    from runner import combine
+
+    traps = load_traps(os.path.join(EVALS, "traps.json"))
+    signup = {"model": "a", "report": {"summary": "Signup is hard to find.", "findings": [{"title": "No structured data"}], "top_fixes": []}, "steps": [], "usage": {"tokens": 10}}
+    pricing = {"model": "b", "report": {"summary": "", "findings": [{"title": "Missing meta description"}], "top_fixes": []}, "steps": [], "usage": {"tokens": 5}}
+    merged = combine([signup, pricing])
+    result = score_candidate(merged, traps)
+    assert set(result.found_ids) == {"U1", "S1", "G2"} and merged["usage"]["tokens"] == 15

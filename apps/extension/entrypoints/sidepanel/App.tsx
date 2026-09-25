@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { getSession, WEB_URL } from "../../lib/api";
+import { getPlan, getSession, WEB_URL, type GoalPlan, type PlanSummary } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
-import { runTest, type Progress, type RunOptions } from "./run";
+import { suggestGoals } from "../../lib/goals";
+import { runTest, snapshotActiveTab, type Progress, type RunOptions } from "./run";
 
 const PERSONAS = [
   ["first_timer", "First-time visitor"],
@@ -19,6 +20,7 @@ const STATUS_COPY: Record<string, string> = {
   captcha: "Stopped at a CAPTCHA.",
   stopped: "Ended early. A partial report is being prepared.",
   safe_stop: "Everything worked up to the send button. Walkthru only sends on verified domains, after you approve.",
+  looping: "Walkthru stopped the test user for going in circles. That is Walkthru's limit, not a problem with your site.",
 };
 
 export function App() {
@@ -28,6 +30,9 @@ export function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [plan, setPlan] = useState<PlanSummary | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [understood, setUnderstood] = useState<GoalPlan | null>(null);
   const abort = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -41,8 +46,26 @@ export function App() {
     return () => chrome.storage.onChanged.removeListener(onChange);
   }, []);
 
+  // The server decides the plan; refresh it when the account connects and after every run.
+  const finished = progress.phase === "finished" || progress.phase === "error";
+  useEffect(() => {
+    if (signedIn) getPlan().then(setPlan).catch(() => setPlan(null));
+    else setPlan(null);
+  }, [signedIn, finished]);
+  const canLogIn = plan?.logged_in ?? false;
+
+  // Goals this page can actually support, read from its links and buttons (like "Sign up" or "Pricing").
+  useEffect(() => {
+    if (!/^https?:\/\//.test(site)) {
+      setSuggestions([]);
+      return;
+    }
+    snapshotActiveTab().then((obs) => setSuggestions(obs ? suggestGoals(obs.elements) : []));
+  }, [site]);
+
   const running = progress.phase === "running" || progress.phase === "starting";
-  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true;
+  const outOfRuns = plan?.runs_left === 0;
+  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true && !outOfRuns;
   // Say why Start is disabled instead of leaving a dead button.
   const blocked = running || canStart
     ? null
@@ -52,7 +75,9 @@ export function App() {
         ? "Open a website in this tab to test it."
         : !goal.trim()
           ? "Give the test user a goal."
-          : null;
+          : outOfRuns
+            ? `No test runs left ${plan?.plan === "free" ? "this month" : "in this pass"}. Instant Scans stay free.`
+            : null;
   const agentState: AgentState = progress.phase === "error"
     ? "stopped"
     : progress.phase === "finished"
@@ -74,8 +99,12 @@ export function App() {
     e.preventDefault();
     if (!canStart) return;
     abort.current = new AbortController();
-    const opts: RunOptions = { site, goal: goal.trim(), persona, logged_in: loggedIn, max_steps: 12, signal: abort.current.signal };
-    await runTest(opts, setProgress);
+    setUnderstood(null);
+    const opts: RunOptions = { site, goal: goal.trim(), persona, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal: abort.current.signal };
+    await runTest(opts, (p) => {
+      if (p.plan) setUnderstood(p.plan);
+      setProgress(p);
+    });
   }
 
   return (
@@ -103,18 +132,32 @@ export function App() {
           Goal for the test user
           <textarea id="goal" value={goal} onChange={(e) => setGoal(e.target.value)} disabled={running} required />
         </label>
+        {suggestions.length > 0 && !running && (
+          <div className="suggestions" role="group" aria-label="Goals this page supports">
+            {suggestions.map((s) => (
+              <button key={s} type="button" className="chip" aria-pressed={goal === s} onClick={() => setGoal(s)}>{s}</button>
+            ))}
+          </div>
+        )}
         <label htmlFor="persona">
           Test user
           <select id="persona" value={persona} onChange={(e) => setPersona(e.target.value as typeof persona)} disabled={running}>
-            {PERSONAS.map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
+            {PERSONAS.map(([v, l]) => {
+              const included = !plan || plan.personas.includes(v);
+              return <option key={v} value={v} disabled={!included}>{included ? l : `${l} (paid plans)`}</option>;
+            })}
           </select>
         </label>
         <label className="row" htmlFor="logged">
-          <input id="logged" type="checkbox" checked={loggedIn} onChange={(e) => setLoggedIn(e.target.checked)} disabled={running} />
+          <input id="logged" type="checkbox" checked={loggedIn && canLogIn} onChange={(e) => setLoggedIn(e.target.checked)} disabled={running || !canLogIn} />
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
         </label>
+        {plan && !canLogIn && <p className="hint">Logged-in pages need a paid plan. Free runs test public pages.</p>}
+        {plan && (
+          <p className="hint" role="status">
+            {plan.runs_left} of {plan.runs_allowed} test runs left {plan.plan === "free" ? "this month" : "in your pass"}, up to {plan.max_steps} steps each.
+          </p>
+        )}
         <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
@@ -122,6 +165,15 @@ export function App() {
         </div>
         {blocked && <p className="hint" role="status">{blocked}</p>}
       </form>
+
+      {understood && (
+        <section className="notice" aria-label="How Walkthru understood the goal">
+          <p>Understood as: {understood.intent}</p>
+          <ol className="checklist">
+            {understood.checkpoints.map((c) => <li key={c}>{c}</li>)}
+          </ol>
+        </section>
+      )}
 
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
       {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}

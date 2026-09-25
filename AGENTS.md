@@ -8,6 +8,7 @@ Walkthru: AI test users try a website's flows (signup, dashboard, checkout) in t
 ## Read before working
 | File | When |
 |---|---|
+| [handoff.md](handoff.md) | First, in a new session. The whole picture and the reading order. |
 | [CURRENT_STATE.md](CURRENT_STATE.md) | Always. What is done, what is next, known issues. |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Any backend, extension, agent or data work. |
 | [DESIGN.md](DESIGN.md) | Any UI work. Tokens, type, motion rules. |
@@ -31,7 +32,7 @@ evals/           Fixture sites (fixtures/easy, fixtures/hard, traps.json, serve.
 ## Commands
 ```
 # everything at once (DEV ONLY; remove dev.py and dev.cmd before production)
-.\dev              # API :8000, web :5173, fixtures :8101/:8102, extension build
+.\dev              # API :8010, web :5173, fixtures :8101/:8102, extension build
 
 # web
 cd apps/web && npm install
@@ -46,6 +47,7 @@ cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".
 .venv/Scripts/ruff check .
 .venv/Scripts/python -m app.db            # apply schema.sql to Supabase (idempotent)
 .venv/Scripts/python scripts/test_user.py # throwaway account + session for local testing
+.venv/Scripts/python scripts/grant_plan.py EMAIL pro   # dev pass to test paid plans for free (--revoke to end it)
 
 # extension
 cd apps/extension && npm install

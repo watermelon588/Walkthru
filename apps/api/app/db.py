@@ -64,8 +64,9 @@ def _patch(filters: dict, values: dict, *, returning: bool = False) -> list[dict
     return _request("PATCH", "/rest/v1/runs", params=filters | ({"select": "id"} if returning else {}), json_body=values, prefer=prefer) or []
 
 
-def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", email: str | None = None, public: bool = False) -> None:
-    row = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "kind": kind, "email": email, "public": public}
+def insert_run(run_id: str, user_id: str | None, site: str, goal: str, persona: str, tier: str, logged_in: bool, *, kind: str = "test", public: bool = False) -> None:
+    # No email here: public reports are readable with the public key, so contact details never live in this table.
+    row = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "kind": kind, "public": public}
     _request("POST", "/rest/v1/runs", json_body=row, prefer="resolution=ignore-duplicates,return=minimal")
 
 
@@ -99,6 +100,75 @@ def runs_for_user(user_id: str) -> list[dict]:
     return _rows({"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.asc"})
 
 
+def test_runs_since(user_id: str, since: str) -> list[dict]:
+    return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}", "select": "site"})
+
+
+def free_runs_today(kind: str = "test") -> int:
+    """Free test runs (or Instant Scans, kind="scan") started today, UTC. Counted in the database, so every API process sees the same number."""
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    # ponytail: fetches ids to count them; switch to a Prefer: count=exact HEAD past a few thousand runs a day
+    return len(_rows({"kind": f"eq.{kind}", "tier": "eq.free", "created_at": f"gte.{today}", "select": "id"}))
+
+
+# ---------- entitlements (paid passes; SPEC.md "Plans", payment.md) ----------
+
+
+def active_entitlement(user_id: str, now: str) -> dict | None:
+    rows = _request("GET", "/rest/v1/entitlements", params={
+        "user_id": f"eq.{user_id}", "starts_at": f"lte.{now}", "expires_at": f"gt.{now}",
+        "select": "plan,starts_at,expires_at,runs_granted", "order": "expires_at.desc", "limit": "1"}) or []
+    return rows[0] if rows else None
+
+
+def entitlements_for_user(user_id: str) -> list[dict]:
+    return _request("GET", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.asc"}) or []
+
+
+def grant_entitlement(user_id: str, plan: str, days: int, runs: int, source: str) -> None:
+    now = datetime.now(UTC)
+    row = {"user_id": user_id, "plan": plan, "starts_at": now.isoformat(), "expires_at": (now + timedelta(days=days)).isoformat(), "runs_granted": runs, "source": source}
+    _request("POST", "/rest/v1/entitlements", json_body=row, prefer="return=minimal")
+
+
+def expire_entitlements(user_id: str) -> None:
+    now = _now()
+    _request("PATCH", "/rest/v1/entitlements", params={"user_id": f"eq.{user_id}", "expires_at": f"gt.{now}"}, json_body={"expires_at": now}, prefer="return=minimal")
+
+
+def public_reports(user_id: str) -> list[dict]:
+    """The owner's shared reports, newest first: the badge follows the latest one for its site."""
+    return _rows({"user_id": f"eq.{user_id}", "public": "eq.true", "report": "not.is.null",
+                  "select": "id,site,status,kind,created_at,report", "order": "created_at.desc", "limit": "50"})
+
+
+def recent_reports(user_id: str, exclude_id: str, limit: int = 20) -> list[dict]:
+    """The user's latest finished test runs with a report, newest first: candidates for rerun comparison."""
+    return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "id": f"neq.{exclude_id}", "report": "not.is.null",
+                  "select": "id,site,goal,created_at,report", "order": "created_at.desc", "limit": str(limit)})
+
+
+# ---------- ignored findings (paid plans; SPEC.md "Ignore a finding") ----------
+
+
+def ignored_fingerprints(user_id: str, origin: str) -> dict[str, str]:
+    rows = _request("GET", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "origin": f"eq.{origin}", "select": "fingerprint,reason"}) or []
+    return {r["fingerprint"]: r["reason"] for r in rows}
+
+
+def set_ignored(user_id: str, origin: str, fingerprint: str, reason: str) -> None:
+    row = {"user_id": user_id, "origin": origin, "fingerprint": fingerprint, "reason": reason, "created_at": _now()}
+    _request("POST", "/rest/v1/finding_states", json_body=row, prefer="resolution=merge-duplicates,return=minimal")
+
+
+def clear_ignored(user_id: str, origin: str, fingerprint: str) -> None:
+    _request("DELETE", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "origin": f"eq.{origin}", "fingerprint": f"eq.{fingerprint}"})
+
+
+def ignored_for_user(user_id: str) -> list[dict]:
+    return _request("GET", "/rest/v1/finding_states", params={"user_id": f"eq.{user_id}", "select": "*"}) or []
+
+
 def run_ids_for_user(user_id: str) -> list[str]:
     return [r["id"] for r in _rows({"user_id": f"eq.{user_id}", "select": "id"})]
 
@@ -124,9 +194,12 @@ def mark_evidence_purged(run_id: str, steps: list[dict]) -> None:
     _patch({"id": f"eq.{run_id}"}, {"steps": steps, "evidence_purged_at": _now()})
 
 
-def forget_scan_emails(days: int) -> None:
-    """Instant Scan emails are only needed to deliver the report."""
-    _patch({"kind": "eq.scan", "email": "not.is.null", "created_at": f"lt.{_cutoff(days)}"}, {"email": None})
+def user_email(user_id: str) -> str | None:
+    """The account's email from Supabase Auth, read only when a report email is sent."""
+    try:
+        return (_request("GET", f"/auth/v1/admin/users/{user_id}") or {}).get("email")
+    except httpx.HTTPStatusError:
+        return None
 
 
 def delete_runs(run_ids: list[str]) -> None:
