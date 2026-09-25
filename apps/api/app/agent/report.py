@@ -15,7 +15,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agent import compare, score
 from app.agent.schema import Finding, FirstImpression, LaunchReady, Report, Synthesis
-from app.scans import accessibility, email, fetch, performance, security, seo, site
+from app.scans import accessibility, email, fetch, performance, security, seo, site, stack
 
 
 class ReportState(TypedDict, total=False):
@@ -44,6 +44,7 @@ class ReportState(TypedDict, total=False):
     paid: bool  # paid plans get GEO scored on every audited page, free on the homepage
     production_like: bool
     final_controls: list[str]  # labels of the buttons, links and fields on the page where the journey ended
+    stack: dict  # hosting, framework and backend (app/scans/stack.py), for the fix plan's recipes
     synthesis: dict
     tokens: Annotated[int, operator.add]
     notes: Annotated[list[str], operator.add]  # non-fatal problems, e.g. a scan that could not fetch
@@ -111,6 +112,17 @@ def accessibility_scan(state: ReportState) -> dict:
 
 def performance_scan(state: ReportState) -> dict:
     return _scan(state, "performance")
+
+
+def stack_scan(state: ReportState) -> dict:
+    """Which hosting, framework and backend the site uses, from one homepage response (P1.3)."""
+    try:
+        fetch.assert_public(state["site"])
+        with fetch.client() as c:
+            resp = fetch.get(c, state["site"])
+        return {"stack": stack.detect(dict(resp.headers), resp.text, str(resp.url))} if resp is not None else {}
+    except Exception as e:  # noqa: BLE001 - the fix plan falls back to generic recipes
+        return {"notes": [f"stack detection failed: {e}"]}
 
 
 def site_scan(state: ReportState) -> dict:
@@ -433,9 +445,19 @@ def synthesize(state: ReportState) -> dict:
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),
         pages=state.get("finding_pages") or {},
+        stack=_with_backend(state.get("stack"), code_findings),
     )
     report.launch_ready = LaunchReady.model_validate(score.launch_ready(report.model_dump(), state.get("status", "scan")))
     return {"synthesis": report.model_dump(), "tokens": used}
+
+
+def _with_backend(found: dict | None, findings: list[Finding]) -> dict | None:
+    """Backend exposure findings name the backend even when the homepage HTML does not."""
+    if not found or found.get("backend"):
+        return found
+    rules = {f.rule or "" for f in findings}
+    backend = "supabase" if any(r.startswith("sec.supabase") for r in rules) else "firebase" if any(r.startswith("sec.firebase") for r in rules) else None
+    return {**found, "backend": backend, "evidence": {**found.get("evidence", {}), "backend": "a backend exposure finding"}} if backend else found
 
 
 def build_graph():
@@ -444,11 +466,12 @@ def build_graph():
     g.add_node("site_scan", site_scan)
     g.add_node("accessibility_scan", accessibility_scan)
     g.add_node("performance_scan", performance_scan)
+    g.add_node("stack_scan", stack_scan)
     g.add_node("synthesize", synthesize)
-    for n in ("first_impression", "accessibility_scan", "site_scan"):
+    for n in ("first_impression", "accessibility_scan", "site_scan", "stack_scan"):
         g.add_edge(START, n)
     g.add_edge("site_scan", "performance_scan")
-    g.add_edge(["first_impression", "accessibility_scan", "performance_scan"], "synthesize")
+    g.add_edge(["first_impression", "accessibility_scan", "performance_scan", "stack_scan"], "synthesize")
     g.add_edge("synthesize", END)
     return g.compile()
 

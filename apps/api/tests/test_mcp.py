@@ -175,7 +175,8 @@ def test_verify_finding_flips_to_fixed_after_the_fix(monkeypatch, passes, fake_d
         assert not error and "(id: security:no x-content-type-options)" in report
 
         error, recipe = _call(c, key, "get_finding", {"run_id": run_id, "rule": "security:no x-content-type-options"})
-        assert not error and "## Change\nSend X-Content-Type-Options: nosniff." in recipe and 'verify_finding("' in recipe
+        assert not error and "Send X-Content-Type-Options: nosniff." in recipe and 'verify_finding("' in recipe
+        assert "X-Content-Type-Options: nosniff" in recipe and "Check locally: `curl -sI" in recipe and "Why it matters:" in recipe
 
         error, before = _call(c, key, "verify_finding", {"run_id": run_id, "rule": "security:no x-content-type-options"})
         assert not error and before.startswith("Still broken: No X-Content-Type-Options"), before
