@@ -81,6 +81,11 @@ export type Report = {
     notes: string[]
     fixes?: { id: string; title: string; file: string; code: string; note: string }[]
     fixes_total?: number
+    citability?: { url: string; score: number; signals: Record<'statistics_with_sources' | 'attributed_quote' | 'definition' | 'comparison_table', boolean>;
+      rag: Record<'standalone_sections' | 'question_headings' | 'answer_first', boolean>; last_updated: string | null }[]
+    trust?: Record<'identity' | 'social_proof' | 'external_sources' | 'name_consistency', boolean>
+    discovery?: Record<string, boolean | null>
+    entities?: Record<string, { status: string; url?: string }>
   } | null
   model?: string | null
   comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[] } | null
@@ -92,8 +97,13 @@ export type Report = {
     truncated: boolean
     urls: string[]
     robots_respected: boolean
+    mobile_vitals?: { url: string; status: 'field_data' | 'lab_only' | 'unavailable'; lab_score: number | null; lcp_ms: number | null; cls: number | null; inp_ms: number | null }[]
   } | null
   /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
+  /** Only on competitor comparisons (kind 'compare'): one entry per site, yours first. */
+  compare?: CompareSite[]
+  /** Signup funnel numbers, paid runs only (apps/api/app/agent/funnel.py). null means not measured. */
+  funnel?: Funnel & { previous?: Funnel }
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
@@ -103,7 +113,7 @@ export type Run = {
   site: string
   goal: string
   persona: string
-  kind: 'test' | 'scan'
+  kind: 'test' | 'scan' | 'watch' | 'compare' | 'compare_part'
   status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop' | 'looping'
   steps: Step[]
   report: Report | null
@@ -143,7 +153,7 @@ export const EVIDENCE_RETENTION_DAYS = 30
 /** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs (or public ones). */
 export async function listRuns(): Promise<Run[]> {
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase.from('runs').select(COLUMNS).order('created_at', { ascending: false }).limit(50)
+  const { data, error } = await supabase.from('runs').select(COLUMNS).neq('kind', 'compare_part').order('created_at', { ascending: false }).limit(50)
   if (error) throw error
   return data as Run[]
 }
@@ -260,3 +270,36 @@ export function timeAgo(iso: string): string {
   if (s < 86400) return `${Math.floor(s / 3600)} h ago`
   return `${Math.floor(s / 86400)} d ago`
 }
+
+/** Personal API keys for the Walkthru MCP server (Plus). The key itself is only in the create response. */
+export type ApiKey = { id: string; name: string; created_at: string; last_used_at: string | null }
+export const listApiKeys = () => api<ApiKey[]>('/me/api-keys', undefined, true, 'GET')
+export const createApiKey = (name: string) => api<ApiKey & { key: string }>('/me/api-keys', { name })
+export const revokeApiKey = (id: string) => api<{ revoked: string }>(`/me/api-keys/${id}`, undefined, true, 'DELETE')
+export const MCP_URL = `${API}/mcp`
+
+/** Weekly watch (Plus). */
+export type WatchChanges = { new: string[]; fixed: string[]; score: number | null; at: string; reason: string; run_id: string; baseline: boolean }
+export type WatchedSite = { id: string; site: string; last_run_id: string | null; last_changes: WatchChanges | null; next_check_at: string; last_hook_at: string | null }
+export const getWatch = () => api<{ sites: WatchedSite[]; plan: PlanSummary['plan']; limit: number; email: boolean }>('/watch', undefined, true, 'GET')
+export const watchSite = (site: string) => api<WatchedSite>('/watch', { site })
+export const unwatchSite = (id: string) => api<{ removed: string }>(`/watch/${id}`, undefined, true, 'DELETE')
+export const checkSiteNow = (id: string) => api<{ queued: boolean }>(`/watch/${id}/check`)
+export const createDeployHook = (id: string) => api<{ url: string }>(`/watch/${id}/hook`)
+
+/** Competitor side by side (paid plans). */
+export type CompareSite = {
+  site: string
+  run_id?: string
+  yours?: boolean
+  score?: number | null
+  areas?: Record<string, number | null>
+  geo?: number | null
+  findings?: { high: number; medium: number; low: number }
+  pages?: number | null
+  impression?: string | null
+  error?: string
+}
+export const startCompare = (site: string, competitors: string[]) => api<{ run_id: string }>('/compare', { site, competitors })
+
+export type Funnel = { steps_to_goal: number | null; fields_typed: number; errors_seen: number; safe_stops: number; first_useful_step: number | null; seconds_to_first_useful: number | null }

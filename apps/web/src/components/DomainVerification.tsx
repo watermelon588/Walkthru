@@ -49,7 +49,7 @@ export function DomainVerification() {
   )
 }
 
-function Snippet({ label, value }: { label: string; value: string }) {
+export function Snippet({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
   async function copy() {
     try {

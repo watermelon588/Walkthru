@@ -38,6 +38,25 @@ export function SiteAuditCoverage({ audit }: { audit: Audit }) {
       ) : (
         audit.urls.length > 0 && <UrlList urls={audit.urls} />
       )}
+      {(audit.mobile_vitals?.length ?? 0) > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-medium">Mobile Core Web Vitals</h3>
+          <p className="mt-1 text-xs leading-relaxed text-muted">PageSpeed checks up to five audited URLs. LCP, CLS and INP are real-user 75th-percentile values when the URL has enough data; the Lighthouse score is a separate lab result.</p>
+          <ul className="mt-3 divide-y divide-line border-y border-line text-xs">
+            {audit.mobile_vitals?.map((page) => (
+              <li key={page.url} className="grid gap-1 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-4">
+                <span className="min-w-0 break-all font-mono">{page.url}</span>
+                <span className="text-muted">
+                  {page.status === 'field_data'
+                    ? `LCP ${page.lcp_ms == null ? 'n/a' : `${(page.lcp_ms / 1000).toFixed(1)}s`} · CLS ${page.cls ?? 'n/a'} · INP ${page.inp_ms == null ? 'n/a' : `${page.inp_ms}ms`}`
+                    : page.status === 'lab_only' ? 'No URL-level field data' : 'PageSpeed unavailable'}
+                  {page.lab_score != null && ` · Lab ${page.lab_score}/100`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }
