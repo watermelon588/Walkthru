@@ -204,27 +204,17 @@ def get_finding(run_id: str, rule: str) -> str:
     """Everything the report holds about one finding: why it matters, the evidence, every affected page, the change to
     make (with ready-made code when Walkthru has it) and how to confirm the fix. rule: the finding's id from get_report."""
     from app.agent import fix_prompt
+    from app.scans import stack as stacks
 
     row = _row(run_id)
     fid, f = _find(row, rule)
     rep = row["report"]
-    pages = (rep.get("pages") or {}).get(finding_id(f)) or (rep.get("pages") or {}).get(_fingerprint(f)) or []
-    lines = [
-        f"# {f['title']}",
-        f"id: {fid}. {f['severity'].capitalize()} {f['kind']} finding on {row['site']} (run {row['id']}).",
-        "",
-        "## Why it matters",
-        fix_prompt._mask(f["detail"]),
-        "",
-        "## Where",
-        *([f"- {u}" for u in pages] or [f"`{fix_prompt._mask(f.get('evidence') or row['site'])}`"]),
-        "",
-        "## Change",
-        fix_prompt._mask(f["fix"]),
-    ]
-    code = fix_prompt._fix_for(f, {x["id"]: x for x in (rep.get("geo") or {}).get("fixes", [])})
-    if code:
-        lines += ["", f"Ready-made fix for `{code['file']}` ({code['note']}):", "", "```", code["code"].rstrip(), "```"]
+    item = {"finding": f, "recipe": fix_prompt.recipe(f) or {}, "step": fix_prompt.step(f, rep.get("stack"))}
+    fixes = {x["id"]: x for x in (rep.get("geo") or {}).get("fixes", [])}
+    lines = [f"id: {fid}. Finding on {row['site']} (run {row['id']}). Stack: {stacks.label(rep.get('stack'))}.", "",
+             *fix_prompt.finding_lines(item, rep, fix_prompt._places(row, rep), fixes, heading=f"# {f['title']}")]
+    if item["recipe"].get("manual_text"):
+        lines += [f"Outside the code ({fix_prompt.MANUAL.get(item['recipe']['manual'], 'hosting')}): {item['recipe']['manual_text']}"]
     lines += ["", "## Done when",
               ("Rerun the journey in the Walkthru Chrome extension: journey findings need a real browser."
                if f["kind"] == "ux" else f'verify_finding("{row["id"]}", "{fid}") answers fixed.')]

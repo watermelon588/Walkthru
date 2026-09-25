@@ -1,0 +1,311 @@
+{
+  "_about": "Fix recipes per rule and stack (P1.3). Used by app/agent/fix_prompt.py and the fix pull request (app/github.py), no model call. Keys under rules are rule ids or fnmatch patterns. A recipe with `header` gets its per-host snippet generated from HEADER_TARGETS in fix_prompt.py. steps: framework, then hosting, then backend, then '*'. {url} and {origin} are filled in from the report. manual: dns, hosting, email or provider; a recipe with only manual text goes to the manual list.",
+  "rules": {
+    "sec.hsts.missing": {
+      "why": "Without HSTS a visitor's first request can be downgraded to plain http on a hostile network, so logins and cookies can be read.",
+      "header": {"name": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains"},
+      "risk": "Only add includeSubDomains when every subdomain serves https; browsers then refuse plain http on all of them for two years.",
+      "check": "curl -sI {url} | grep -i strict-transport-security"
+    },
+    "sec.hsts_*": {
+      "why": "A short, invalid or disabled HSTS header leaves visitors open to downgrade attacks between visits.",
+      "header": {"name": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains"},
+      "risk": "Replace the existing Strict-Transport-Security header rather than adding a second one. includeSubDomains needs https on every subdomain.",
+      "check": "curl -sI {url} | grep -i strict-transport-security"
+    },
+    "sec.no_content_security_policy": {
+      "why": "A Content Security Policy is the main defence that stops injected scripts from running if an XSS bug slips in.",
+      "header": {"name": "Content-Security-Policy-Report-Only", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"},
+      "risk": "Starts in report-only mode on purpose: a strict policy can block your own scripts, analytics or fonts. Watch the browser console for violations for a few days, add the sources you trust, then rename the header to Content-Security-Policy.",
+      "check": "curl -sI {url} | grep -i content-security-policy"
+    },
+    "sec.content_security_policy_is_report_only": {
+      "why": "A report-only policy only logs violations; it does not block injected scripts.",
+      "header": {"name": "Content-Security-Policy", "value": "<your current report-only policy, once the console shows no violations>"},
+      "risk": "Switch only after the report-only policy has run without violations you did not expect; otherwise real features break.",
+      "check": "curl -sI {url} | grep -i '^content-security-policy:'"
+    },
+    "sec.csp_*": {
+      "why": "This weakens the Content Security Policy, so an injected script could still run.",
+      "change": "Tighten the existing Content-Security-Policy where it is set. Remove 'unsafe-inline' and 'unsafe-eval' from script-src (use nonces or hashes for the inline scripts you need), replace * or https: in script-src with the exact hosts you load from, and add object-src 'none' and base-uri 'self' if they are missing.",
+      "risk": "Tightening script-src can break inline scripts, analytics or third-party widgets. Ship it as Content-Security-Policy-Report-Only first and watch the console.",
+      "check": "curl -sI {url} | grep -i content-security-policy"
+    },
+    "sec.no_x_content_type_options": {
+      "why": "Without nosniff, browsers may guess a file's type and run an uploaded or mislabelled file as script.",
+      "header": {"name": "X-Content-Type-Options", "value": "nosniff"},
+      "risk": "Very low: files must be served with their correct Content-Type, which every modern host does.",
+      "check": "curl -sI {url} | grep -i x-content-type-options"
+    },
+    "sec.no_referrer_policy": {
+      "why": "Without a Referrer-Policy, full page addresses (sometimes with tokens or ids in them) are sent to every site you link to.",
+      "header": {"name": "Referrer-Policy", "value": "strict-origin-when-cross-origin"},
+      "risk": "Very low: analytics still see which site a visitor came from, just not the full path.",
+      "check": "curl -sI {url} | grep -i referrer-policy"
+    },
+    "sec.page_can_be_framed": {
+      "why": "Any site can load your pages in an invisible frame and trick visitors into clicking your buttons (clickjacking).",
+      "header": {"name": "X-Frame-Options", "value": "SAMEORIGIN"},
+      "risk": "Breaks embedding your site in other sites. If you embed it on purpose, use Content-Security-Policy: frame-ancestors with those sites instead.",
+      "check": "curl -sI {url} | grep -i -E 'x-frame-options|frame-ancestors'"
+    },
+    "sec.server_header_reveals_a_version": {
+      "why": "An exact server version tells attackers which known vulnerabilities to try first.",
+      "steps": {
+        "*": {"file": "your web server config", "snippet": "# nginx\nserver_tokens off;\n\n# Apache\nServerTokens Prod\nServerSignature Off", "note": "Hide the version number; the server name alone is fine."}
+      },
+      "manual": "hosting",
+      "check": "curl -sI {url} | grep -i '^server:'"
+    },
+    "sec.cors_*": {
+      "why": "Your API tells browsers that any website may read its responses, so another site could read a signed-in visitor's data.",
+      "steps": {
+        "nextjs": {"file": "the route handler or middleware that sets Access-Control-Allow-Origin", "snippet": "const allowed = new Set(['https://yourdomain.com'])\nconst origin = request.headers.get('origin') ?? ''\nif (allowed.has(origin)) response.headers.set('Access-Control-Allow-Origin', origin)\nresponse.headers.set('Vary', 'Origin')", "note": "Reflect only origins you list; never * together with credentials."},
+        "*": {"file": "the API code that sets Access-Control-Allow-Origin", "snippet": "// Allow only your own origins, and never '*' together with Access-Control-Allow-Credentials: true\nconst allowed = ['https://yourdomain.com']\nif (allowed.includes(req.headers.origin)) res.setHeader('Access-Control-Allow-Origin', req.headers.origin)\nres.setHeader('Vary', 'Origin')", "note": "List the exact origins that need access."}
+      },
+      "risk": "Other front ends you run on different domains stop working until you add them to the list.",
+      "check": "curl -sI -H 'Origin: https://evil.example' {url} | grep -i access-control-allow"
+    },
+    "sec.cookie.flags_missing": {
+      "why": "Cookies without HttpOnly can be read by any injected script, and without Secure and SameSite they travel over plain http and in cross-site requests.",
+      "steps": {
+        "nextjs": {"file": "where the cookie is set (route handler, server action or middleware)", "snippet": "cookies().set('session', value, { httpOnly: true, secure: true, sameSite: 'lax', path: '/' })", "note": "Only cookies that browser JavaScript must read may skip httpOnly."},
+        "supabase": {"file": "your Supabase client setup", "snippet": "// With @supabase/ssr the auth cookies are set by the library: pass cookieOptions\ncreateServerClient(url, key, { cookies, cookieOptions: { secure: true, sameSite: 'lax' } })", "note": "Check which cookie the report names; third-party cookies are set by that provider."},
+        "*": {"file": "where the cookie is set on the server", "snippet": "Set-Cookie: session=...; HttpOnly; Secure; SameSite=Lax; Path=/", "note": "Only cookies that browser JavaScript must read may skip HttpOnly."}
+      },
+      "risk": "Code that reads the cookie from JavaScript (document.cookie) stops seeing it once HttpOnly is set.",
+      "check": "curl -sI {url} | grep -i set-cookie"
+    },
+    "sec.mixed_content": {
+      "why": "Resources over plain http on an https page can be swapped by anyone on the network, and browsers block some of them.",
+      "change": "Change every http:// address the report lists to https:// (or a relative path) in your templates and content.",
+      "risk": "A resource whose server has no https stops loading; host a copy yourself.",
+      "check": "curl -s {url} | grep -o 'src=\"http://[^\"]*' | head"
+    },
+    "sec.*_in_a_javascript_bundle": {
+      "why": "A secret key in a JavaScript file is public: anyone can open the file and use the key with your account.",
+      "manual": "provider",
+      "manual_text": "Rotate the leaked key in that provider's dashboard now (the old one stays valid until you do), then store the new one only as a server-side environment variable in your hosting settings.",
+      "steps": {
+        "nextjs": {"file": "the file that reads the key, and your env settings", "snippet": "// Server only: no NEXT_PUBLIC_ prefix, read it in a route handler or server action\nconst key = process.env.STRIPE_SECRET_KEY", "note": "Anything named NEXT_PUBLIC_* is copied into the browser bundle."},
+        "vite": {"file": "the file that reads the key, and your env settings", "snippet": "// Anything named VITE_* ships to the browser. Move the call behind a server function\n// (Vercel or Netlify function, or a Supabase Edge Function) that reads process.env.SECRET_KEY.", "note": "The browser should call your function, never the provider with the secret."},
+        "lovable": {"file": "the code that calls the provider", "snippet": "// Move this call into a Supabase Edge Function and store the key with:\n// supabase secrets set STRIPE_SECRET_KEY=...", "note": "Lovable projects are Vite apps: VITE_* values are public."},
+        "bolt": {"file": "the code that calls the provider", "snippet": "// Move this call into a server function (Netlify or Vercel function) that reads process.env.SECRET_KEY", "note": "VITE_* values are public."},
+        "*": {"file": "the code that uses the key", "snippet": "// Call the provider from your server with a key read from an environment variable,\n// and let the browser call your server instead.", "note": "Publishable or public keys are fine in the browser; secret keys never are."}
+      },
+      "risk": "Rotating breaks anything still using the old key; update your server env at the same time.",
+      "check": "grep -rn 'sk_live_\\|AKIA\\|SG\\.' dist/ .next/static/ build/ 2>/dev/null | head"
+    },
+    "sec.*_is_publicly_readable": {
+      "why": "Anyone can download this file; config and backup files usually hold passwords, keys or customer data.",
+      "manual": "provider",
+      "manual_text": "Rotate every password and key the file contained: assume they were copied.",
+      "steps": {
+        "vercel": {"file": ".vercelignore, and the file itself", "snippet": "# .vercelignore\n.env*\n.git\n*.sql\n*.bak", "note": "Also delete the file from the public or build folder and redeploy."},
+        "netlify": {"file": "netlify.toml (publish only the build folder)", "snippet": "[build]\n  publish = \"dist\"", "note": "Delete the file from the repository's public folder and redeploy."},
+        "*": {"file": "the public or build folder", "snippet": "git rm --cached .env .env.production *.sql\necho '.env*' >> .gitignore", "note": "Deploy only the build output, never the project root."}
+      },
+      "risk": "None to the site; the rotation is what protects you.",
+      "check": "curl -s -o /dev/null -w '%{http_code}\\n' {origin}/.env"
+    },
+    "sec.source_maps_are_publicly_readable": {
+      "why": "Source maps publish your original source code, including comments and internal endpoints.",
+      "steps": {
+        "nextjs": {"file": "next.config.js", "snippet": "module.exports = {\n  productionBrowserSourceMaps: false,\n}", "note": "Upload maps to your error tracker instead if you need them."},
+        "vite": {"file": "vite.config.ts", "snippet": "export default defineConfig({\n  build: { sourcemap: false },\n})", "note": "Or 'hidden' to keep them for an error tracker without linking them."},
+        "lovable": {"file": "vite.config.ts", "snippet": "export default defineConfig({\n  build: { sourcemap: false },\n})", "note": ""},
+        "bolt": {"file": "vite.config.ts", "snippet": "export default defineConfig({\n  build: { sourcemap: false },\n})", "note": ""},
+        "astro": {"file": "astro.config.mjs", "snippet": "export default defineConfig({\n  vite: { build: { sourcemap: false } },\n})", "note": ""},
+        "*": {"file": "your bundler config", "snippet": "Turn off production source maps (webpack: devtool: false).", "note": ""}
+      },
+      "risk": "Stack traces from production get harder to read unless you upload maps to your error tracker privately.",
+      "check": "curl -s {url} | grep -o 'src=\"[^\"]*\\.js' | head -1"
+    },
+    "sec.*_has_known_vulnerabilities": {
+      "why": "This library version has published vulnerabilities that attackers can look up.",
+      "change": "Upgrade the library to its latest version (npm install <name>@latest, or change the version in the CDN address), then run your tests.",
+      "risk": "Major version upgrades can change behavior; read the library's changelog for breaking changes.",
+      "check": "npm ls <name>  # or check the version in the <script src> address"
+    },
+    "sec.library_from_a_public_cdn_loads_without_an_integrity_check": {
+      "why": "If the CDN is compromised, the script it serves runs on your site with full access.",
+      "change": "Add integrity and crossorigin attributes to the <script> or <link> tag (the CDN shows the SRI hash, or generate it with: curl -s <url> | openssl dgst -sha384 -binary | openssl base64 -A).",
+      "risk": "If the file at that address ever changes, the browser refuses it; pin an exact version in the address.",
+      "check": "curl -s {url} | grep -o '<script[^>]*cdn[^>]*>' | head"
+    },
+    "sec.supabase.public_table": {
+      "why": "Anyone with your public anon key (it is in your JavaScript) can read these tables.",
+      "steps": {
+        "*": {"file": "a new Supabase migration (or the SQL editor)", "snippet": "alter table public.<table> enable row level security;\n-- then allow only what each user should see, for example:\ncreate policy \"owners read their rows\" on public.<table>\n  for select to authenticated using (user_id = (select auth.uid()));", "note": "Repeat for every table the report lists. With RLS on and no policy, nobody can read it through the API."}
+      },
+      "risk": "Pages that read these tables without signing in stop getting data until you add a policy for them.",
+      "check": "curl -s '{supabase_url}/rest/v1/<table>?select=*&limit=1' -H 'apikey: <anon key>'  # expect []"
+    },
+    "sec.supabase.public_rpc": {
+      "why": "These database functions can be called by anyone with the anon key.",
+      "steps": {
+        "*": {"file": "a new Supabase migration", "snippet": "revoke execute on function public.<name>(<args>) from anon, public;\ngrant execute on function public.<name>(<args>) to authenticated;", "note": "Keep anon access only for functions meant to be public."}
+      },
+      "risk": "Signed-out pages that call these functions stop working.",
+      "check": "curl -s -X POST '{supabase_url}/rest/v1/rpc/<name>' -H 'apikey: <anon key>'  # expect a permission error"
+    },
+    "sec.supabase.public_bucket": {
+      "why": "Anyone can list and download every file in these storage buckets.",
+      "steps": {
+        "*": {"file": "Supabase dashboard, Storage, bucket settings (or a migration)", "snippet": "update storage.buckets set public = false where id = '<bucket>';\n-- then serve files with signed URLs: supabase.storage.from('<bucket>').createSignedUrl(path, 3600)", "note": "Public buckets are only right for files meant for everyone, like logos."}
+      },
+      "risk": "Public links to these files stop working; switch them to signed URLs.",
+      "check": "curl -s -X POST '{supabase_url}/storage/v1/object/list/<bucket>' -H 'apikey: <anon key>' -d '{\"prefix\":\"\"}'"
+    },
+    "sec.firebase*": {
+      "why": "Your Firebase data can be read without signing in.",
+      "steps": {
+        "*": {"file": "database.rules.json or firestore.rules", "snippet": "{\n  \"rules\": {\n    \".read\": \"auth != null\",\n    \".write\": \"auth != null\"\n  }\n}", "note": "Then narrow each path to the user who owns it."}
+      },
+      "risk": "Signed-out reads stop working.",
+      "check": "curl -s '<your database url>/.json?shallow=true'  # expect Permission denied"
+    },
+    "sec.no_caa_record": {"why": "A CAA record limits which certificate authorities may issue certificates for your domain.", "manual": "dns",
+      "manual_text": "Add a CAA DNS record for your domain naming your certificate authority, for example 0 issue \"letsencrypt.org\" (Vercel, Netlify and Cloudflare use Let's Encrypt; Cloudflare also uses Google Trust Services: pki.goog).",
+      "check": "dig +short CAA {host}"},
+    "sec.subdomain_*": {"why": "A subdomain points at a service you no longer use, so someone else could claim it and serve content on your domain.", "manual": "dns",
+      "manual_text": "Delete the DNS record for that subdomain in your DNS provider, or claim the resource it points at again.",
+      "check": "dig +short {host}"},
+    "sec.tls_*": {"why": "Your certificate or TLS setup lets browsers warn visitors or lets old, broken encryption through.", "manual": "hosting",
+      "manual_text": "Renew the certificate or turn off TLS 1.0 and 1.1 in your hosting or CDN settings (Cloudflare: SSL/TLS, Edge Certificates, Minimum TLS Version 1.2).",
+      "check": "curl -svI {url} 2>&1 | grep -i -E 'expire|SSL connection'"},
+    "sec.server_negotiates_tls_older_than_n_n": {"why": "Old TLS versions have known weaknesses.", "manual": "hosting",
+      "manual_text": "Set the minimum TLS version to 1.2 in your hosting or CDN settings.", "check": "curl -sI --tlsv1.1 --tls-max 1.1 {url}  # expect a failure"},
+    "sec.server_still_accepts_tls_n_n_or_n_n": {"why": "Old TLS versions have known weaknesses.", "manual": "hosting",
+      "manual_text": "Set the minimum TLS version to 1.2 in your hosting or CDN settings.", "check": "curl -sI --tlsv1.1 --tls-max 1.1 {url}  # expect a failure"},
+    "sec.http.plain": {"why": "Everything sent to the site, including passwords, can be read on the network.", "manual": "hosting",
+      "manual_text": "Turn on HTTPS and the http to https redirect in your hosting settings (Vercel, Netlify and Cloudflare do this for free).",
+      "check": "curl -sI http://{host} | grep -i location"},
+    "sec.*spf*": {"why": "Without SPF, anyone can send email that claims to come from your domain.", "manual": "email",
+      "manual_text": "Add the SPF TXT record your email provider gives you (one record, starting v=spf1).", "check": "dig +short TXT {host}"},
+    "sec.*dmarc*": {"why": "Without DMARC, receivers do not know to reject mail that fakes your domain.", "manual": "email",
+      "manual_text": "Add a TXT record at _dmarc.<your domain>: v=DMARC1; p=quarantine; rua=mailto:dmarc@<your domain>", "check": "dig +short TXT _dmarc.{host}"},
+    "sec.*mx*": {"why": "Without MX records, replies and bounces to your domain are lost.", "manual": "email",
+      "manual_text": "Add the MX records your email provider gives you.", "check": "dig +short MX {host}"},
+
+    "geo.robots.blocks_search_bot": {
+      "why": "ChatGPT, Claude and Perplexity cannot read your pages, so they cannot quote or recommend you.",
+      "steps": {
+        "nextjs": {"file": "app/robots.ts (or public/robots.txt)", "snippet": "export default function robots() {\n  return { rules: [{ userAgent: '*', allow: '/' }], sitemap: 'https://yourdomain.com/sitemap.xml' }\n}", "note": "Remove any Disallow for GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot."},
+        "*": {"file": "public/robots.txt", "snippet": "User-agent: *\nAllow: /\n\nSitemap: https://yourdomain.com/sitemap.xml", "note": "Remove Disallow lines for OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot. Blocking training bots (GPTBot, ClaudeBot) is your choice."}
+      },
+      "risk": "Low; if you blocked AI crawlers on purpose, keep the training bots blocked and allow only the search ones.",
+      "check": "curl -s {origin}/robots.txt"
+    },
+    "seo.robots_txt_blocks_all_crawlers": {
+      "why": "Search engines are told not to crawl the site, so it disappears from Google and AI search.",
+      "steps": {
+        "nextjs": {"file": "app/robots.ts (or public/robots.txt)", "snippet": "export default function robots() {\n  return { rules: [{ userAgent: '*', allow: '/' }] }\n}", "note": "A staging site should stay blocked; production should not."},
+        "*": {"file": "public/robots.txt", "snippet": "User-agent: *\nAllow: /", "note": "Keep Disallow only for private areas."}
+      },
+      "risk": "Private pages become crawlable if they were only hidden by robots.txt; protect them with sign-in instead.",
+      "check": "curl -s {origin}/robots.txt"
+    },
+    "seo.no_sitemap_xml": {
+      "why": "A sitemap tells search engines and AI crawlers every page to read.",
+      "steps": {
+        "nextjs": {"file": "app/sitemap.ts", "snippet": "export default function sitemap() {\n  return [{ url: 'https://yourdomain.com/', lastModified: new Date() }]\n}", "note": "List every public page."},
+        "*": {"file": "public/sitemap.xml", "snippet": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n  <url><loc>https://yourdomain.com/</loc></url>\n</urlset>", "note": "List every public page and add a Sitemap: line to robots.txt."}
+      },
+      "risk": "None.",
+      "check": "curl -sI {origin}/sitemap.xml | head -1"
+    },
+    "geo.no_llms_txt": {
+      "why": "llms.txt is a small map of your site for AI assistants (low measured impact, cheap to add).",
+      "steps": {"*": {"file": "public/llms.txt", "snippet": "# Your product\n\n> One sentence on what it does and for whom.\n\n## Pages\n- [Pricing](https://yourdomain.com/pricing): plans and prices", "note": "Served at /llms.txt from the public folder."}},
+      "risk": "None.",
+      "check": "curl -s {origin}/llms.txt | head -3"
+    },
+    "geo.no_llms_full_txt": {"why": "An optional full-text version of llms.txt for AI assistants (low measured impact).",
+      "steps": {"*": {"file": "public/llms-full.txt", "snippet": "# Your product\n\nThe full text of your key pages, in Markdown.", "note": "Optional."}}, "risk": "None.", "check": "curl -sI {origin}/llms-full.txt | head -1"},
+    "geo.no_well_known_ai_txt": {"why": "An optional file stating how AI systems may use your content (low measured impact).",
+      "steps": {"*": {"file": "public/.well-known/ai.txt", "snippet": "User-Agent: *\nAllow: /", "note": "Optional."}}, "risk": "None.", "check": "curl -sI {origin}/.well-known/ai.txt | head -1"},
+    "geo.no_structured_data": {
+      "why": "Structured data tells Google and AI search exactly who you are and what you offer.",
+      "steps": {
+        "nextjs": {"file": "app/layout.tsx", "snippet": "<script type=\"application/ld+json\" dangerouslySetInnerHTML={{ __html: JSON.stringify({\n  '@context': 'https://schema.org', '@type': 'Organization', name: 'Your product', url: 'https://yourdomain.com',\n}) }} />", "note": "Static JSON you write yourself is safe here; never put user input in it."},
+        "astro": {"file": "src/layouts/Layout.astro <head>", "snippet": "<script type=\"application/ld+json\" set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'Organization', name: 'Your product', url: 'https://yourdomain.com' })} />", "note": ""},
+        "*": {"file": "index.html <head>", "snippet": "<script type=\"application/ld+json\">\n{\"@context\": \"https://schema.org\", \"@type\": \"Organization\", \"name\": \"Your product\", \"url\": \"https://yourdomain.com\"}\n</script>", "note": "It must be in the HTML the server sends, not added by JavaScript later."}
+      },
+      "risk": "None.",
+      "check": "curl -s {url} | grep -c application/ld+json"
+    },
+    "geo.the_homepage_says_little_before_javascript_runs": {
+      "why": "AI crawlers and many search bots do not run JavaScript, so they see an empty page.",
+      "steps": {
+        "nextjs": {"file": "app/page.tsx", "snippet": "// Keep the homepage a server component (no 'use client' at the top) so its text is in the HTML.", "note": "Move interactive parts into small client components."},
+        "vite": {"file": "index.html", "snippet": "<div id=\"root\">\n  <h1>What your product does</h1>\n  <p>One paragraph for people and crawlers, replaced when the app loads.</p>\n</div>", "note": "Or prerender the homepage at build time."},
+        "lovable": {"file": "index.html", "snippet": "<div id=\"root\">\n  <h1>What your product does</h1>\n  <p>One paragraph for people and crawlers, replaced when the app loads.</p>\n</div>", "note": "Lovable apps render in the browser; this text is what crawlers read."},
+        "bolt": {"file": "index.html", "snippet": "<div id=\"root\">\n  <h1>What your product does</h1>\n  <p>One paragraph for people and crawlers, replaced when the app loads.</p>\n</div>", "note": ""},
+        "*": {"file": "the homepage template", "snippet": "Render the headline and first paragraph on the server (or prerender them) instead of in JavaScript.", "note": ""}
+      },
+      "risk": "Keep the static text identical to what the app shows, or search engines may treat it as cloaking.",
+      "check": "curl -s {url} | sed 's/<[^>]*>/ /g' | wc -w"
+    },
+    "geo.page.javascript_only": {"why": "These pages are empty until JavaScript runs, so AI crawlers read nothing.",
+      "change": "Render these pages on the server or prerender them at build time.", "risk": "None.", "check": "curl -s <page> | sed 's/<[^>]*>/ /g' | wc -w"},
+    "geo.your_site_never_states_its_name_in_a_machine_readable_way": {"why": "Search and AI engines are not sure what your brand is called.",
+      "change": "Add <meta property=\"og:site_name\" content=\"Your product\"> to every page's <head>, and a name in your structured data.",
+      "risk": "None.", "check": "curl -s {url} | grep -i og:site_name"},
+
+    "seo.missing_meta_description": {
+      "why": "Search engines and link previews show a random snippet instead of your pitch.",
+      "steps": {
+        "nextjs": {"file": "app/layout.tsx (and each page's metadata)", "snippet": "export const metadata = {\n  title: 'Your product: what it does',\n  description: 'One or two sentences, 120 to 160 characters, saying what it does and for whom.',\n}", "note": "Give each page its own description."},
+        "astro": {"file": "src/layouts/Layout.astro <head>", "snippet": "<meta name=\"description\" content={description} />", "note": "Pass a description from each page."},
+        "wordpress": {"file": "your SEO plugin (Yoast or Rank Math), page settings", "snippet": "Meta description: one or two sentences, 120 to 160 characters.", "note": ""},
+        "*": {"file": "index.html <head>", "snippet": "<meta name=\"description\" content=\"One or two sentences, 120 to 160 characters, saying what it does and for whom.\">", "note": "Single-page apps: this is the description for every route unless you set it per page."}
+      },
+      "risk": "None.",
+      "check": "curl -s {url} | grep -i '<meta name=\"description\"'"
+    },
+    "seo.meta_description_is_too_short": {"why": "A very short description wastes the space search results give you.",
+      "change": "Rewrite the meta description to 120 to 160 characters: what it does, for whom, and why it is different.", "risk": "None.",
+      "check": "curl -s {url} | grep -i '<meta name=\"description\"'"},
+    "seo.page_title_is_too_short": {"why": "The title is the headline in search results; a short one says little.",
+      "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = { title: 'Your product: the one thing it does' }", "note": "30 to 60 characters."},
+                "*": {"file": "index.html <head>", "snippet": "<title>Your product: the one thing it does</title>", "note": "30 to 60 characters."}},
+      "risk": "None.", "check": "curl -s {url} | grep -i '<title>'"},
+    "seo.no_canonical_link": {"why": "Without a canonical link, copies of a page (with tracking parameters, www or not) compete with each other.",
+      "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = { metadataBase: new URL('https://yourdomain.com'), alternates: { canonical: '/' } }", "note": "Set each page's own canonical path."},
+                "*": {"file": "every page's <head>", "snippet": "<link rel=\"canonical\" href=\"https://yourdomain.com/this-page\">", "note": ""}},
+      "risk": "A wrong canonical hides the page from search; point each page at itself.", "check": "curl -s {url} | grep -i 'rel=\"canonical\"'"},
+    "seo.no_open_graph_tags": {"why": "Links shared on LinkedIn, Slack or X show no title, text or image.",
+      "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = {\n  openGraph: { title: 'Your product', description: 'What it does', images: ['/og.png'] },\n}", "note": "A 1200 x 630 image works everywhere."},
+                "*": {"file": "index.html <head>", "snippet": "<meta property=\"og:title\" content=\"Your product\">\n<meta property=\"og:description\" content=\"What it does\">\n<meta property=\"og:image\" content=\"https://yourdomain.com/og.png\">", "note": ""}},
+      "risk": "None.", "check": "curl -s {url} | grep -i 'og:'"},
+    "seo.more_than_one_hn_heading": {"why": "Several h1 headings blur what the page is about.", "change": "Keep one <h1> per page (the page's main headline) and turn the others into <h2>.", "risk": "Check your styling: some sites style h1 directly.", "check": "curl -s {url} | grep -o '<h1' | wc -l"},
+    "seo.image.alt_missing": {"why": "Images without alt text are invisible to search engines and screen readers.",
+      "change": "Add a short alt text describing each meaningful image; use alt=\"\" for decorative ones.", "risk": "None.", "check": "curl -s {url} | grep -o '<img[^>]*>' | grep -v alt= | head"},
+    "seo.broken_internal_link": {"why": "Visitors and crawlers hit a dead end.", "change": "Fix or remove each broken link the report lists, or redirect the old address.", "risk": "None.", "check": "curl -s -o /dev/null -w '%{http_code}\\n' <broken link>"},
+
+    "ux.signup_emails_hit_*": {
+      "why": "New users never get their confirmation email, so they cannot finish signing up.",
+      "manual": "provider",
+      "manual_text": "Set up your own SMTP sender (Resend, Postmark or SES) in your auth provider, for Supabase under Authentication, Emails, SMTP settings, and raise the email rate limit there.",
+      "steps": {"supabase": {"file": "Supabase dashboard: Authentication, Emails, SMTP settings", "snippet": "Host: smtp.resend.com\nPort: 465\nUsername: resend\nPassword: <your Resend API key, entered in the dashboard only>", "note": "Supabase's built-in mailer sends only a few emails an hour and is meant for testing."}},
+      "risk": "Emails come from your own domain after this, so its SPF and DKIM records must be set.",
+      "check": "Sign up with a fresh address and confirm the email arrives within a minute."
+    },
+    "a11y.control.name_missing": {
+      "why": "Screen readers, voice control and AI agents cannot tell what this field or button is for.",
+      "steps": {"*": {"file": "the form component", "snippet": "<label for=\"email\">Email</label>\n<input id=\"email\" type=\"email\" name=\"email\">\n\n<!-- Icon-only buttons -->\n<button aria-label=\"Close\"><svg aria-hidden=\"true\">...</svg></button>", "note": "A placeholder is not a label."}},
+      "risk": "None.",
+      "check": "npx @axe-core/cli {url} --tags wcag2a"
+    },
+    "a11y.image.alt_missing": {"why": "Screen reader users hear nothing, or a file name, for these images.",
+      "change": "Add alt text that says what the image shows; use alt=\"\" for decorative images.", "risk": "None.", "check": "npx @axe-core/cli {url} --rules image-alt"},
+    "a11y.*": {"why": "This stops some visitors, and AI agents that rely on the accessibility tree, from using the page.",
+      "change": "Fix the elements the report lists, following the fix line of the finding.", "risk": "None.", "check": "npx @axe-core/cli {url}"},
+
+    "perf.*": {"why": "Slow pages lose visitors, and Google ranks slow mobile pages lower.",
+      "steps": {"nextjs": {"file": "the page's components", "snippet": "import Image from 'next/image'\n<Image src=\"/hero.jpg\" alt=\"...\" width={1200} height={600} priority />", "note": "Use next/image, lazy-load below-the-fold parts with next/dynamic, and keep third-party scripts on strategy=\"lazyOnload\"."},
+                "*": {"file": "the page", "snippet": "<img src=\"hero.webp\" width=\"1200\" height=\"600\" alt=\"...\" fetchpriority=\"high\">\n<img src=\"below.webp\" loading=\"lazy\" width=\"600\" height=\"400\" alt=\"...\">", "note": "Compress images to WebP or AVIF, size them, lazy-load what is below the fold, and defer non-critical scripts."}},
+      "risk": "Lazy-loading the main above-the-fold image makes LCP worse; load that one eagerly.", "check": "npx lighthouse {url} --only-categories=performance --form-factor=mobile --quiet"}
+  }
+}

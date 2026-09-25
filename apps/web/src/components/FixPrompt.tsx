@@ -6,13 +6,14 @@ import { getFixPrompt } from '../lib/runs'
 export function FixPrompt({ runId, paid, count }: { runId: string; paid: boolean; count: number }) {
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [parts, setParts] = useState<string[]>([])  // the chat version, one part per chat message
 
   async function act(label: string, work: () => Promise<void>) {
     setBusy(true)
     setStatus(null)
     try {
       await work()
-      setStatus(label)
+      if (label) setStatus(label)
     } catch (e) {
       setStatus(e instanceof Error ? e.message : 'That did not work. Try again.')
     } finally {
@@ -20,8 +21,18 @@ export function FixPrompt({ runId, paid, count }: { runId: string; paid: boolean
     }
   }
 
-  const copy = (style: 'full' | 'chat', label: string) => act(label, async () => {
-    if (!(await copyText(await getFixPrompt(runId, style)))) throw new Error('Could not copy. Use Download instead.')
+  const copy = (label: string) => act(label, async () => {
+    if (!(await copyText(await getFixPrompt(runId, 'full')))) throw new Error('Could not copy. Use Download instead.')
+  })
+  // The API splits the chat version into parts of at most 4,000 characters, each starting "Walkthru fix plan for".
+  const chat = () => act('', async () => {
+    const all = (await getFixPrompt(runId, 'chat')).split(/\n\n(?=Walkthru fix plan for )/).map((p) => p.trim()).filter(Boolean)
+    setParts(all)
+    if (!(await copyText(all[0] ?? ''))) throw new Error('Could not copy. Use Download instead.')
+    setStatus(all.length > 1 ? `Copied part 1 of ${all.length}. Paste it, let the builder finish, then copy the next part.` : 'Copied the chat version for Lovable or Bolt.')
+  })
+  const copyPart = (i: number) => act(`Copied part ${i + 1} of ${parts.length}.`, async () => {
+    if (!(await copyText(parts[i]))) throw new Error('Could not copy.')
   })
   const download = () => act('Downloaded walkthru-fixes.md', async () => {
     const url = URL.createObjectURL(new Blob([await getFixPrompt(runId, 'full')], { type: 'text/markdown' }))
@@ -37,18 +48,29 @@ export function FixPrompt({ runId, paid, count }: { runId: string; paid: boolean
       <h2 id="fix-prompt-title" className="mt-2 text-xl font-light tracking-tight">One prompt for all {count} fixes</h2>
       <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted">
         {paid
-          ? 'Paste it into Claude Code, Cursor or Codex, or save the file into your project. Lovable and Bolt get a shorter chat version. Ignored findings are left out; secrets are never included.'
+          ? 'Paste it into Claude Code, Cursor or Codex, or save the file into your project. Fixes come in batches with a check after each, written for your hosting and framework when Walkthru can tell them. Lovable and Bolt get the same plan in chat-sized parts. Ignored findings are left out; secrets are never included.'
           : 'Pro builds one Markdown prompt from this report for Claude Code, Cursor, Lovable or Bolt, with every fix in order and a check for each. Rerun afterwards to see what was fixed.'}
       </p>
       {paid ? (
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={button} disabled={busy} onClick={() => copy('full', 'Copied. Paste it into your coding agent.')}>Copy prompt</button>
+          <button type="button" className={button} disabled={busy} onClick={() => copy('Copied. Paste it into your coding agent.')}>Copy prompt</button>
           <button type="button" className={button} disabled={busy} onClick={download}>Download walkthru-fixes.md</button>
-          <button type="button" className={button} disabled={busy} onClick={() => copy('chat', 'Copied the short version for Lovable or Bolt.')}>Copy chat version</button>
+          <button type="button" className={button} disabled={busy} onClick={chat}>Copy chat version</button>
         </div>
-      ) : (
+      ) : null}
+      {paid && parts.length > 1 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+          <span>Chat parts:</span>
+          {parts.map((_, i) => (
+            <button key={i} type="button" className="rounded-full border border-line px-3 py-1 transition hover:border-ink disabled:opacity-50" disabled={busy} onClick={() => copyPart(i)}>
+              Copy part {i + 1} of {parts.length}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {!paid ? (
         <p className="mt-4 text-sm"><a href="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See Pro</a></p>
-      )}
+      ) : null}
       {status && <p role="status" className="mt-3 text-xs text-muted">{status}</p>}
     </section>
   )
