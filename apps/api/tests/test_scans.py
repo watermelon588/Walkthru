@@ -49,13 +49,13 @@ def test_security_hard_site_unverified_vs_verified():
     with fetch.client() as c:
         basic = titles(security.scan(HARD + "/", c, verified=False))
         full = titles(security.scan(HARD + "/", c, verified=True))
-    assert "Site is served over plain http" in basic  # X1 (transport) on the http fixture
+    assert "Local development uses plain http" in basic  # local fixture is a dev note, not a production warning
     assert "No Content-Security-Policy" in basic and "Page can be framed" in basic  # X1 headers
     assert any(x.startswith('Cookie "session" is missing') for x in basic)  # X2
     assert "Server header reveals a version" in basic  # X6
     with fetch.client() as c:
         signup = c.get(HARD + "/signup.html").text
-    assert "Form submits over plain http" in titles(security.check_content(signup, HARD + "/signup.html"))  # X5
+    assert "Local form submits over plain http" in titles(security.check_content(signup, HARD + "/signup.html"))  # X5, dev note
     assert not any("publicly readable" in x for x in basic)  # exposed files need verification
     assert "/.env is publicly readable" in full and "/.git/config is publicly readable" in full  # X3
     assert "Stripe live key in a JavaScript bundle" in full  # X4

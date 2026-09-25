@@ -24,7 +24,7 @@ from starlette.routing import Route
 from app import auth, billing, db, deliver, mcp_server, plans, retention, watch
 from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
-from app.agent.schema import Observation, StepEvidence
+from app.agent.schema import Comparison, Observation, StepEvidence
 from app.auth import require_user
 from app.scans import fetch, security
 
@@ -300,7 +300,8 @@ def finish_run(run_id: str, values: dict) -> None:
         )
         rep.tokens += values.get("tokens", 0)
         try:
-            rep.comparison = compare.attach(row, rep.model_dump())
+            comparison = compare.attach(row, rep.model_dump())
+            rep.comparison = Comparison.model_validate(comparison) if comparison else None
         except Exception:  # a failed comparison must never lose the report
             log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
         if row.get("tier") == "paid":

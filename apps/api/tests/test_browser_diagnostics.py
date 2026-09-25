@@ -32,3 +32,4 @@ def test_browser_findings_are_tied_to_the_step_that_produced_them():
         ("performance", "high"),
     ]
     assert all(finding.evidence and "step 1" in finding.evidence for finding in findings)
+    assert findings[0].rule == "a11y.axe.label"

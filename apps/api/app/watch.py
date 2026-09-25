@@ -30,9 +30,8 @@ def new_hook() -> tuple[str, str]:
 
 def changes(before: dict | None, after: dict) -> dict:
     """What a new report fixed and introduced compared with the previous one, by finding fingerprint (compare.py)."""
-    old = {compare.fingerprint(f): f["title"] for f in (before or {}).get("findings", [])}
-    new = {compare.fingerprint(f): f["title"] for f in after.get("findings", [])}
-    return {"new": [new[k] for k in new if k not in old], "fixed": [old[k] for k in old if k not in new],
+    diff = compare.compare((before or {}).get("findings", []), after.get("findings", []))
+    return {"new": [f["title"] for f in diff["new"]], "fixed": [f["title"] for f in diff["fixed"]],
             "score": (after.get("launch_ready") or {}).get("score"), "at": datetime.now(UTC).isoformat()}
 
 

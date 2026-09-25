@@ -4,7 +4,7 @@ the report found. Ignored findings are left out, and secret values are masked (S
 
 import re
 
-from app.agent.compare import fingerprint
+from app.agent.compare import fingerprint, is_ignored, legacy_fingerprint
 
 ORDER = ("security", "ux", "geo", "seo", "accessibility", "performance")
 SEVERITY = {"high": 0, "medium": 1, "low": 2}
@@ -23,7 +23,7 @@ def _mask(text: str) -> str:
 
 
 def _ordered(findings: list[dict], ignored: dict) -> list[dict]:
-    kept = [f for f in findings if fingerprint(f) not in ignored]
+    kept = [f for f in findings if not is_ignored(f, ignored)]
     return sorted(kept, key=lambda f: (ORDER.index(f["kind"]) if f["kind"] in ORDER else len(ORDER), SEVERITY.get(f["severity"], 3)))
 
 
@@ -68,7 +68,7 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
 
 def _where(finding: dict, pages: dict) -> list[str]:
     """Every affected page when the report knows them (the evidence line shows at most 3)."""
-    urls = pages.get(fingerprint(finding), [])
+    urls = pages.get(fingerprint(finding), pages.get(legacy_fingerprint(finding), []))
     if len(urls) > 1:
         return [f"Where ({len(urls)} pages, fix every one):", *[f"- {u}" for u in urls], ""]
     return [f"Where: `{_mask(finding['evidence'])}`"] if finding.get("evidence") else []

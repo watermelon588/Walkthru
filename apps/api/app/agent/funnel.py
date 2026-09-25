@@ -19,10 +19,12 @@ def metrics(steps: list[dict], status: str) -> dict:
     useful = next((i for i, s in enumerate(steps) if (s.get("progress") or 0) > 0), None)
     start = next((t for s in steps if (t := _at(s))), None)
     reached = _at(steps[useful]) if useful is not None else None
+    typed = {(s.get("url"), s["target_id"]) for s in steps if s.get("action") == "type" and s.get("target_id") is not None}
+    unidentified_types = sum(s.get("action") == "type" and s.get("target_id") is None for s in steps)
     return {
         "steps_to_goal": len(steps) if status == "done" else None,
-        "fields_typed": sum(s.get("action") == "type" for s in steps),
-        "errors_seen": len({e for s in steps for e in s.get("errors_after") or []}),
+        "fields_typed": len(typed) + unidentified_types,
+        "errors_seen": len({" ".join(e.casefold().split()) for s in steps for e in s.get("errors_after") or [] if e.strip()}),
         "safe_stops": sum(bool(s.get("safe_stop")) for s in steps),
         "first_useful_step": useful + 1 if useful is not None else None,
         "seconds_to_first_useful": round((reached - start).total_seconds()) if start and reached and reached >= start else None,

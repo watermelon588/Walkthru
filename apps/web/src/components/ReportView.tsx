@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { EVIDENCE_RETENTION_DAYS, fingerprint, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { EVIDENCE_RETENTION_DAYS, ignoredKey, KIND_LABEL, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { LaunchChecks } from './LaunchChecks'
@@ -97,14 +97,14 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
           )}
 
           {ignore && r.findings.length > 0 && (
-            <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[fingerprint(f)]).length} />
+            <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[ignoredKey(f, ignore.ignored)]).length} />
           )}
 
           {r.geo && <GeoReadiness geo={r.geo} />}
 
           {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
 
-          <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} />
+          <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} reasons={r.check_reasons} />
 
           {r.top_fixes.length > 0 && (
             <section aria-label="Top fixes" className="report-print-section print-break-before mt-14">
@@ -157,7 +157,7 @@ function RetentionNote({ run }: { run: Run }) {
 
 function FindingRow({ f, ignore }: { f: Finding; ignore?: IgnoreControls }) {
   const tone = f.severity === 'high' ? 'text-danger' : f.severity === 'medium' ? 'text-ink' : 'text-muted'
-  const fp = fingerprint(f)
+  const fp = ignoredKey(f, ignore?.ignored ?? {})
   const reason = ignore?.ignored[fp]
   return (
     <li className={`grid gap-2 border-b border-line py-5 sm:grid-cols-[7rem_1fr] ${reason ? 'opacity-60' : ''}`}>
@@ -253,10 +253,12 @@ function FunnelNumbers({ funnel }: { funnel: NonNullable<NonNullable<Run['report
   const was = funnel.previous
   const show = (v: number | null, unit = '') => (v == null ? 'Not reached' : `${v}${unit}`)
   const note = (v: number | null | undefined, unit = '') => (was && v !== undefined ? `was ${v == null ? 'not reached' : `${v}${unit}`}` : undefined)
+  const usefulNote = [funnel.seconds_to_first_useful == null ? 'time not measured' : `after ${funnel.seconds_to_first_useful} s`,
+    was ? `was ${was.first_useful_step == null ? 'not reached' : `step ${was.first_useful_step}`}${was.seconds_to_first_useful == null ? '' : ` after ${was.seconds_to_first_useful} s`}` : null].filter(Boolean).join(' · ')
   return (
     <section aria-label="Signup funnel" className="report-summary mt-4 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3 lg:grid-cols-5">
       <Stat label="Steps to the goal" value={show(funnel.steps_to_goal)} note={note(was?.steps_to_goal)} />
-      <Stat label="First useful screen" value={funnel.first_useful_step == null ? 'Not reached' : `Step ${funnel.first_useful_step}`} note={funnel.seconds_to_first_useful != null ? `after ${funnel.seconds_to_first_useful} s` : note(was?.first_useful_step)} />
+      <Stat label="First useful screen" value={funnel.first_useful_step == null ? 'Not reached' : `Step ${funnel.first_useful_step}`} note={usefulNote} />
       <Stat label="Fields typed" value={String(funnel.fields_typed)} note={note(was?.fields_typed)} />
       <Stat label="Errors seen" value={String(funnel.errors_seen)} note={note(was?.errors_seen)} />
       <Stat label="Safe stops" value={String(funnel.safe_stops)} note={note(was?.safe_stops)} />
