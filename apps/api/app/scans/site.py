@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from collections import OrderedDict, deque
@@ -13,7 +14,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import fetch, geo, security, seo
+from app.scans import backend, fetch, geo, security, seo
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
@@ -270,6 +271,10 @@ def audit(
     if verified:
         security_records.extend((finding, None) for finding in security.check_exposed(base, client))
         security_records.extend((finding, None) for finding in security.check_bundles(root.text, root_url, client))
+    try:  # Supabase or Firebase from the browser: explained on every plan, probed read-only on verified domains (P1.1)
+        security_records.extend((finding, root_url) for finding in backend.check(root.text, root_url, client, verified=verified))
+    except Exception:
+        logging.getLogger("walkthru").warning("backend exposure check failed for %s", root_url, exc_info=True)
 
     if shell:
         # Page-level checks read the served HTML. On a JavaScript-built page that is not what visitors or
