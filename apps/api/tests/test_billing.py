@@ -427,3 +427,15 @@ def test_real_sdk_builds_the_checkout_request_and_parses_the_payment(billing_db,
     assert sent["product_cart"] == [{"product_id": "pdt_pro", "quantity": 1}] and sent["metadata"]["offer_id"] == o["id"]
     assert send(c, "payment.succeeded", {"payment_id": "pay_real"}).json()["result"] == "granted"
     assert seen[-1].url.path == "/payments/pay_real"
+
+
+def test_founder_hears_about_each_access_request(monkeypatch, billing_db):
+    from app import deliver, main
+
+    sent = []
+    monkeypatch.setattr(main, "_billing_hits", {})  # earlier tests used up this user's hourly requests
+    monkeypatch.setenv("FOUNDER_EMAIL", "founder@example.com")
+    monkeypatch.setattr(deliver, "send_access_request", lambda *a: sent.append(a) or True)
+    with TestClient(main.app) as c:
+        assert c.post("/billing/access-requests", json={"plan": "plus", "note": "my SaaS"}).status_code == 200
+    assert sent and sent[0][0] == "founder@example.com" and sent[0][2:4] == ("plus", "my SaaS")

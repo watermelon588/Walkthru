@@ -2,6 +2,55 @@
 
 _Last updated: 2026-09-25_
 
+## Handoff for the next agent (2026-09-25, Claude Code, written before pushing)
+
+Read this block first. It describes the founder's local machine as of this push, so a cloud agent does not redo or undo it.
+
+### Local state at this push
+- Local `main` equals `origin/main` after this push. Nothing local is left uncommitted except git-ignored files.
+- Supabase schema is applied, including the four billing tables (`access_requests`, `admin_audit_log`, `billing_events`, `billing_offers`), verified over REST.
+- The direct database host (`db.<ref>.supabase.co`) resolves to IPv6 only and the founder's network has no IPv6, so `python -m app.db` times out there. The IPv4 session pooler works: host `aws-0-ap-southeast-2.pooler.supabase.com`, port 5432, user `postgres.<project-ref>`, same password. Use it by overriding `DATABASE_URL` for the one command; `.env` still holds the direct URL.
+- The founder's account has a development Plus pass until 2026-10-25 (`scripts/grant_plan.py`, no payment).
+- Local git-ignored changes: `apps/api/.env` gained `FOUNDER_EMAIL`; `evals/.walkthru-token` now holds the founder account's verification token, so the hard fixture (:8102) counts as their verified domain. Restart `.\dev` to load the new env value.
+- The dev stack runs with `.\dev` (API :8010, web :5173, fixtures :8101/:8102). The rebuilt extension in `apps/extension/.output/chrome-mv3` needs a Reload in `chrome://extensions` to show the new icon.
+
+### Fixed in this session (tested)
+- MCP: every finding id is unique within a report (a repeated rule becomes `rule#2`); `get_finding` and `verify_finding` reach both cookie findings on the hard fixture.
+- MCP: tools answer in text only (`structured_output=False`), so agents read each answer once instead of twice.
+- `run_scan` (MCP `scan_site` and `rerun`, watch and compare parts): adds `https://` when the address has no scheme, and runs the owner-only checks (exposed files, bundle secrets, source maps, takeover) when the scanning user verified that host after redirects. Anonymous Instant Scans never do.
+- Plan requests email the founder (`FOUNDER_EMAIL` plus `RESEND_API_KEY`), with the approve and reject commands; `scripts/billing.py list` prints emails instead of user ids.
+- Pricing copy: the Launch Pack card lists competitor compare; the Plus card says Everything in Pro and lists the MCP server; the billing request form shows what each plan includes (read from `content.ts`). Docs show the real MCP address (`MCP_URL`) instead of a placeholder.
+- Extension icons: Scout on a light rounded tile, `apps/extension/public/icon/{16,32,48,128}.png`, picked up by WXT into the manifest.
+- End-to-end MCP test as an outside agent: handshake, all 7 tools, clear errors for bad ids, bad keys and `file://`, and another account's run id refused by every run tool.
+
+### Still broken or open
+- Report fingerprints (`kind:rule`) collide when one rule fires twice (the `session` and `__Host-csrf` cookies both give `security:sec.cookie.flags_missing`). Ignoring one ignores both, and per-page lists merge. MCP works around it with `#2`; the root fix belongs in the scanners (a rule id per cookie or per target).
+- Some generated rule ids are awkward (`sec.jquery_n_n_has_known_vulnerabilities`, `seo.more_than_one_hn_heading`); missing image alt text is reported twice (accessibility and SEO).
+- Billing: Dodo products are not configured, so `scripts/billing.py approve` stops with "set DODO_PRODUCT_...". Until then the only way to give access is `grant_plan.py` (free).
+- Resend's test sender only reaches the Resend account's own email, so the founder email works only if `FOUNDER_EMAIL` is that address. Real customer email needs the domain (not bought).
+- The web app was not re-tested in a browser this session (dashboard, report actions, compare, watch): the founder did not sign in to the in-app browser. The API and MCP paths were tested live.
+- A test MCP key was pasted in chat; the founder should revoke it on the MCP page.
+- None of the system-design tasks in docs/system-design.md are started. Founder-only items there: rotate the Supabase secret key and DB password, rotate test-account passwords, domain, OAuth, Dodo.
+
+### Next steps, in order
+1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
+2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.
+3. Launch-gate agent tasks from docs/system-design.md: SD-2.2 (request and snapshot size caps), SD-9.2 (Python lockfile), SD-9.1 (CI), SD-3.1 (IDOR test for every route), SD-2.1 (shared rate limits).
+4. Founder with an agent: Dodo test mode (docs/billing.md), then one test payment and refund.
+5. API key hardening before launch: expiry, read-only scope, register the `wt_` prefix for GitHub secret scanning; OAuth for MCP after launch.
+
+### Do not alter without asking the founder
+- Server-side plan decisions (`apps/api/app/plans.py`): the client never says which plan it is on. Paid checks are "not free"; Plus-only checks are watch, MCP and API keys.
+- Owner-only security checks run only on hosts the user verified, re-checked after redirects. Never send attack payloads, fuzz or write to a site's backend.
+- API keys: stored as SHA-256 hashes, shown once, revocable. Never log or store a raw key.
+- Billing: a pass turns on only from Dodo's signed webhook; `AccessRequest` forbids extra fields; prices come only from `billing.PRICES` (confirmed 2026-09-24).
+- Plus stays a waitlist in the pricing copy until citation tracking and branded PDFs ship (SPEC.md).
+- The fixed extension `key` in `apps/extension/wxt.config.ts` (id `cilngbcfpoojecjoiklimnjnomjglcdo`) stays until the Chrome Web Store upload.
+- MCP finding ids, including the `#n` suffix, are now what agents pass back; change them only together with `_ids` and its test.
+- UI: the founder reverted two redesign passes. Keep UI changes small and match existing patterns; design tokens only; no em dashes in user-facing copy.
+- Never commit `.env` or `evals/.walkthru-token`; never set `ALLOW_LOCAL_SCANS` in production.
+
+
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).
 - Monorepo scaffold: `apps/api` (FastAPI `/health` + test), `apps/web` (Vite React TS).
@@ -172,6 +221,8 @@ _Last updated: 2026-09-25_
   - MCP: `get_finding` and `verify_finding` (see ARCHITECTURE.md `mcp`).
   - Verified: 286 API tests and Ruff; web build and oxlint. The real site audit against the fixtures finds every new trap on hard (X7 to X14, scorer 8 of 8) and none on easy. Real sites reachable from the build sandbox (pypi.org, nodejs.org, ruby-lang.org) showed no new false alarms; pypi's bot-challenge page correctly got a low "CSP has no base-uri". python.org, TLS handshakes and DNS-over-HTTPS were blocked in that sandbox, so TLS, CAA and takeover are verified by local TLS and recorded DNS tests only; check one live scan after deploy.
 
+- **MCP and plan fixes (2026-09-25, Claude Code):** MCP ids are unique per report (a repeated rule becomes `rule#2`), tools answer in text only (no duplicate structured copy), owner scans (MCP `scan_site`, `rerun`, watch, compare) add `https://` when missing and run owner-only checks on hosts the owner verified. Plan requests email the founder when `FOUNDER_EMAIL` and `RESEND_API_KEY` are set; `scripts/billing.py list` shows emails. Pricing cards: Launch Pack lists competitor compare, Plus lists Everything in Pro and MCP; the billing request form shows what each plan includes. Docs MCP example uses the real API address. Extension icons (Scout on a light tile) in `apps/extension/public/icon/`.
+
 ## In progress
 - **P1.2 security parity merged (2026-09-25).** Header, CSP, CORS, SRI, TLS, CAA, library, secret, source-map and takeover checks from the Claude branch are integrated with the P0 truth pass. The hard and easy fixtures and full API suite pass (289 tests); Ruff, TypeScript, oxlint and Vite build pass. The TLS localhost test uses IPv4 on Windows because the fixture server listens there. Owner-verified real-site false-positive checks in the P1.2 acceptance criteria remain pending, so the task stays in progress.
 - **v1.2 flagship plan written (2026-09-25).** The plan is in ROADMAP.md (build rules, Phases 0 to 4, sessions 16 to 33) and tasks/todo.md (P0.1 to P4.6 with acceptance criteria). P0.2 funnel numbers is committed and P0.4 competitor comparison is closed; copy review and the remaining Phase 0 and Phase 1 depth work are open. Founder rules: free tier only, deterministic first, reuse permissively licensed open source after a licence check (docs/decisions.md). Launch moves to 10-27 (11-03 at the latest).
@@ -211,6 +262,7 @@ New sessions start with handoff.md. Founder's order (2026-09-24):
 - No Anthropic budget for now: everything runs on free providers (Groq, Gemini, OpenRouter free models for the report writer). Fallback chain lives in `apps/api/app/agent/runtime.py`.
 
 ## Checks (last run)
+- 2026-09-25 MCP and plan fixes: API 296 pytest pass and Ruff is clean; web TypeScript, Vite build and oxlint pass; extension 30 vitest pass plus 1 skipped, TypeScript and oxlint pass, WXT build includes the icons. Live MCP against the running API: unique `#2` ids, text-only answers, `example.com` scanned as https, and the hard fixture's owner-only findings (exposed `.env`, `.env.production`, `backup.sql`, AWS, SendGrid and Stripe keys in the bundle, public source maps) reported for the verified owner.
 - 2026-09-24 report writer: API 99 pytest pass and Ruff is clean. A live Tripverse report through the new chain with 120b disabled fell through an overloaded Ultra in 0.7 s and still produced a grounded report quoting the real error.
 - 2026-09-21 interrupted-run recovery: API 69 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 19 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. Live API health and extension-origin stop preflight return 200. The remaining stale run was converted to `stopped` and its report is ready.
 - 2026-09-21 T23 browser evidence: API 68 pytest pass and Ruff is clean; web TypeScript, oxlint and Vite production build pass; extension 18 vitest pass plus 1 skipped live contract test, TypeScript and oxlint pass, and the WXT production build succeeds. `axe-core` 4.13.0 reports no audited dependency vulnerabilities; the new wire and report mappings have direct regression coverage.

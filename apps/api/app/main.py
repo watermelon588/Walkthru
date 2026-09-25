@@ -366,6 +366,9 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
 def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tuple[str, dict]:
     """One server-side scan, stored as a run. Anonymous Instant Scans are public; an owner's scan (MCP) is private.
     Raises ValueError with a message for the caller when the site cannot be scanned."""
+    site = site.strip()
+    if "://" not in site:
+        site = f"https://{site}"  # agents and people type "example.com"
     fetch.assert_public(site)
     with fetch.client() as c:
         resp = fetch.get(c, site)
@@ -374,7 +377,9 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
     run_id = uuid.uuid4().hex
     # Owners' scans use the paid tier so they never count against the free daily capacity.
     db.insert_run(run_id, user_id, str(resp.url), "Instant Scan", "stranger", "paid" if user_id else "free", False, kind=kind, public=user_id is None)
-    rep = report.run_report(str(resp.url), fetch.page_text(resp.text))
+    # Exposed files and keys only on a host this owner verified, checked after redirects (same rule as journey runs).
+    verified = bool(user_id) and _verified(str(resp.url), user_id)
+    rep = report.run_report(str(resp.url), fetch.page_text(resp.text), verified=verified)
     db.set_report(run_id, rep.model_dump(), status="done")
     return run_id, {"site": str(resp.url), "report": rep.model_dump()}
 
@@ -682,7 +687,7 @@ def billing_status(user: dict = Depends(require_user)) -> dict:
 
 
 @app.post("/billing/access-requests")
-def request_access(body: AccessRequest, user: dict = Depends(require_user)) -> dict:
+def request_access(body: AccessRequest, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
     _billing_rate_limit(user["id"])
     if any(billing.offer_open(o) for o in db.offers_for_user(user["id"], 10)):
         raise HTTPException(409, "You already have an approved offer waiting. Pay it from this page before it expires.")
@@ -691,7 +696,18 @@ def request_access(body: AccessRequest, user: dict = Depends(require_user)) -> d
     except db.Conflict as e:
         raise HTTPException(409, "Your request is already waiting for review.") from e
     log.info("access request %s for %s", row.get("id"), body.plan)
+    if founder := os.environ.get("FOUNDER_EMAIL"):
+        background.add_task(_notify_founder, founder, user, body.plan, body.note.strip(), str(row.get("id")))
     return {"id": row.get("id"), "plan": body.plan, "status": "pending"}
+
+
+def _notify_founder(to: str, user: dict, plan: str, note: str, request_id: str) -> None:
+    try:
+        email = user.get("email") or db.user_email(user["id"]) or user["id"]
+        if not deliver.send_access_request(to, email, plan, note, request_id):
+            log.warning("access request %s: founder email not sent (RESEND_API_KEY unset or refused)", request_id)
+    except Exception:  # the request is already saved; `scripts/billing.py list` still shows it
+        log.warning("access request %s: founder email failed", request_id, exc_info=True)
 
 
 @app.post("/billing/offers/{offer_id}/checkout")
