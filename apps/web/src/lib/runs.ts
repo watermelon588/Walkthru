@@ -344,3 +344,14 @@ export type Branding = { active: boolean; brand: Brand | null }
 export const getBranding = () => api<Branding>('/me/branding', undefined, true, 'GET')
 export const saveBranding = (brand: Brand) => api<Branding>('/me/branding', brand)
 export const deleteBranding = () => api<Branding>('/me/branding', undefined, true, 'DELETE')
+
+/** Plus: the Walkthru GitHub App, and fix pull requests (P4.4). Tokens never reach the browser. */
+export type GitHubStatus = { configured: boolean; plus: boolean; install_url: string | null; installations: { id: number; account: string }[] }
+export type GitHubRepo = { full_name: string; private: boolean; default_branch: string; installation_id: number }
+export type FixPr = { repo: string; base: string; changes: { path: string; action: 'create' | 'update'; summary: string; titles: string[]; lines: number }[]; left: string[]; url?: string; number?: number }
+export const getGitHub = () => api<GitHubStatus>('/github', undefined, true, 'GET')
+export const connectGitHub = (installation_id: number, code: string, state: string) => api<{ id: number; account: string }>('/github/connect', { installation_id, code, state })
+export const listGitHubRepos = () => api<{ repos: GitHubRepo[]; errors: string[] }>('/github/repos', undefined, true, 'GET')
+export const disconnectGitHub = (id: number) => api<{ removed: number }>(`/github/installations/${id}`, undefined, true, 'DELETE')
+export const fixPullRequest = (runId: string, repo: GitHubRepo, confirm: boolean) =>
+  api<FixPr>(`/runs/${runId}/fix-pr`, { installation_id: repo.installation_id, repo: repo.full_name, confirm })

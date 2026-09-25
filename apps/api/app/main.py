@@ -18,10 +18,10 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from langgraph.types import Command
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
-from app import auth, billing, db, deliver, mcp_server, plans, plus, retention, teams, watch
+from app import auth, billing, db, deliver, github, mcp_server, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
@@ -673,6 +673,111 @@ def revoke_api_key(key_id: str, user: dict = Depends(require_user)) -> dict:
     return {"revoked": key_id}
 
 
+# ---------- Plus: GitHub App and fix pull requests (app/github.py, P4.4) ----------
+
+
+class GitHubConnect(BaseModel):
+    model_config = {"extra": "forbid"}
+    installation_id: int = Field(ge=1, le=2**53)
+    code: str = Field(min_length=1, max_length=200)
+    state: str = Field(min_length=1, max_length=100)
+
+
+class FixPullRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    installation_id: int = Field(ge=1, le=2**53)
+    repo: str = Field(max_length=141)
+    confirm: bool = False  # False previews the changes; True opens the pull request
+
+    @field_validator("repo")
+    @classmethod
+    def _repo(cls, value: str) -> str:
+        if not github.REPO.fullmatch(value):  # owner/name only: never "..", extra segments or a leading dot
+            raise ValueError("owner/name of a repository")
+        return value
+
+
+_github_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the other limits
+
+
+def _github_limit(key: str, count: int, window: int, message: str) -> None:
+    now = time.time()
+    hits = [t for t in _github_hits.get(key, []) if now - t < window]
+    if len(hits) >= count:
+        raise HTTPException(429, message)
+    _github_hits[key] = [*hits, now]
+
+
+def _installation(user_id: str, installation_id: int) -> dict:
+    row = next((r for r in db.github_installations(user_id) if int(r["installation_id"]) == installation_id), None)
+    if not row:
+        raise HTTPException(404, "That GitHub installation is not connected to your account.")
+    return row
+
+
+@app.get("/github")
+def github_status(user: dict = Depends(require_user)) -> dict:
+    is_plus = _plan_name(user["id"]) == "plus"
+    if not github.configured():
+        return {"configured": False, "plus": is_plus, "install_url": None, "installations": []}
+    rows = db.github_installations(user["id"])
+    return {"configured": True, "plus": is_plus, "install_url": github.install_url(user["id"]) if is_plus else None,
+            "installations": [{"id": int(r["installation_id"]), "account": r["account_login"]} for r in rows]}
+
+
+@app.post("/github/connect")
+def github_connect(body: GitHubConnect, user: dict = Depends(require_user)) -> dict:
+    """The GitHub install redirect lands in Settings, which posts its installation id, OAuth code and state here."""
+    plus.require(user["id"], "Fix pull requests")
+    if not github.configured():
+        raise HTTPException(503, "The GitHub App is not set up on this server yet.")
+    if not github.state_ok(user["id"], body.state):
+        raise HTTPException(403, "This connection link expired or was started from another account. Connect again from Settings.")
+    _github_limit(f"connect:{user['id']}", 10, 3600, "Too many connection attempts. Try again in an hour.")
+    try:
+        account = github.owned_installation(body.code, body.installation_id)
+    except github.GitHubError as e:
+        raise HTTPException(403, str(e)) from e
+    db.add_github_installation(user["id"], body.installation_id, account)
+    return {"id": body.installation_id, "account": account}
+
+
+@app.get("/github/repos")
+def github_repos(user: dict = Depends(require_user)) -> dict:
+    plus.require(user["id"], "Fix pull requests")
+    repos, errors = [], []
+    for row in db.github_installations(user["id"]):
+        try:
+            repos += github.repositories(int(row["installation_id"]))
+        except github.GitHubError as e:
+            errors.append(f"{row['account_login'] or row['installation_id']}: {e}")
+    return {"repos": repos, "errors": errors}
+
+
+@app.delete("/github/installations/{installation_id}")
+def github_disconnect(installation_id: int, user: dict = Depends(require_user)) -> dict:
+    """Walkthru forgets the installation at once. Uninstalling the App on GitHub also revokes its access there."""
+    if not db.remove_github_installation(user["id"], installation_id):
+        raise HTTPException(404, "That GitHub installation is not connected to your account.")
+    return {"removed": installation_id}
+
+
+@app.post("/runs/{run_id}/fix-pr")
+def fix_pull_request(run_id: str, body: FixPullRequest, user: dict = Depends(require_user)) -> dict:
+    """Preview, then open, a pull request with the config-only fixes for this report. The owner reviews and merges it."""
+    row = _owned(run_id, user)
+    plus.require(user["id"], "Fix pull requests")
+    if not row.get("report"):
+        raise HTTPException(409, "The report is not ready yet.")
+    _installation(user["id"], body.installation_id)
+    if body.confirm:
+        _github_limit(f"pr:{user['id']}", 5, 86_400, "You opened 5 fix pull requests today. Try again tomorrow.")
+    try:
+        return github.open_fix_pr(body.installation_id, body.repo, row, row["report"], confirm=body.confirm)
+    except github.GitHubError as e:
+        raise HTTPException(502, str(e)) from e
+
+
 # ---------- sharing, email, verification ----------
 
 
@@ -746,6 +851,7 @@ def export_account(user: dict = Depends(require_user)) -> dict:
         "billing_offers": [billing.public_offer(o) for o in db.offers_for_user(user["id"], 100)],
         "ignored_findings": db.ignored_for_user(user["id"]),
         "team_workspaces": teams.export(user["id"]),
+        "github_installations": db.github_installations(user["id"]),
     }
 
 

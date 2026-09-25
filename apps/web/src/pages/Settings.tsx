@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { AccountAvatar } from '../components/AccountAvatar'
 import { AppShell } from '../components/AppShell'
 import { DomainVerification } from '../components/DomainVerification'
+import { GitHubConnect } from '../components/GitHubConnect'
 import { ReportBranding } from '../components/ReportBranding'
 import { TestUsers } from '../components/TestUsers'
 import { YourData } from '../components/YourData'
@@ -172,6 +173,7 @@ function SettingsContent({ session }: { session: Session }) {
       <DomainVerification />
       <TestUsers />
       <ReportBranding />
+      <GitHubConnect />
       <YourData email={session.user.email ?? ''} />
     </>
   )

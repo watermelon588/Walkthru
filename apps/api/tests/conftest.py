@@ -67,6 +67,7 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "messages_by", lambda user_id: [])
     monkeypatch.setattr(db, "auto_share_teams", lambda user_id: [])
     monkeypatch.setattr(db, "anonymize_team_user", lambda user_id: None)
+    monkeypatch.setattr(db, "github_installations", lambda user_id: [])
     return rows
 
 
