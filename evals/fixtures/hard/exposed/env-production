@@ -1,0 +1,3 @@
+# X12: production environment file served from the web root
+DATABASE_URL=postgres://zentrix:hunter2@db.internal:5432/zentrix
+NODE_ENV=production
