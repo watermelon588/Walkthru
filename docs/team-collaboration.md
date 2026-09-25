@@ -257,7 +257,36 @@ The pages work and follow the existing patterns: PageHeader-like header, the Set
 - Letting members' runs use the owner's quota (billing).
 - Where the rules live.
 
-## 11. Open decisions for the founder
+## 11. Scout: the @Scout assistant in chat (added 2026-09-25)
+
+Write `@Scout` and a question in the workspace chat, or in a report or finding thread. Scout answers in the same thread, with the "AI answer, check the report" label, and mentions the person who asked.
+
+**How it works** (`apps/api/app/scout.py`, about 150 lines):
+1. `post_message` sees the mention and queues `scout.reply` as a background task. The asker's message returns at once.
+2. Retrieval is plain code, with no embeddings or vector database. Scout reads the findings board of this workspace (status, owner, found again), the latest score per site, the shared reports' summaries, and the last 20 messages in the thread. Findings on a site the question names come first, then those sharing the question's words, open ones and high severity. The context is capped at 14,000 characters.
+3. One call to OpenRouter's free models, in order: `SCOUT_MODELS`, by default Nemotron 3 Ultra, then Nemotron 3 Super, then Nemotron 3.5 Lightning. Each has at most 60 s, and 100 s in total. The **Groq and Gemini chain is never used**, so chat cannot use up the quota that journeys and reports need.
+4. The answer is stored as a chat message with `bot = true` and no author, so it is part of the history and reaches everyone through Realtime or polling.
+
+**Scope and safety:**
+- Scout reads only what this workspace's members can already read. It never sees the owner's personal runs or another workspace (tested).
+- It has no tools and takes no actions.
+- The prompt marks all workspace data and the question as data, not instructions.
+- Answers are plain text, at most 3,000 characters.
+
+**Limits:**
+- `SCOUT_DAILY` (50) answers per workspace per UTC day, counted in the database.
+- 10 questions per person per 10 minutes.
+- Only active workspaces.
+- A retried send is answered once.
+- Without a key, Scout replies that it is not switched on. When every model fails, it says the free models are busy.
+
+**Keys:**
+- `SCOUT_OPENROUTER_API_KEY`, falling back to `OPENROUTER_API_KEY`.
+- OpenRouter limits free models per **account** (about 50 requests a day without credit, about 1,000 a day after buying $10 of credit once). A key from the same account shares that allowance with the report writer. Use a separate account for Scout, or buy the one-off credit.
+
+**Speed:** Nemotron 3 Ultra measured about 60 s median as the report writer. For faster chat answers, put Nemotron 3 Super first in `SCOUT_MODELS`.
+
+## 12. Open decisions for the founder
 
 1. **Seats.** The pricing doc says Plus is "3 seats sharing reports", so `TEAM_SEATS=3`, with viewers counted. Two options that would sell well to agencies:
    - Free viewer seats, so clients do not count.

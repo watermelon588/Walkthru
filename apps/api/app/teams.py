@@ -24,10 +24,10 @@ from collections import Counter
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, EmailStr, Field
 
-from app import db, deliver
+from app import db, deliver, scout
 from app.agent import compare
 from app.auth import require_user
 
@@ -204,7 +204,7 @@ def _invite_out(inv: dict) -> dict:
 
 def _message_out(m: dict) -> dict:
     gone = bool(m.get("deleted_at"))
-    return {"id": m["id"], "thread": m["thread"], "author_id": m.get("author_id"), "author_name": m.get("author_name") or "Former member",
+    return {"id": m["id"], "thread": m["thread"], "author_id": m.get("author_id"), "author_name": m.get("author_name") or "Former member", "bot": bool(m.get("bot")),
             "body": "" if gone else m["body"], "mentions": [] if gone else (m.get("mentions") or []),
             "created_at": m["created_at"], "edited_at": m.get("edited_at"), "deleted": gone}
 
@@ -859,19 +859,25 @@ def list_messages(team_id: uuid.UUID, thread: str = Query("general", max_length=
 
 
 @router.post("/teams/{team_id}/messages")
-def post_message(team_id: uuid.UUID, body: NewMessage, user: dict = Depends(require_user)) -> dict:
+def post_message(team_id: uuid.UUID, body: NewMessage, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    """Send a message. One that mentions @Scout also gets an answer from Scout in the same thread (app/scout.py)."""
     me = _member(team_id, user, write=True)
     tid, thread = str(team_id), _thread(body.thread)
     if thread.startswith("run:") and not db.team_run(tid, thread[4:]):
         raise HTTPException(404, "That report is not shared in this workspace.")
     text = clean_body(body.body)
     _limit(f"message:{user['id']}", 30, 60, "You are sending messages very fast. Wait a moment and try again.")
+    asks_scout = scout.called(text)
+    if asks_scout:
+        _limit(f"scout:{user['id']}", 10, 600, "You asked Scout a lot just now. Wait a few minutes before the next question.")
     member_ids = {m["user_id"] for m in db.team_members(tid)} if body.mentions else set()
     mentions = [u for u in dict.fromkeys(str(m) for m in body.mentions) if u in member_ids and u != user["id"]]
     stored = db.insert_message({"team_id": tid, "thread": thread, "author_id": user["id"], "author_name": _name(user), "body": text,
                                 "mentions": mentions, "client_id": str(body.client_id or uuid.uuid4())})
     if not stored or stored.get("author_id") != user["id"]:
         raise HTTPException(409, "That message id is already taken. Send it again.")
+    if asks_scout and stored.get("new"):  # a retried send is answered once
+        background.add_task(scout.reply, tid, thread, text, user)
     if thread == "general" and stored["id"] > me["last_read_message_id"]:  # your own message counts as read
         db.update_member(tid, user["id"], {"last_read_message_id": stored["id"], "last_seen_at": _now().isoformat()}, last_read_message_id=f"lt.{stored['id']}")
     return _message_out(stored)

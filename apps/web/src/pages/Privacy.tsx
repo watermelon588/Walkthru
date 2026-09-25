@@ -68,6 +68,8 @@ const sections: DocSection[] = [
           <dd>Sign-in, database and private screenshot storage.</dd>
           <dt>Groq and Google (Gemini)</dt>
           <dd>AI models for test users and report writing.</dd>
+          <dt>OpenRouter</dt>
+          <dd>AI models for Scout, the assistant in team workspace chat. Only when someone asks Scout a question, it receives that question and the workspace's shared findings, report summaries and recent messages.</dd>
           <dt>Google PageSpeed Insights</dt>
           <dd>Mobile speed measurements for the public address being scanned.</dd>
           <dt>Resend</dt>
