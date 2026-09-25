@@ -210,6 +210,7 @@ def audit(
         return SiteAudit([failure], [], coverage)
 
     root_url = str(root.url)
+    verified = verified and fetch.same_site(url, root_url)  # a redirect to another host is not the verified site
     shell = fetch.is_js_shell(root.text)
     base = fetch.origin(root_url)
     robots_response = fetch.get(client, f"{base}/robots.txt", same_origin=base)

@@ -7,6 +7,8 @@ const tools = [
   { name: 'scan_site', body: 'Scans a public site: SEO, AI search readiness, passive security and a first impression, in about 20 seconds.' },
   { name: 'get_report', body: 'Reads any of your reports in full, with the evidence and the fix for each finding.' },
   { name: 'get_fix_prompt', body: 'Returns the fix prompt, so your agent can apply every fix in the codebase it has open.' },
+  { name: 'get_finding', body: 'Everything about one finding: why it matters, every affected page, the change and ready-made code when there is some.' },
+  { name: 'verify_finding', body: 'Re-runs only the check behind one finding, on its pages, and answers fixed or still broken.' },
   { name: 'rerun', body: 'Checks the site again after the fixes and says what disappeared and what is new.' },
   { name: 'list_runs', body: 'Lists your recent runs and scans with their Launch Ready scores.' },
 ]
