@@ -7,14 +7,14 @@ import re
 import time
 from collections import OrderedDict, deque
 from dataclasses import dataclass, field
-from urllib.parse import urldefrag, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urldefrag, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
 import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import backend, fetch, geo, security, seo
+from app.scans import backend, fetch, geo, geo_depth, security, seo, seo_depth
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
@@ -50,9 +50,12 @@ def _normal_url(raw: str, page_url: str, base: str) -> str | None:
     parsed = urlsplit(joined)
     if parsed.scheme not in {"http", "https"} or fetch.origin(joined) != base:
         return None
-    # Query variants create effectively unbounded crawl spaces and rarely represent
-    # a separate launch-readiness page. Audit the stable path once.
-    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "/", "", ""))
+    # Query variants create unbounded crawl spaces. The one exception is a small,
+    # numeric pagination URL: Google treats each page in a sequence as a URL.
+    params = parse_qs(parsed.query)
+    page = (params.get("page") or params.get("paged") or [""])[0]
+    query = urlencode({"page": page}) if page.isdigit() and 1 <= int(page) <= 100 else ""
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "/", query, ""))
 
 
 def _links(html: str, page_url: str, base: str) -> list[str]:
@@ -297,8 +300,11 @@ def audit(
     local = fetch.is_local_site(root_url) and not production_like
     sitemap_text = sitemap_response.text if sitemap_response is not None and sitemap_response.status_code == 200 else ""
     seo_records.extend(_site_checks(pages, failed, linked_from, depth, sitemap_text, base, truncated=truncated, local=local))
+    seo_records.extend(seo_depth.audit(pages, base, client, robot_rules, truncated=truncated, deadline=deadline))
     llms = fetch.get(client, f"{base}/llms.txt", same_origin=base)
     probe = fetch.get(client, root_url, headers={"User-Agent": geo.PROBE_AGENT})
+    with fetch.client(timeout=2.5) as geo_client:
+        remote = geo_depth.collect_remote(root_url, root.text, geo_client, full=geo_full, local=local)
     readiness = geo.audit(
         root_url,
         [(page_url, response.text) for page_url, response in pages] or [(root_url, root.text)],
@@ -308,6 +314,8 @@ def audit(
         (probe.status_code, probe.text[:5000], dict(probe.headers)) if probe is not None else None,
         full=geo_full,
         local=local,
+        sitemap_text=sitemap_text,
+        remote=remote,
     )
     page_map: list[tuple[str, str, list[str]]] = []
     return SiteAudit(_aggregate(seo_records, len(pages), page_map), _aggregate(security_records, len(pages), page_map), coverage,

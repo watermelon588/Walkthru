@@ -81,6 +81,11 @@ export type Report = {
     notes: string[]
     fixes?: { id: string; title: string; file: string; code: string; note: string }[]
     fixes_total?: number
+    citability?: { url: string; score: number; signals: Record<'statistics_with_sources' | 'attributed_quote' | 'definition' | 'comparison_table', boolean>;
+      rag: Record<'standalone_sections' | 'question_headings' | 'answer_first', boolean>; last_updated: string | null }[]
+    trust?: Record<'identity' | 'social_proof' | 'external_sources' | 'name_consistency', boolean>
+    discovery?: Record<string, boolean | null>
+    entities?: Record<string, { status: string; url?: string }>
   } | null
   model?: string | null
   comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[] } | null
@@ -92,6 +97,7 @@ export type Report = {
     truncated: boolean
     urls: string[]
     robots_respected: boolean
+    mobile_vitals?: { url: string; status: 'field_data' | 'lab_only' | 'unavailable'; lab_score: number | null; lcp_ms: number | null; cls: number | null; inp_ms: number | null }[]
   } | null
   /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
   /** Only on competitor comparisons (kind 'compare'): one entry per site, yours first. */

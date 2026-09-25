@@ -17,7 +17,7 @@ from urllib.robotparser import RobotFileParser
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import fetch, geo_fixes
+from app.scans import fetch, geo_depth, geo_fixes
 
 # Bots that fetch pages to answer and cite. Blocking any of these hides the site from that assistant.
 CITATION_BOTS = ("OAI-SearchBot", "ChatGPT-User", "Claude-SearchBot", "ClaudeBot", "PerplexityBot", "Googlebot", "Bingbot", "Applebot")
@@ -41,12 +41,17 @@ class GeoResult:
     fixes: list[dict] = field(default_factory=list)  # the GEO fix pack (app/scans/geo_fixes.py)
     full: bool = True
     pages: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (kind, title, every affected page)
+    citability: list[dict] = field(default_factory=list)
+    trust: dict = field(default_factory=dict)
+    discovery: dict = field(default_factory=dict)
+    entities: dict = field(default_factory=dict)
 
     def summary(self) -> dict:
         """The part stored in `report.geo`; findings go to the report's findings list. Free reports keep one fix and the count."""
         shown = self.fixes if self.full else self.fixes[:1]
         return {"score": self.score, "band": self.band, "categories": self.categories, "ai_words": self.ai_words, "ai_view": self.ai_view,
-                "notes": self.notes, "fixes": shown, "fixes_total": len(self.fixes)}
+                "notes": self.notes, "fixes": shown, "fixes_total": len(self.fixes), "citability": self.citability,
+                "trust": self.trust, "discovery": self.discovery, "entities": self.entities}
 
 
 def _f(severity: str, title: str, detail: str, fix: str, evidence: str | None = None) -> Finding:
@@ -92,7 +97,8 @@ def _challenged(status: int, headers: dict, body: str) -> bool:
 
 
 def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, llms: tuple[int, str] | None,
-          probe: tuple[int, str, dict] | None, *, full: bool, local: bool = False) -> GeoResult:
+          probe: tuple[int, str, dict] | None, *, full: bool, local: bool = False, sitemap_text: str = "",
+          remote: dict | None = None) -> GeoResult:
     """`pages` starts with the homepage. `full` scores every page (paid plans); otherwise the homepage only.
     `local` skips checks that describe the host rather than the code (robots.txt and the bot probe on a dev server)."""
     scope = pages if full else pages[:1]
@@ -244,20 +250,39 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
         score("meta", "Title and description", [(3 if has("title") else 0, 3), (3 if has('meta[name="description"]') else 0, 3),
                                                   (2 if has('link[rel="canonical"]') else 0, 2), (2 if has('meta[property^="og:"]') else 0, 2)])
 
-    # 7. llms.txt (5): low measured impact, so light weight and a low-severity finding.
+    # 7. llms.txt (3) and AI discovery endpoints (2): low measured impact.
     if llms is not None and not local:
         status, body = llms
         ok = llms_ok = status == 200 and body.lstrip().startswith("# ")
-        score("llms", "llms.txt", [(5 if ok else 2 if status == 200 else 0, 5)])
+        score("llms", "llms.txt", [(3 if ok else 1 if status == 200 else 0, 3)])
         if not ok:
             findings.append(_f("low", "No llms.txt" if status != 200 else "llms.txt is not in the expected format",
                                "llms.txt is a short Markdown map of your site for AI tools. It has low measured impact on AI search today, so fix the items above first.",
                                "Add /llms.txt: an H1 with your name, a one-line > summary, then sections of links to your key pages.",
                                f"{urlsplit(root_url).scheme}://{urlsplit(root_url).netloc}/llms.txt"))
+    discovery = (remote or {}).get("discovery", {})
+    measured = [present for present in discovery.values() if present is not None]
+    if measured:
+        score("discovery", "AI discovery files (low impact)", [(2 * sum(measured) / len(measured), 2)])
+        for path, present in discovery.items():
+            if present is False:
+                findings.append(_f("low", f"No {path}",
+                                   "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+                                   f"Publish a plain-text {path} describing the site and linking to its key pages.",
+                                   fetch.origin(root_url) + path))
+    entities = (remote or {}).get("entities", {})
+    for source, value in entities.items():
+        if value.get("status") == "matched":
+            notes.append(f"{source.replace('_', ' ').title()} has an entity whose official website matches this domain.")
+        elif value.get("status") == "no_match":
+            notes.append(f"No {source.replace('_', ' ')} entity with this domain was found. This is an advisory identity signal, not a ranking requirement.")
 
     earned, possible = sum(c["earned"] for c in cats), sum(c["max"] for c in cats)
     total = round(100 * earned / possible) if possible else 0
     band = next(name for floor, name in BANDS if total >= floor)
     view = "" if shell else " ".join(text.split()[:60])
-    fixes = geo_fixes.build(root_url, list(scope), objects, root_objects=_json_ld(root)[0], blocked=blocked, shell=shell, llms_ok=llms_ok)
-    return GeoResult(total, band, cats, findings, 0 if shell else words, view, notes, fixes, full, page_map)
+    fixes = geo_fixes.build(root_url, list(scope), objects, root_objects=_json_ld(root)[0], blocked=blocked, shell=shell,
+                            llms_ok=llms_ok, indexing=full and not local)
+    depth = geo_depth.analyze(root_url, list(scope), sitemap_text)
+    return GeoResult(total, band, cats, findings + depth["findings"], 0 if shell else words, view, notes, fixes, full,
+                     page_map + depth["pages"], depth["citability"], depth["trust"], discovery, entities)
