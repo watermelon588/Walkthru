@@ -516,3 +516,16 @@ notify pgrst, 'reload schema';
 alter table public.team_messages add column if not exists bot boolean not null default false;
 create index if not exists team_messages_bot on public.team_messages (team_id, created_at) where bot;
 notify pgrst, 'reload schema';
+
+-- ---------- Plus: GitHub App installations for fix pull requests (2026-09-25, app/github.py) ----------
+-- Only the installation id: tokens are minted per action and never stored. API only (no browser grants).
+create table if not exists public.github_installations (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  installation_id bigint not null,
+  account_login text not null default '' check (char_length(account_login) <= 100),
+  created_at timestamptz not null default now(),
+  primary key (user_id, installation_id)
+);
+alter table public.github_installations enable row level security;
+revoke all on public.github_installations from anon, authenticated;
+notify pgrst, 'reload schema';

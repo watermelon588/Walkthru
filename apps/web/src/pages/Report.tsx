@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { ReportView } from '../components/ReportView'
+import { FixPullRequest } from '../components/FixPullRequest'
 import { ShareToTeam } from '../components/ShareToTeam'
 import { btnGhost } from '../components/Shared'
 import { copyText } from '../lib/clipboard'
@@ -68,6 +69,7 @@ export default function Report() {
             />
           )}
           {state.run.report && <Actions run={state.run} branded={!!brand} onShared={() => setState({ kind: 'ready', run: { ...state.run, public: true } })} />}
+          {state.run.report && paid && <FixPullRequest runId={state.run.id} />}
           <ReportView
             run={state.run}
             brand={brand}

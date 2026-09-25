@@ -19,6 +19,7 @@ dependencies = [
   "selectolax>=0.3",
   "dodopayments>=1.117,<2",  # V10 billing: checkout sessions, payment lookups (payment.md)
   "standardwebhooks>=1.1,<2",  # Dodo webhook signature and timestamp verification
+  "PyJWT[crypto]>=2.8,<3",  # GitHub App token signing (RS256) for fix pull requests (MIT; already installed via mcp)
 ]
 
 [project.optional-dependencies]

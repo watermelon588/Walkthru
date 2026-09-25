@@ -664,3 +664,20 @@ def anonymize_team_user(user_id: str) -> None:
 def messages_by(user_id: str) -> list[dict]:
     """Every chat message and comment this user wrote, for the account export."""
     return _select("team_messages", {"author_id": f"eq.{user_id}", "select": "id,team_id,thread,body,created_at,edited_at,deleted_at", "order": "id.asc", "limit": "10000"})
+
+
+# ---------- GitHub App installations (Plus fix pull requests, app/github.py) ----------
+
+
+def github_installations(user_id: str) -> list[dict]:
+    return _select("github_installations", {"user_id": f"eq.{user_id}", "order": "created_at.asc"})
+
+
+def add_github_installation(user_id: str, installation_id: int, account: str) -> None:
+    _request("POST", "/rest/v1/github_installations", params={"on_conflict": "user_id,installation_id"},
+             json_body={"user_id": user_id, "installation_id": installation_id, "account_login": account[:100]}, prefer="resolution=merge-duplicates,return=minimal")
+
+
+def remove_github_installation(user_id: str, installation_id: int) -> bool:
+    return bool(_request("DELETE", "/rest/v1/github_installations", params={"user_id": f"eq.{user_id}", "installation_id": f"eq.{installation_id}",
+                                                                             "select": "installation_id"}, prefer="return=representation"))
