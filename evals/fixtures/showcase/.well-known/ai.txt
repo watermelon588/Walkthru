@@ -1,0 +1,2 @@
+Showcase is a product site used to test public journeys and AI search readiness.
+Key pages: /about.html, /docs.html, /pricing.html, /contact.html.

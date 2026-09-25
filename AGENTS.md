@@ -61,7 +61,8 @@ apps/api/.venv/Scripts/python evals/serve.py   # easy :8101, hard :8102
 
 ## Rules
 - **Always:** keep build and lint green; use design tokens (`bg-bg`, `text-ink`, `text-muted`, `border-line`, `bg-surface`, `text-accent`, `text-danger`), never raw hex in components; honor `prefers-reduced-motion` for every animation; label every input; handle loading, error and empty states.
-- **Ask first:** adding dependencies not listed in ARCHITECTURE.md, schema changes after launch, changing the paid-tier LLM, changing pricing.
-- **Never:** commit secrets or `.env`; use em dashes in user-facing copy; add a new accent color; run active security probes; submit payment forms from the agent; solve CAPTCHAs.
+- **Always (v1.2 build rules, ROADMAP.md):** deterministic code before a model call; free-tier models and APIs only; reuse open source after checking its licence (docs/decisions.md 2026-09-25) and keep its notice in `apps/api/THIRD_PARTY.md`.
+- **Ask first:** adding dependencies not listed in ARCHITECTURE.md (permissive open source is approved in principle; still name it in the task), schema changes after launch, switching on any paid model or API, changing pricing.
+- **Never:** commit secrets or `.env`; use em dashes in user-facing copy; add a new accent color; send attack payloads, fuzz, or write to a site's backend; probe a domain the owner has not verified (read-only probes only); active-scan a production URL; copy code or data from AGPL, Commons Clause, Elastic or unlicensed repos; keep repository code after a scan; submit payment forms from the agent; solve CAPTCHAs.
 - Simplest working solution first (see the ponytail skill). No abstractions for one caller.
 - Update CURRENT_STATE.md at the end of every working session.

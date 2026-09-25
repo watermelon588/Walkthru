@@ -123,3 +123,39 @@ grant select on public.finding_states to authenticated;
 -- column there leaked Instant Scan and owner addresses. The API now sends report emails without storing them.
 alter table public.runs drop column if exists email;
 notify pgrst, 'reload schema';
+
+-- 2026-09-25: personal API keys for the MCP server (Plus). Shown once, stored as SHA-256, revocable.
+-- RLS on and no grants: only the API (service role) reads or writes this table.
+create table if not exists public.api_keys (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 60),
+  key_hash text not null unique,
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz,
+  revoked_at timestamptz
+);
+alter table public.api_keys enable row level security;
+revoke all on public.api_keys from anon, authenticated;  -- belt and braces: RLS has no policies either
+create index if not exists api_keys_user on public.api_keys (user_id) where revoked_at is null;
+notify pgrst, 'reload schema';
+
+-- 2026-09-25: weekly watch (Plus). One row per watched site; the API checks due rows weekly and on a deploy hook.
+-- Runs gain two kinds: 'watch' (a watch check, a normal report) and 'compare' (competitor side by side).
+create table if not exists public.sites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  site text not null,
+  watch boolean not null default true,
+  hook_hash text unique,
+  last_run_id text,
+  last_changes jsonb,
+  next_check_at timestamptz not null default now(),
+  last_hook_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, site)
+);
+alter table public.sites enable row level security;
+revoke all on public.sites from anon, authenticated;
+create index if not exists sites_due on public.sites (next_check_at) where watch;
+notify pgrst, 'reload schema';

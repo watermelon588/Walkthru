@@ -51,6 +51,54 @@ export function GeoReadiness({ geo }: { geo: Geo }) {
         </blockquote>
       </figure>
 
+      {(geo.citability?.length ?? 0) > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-medium">Citation evidence by page</h3>
+          <p className="mt-1 text-xs leading-relaxed text-muted">A content checklist, not a prediction of citations or rankings. Each signal contributes 25 points.</p>
+          <ul className="mt-3 divide-y divide-line border-y border-line">
+            {geo.citability?.map((page) => (
+              <li key={page.url} className="py-3">
+                <details>
+                  <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 break-all font-mono text-xs">{page.url}</span>
+                    <span className="shrink-0 font-mono text-xs text-muted">{page.score}/100</span>
+                  </summary>
+                  <div className="mt-3 grid gap-4 text-xs text-muted sm:grid-cols-2">
+                    <div>
+                      <p className="font-medium text-ink">Content signals</p>
+                      <ul className="mt-1 space-y-1">
+                        {([
+                          ['statistics_with_sources', 'Statistics with sources'],
+                          ['attributed_quote', 'Attributed quotation'],
+                          ['definition', 'Clear definition'],
+                          ['comparison_table', 'Comparison table'],
+                        ] as const).map(([key, label]) => <li key={key}>{page.signals[key] ? 'Present' : 'Not seen'}: {label}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-medium text-ink">Retrieval structure</p>
+                      <ul className="mt-1 space-y-1">
+                        <li>{page.rag.standalone_sections ? 'Present' : 'Not seen'}: standalone sections</li>
+                        <li>{page.rag.question_headings ? 'Present' : 'Not seen'}: question headings</li>
+                        <li>{page.rag.answer_first ? 'Present' : 'Not seen'}: answer near the heading</li>
+                        <li>Latest date seen: {page.last_updated ?? 'No date seen'}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </details>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {geo.trust && Object.keys(geo.trust).length > 0 && (
+        <p className="mt-5 text-xs leading-relaxed text-muted">
+          Trust signals seen: {Object.entries(geo.trust).filter(([, seen]) => seen).map(([signal]) => signal.replaceAll('_', ' ')).join(', ') || 'none'}.
+          These are site signals, not a trust rating.
+        </p>
+      )}
+
       {(geo.fixes?.length ?? 0) > 0 && <FixPack fixes={geo.fixes ?? []} total={geo.fixes_total ?? 0} />}
 
       {geo.notes.length > 0 && (
