@@ -10,8 +10,8 @@ _Written 2026-09-24 at the end of a long build session. Branch `1`, last commit 
 | 2 | `AGENTS.md` | Repo rules: always, ask first, never. Commands. |
 | 3 | `CURRENT_STATE.md` | What is done, dated, and the known issues |
 | 4 | `SPEC.md` | Product v1.1: positioning, the plans table, GEO rules |
-| 5 | `ROADMAP.md` | 23 weak points with fixes, session plan, deadlines |
-| 6 | `tasks/todo.md` | Tasks V1 to V22 with acceptance criteria, in session order |
+| 5 | `ROADMAP.md` | v1.2 flagship plan: build rules, 32 weak points with fixes, Phases 0 to 4, session plan, deadlines |
+| 6 | `tasks/todo.md` | Phase tasks P0.1 to P4.6 with acceptance criteria and the open-source repo to reuse for each; V1 to V22 history below |
 | 7 | `ARCHITECTURE.md` | Capability map and module designs (read the parts you touch) |
 | 8 | `payment.md` | Billing design (founder-approved passes through Dodo), costs, the 25% model-cost allowance |
 | 9 | `docs/decisions.md` | Why things are the way they are; read the 2026-09-24 entries |

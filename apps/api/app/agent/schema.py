@@ -133,6 +133,7 @@ class SiteAuditSummary(BaseModel):
     truncated: bool
     urls: list[str] = Field(default_factory=list, max_length=55)
     robots_respected: bool = True
+    mobile_vitals: list[dict] = Field(default_factory=list, max_length=5)
 
 
 class GeoCategory(BaseModel):
@@ -153,6 +154,10 @@ class GeoSummary(BaseModel):
     notes: list[str] = Field(default_factory=list)
     fixes: list[dict] = Field(default_factory=list)  # GEO fix pack: id, title, file, code, note (one on free reports)
     fixes_total: int = 0
+    citability: list[dict] = Field(default_factory=list)  # Per-page content signals; advisory, not a citation prediction.
+    trust: dict[str, bool] = Field(default_factory=dict)
+    discovery: dict[str, bool | None] = Field(default_factory=dict)
+    entities: dict[str, dict] = Field(default_factory=dict)
 
 
 class ComparedFinding(BaseModel):
@@ -195,3 +200,4 @@ class Report(BaseModel):
     model: str | None = None  # which models ran the test and wrote the report, shown on the report
     pages: dict[str, list[str]] = Field(default_factory=dict)  # finding fingerprint -> every affected page
     launch_ready: LaunchReady | None = None  # app/agent/score.py; absent on reports written before 2026-09-24
+    funnel: dict | None = None  # app/agent/funnel.py, paid runs only; `previous` holds the last run of the same goal

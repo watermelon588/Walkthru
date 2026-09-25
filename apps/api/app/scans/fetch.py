@@ -37,7 +37,8 @@ def client(timeout: float = 15) -> httpx.Client:
     return httpx.Client(follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
-def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: dict | None = None) -> httpx.Response | None:
+def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: dict | None = None,
+        timeout: float | None = None) -> httpx.Response | None:
     """Fetch with every redirect revalidated before the next network request."""
     current = url
     try:
@@ -46,7 +47,7 @@ def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: d
             if same_origin is not None and origin(current) != same_origin:
                 return None
             started = time.monotonic()
-            response = c.get(current, headers=headers)
+            response = c.get(current, headers=headers, **({"timeout": timeout} if timeout is not None else {}))
             if not response.is_redirect:
                 response.extensions["walkthru_hops"] = hops  # redirect chains are an SEO finding (site.py)
                 response.extensions["walkthru_seconds"] = time.monotonic() - started  # the final page only (slow-response check)

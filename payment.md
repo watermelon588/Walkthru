@@ -40,6 +40,12 @@ The founder asked for the finalized plan on 2026-09-24. SPEC.md is the source of
 
 The founding price applies to the first 50 approved customers, locked for 12 months while their pass stays active.
 
+## Update 2026-09-25: free tier only for the flagship plan
+
+- Every plan, paid included, runs on free models and free API quotas until revenue pays for more. Claude Haiku stays wired and off.
+- The v1.2 depth features (backend exposure, security parity, code scans, Search Console, citation tracking) add $0 in model cost. Their limit is free-quota capacity, guarded by database-counted daily caps, and the Google Cloud VM for the worker (Always Free e2-micro first; e2-small only if measured memory needs it).
+- The 25% provider allowance above still governs the day a paid model or paid engine (ChatGPT, Perplexity) is switched on (ROADMAP P4.5).
+
 ## Why this decision exists
 
 The founder does not currently have a credit card and cannot safely finance unknown model usage before revenue exists. Dodo also does not split a customer's payment directly between Walkthru and Google, Anthropic or OpenAI. Dodo collects customer money for Walkthru; Walkthru remains responsible for paying its model providers.

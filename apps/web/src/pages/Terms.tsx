@@ -29,11 +29,13 @@ const sections: DocSection[] = [
     title: 'Sites you may test',
     body: (
       <>
-        <p>Only scan or test sites you own or have permission to test. You agree not to:</p>
+        <p>Only test, watch or run deep checks on sites you own or have permission to test. Competitor comparison is the one exception: it reads the public pages of other sites with the same passive requests a search engine makes, never logs in, never submits forms and never runs the checks reserved for verified domains. You agree not to:</p>
         <ul>
           <li>use {brand.name} to attack, overload or gain unauthorised access to any system;</li>
           <li>try to get around safe mode, CAPTCHAs, rate limits or plan limits;</li>
           <li>point test users at payment, deletion or messaging flows on accounts that hold real customer data;</li>
+          <li>use competitor comparison to overload a site, or on pages that are not public;</li>
+          <li>share your API keys or deploy hooks. You are responsible for what is done with them; revoke any key you think has leaked;</li>
           <li>resell or copy the service, or use reports to build a competing product.</li>
         </ul>
         <p>We may pause or end accounts that break these rules.</p>
@@ -87,7 +89,7 @@ export default function Terms() {
     <DocLayout
       title="Terms of service"
       lead={`The rules for using ${brand.name}, written to be read. The short version: only test sites you are allowed to test, and treat findings as advice.`}
-      updated="2026-09-24"
+      updated="2026-09-25"
       sections={sections}
     />
   )

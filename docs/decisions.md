@@ -264,3 +264,55 @@ Steps arrive about 5 s apart even when the server answers in 1.5 s: the rest is 
 - The extension only accepted sessions from localhost and had a machine-specific id. A committed public key fixes the id; the allowed page comes from `VITE_WEB_URL` (`npm run zip:beta`).
 - Behind a proxy every visitor shared one address, so 5 scans an hour would have been the limit for everyone. uvicorn trusts the proxy's forwarded address. A spoofed header only bypasses the per-address limit; the database-counted daily cap still holds.
 - Vercel gets SPA routing and security headers, including a strict CSP (`script-src 'self'`), tested against the production build.
+
+## 2026-09-25 Premium depth: flagship plan, open-source reuse, free tier only
+
+**Why:** the founder asked whether the paid report is worth paying for when free tools exist. A review of the code against open-source tools found:
+- Passive security is below the free ZAP baseline: it checks whether headers exist, not how good they are; 5 exposed paths; 6 secret patterns.
+- Launch Pack and Pro promise landing copy review, signup funnel numbers and competitor side by side, and none of them exist. SPEC claimed TLS checks that do not exist.
+- The first impression is text only and rated a clear page 0 of 3 (briefing audit).
+- The fix prompt gives a one-line generic fix per finding; only GEO has code.
+- GEO covers readiness, but not tracking, which is what Otterly ($29), Peec and Profound sell.
+- The biggest real risk for AI-built apps, a Supabase database readable without login (CVE-2025-48757, 170+ Lovable apps), is not checked.
+
+**Decided (founder, 2026-09-25):**
+- Build to a flagship bar: each section at least as useful as the best free tool for its area, in phases 0 to 4 (ROADMAP.md).
+- **Free tier only.** No paid model or API until revenue covers it. Deterministic code first; a model call only where judgement or writing is the product. Claude Haiku stays wired and off.
+- **Reuse open source before writing from scratch**, after a licence check. Permissive open source is approved in principle; each dependency is still named in its task.
+- **Positioning of value:** users pay for the scanners run for them, results deduplicated, explained in plain words and turned into a fix plan for their stack. Not for keyword, backlink or rank data (Ahrefs and Semrush datasets are out of reach at this price, and stay out of scope).
+
+**Security scope (recommended, written into SPEC and AGENTS.md):** read-only probes (backend exposure, safe Nuclei templates) only on owner-verified domains; active scans (ZAP) only in Phase 4, only against an owner-entered staging URL, with a signed confirmation. No payloads, fuzzing, denial of service or writes, ever. A full active scan on production can create records, send emails and take hours, so it is not offered.
+
+**GitHub:** Supabase's GitHub sign-in returns GitHub's token once, never refreshes it, and has no repo scope. Code access uses a separate GitHub App (read-only Contents and Metadata, per-repo install, short-lived installation tokens). Code is cloned shallow into a temp directory on the worker VM and deleted after the scan.
+
+**Free-tier engines for citation tracking (checked 2026-09-25, re-check before building):** Gemini 2.5 Flash and Flash-Lite list free Google Search grounding (500 requests a day, shared; one report measured far lower free limits, so measure on our key). Gemini 3.x has no free grounding. Groq Compound has web search on the free tier; `groq/compound-mini` was retired on 2026-09-21. ChatGPT and Perplexity have no free API, so they are shown as "not measured". Sources: [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing), [Groq Compound](https://console.groq.com/docs/compound/systems/compound).
+
+**Licence check (GitHub, 2026-09-25):**
+
+| Project | Licence | Use |
+|---|---|---|
+| [Auriti-Labs/geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill) | MIT | Port the remaining GEO checks and citability methods (P1.5) |
+| [ai-search-guru/getcito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool) | MIT | Data model for citation tracking (P3.2) |
+| [Perufitlife/supabase-security-skill](https://github.com/Perufitlife/supabase-security-skill), [humora2504/vibeproof](https://github.com/humora2504/vibeproof), [GerardoRdz96/rlsgate](https://github.com/GerardoRdz96/rlsgate) | MIT | Backend exposure probe and migrations checks (P1.1, P2.2) |
+| [mdn/mdn-http-observatory](https://github.com/mdn/mdn-http-observatory) | MPL-2.0 | Header tests rewritten in Python, no files copied (P1.2) |
+| [google/csp-evaluator](https://github.com/google/csp-evaluator) | Apache-2.0 | CSP checks ported (P1.2) |
+| [RetireJS/retire.js](https://github.com/RetireJS/retire.js) | Apache-2.0 | Vulnerable library data (P1.2) |
+| [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) | MIT | Secret patterns (P1.2) and repo scans (P2.2) |
+| [EdOverflow/can-i-take-over-xyz](https://github.com/EdOverflow/can-i-take-over-xyz) | CC-BY-4.0 | Takeover fingerprints, with attribution (P1.2) |
+| [google/osv-scanner](https://github.com/google/osv-scanner) | Apache-2.0 | Dependency scans, separate binary (P2.2) |
+| [opengrep/opengrep](https://github.com/opengrep/opengrep) | LGPL-2.1 | Engine only, separate binary, our own rules (P2.2) |
+| [projectdiscovery/nuclei](https://github.com/projectdiscovery/nuclei), [nuclei-templates](https://github.com/projectdiscovery/nuclei-templates) | MIT | Safe templates on verified domains (P2.4) |
+| [zaproxy/zaproxy](https://github.com/zaproxy/zaproxy) | Apache-2.0 | Opt-in staging scan in Docker (P4.1) |
+| [puneetindersingh/open-seo-crawler](https://github.com/puneetindersingh/open-seo-crawler), [PhialsBasement/LibreCrawl](https://github.com/PhialsBasement/LibreCrawl), [kemalai/FreeCrawl-SEO-Tool](https://github.com/kemalai/FreeCrawl-SEO-Tool) | MIT | SEO checks to port (P1.6) |
+| [m-naw/ux-explore](https://github.com/m-naw/ux-explore) | Apache-2.0 | Persona report ideas (P4.2) |
+| [adbar/trafilatura](https://github.com/adbar/trafilatura), [GoogleChrome/lighthouse](https://github.com/GoogleChrome/lighthouse) | Apache-2.0 | Candidates only if our own extraction or PageSpeed falls short |
+| [semgrep/semgrep-rules](https://github.com/semgrep/semgrep-rules), [opengrep/opengrep-rules](https://github.com/opengrep/opengrep-rules) | Commons Clause | **Not used.** Forbids selling a product built on them |
+| [trufflesecurity/trufflehog](https://github.com/trufflesecurity/trufflehog), [nabla-c0d3/sslyze](https://github.com/nabla-c0d3/sslyze) | AGPL-3.0 | **Not used.** gitleaks and the Python `ssl` module cover the need |
+| [bearer/bearer](https://github.com/bearer/bearer) | Elastic 2.0 | **Not used.** Forbids offering it as a service |
+| [neuhai/UXAgent](https://github.com/neuhai/UXAgent), [hand-dot/supabase-rls-checker](https://github.com/hand-dot/supabase-rls-checker) | None | **Ideas only.** No licence means no right to copy |
+| [enthec/webappanalyzer](https://github.com/enthec/webappanalyzer) | GPL-3.0 | **Not used.** Stack detection is a short list in our own code |
+| [testssl/testssl.sh](https://github.com/testssl/testssl.sh) | GPL-2.0 | Not needed; the `ssl` module covers expiry and version |
+
+**Market reference:** open-source GEO ([geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill), [GetCito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool)); paid GEO trackers from $29 (Otterly) to $99+ (Profound), [comparison](https://discoveredlabs.com/blog/profound-vs-peec-vs-otterly-which-ai-visibility-platform-should-you-buy); vibe-coded app risk ([Symbiotic, 1,072 apps](https://www.symbioticsec.ai/blog/we-scanned-1-072-vibe-coded-apps-98-had-security-flaws)); code scanning stack ([appsecsanta](https://appsecsanta.com/open-source-tools)); [Semgrep rules licence](https://semgrep.dev/legal/rules-license/).
+
+**Timeline effect:** launch moves one week, from 10-20 (realistic 10-27) to 10-27 (realistic 11-03); Plus opens about 12-08. Plan allocation of the new features is proposed in SPEC.md until the founder confirms it.
