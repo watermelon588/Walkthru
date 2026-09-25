@@ -44,7 +44,7 @@ export type BoardItem = {
 }
 export type Board = { findings: BoardItem[]; assignees: { user_id: string; name: string }[]; can_triage: boolean }
 
-export type Message = { id: number; thread: string; author_id: string | null; author_name: string; body: string; mentions: string[]; created_at: string; edited_at: string | null; deleted: boolean }
+export type Message = { id: number; thread: string; author_id: string | null; author_name: string; bot: boolean; body: string; mentions: string[]; created_at: string; edited_at: string | null; deleted: boolean }
 export type Preview = { team: { id: string; name: string }; role: Role; kind: 'email' | 'link'; invited_by_name: string; expires_at: string; member: boolean; problem: string | null }
 
 const t = (id: string) => `/teams/${encodeURIComponent(id)}`

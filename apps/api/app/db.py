@@ -470,7 +470,7 @@ def delete_brand(user_id: str) -> None:
 
 _MEMBER = "team_id,user_id,role,name,email,auto_share,last_read_message_id,last_seen_at,joined_at"
 _TEAM = "id,name,owner_id,created_at,updated_at"
-_MESSAGE = "id,team_id,thread,author_id,author_name,body,mentions,created_at,edited_at,deleted_at"
+_MESSAGE = "id,team_id,thread,author_id,author_name,bot,body,mentions,created_at,edited_at,deleted_at"
 _INVITE = "id,team_id,kind,email,email_domain,role,max_uses,uses,invited_by,invited_by_name,created_at,expires_at,revoked_at"
 
 
@@ -582,7 +582,7 @@ def runs_brief(run_ids: list[str]) -> list[dict]:
     found: list[dict] = []
     for i in range(0, len(run_ids), 100):  # keeps the query string short
         found += _rows({"id": f"in.({','.join(run_ids[i:i + 100])})",
-                        "select": "id,user_id,site,goal,persona,kind,status,created_at,findings:report->findings,launch_ready:report->launch_ready"})
+                        "select": "id,user_id,site,goal,persona,kind,status,created_at,findings:report->findings,launch_ready:report->launch_ready,summary:report->>summary"})
     return found
 
 
@@ -597,11 +597,12 @@ def save_finding_state(row: dict) -> dict | None:
 
 
 def insert_message(row: dict) -> dict | None:
-    """Once per (team, client_id): a retried send returns the message already stored."""
+    """Once per (team, client_id): a retried send returns the message already stored, with `new` False."""
     stored = _insert("team_messages", row, on_conflict="team_id,client_id")
     if stored:
-        return {k: stored.get(k) for k in _MESSAGE.split(",")}
-    return _one(_select("team_messages", {"team_id": f"eq.{row['team_id']}", "client_id": f"eq.{row['client_id']}", "select": _MESSAGE, "limit": "1"}))
+        return {**{k: stored.get(k) for k in _MESSAGE.split(",")}, "new": True}
+    earlier = _one(_select("team_messages", {"team_id": f"eq.{row['team_id']}", "client_id": f"eq.{row['client_id']}", "select": _MESSAGE, "limit": "1"}))
+    return {**earlier, "new": False} if earlier else None
 
 
 def team_messages(team_id: str, thread: str, *, after: int | None = None, before: int | None = None, limit: int = 50) -> list[dict]:

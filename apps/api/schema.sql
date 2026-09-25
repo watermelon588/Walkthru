@@ -511,3 +511,8 @@ end
 $$;
 
 notify pgrst, 'reload schema';
+
+-- Scout in team chat (2026-09-25): its answers are messages with bot = true and no author (app/scout.py).
+alter table public.team_messages add column if not exists bot boolean not null default false;
+create index if not exists team_messages_bot on public.team_messages (team_id, created_at) where bot;
+notify pgrst, 'reload schema';

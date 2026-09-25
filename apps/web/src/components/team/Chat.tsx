@@ -17,7 +17,7 @@ function mentionsIn(text: string, members: Member[], me: string): string[] {
 
 /** Message text with links and @mentions marked. React escapes everything; links are http(s) only. */
 function Body({ text, members }: { text: string; members: Member[] }) {
-  const names = members.map((m) => m.name).filter(Boolean).sort((a, b) => b.length - a.length).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const names = ['Scout', ...members.map((m) => m.name)].filter(Boolean).sort((a, b) => b.length - a.length).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const pattern = new RegExp(`(https?://[^\\s<>"]+${names.length ? `|@(?:${names.join('|')})` : ''})`, 'gi')
   const parts: ReactNode[] = []
   let last = 0
@@ -110,6 +110,15 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
     }
   }
 
+  // After an @Scout question: say Scout is working, and check for the answer every few seconds until it lands.
+  const [waiting, setWaiting] = useState<{ after: number; until: number } | null>(null)
+  const answered = waiting !== null && messages.some((m) => m.bot && m.id > waiting.after)
+  useEffect(() => {
+    if (!waiting || answered) return
+    const timer = window.setInterval(() => (Date.now() > waiting.until ? setWaiting(null) : refresh()), 3000)
+    return () => window.clearInterval(timer)
+  }, [waiting, answered, refresh])
+
   async function send(event?: FormEvent) {
     event?.preventDefault()
     const body = text.trim()
@@ -121,6 +130,7 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
       nearBottom.current = true
       merge([sent])
       setText('')
+      if (/(^|[^\w@])@scout\b/i.test(body)) setWaiting({ after: sent.id, until: Date.now() + 120_000 })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send. Your text is still here.')
     } finally {
@@ -189,6 +199,7 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted">
                     <span className="text-sm text-ink">{m.author_name}</span>
+                    {m.bot && <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-accent">AI answer, check the report</span>}
                     <time dateTime={m.created_at}>{time(m.created_at)}</time>
                     {m.edited_at && !m.deleted && <span>(edited)</span>}
                   </p>
@@ -215,6 +226,7 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
                 </div>
               </li>
             ))}
+            {waiting && !answered && <li role="status" className="text-sm text-muted">Scout is reading this workspace's reports and findings…</li>}
           </ol>
           {canChat ? (
             <form onSubmit={send} className="border-t border-line px-5 py-4">
@@ -231,7 +243,8 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
               />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                  {others.length > 0 && <span>Mention</span>}
+                  <span>Mention</span>
+                  <button type="button" onClick={() => insert('Scout')} title="Ask Scout about this workspace's reports and findings" className="rounded-full border border-line px-2.5 py-1 text-accent transition hover:bg-surface">@Scout</button>
                   {others.slice(0, 8).map((m) => (
                     <button key={m.user_id} type="button" onClick={() => insert(m.name)} className="rounded-full border border-line px-2.5 py-1 transition hover:bg-surface hover:text-ink">@{m.name}</button>
                   ))}

@@ -60,6 +60,18 @@ Read this block first. It describes the founder's local machine as of this push,
 - **Not tested:** Supabase Realtime itself. The pages fell back to polling in the sandbox, as designed.
 - **Reference and the UI brief for the local agent:** [docs/team-collaboration.md](docs/team-collaboration.md).
 
+### Added 2026-09-25 by Claude Code (cloud): Scout in team chat
+- `@Scout <question>` in any workspace thread gets an answer from this workspace's findings board, shared reports and recent messages (`app/scout.py`, docs/team-collaboration.md section 11).
+- **Provider:** OpenRouter free Nemotron models only (Ultra, then Super, then Lightning). It never uses Groq or Gemini.
+- **Limits:** 50 answers per workspace per day, 10 questions per person per 10 minutes.
+- **Founder:**
+  1. Apply the schema (adds `team_messages.bot`).
+  2. Set `SCOUT_OPENROUTER_API_KEY` in `apps/api/.env`, ideally from a separate OpenRouter account so its free daily requests are its own.
+- **Verified:**
+  - API tests with a fake OpenRouter: fallback, workspace-only context (another workspace and the owner's personal runs never reach the prompt), daily cap, no-key message, rate limit, retries answered once.
+  - A browser run against a fake OpenRouter.
+- **Not verified:** the real OpenRouter models, which this sandbox cannot reach.
+
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.

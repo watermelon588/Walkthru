@@ -487,3 +487,53 @@ def test_account_deletion_waits_for_workspaces_with_members(live):
     teams.before_account_delete(owner["id"])
     live["psql"]("delete from auth.users where id = %s", (owner["id"],))
     assert live["psql"]("select count(*) from public.teams where id in (%s, %s)", (solo, team))[0][0] == 0
+
+
+# ---------- Scout ----------
+
+
+def test_scout_answers_from_this_workspace_only(live, monkeypatch):
+    from app import scout
+
+    owner, member = person(live, plus=True, name="Ana"), person(live, name="Bo")
+    team, other = workspace(owner), workspace(owner, "Other client")
+    join(team, owner, member)
+    api.post(f"/teams/{team}/runs", json={"run_id": a_run(owner, "https://shop.acme.example")}, headers=owner["h"])
+    api.post(f"/teams/{other}/runs", json={"run_id": a_run(owner, "https://secret.example", [
+        {"kind": "seo", "severity": "low", "title": "Private other-client finding", "detail": "d", "fix": "f", "evidence": None}])}, headers=owner["h"])
+    a_run(owner, "https://personal.example")  # the owner's own, never shared
+    prompts = []
+
+    def post(url, headers, json, timeout):
+        prompts.append(json["messages"][1]["content"])
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Missing CSP on shop.acme.example is still open (report 25 Sep)."}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setenv("SCOUT_OPENROUTER_API_KEY", "k")
+    monkeypatch.setattr(scout.httpx, "post", post)
+    asked = api.post(f"/teams/{team}/messages", json={"body": "@Scout what is still open on shop.acme.example?"}, headers=member["h"]).json()
+    messages = api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"]
+    answer = messages[-1]
+    assert answer["bot"] is True and answer["author_name"] == "Scout" and answer["author_id"] is None and answer["id"] > asked["id"]
+    assert answer["body"].startswith("Missing CSP") and answer["mentions"] == [member["id"]]
+    assert "Missing Content-Security-Policy" in prompts[0] and "shop.acme.example" in prompts[0]
+    assert "Private other-client finding" not in prompts[0] and "secret.example" not in prompts[0] and "personal.example" not in prompts[0]
+    assert next(t for t in api.get("/teams", headers=member["h"]).json()["teams"] if t["id"] == team)["mentions"] == 1
+
+    api.post(f"/teams/{team}/messages", json={"body": "no question here"}, headers=member["h"])
+    assert len(prompts) == 1  # only a mention calls the model
+    cid = str(uuid.uuid4())
+    api.post(f"/teams/{team}/messages", json={"body": "@scout again?", "client_id": cid}, headers=member["h"])
+    api.post(f"/teams/{team}/messages", json={"body": "@scout again?", "client_id": cid}, headers=member["h"])
+    assert len(prompts) == 2  # a retried send is answered once
+
+    monkeypatch.setattr(scout, "DAILY", 2)
+    api.post(f"/teams/{team}/messages", json={"body": "@Scout one more"}, headers=member["h"])
+    assert len(prompts) == 2 and "daily limit" in api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"][-1]["body"]
+    monkeypatch.setattr(scout, "DAILY", 50)
+    monkeypatch.delenv("SCOUT_OPENROUTER_API_KEY")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    api.post(f"/teams/{team}/messages", json={"body": "@Scout hello"}, headers=member["h"])
+    assert "not switched on" in api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"][-1]["body"]
+    codes = [api.post(f"/teams/{team}/messages", json={"body": f"@Scout q{i}"}, headers=member["h"]).status_code for i in range(8)]
+    assert 429 in codes  # 10 questions per person per 10 minutes

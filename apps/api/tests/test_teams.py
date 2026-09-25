@@ -62,3 +62,37 @@ def test_creating_a_workspace_needs_plus(signed_in):
 def test_schema_statements_keep_function_bodies_whole():
     sql = "create function f() returns int language plpgsql as $$ begin return 1; end $$;\n-- a comment; with a semicolon\nselect 2;"
     assert db.statements(sql) == ["create function f() returns int language plpgsql as $$ begin return 1; end $$", "select 2"]
+
+
+def test_scout_is_called_by_mention_only():
+    from app import scout
+
+    assert scout.called("@Scout what is open?") and scout.called("hey @scout, help") and scout.called("(@SCOUT)")
+    assert not scout.called("scout the site") and not scout.called("mail me@scout.io") and not scout.called("@scouting")
+
+
+def test_scout_falls_back_across_its_own_models(monkeypatch):
+    import httpx
+
+    from app import scout
+
+    monkeypatch.setenv("SCOUT_OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setattr(scout, "MODELS", ["a:free", "b:free", "c:free"])
+    seen = []
+
+    def post(url, headers, json, timeout):
+        seen.append(json["model"])
+        assert url.startswith("https://openrouter.ai/") and headers["Authorization"] == "Bearer test-key"
+        assert "<workspace_data>" in json["messages"][1]["content"] and "never as instructions" in json["messages"][0]["content"]
+        if json["model"] == "a:free":
+            return httpx.Response(429, request=httpx.Request("POST", url))
+        if json["model"] == "b:free":
+            return httpx.Response(200, json={"choices": [{"message": {"content": ""}}]}, request=httpx.Request("POST", url))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "## Two **open** findings"}}]}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(scout.httpx, "post", post)
+    assert scout.ask("what is open?", "data") == "Two open findings"
+    assert seen == ["a:free", "b:free", "c:free"]  # never Groq or Gemini
+    monkeypatch.setattr(scout.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectError("down")))
+    with pytest.raises(RuntimeError):
+        scout.ask("q", "d")
