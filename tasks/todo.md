@@ -157,7 +157,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
     - Proposed limits: Launch Pack one snapshot of 10 prompts; Pro 10 prompts weekly on Gemini; Plus 25 prompts per site weekly on both engines.
   - Verify: pytest with recorded answers; the showcase prompt set tracked twice.
 - [ ] **P3.3 Sources and accuracy** (M): sources grouped by type (the user's site, competitors, Reddit, G2, Product Hunt, YouTube, Wikipedia, listicles) with "get listed here" actions; accuracy compares the answer's price and feature claims with the site's own pages (one free-chain call per answer, labelled).
-- [ ] **P3.4 Weekly watch and deploy webhook (V12)** (M): as in the v1.1 entry, plus tracking changes (a lost citation, a new competitor) in the same once-per-change email.
+- [ ] **P3.4 Weekly watch and deploy webhook (V12)** (M): watch, deploy hook and change email built 2026-09-25 (`app/watch.py`, `/watch`, `/hooks/deploy/{token}`, `tests/test_watch_compare.py`); still open: as in the v1.1 entry, plus tracking changes (a lost citation, a new competitor) in the same once-per-change email.
 - [ ] **P3.5 AI traffic** (M): upload a server or Vercel log; count hits by AI crawler and status (reuse geo-optimizer-skill's `geo logs` bot list, MIT); optional GA4 Data API connect for visits referred by chatgpt.com, perplexity.ai, gemini.google.com and copilot.
 - [ ] **P3.6 Citability rewrites** (S): for the 3 weakest pages by citability score, one free-chain call each, suggestions quoting the text they replace.
 - [ ] **Checkpoint P3:** stable week-over-week tracking on the showcase; Plus opens with watch, tracking, MCP, competitor compare and branded PDF.
@@ -304,7 +304,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 ### Session 9 (10-14 to 10-15)
 - [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S), moved to v1.2 session 26
   - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
-- [ ] **V18 Signup funnel numbers** (S), moved to P0.2
+- [x] **V18 Signup funnel numbers** (S), moved to P0.2 and done there 2026-09-25
   - Accept: `report.funnel` on paid runs holds steps to the goal, fields typed, errors seen, safe stops and time to the first useful screen; compared across reruns.
   - Verify: pytest over stored steps.
 - [ ] **V19 Landing copy review** (S), moved to P0.3 (now screenshot-based)
@@ -323,7 +323,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 ### Session 11 (10-21 to 11-01)
 - [ ] Fix what real users hit in launch week
-- [ ] **V12 Weekly watch and deploy webhook** (M), moved to P3.4
+- [x] **V12 Weekly watch and deploy webhook** (M), moved to P3.4; built 2026-09-25 (`app/watch.py`, `sites` table, `/hooks/deploy/{token}`)
   - Accept: `sites` table; a weekly job scans due sites and emails only on change; `POST /hooks/deploy/{token}` at most once per 10 minutes.
   - Verify: a blocked AI crawler on the fixture sends exactly one email; an unchanged week sends none.
 
@@ -376,7 +376,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
   - Done 2026-09-18: `lib/execute.ts` (click/type/scroll/back, dry run, safe mode), `sidepanel/run.ts` loop (per-site permission, same-origin stop, 4 min cap, confirm before submit on logged-in pages). Manual run on fixture pending.
 - [x] T5 Server step API + `persona_session` graph with interrupt/resume + Postgres checkpointer + interrupted-run stop/report recovery (M)
   - Done 2026-09-18: `apps/api/app/agent/`, `/runs` routes, 9 pytest with fake model. Postgres saver and a real Groq model were verified against the signup flow; LangSmith tracing is configured.
-- [ ] Checkpoint A: extension completes the easy fixture flow end to end
+- [x] Checkpoint A: extension completes the easy fixture flow end to end (passed; see CURRENT_STATE.md)
 
 ## Week 2 (Sep 28–Oct 4): report + scans
 - [x] T6 `first_impression` + `synthesize` + report JSON (M)
@@ -390,7 +390,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
   - [ ] Session 8B: capture real hard-fixture reports from the free and paid models, compare against the quality/cost gates, record the model decision in `docs/decisions.md`
   - Verify: `cd apps/api && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check .`
   - Gate: at least 80% of all seeded traps found, free run at most $0.02, paid run at most $0.20
-- [ ] Checkpoint B: ≥ 80% traps found; cost measured
+- [x] Checkpoint B: ≥ 80% traps found; cost measured (82% recall and measured tokens per run, 2026-09-24, docs/decisions.md)
 
 ## Week 3 (Oct 5–11): product surface
 - [x] T10 Supabase schema + RLS + auth (web + extension token handoff) (M)
@@ -403,7 +403,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 - [ ] Checkpoint C: 20 community sites tested, feedback collected
 
 ## Week 4 (Oct 12–18): money + launch
-- [ ] T14 Plans + credits + Dodo checkout + webhook + limits (M)
+- [x] T14 Plans + credits + Dodo checkout + webhook + limits (M): plans and limits 2026-09-24 (V1), Dodo 2026-09-25 (V10, docs/billing.md). The credit ledger stays open under Billing below.
 - [ ] T15 Deploy (Vercel + VM), rate limits, error logging (M)
 - [ ] T16 Landing page wired to real signup, pricing, demo report (S)
 - [ ] Checkpoint D: stranger installs → tests → pays, in production
@@ -443,7 +443,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
   - [x] Report contract test asserts `site_audit`; legacy reports render because the section is conditional; unverified audits asserted never to request exposed-file paths
   - [x] Passive smoke on python.org: 3 pages in 1.4 s, truncation reported, repeated issues aggregated with page counts
   - [x] Instant Scan of the easy fixture through the real form: public report shows 4 audited pages and aggregated findings; docs updated, both commits pushed
-- [ ] T25 Rerun comparison, multi-persona synthesis, schedules, then integrations
+- [ ] T25 Rerun comparison, multi-persona synthesis, schedules, then integrations (rerun comparison done in V4 and schedules in V12; multi-persona is P4.2; integrations open)
 
 ### Competitive quality checkpoints
 
@@ -464,8 +464,8 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 ### Store and legal
 
-- [ ] Replace placeholder Privacy, Terms and Security links with real pages
-- [ ] Document screenshot collection, masking, retention, subprocessors and deletion
+- [x] Replace placeholder Privacy, Terms and Security links with real pages (2026-09-24; legal review still open)
+- [x] Document screenshot collection, masking, retention, subprocessors and deletion (Privacy page)
 - [ ] Audit Chrome permissions and production `externally_connectable` origins
 - [ ] Produce store listing, screenshots, support contact and submit T13
 - [ ] Enable and verify Google and GitHub OAuth production redirects
@@ -473,9 +473,9 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 ### Billing
 
 - [ ] Founder approves final pricing and included credits
-- [ ] Implement Dodo checkout and signed, idempotent webhook handling
+- [x] Implement Dodo checkout and signed, idempotent webhook handling (2026-09-25, `app/billing.py`)
 - [ ] Implement credit ledger, run reservation, consumption and refund rules
-- [ ] Test duplicate/delayed webhook, failed checkout and refund paths
+- [x] Test duplicate/delayed webhook, failed checkout and refund paths (automated, 35 tests; a live test-mode payment closes V10)
 
 ### Production
 
