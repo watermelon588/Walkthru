@@ -323,10 +323,26 @@ def setup() -> None:
     import psycopg
 
     with open(SCHEMA, encoding="utf-8") as f, psycopg.connect(os.environ["DATABASE_URL"], autocommit=True, connect_timeout=15) as conn:
-        sql = "\n".join(line for line in f if not line.lstrip().startswith("--"))
-        for stmt in sql.split(";"):
-            if stmt.strip():
-                conn.execute(stmt)
+        for stmt in statements(f.read()):
+            conn.execute(stmt)
+
+
+def statements(sql: str) -> list[str]:
+    """schema.sql as single statements: `--` comment lines dropped, split on semicolons outside $$ bodies, so a
+    function or DO block keeps its inner semicolons."""
+    sql = "\n".join(line for line in sql.splitlines() if not line.lstrip().startswith("--"))
+    found, current = [], ""
+    for i, part in enumerate(sql.split("$$")):
+        if i % 2:  # inside a $$ body
+            current += f"$${part}$$"
+            continue
+        first, *rest = part.split(";")
+        current += first
+        for piece in rest:
+            found.append(current)
+            current = piece
+    found.append(current)
+    return [s.strip() for s in found if s.strip()]
 
 
 if __name__ == "__main__":
@@ -447,3 +463,198 @@ def save_brand(user_id: str, values: dict) -> None:
 
 def delete_brand(user_id: str) -> None:
     _request("DELETE", "/rest/v1/report_brands", params={"user_id": f"eq.{user_id}"})
+
+
+# ---------- Plus team workspaces (app/teams.py, docs/team-collaboration.md) ----------
+# Membership and role are read on every request; nothing here trusts a team id the caller sent without that check.
+
+_MEMBER = "team_id,user_id,role,name,email,auto_share,last_read_message_id,last_seen_at,joined_at"
+_TEAM = "id,name,owner_id,created_at,updated_at"
+_MESSAGE = "id,team_id,thread,author_id,author_name,body,mentions,created_at,edited_at,deleted_at"
+_INVITE = "id,team_id,kind,email,email_domain,role,max_uses,uses,invited_by,invited_by_name,created_at,expires_at,revoked_at"
+
+
+def _one(rows: list[dict]) -> dict | None:
+    return rows[0] if rows else None
+
+
+def rpc(name: str, args: dict) -> Any:
+    return _request("POST", f"/rest/v1/rpc/{name}", json_body=args)
+
+
+def membership(team_id: str, user_id: str) -> dict | None:
+    """The caller's member row with its team embedded, or None when they are not a member."""
+    return _one(_select("team_members", {"team_id": f"eq.{team_id}", "user_id": f"eq.{user_id}", "select": f"{_MEMBER},team:teams({_TEAM})", "limit": "1"}))
+
+
+def memberships(user_id: str) -> list[dict]:
+    return _select("team_members", {"user_id": f"eq.{user_id}", "select": f"{_MEMBER},team:teams({_TEAM})", "order": "joined_at.asc", "limit": "100"})
+
+
+def teams_owned(user_id: str) -> list[dict]:
+    return _select("teams", {"owner_id": f"eq.{user_id}", "select": _TEAM})
+
+
+def create_team(name: str, owner_id: str) -> dict:
+    return _insert("teams", {"name": name, "owner_id": owner_id}) or {}
+
+
+def update_team(team_id: str, values: dict) -> None:
+    _update("teams", {"id": f"eq.{team_id}"}, {**values, "updated_at": _now()})
+
+
+def delete_team(team_id: str) -> None:
+    _request("DELETE", "/rest/v1/teams", params={"id": f"eq.{team_id}"})
+
+
+def add_member(row: dict) -> dict | None:
+    return _insert("team_members", row, on_conflict="team_id,user_id")
+
+
+def team_members(team_id: str) -> list[dict]:
+    return _select("team_members", {"team_id": f"eq.{team_id}", "select": _MEMBER, "order": "joined_at.asc"})
+
+
+def update_member(team_id: str, user_id: str, values: dict, **filters: str) -> list[dict]:
+    """Compare-and-set on one member row; extra `filters` are PostgREST conditions like role="eq.member"."""
+    return _update("team_members", {"team_id": f"eq.{team_id}", "user_id": f"eq.{user_id}", **filters}, values)
+
+
+def remove_member(team_id: str, user_id: str) -> bool:
+    return bool(_request("DELETE", "/rest/v1/team_members", params={"team_id": f"eq.{team_id}", "user_id": f"eq.{user_id}", "role": "neq.owner", "select": "user_id"},
+                         prefer="return=representation"))
+
+
+def team_invites(team_id: str) -> list[dict]:
+    """Invitations not revoked and not expired. Used-up ones are filtered by the caller (uses < max_uses)."""
+    return _select("team_invites", {"team_id": f"eq.{team_id}", "revoked_at": "is.null", "expires_at": f"gt.{_now()}", "select": _INVITE, "order": "created_at.desc", "limit": "200"})
+
+
+def insert_invite(row: dict) -> dict:
+    return _insert("team_invites", row) or {}
+
+
+def invite_by_hash(token_hash: str) -> dict | None:
+    return _one(_select("team_invites", {"token_hash": f"eq.{token_hash}", "select": f"{_INVITE},team:teams({_TEAM})", "limit": "1"}))
+
+
+def get_invite(invite_id: str) -> dict | None:
+    return _one(_select("team_invites", {"id": f"eq.{invite_id}", "select": f"{_INVITE},team:teams({_TEAM})", "limit": "1"}))
+
+
+def revoke_invite(team_id: str, invite_id: str) -> bool:
+    return bool(_update("team_invites", {"id": f"eq.{invite_id}", "team_id": f"eq.{team_id}", "revoked_at": "is.null"}, {"revoked_at": _now()}))
+
+
+def invites_for_email(email: str) -> list[dict]:
+    """Open email invitations addressed to this (verified) address, across workspaces."""
+    rows = _select("team_invites", {"email": f"eq.{email}", "kind": "eq.email", "revoked_at": "is.null", "expires_at": f"gt.{_now()}",
+                                    "select": f"{_INVITE},team:teams({_TEAM})", "order": "created_at.desc", "limit": "20"})
+    return [r for r in rows if r["uses"] < r["max_uses"]]
+
+
+def share_run(team_id: str, run_id: str, user_id: str) -> bool:
+    """False when the run was already shared into this workspace."""
+    return _insert("team_runs", {"team_id": team_id, "run_id": run_id, "shared_by": user_id}, on_conflict="team_id,run_id") is not None
+
+
+def unshare_run(team_id: str, run_id: str) -> bool:
+    return bool(_request("DELETE", "/rest/v1/team_runs", params={"team_id": f"eq.{team_id}", "run_id": f"eq.{run_id}", "select": "run_id"}, prefer="return=representation"))
+
+
+def team_run(team_id: str, run_id: str) -> dict | None:
+    return _one(_select("team_runs", {"team_id": f"eq.{team_id}", "run_id": f"eq.{run_id}", "limit": "1"}))
+
+
+def team_runs(team_id: str, limit: int = 50, before: str | None = None) -> list[dict]:
+    params = {"team_id": f"eq.{team_id}", "order": "shared_at.desc", "limit": str(limit)}
+    if before:
+        params["shared_at"] = f"lt.{before}"
+    return _select("team_runs", params)
+
+
+def teams_for_run(run_id: str) -> list[str]:
+    return [r["team_id"] for r in _select("team_runs", {"run_id": f"eq.{run_id}", "select": "team_id"})]
+
+
+def runs_brief(run_ids: list[str]) -> list[dict]:
+    """What workspace pages show of shared runs: no steps or evidence, only the report's findings and score."""
+    found: list[dict] = []
+    for i in range(0, len(run_ids), 100):  # keeps the query string short
+        found += _rows({"id": f"in.({','.join(run_ids[i:i + 100])})",
+                        "select": "id,user_id,site,goal,persona,kind,status,created_at,findings:report->findings,launch_ready:report->launch_ready"})
+    return found
+
+
+def team_finding_states(team_id: str) -> list[dict]:
+    return _select("team_findings", {"team_id": f"eq.{team_id}", "limit": "5000"})
+
+
+def save_finding_state(row: dict) -> dict | None:
+    rows = _request("POST", "/rest/v1/team_findings", params={"on_conflict": "team_id,origin,fingerprint"}, json_body={**row, "updated_at": _now()},
+                    prefer="resolution=merge-duplicates,return=representation") or []
+    return _one(rows)
+
+
+def insert_message(row: dict) -> dict | None:
+    """Once per (team, client_id): a retried send returns the message already stored."""
+    stored = _insert("team_messages", row, on_conflict="team_id,client_id")
+    if stored:
+        return {k: stored.get(k) for k in _MESSAGE.split(",")}
+    return _one(_select("team_messages", {"team_id": f"eq.{row['team_id']}", "client_id": f"eq.{row['client_id']}", "select": _MESSAGE, "limit": "1"}))
+
+
+def team_messages(team_id: str, thread: str, *, after: int | None = None, before: int | None = None, limit: int = 50) -> list[dict]:
+    """Oldest first. `after` pages forward (live updates); otherwise the latest `limit` messages before `before`."""
+    params = {"team_id": f"eq.{team_id}", "thread": f"eq.{thread}", "select": _MESSAGE, "limit": str(limit)}
+    if after is not None:
+        return _select("team_messages", params | {"id": f"gt.{after}", "order": "id.asc"})
+    if before is not None:
+        params["id"] = f"lt.{before}"
+    return list(reversed(_select("team_messages", params | {"order": "id.desc"})))
+
+
+def get_message(team_id: str, message_id: int) -> dict | None:
+    return _one(_select("team_messages", {"team_id": f"eq.{team_id}", "id": f"eq.{message_id}", "select": _MESSAGE, "limit": "1"}))
+
+
+def update_message(team_id: str, message_id: int, values: dict) -> dict | None:
+    rows = _update("team_messages", {"team_id": f"eq.{team_id}", "id": f"eq.{message_id}", "deleted_at": "is.null", "select": _MESSAGE}, values)
+    return _one(rows)
+
+
+def unread(team_id: str, user_id: str, last_read: int) -> tuple[int, int]:
+    """(unread messages in the workspace channel, unread mentions anywhere) by others, each capped at 100."""
+    base = {"team_id": f"eq.{team_id}", "id": f"gt.{last_read}", "deleted_at": "is.null", "or": f"(author_id.is.null,author_id.neq.{user_id})", "select": "id", "limit": "100"}
+    channel = _select("team_messages", base | {"thread": "eq.general"})
+    mentions = _select("team_messages", base | {"mentions": f"cs.{{{user_id}}}"})
+    return len(channel), len(mentions)
+
+
+def thread_counts(team_id: str) -> dict[str, int]:
+    """Comments per run and finding thread. ponytail: reads thread names; a grouped count view past ~5,000 comments."""
+    rows = _select("team_messages", {"team_id": f"eq.{team_id}", "thread": "neq.general", "deleted_at": "is.null", "select": "thread", "limit": "5000"})
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["thread"]] = counts.get(r["thread"], 0) + 1
+    return counts
+
+
+def insert_event(row: dict) -> None:
+    _request("POST", "/rest/v1/team_events", json_body=row, prefer="return=minimal")
+
+
+def team_events(team_id: str, before: int | None = None, limit: int = 50) -> list[dict]:
+    params = {"team_id": f"eq.{team_id}", "order": "id.desc", "limit": str(limit)}
+    if before is not None:
+        params["id"] = f"lt.{before}"
+    return _select("team_events", params)
+
+
+def auto_share_teams(user_id: str) -> list[str]:
+    return [r["team_id"] for r in _select("team_members", {"user_id": f"eq.{user_id}", "auto_share": "is.true", "role": "neq.viewer", "select": "team_id"})]
+
+
+def messages_by(user_id: str) -> list[dict]:
+    """Every chat message and comment this user wrote, for the account export."""
+    return _select("team_messages", {"author_id": f"eq.{user_id}", "select": "id,team_id,thread,body,created_at,edited_at,deleted_at", "order": "id.asc", "limit": "10000"})

@@ -62,6 +62,10 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "test_users_for", lambda user_id: [])  # tests/test_plus.py fakes these tables
     monkeypatch.setattr(db, "get_brand", lambda user_id: None)
     monkeypatch.setattr(db, "free_runs_today", free_runs_today)
+    # Team workspaces: none by default. tests/test_teams*.py use a real Postgres + PostgREST instead of fakes.
+    monkeypatch.setattr(db, "memberships", lambda user_id: [])
+    monkeypatch.setattr(db, "messages_by", lambda user_id: [])
+    monkeypatch.setattr(db, "auto_share_teams", lambda user_id: [])
     return rows
 
 
