@@ -14,6 +14,10 @@ const Billing = lazy(() => import('./pages/Billing'))
 const Mcp = lazy(() => import('./pages/Mcp'))
 const Watch = lazy(() => import('./pages/Watch'))
 const Compare = lazy(() => import('./pages/Compare'))
+const Teams = lazy(() => import('./pages/Teams'))
+const Team = lazy(() => import('./pages/Team'))
+const TeamReport = lazy(() => import('./pages/TeamReport'))
+const Join = lazy(() => import('./pages/Join'))
 const CompareResult = lazy(() => import('./pages/Compare').then((m) => ({ default: m.CompareResult })))
 const Docs = lazy(() => import('./pages/Docs'))
 const Privacy = lazy(() => import('./pages/Privacy'))
@@ -64,6 +68,10 @@ export default function App() {
           <Route path="/app/compare" element={<RequireAuth><Compare /></RequireAuth>} />
           <Route path="/app/compare/:id" element={<RequireAuth><CompareResult /></RequireAuth>} />
           <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
+          <Route path="/app/team" element={<RequireAuth><Teams /></RequireAuth>} />
+          <Route path="/app/team/:id/runs/:runId" element={<RequireAuth><TeamReport /></RequireAuth>} />
+          <Route path="/app/team/:id/:tab?" element={<RequireAuth><Team /></RequireAuth>} />
+          <Route path="/join" element={<Join />} />
           <Route path="/r/:id" element={<Public />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

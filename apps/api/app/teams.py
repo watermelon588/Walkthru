@@ -465,7 +465,8 @@ def list_members(team_id: uuid.UUID, user: dict = Depends(require_user)) -> dict
     admin = RANK[me["role"]] >= RANK["admin"]
     invites = [i for i in db.team_invites(tid) if i["uses"] < i["max_uses"]] if admin else []
     return {"members": [_member_out(m) for m in members], "invites": [_invite_out(i) for i in invites], "seats": SEATS,
-            "seats_used": len(members) + sum(1 for i in invites if i["kind"] == "email"), "me": {"role": me["role"], "can": _can(me["role"], _active(me))}}
+            "seats_used": len(members) + sum(1 for i in invites if i["kind"] == "email"),
+            "me": {"user_id": user["id"], "role": me["role"], "can": _can(me["role"], _active(me))}}
 
 
 class RoleChange(BaseModel):
@@ -552,7 +553,7 @@ def invite_by_email(team_id: uuid.UUID, body: EmailInvite, user: dict = Depends(
     except Exception:  # the invitation exists either way; the admin can copy the link
         log.warning("team invite email failed", exc_info=True)
         emailed = False
-    _event(tid, user, "invite.sent", email=email, role=body.role)
+    _event(tid, user, "invite.sent", email=mask(email), role=body.role)  # viewers read the activity log too
     return {"invite": _invite_out(invite), "link": link, "code": show_code(raw), "emailed": emailed}
 
 
@@ -678,7 +679,7 @@ def accept_listed_invite(invite_id: uuid.UUID, user: dict = Depends(require_user
 def decline_invite(invite_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
     invite = _addressed(invite_id, user)
     if db.revoke_invite(invite["team_id"], invite["id"]):
-        _event(invite["team_id"], user, "invite.declined", email=invite["email"])
+        _event(invite["team_id"], user, "invite.declined", email=mask(invite["email"]))
     return {"declined": str(invite_id)}
 
 
@@ -937,6 +938,12 @@ def before_account_delete(user_id: str) -> None:
                if m["role"] == "owner" and m.get("team") and len(db.team_members(m["team_id"])) > 1]
     if blocked:
         raise HTTPException(409, f"Hand over or delete your workspaces with other members first: {', '.join(blocked)}.")
+
+
+def forget_user(user_id: str) -> None:
+    """Just before an account is deleted: its name leaves the workspaces of others. What it wrote stays, signed
+    "Former member" (the database then clears the author ids)."""
+    db.anonymize_team_user(user_id)
 
 
 def export(user_id: str) -> dict:

@@ -1,13 +1,15 @@
-import { BookOpenTextIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
 import { accountAvatar, accountProfile, signOut, useSession } from '../lib/auth'
+import { pendingJoin } from '../lib/teams'
 import { AccountAvatar } from './AccountAvatar'
 import { Logo, SkipLink } from './Shared'
 
 const workspace: { to: string; label: string; icon: Icon; end?: boolean }[] = [
   { to: '/app', label: 'Runs', icon: PathIcon, end: true },
+  { to: '/app/team', label: 'Team', icon: UsersThreeIcon },
   { to: '/app/compare', label: 'Compare', icon: ScalesIcon },
   { to: '/app/watch', label: 'Watch', icon: EyeIcon },
   { to: '/app/mcp', label: 'MCP', icon: TerminalWindowIcon },
@@ -25,7 +27,10 @@ const item = 'flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transitio
 export function AppShell({ children, title, plainTitle = false }: { children: ReactNode; title?: string; plainTitle?: boolean }) {
   const drawer = useRef<HTMLDialogElement>(null)
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   useEffect(() => { drawer.current?.close() }, [pathname])
+  // An invitee who had to sign in first lands here; take them back to their invitation.
+  useEffect(() => { if (pendingJoin()) navigate('/join', { replace: true }) }, [navigate])
 
   return (
     <div className="min-h-[100dvh] bg-bg text-ink lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] print:block">

@@ -153,10 +153,13 @@ const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, c
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */
 export const EVIDENCE_RETENTION_DAYS = 30
 
-/** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs (or public ones). */
+/** The signed-in user's own runs. Row-level security also lets them read public reports and reports shared into their
+ *  team workspaces, so the owner filter is what keeps those out of this list. */
 export async function listRuns(): Promise<Run[]> {
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase.from('runs').select(COLUMNS).neq('kind', 'compare_part').order('created_at', { ascending: false }).limit(50)
+  const userId = (await supabase.auth.getSession()).data.session?.user.id
+  if (!userId) throw new Error('Sign in first')
+  const { data, error } = await supabase.from('runs').select(COLUMNS).eq('user_id', userId).neq('kind', 'compare_part').order('created_at', { ascending: false }).limit(50)
   if (error) throw error
   return data as Run[]
 }
@@ -180,7 +183,7 @@ export async function evidenceUrls(paths: string[]): Promise<Record<string, stri
 }
 
 /** Writes go through the API. */
-async function api<T>(path: string, body?: unknown, auth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST'): Promise<T> {
+export async function api<T>(path: string, body?: unknown, auth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST'): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (auth) {
     const token = (await supabase?.auth.getSession())?.data.session?.access_token

@@ -655,6 +655,11 @@ def auto_share_teams(user_id: str) -> list[str]:
     return [r["team_id"] for r in _select("team_members", {"user_id": f"eq.{user_id}", "auto_share": "is.true", "role": "neq.viewer", "select": "team_id"})]
 
 
+def anonymize_team_user(user_id: str) -> None:
+    for table, id_column, name_column in (("team_messages", "author_id", "author_name"), ("team_events", "actor_id", "actor_name"), ("team_invites", "invited_by", "invited_by_name")):
+        _request("PATCH", f"/rest/v1/{table}", params={id_column: f"eq.{user_id}"}, json_body={name_column: "Former member"}, prefer="return=minimal")
+
+
 def messages_by(user_id: str) -> list[dict]:
     """Every chat message and comment this user wrote, for the account export."""
     return _select("team_messages", {"author_id": f"eq.{user_id}", "select": "id,team_id,thread,body,created_at,edited_at,deleted_at", "order": "id.asc", "limit": "10000"})

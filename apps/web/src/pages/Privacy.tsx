@@ -73,7 +73,7 @@ const sections: DocSection[] = [
           <dt>Resend</dt>
           <dd>Sending reports by email, only when you ask.</dd>
         </dl>
-        <p>A report becomes visible to others only when you create a public link for it. Instant Scan reports have a public link by design.</p>
+        <p>A report becomes visible to others only when you create a public link for it, or share it into a team workspace, where that workspace's members can read it. Instant Scan reports have a public link by design. In a team workspace, the other members see your name and email address and what you post there.</p>
       </>
     ),
   },
@@ -86,6 +86,7 @@ const sections: DocSection[] = [
         <li>Emails entered for an Instant Scan report: not stored; used once to send the report.</li>
         <li>API keys, deploy hooks and watched sites: kept until you revoke or remove them, or delete your account.</li>
         <li>Runs, steps and reports: kept until you delete them.</li>
+        <li>Team workspace chat, comments and activity: kept until the author deletes a message or the owner deletes the workspace. When you delete your account, what you wrote in other people's workspaces stays, signed "Former member" instead of your name.</li>
         <li>Your account: kept until you delete it. Deleting it removes every run, report and screenshot, then the account itself.</li>
       </ul>
     ),
