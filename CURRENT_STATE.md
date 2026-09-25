@@ -39,6 +39,27 @@ Read this block first. It describes the founder's local machine as of this push,
 - **Branded PDF (P4.3):** Settings > Branded PDF reports (Plus): name, logo (PNG, JPEG or WebP, checked by file signature, at most 200 kB), color (must reach 3:1 on white), footer line, with a live cover preview. On the owner's report page, Save branded PDF prints a full cover page, the brand color in place of the accent, a closing block and a plain page title; no Walkthru or Scout text remains (checked by extracting the PDF text). The screen view is unchanged. Print paper is now white for every PDF (the app shell's grey used to print).
 - Verified: 321 API tests (25 new in `tests/test_plus.py`), 30 extension tests, all builds and lints; schema applied twice to a local Postgres 16 (constraints, revoked browser access, owner reads `group_id`); branded and plain PDFs rendered in Chromium and inspected page by page; Settings at 1280 and 375 px; the side panel driven through a 3-user set against a stub API (one group id, same start page, custom test user included). A security review of the commit found nothing. Not tested live: a real 3-user journey in Chrome and the schema on Supabase (needs the founder's machine).
 
+### Added 2026-09-25 by Claude Code (cloud): Plus team workspaces (team collaboration)
+- **Founder actions first:**
+  1. Apply the schema (seven `team_*` tables, RLS, two SQL functions, Realtime publication, members-read policies on `runs` and `run-evidence`): `.venv/Scripts/python -m app.db` with the pooler `DATABASE_URL` override. `db.setup()` now splits statements outside `$$` bodies.
+  2. In Supabase Auth, keep **Confirm email** on. Email invitations trust `email_confirmed_at`.
+  3. For invitation emails, set `RESEND_API_KEY`. Without it, the page shows the link to send yourself.
+- **What it does:**
+  - Plus owners create up to 3 workspaces (Team in the sidebar) and invite by email or by invite link with a typeable join code (optional email domain, uses, expiry). Invited people need no plan.
+  - Roles are owner, admin, member and viewer.
+  - Workspaces hold shared reports (Share to workspace on the report page, or auto-share), a findings board with status, owner and "Found again after a fix", persistent chat and comment threads with mentions and unread counts, an activity log and presence.
+  - While the owner is not on Plus, a workspace is read-only.
+  - `TEAM_SEATS` defaults to 3, from the pricing doc, and counts open email invitations.
+- **Auth:** `require_user` returns `email_verified`, a display name and an avatar. The token cache is keyed by SHA-256, bounded, and never outlives the token's `exp`.
+- **Privacy fix found on the way:** the Runs list read every public report through RLS (other users' shared reports and all Instant Scans). `listRuns` now filters to the signed-in owner.
+- **Verified:**
+  - 346 API tests, including 19 against a real Postgres 16 + PostgREST 12 with Supabase's roles (`tests/test_teams_live.py`): RLS, grants, and the 6-way race for the last seat.
+  - Web build and oxlint at 0 warnings.
+  - A two-browser end-to-end run: owner, member and client viewer on the production build, the real API and PostgREST, with no console errors and no overflow at 390 px.
+  - The signed-out invitee flow.
+- **Not tested:** Supabase Realtime itself. The pages fell back to polling in the sandbox, as designed.
+- **Reference and the UI brief for the local agent:** [docs/team-collaboration.md](docs/team-collaboration.md).
+
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.
@@ -47,7 +68,7 @@ Read this block first. It describes the founder's local machine as of this push,
 5. API key hardening before launch: expiry, read-only scope, register the `wt_` prefix for GitHub secret scanning; OAuth for MCP after launch.
 
 ### Do not alter without asking the founder
-- Server-side plan decisions (`apps/api/app/plans.py`): the client never says which plan it is on. Paid checks are "not free"; Plus-only checks are watch, MCP and API keys.
+- Server-side plan decisions (`apps/api/app/plans.py`): the client never says which plan it is on. Paid checks are "not free"; Plus-only checks are watch, MCP and API keys, custom test users, report groups, branding and creating team workspaces (a workspace stays active only while its owner is on Plus).
 - Owner-only security checks run only on hosts the user verified, re-checked after redirects. Never send attack payloads, fuzz or write to a site's backend.
 - API keys: stored as SHA-256 hashes, shown once, revocable. Never log or store a raw key.
 - Billing: a pass turns on only from Dodo's signed webhook; `AccessRequest` forbids extra fields; prices come only from `billing.PRICES` (confirmed 2026-09-24).

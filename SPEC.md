@@ -55,6 +55,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | **Opt-in active scan of a staging URL** (revenue-gated, date not set, P4.1) | No | No | No | Coming |
 | **Walkthru MCP server**: Claude Code, Cursor and other agents scan, read the fix prompt and rerun from the editor | No | No | No | Yes |
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
+| **Team workspace** (P4.7): shared reports, findings board with status and owner, chat and comment threads, activity, roles, email invitations and invite links. Invited people need no plan | No | No | No | Up to 3 workspaces, 3 seats each (proposed) |
 | Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
 | Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
 | Test users | First-time visitor | All 4 | All 4 | All 4 + up to 10 custom test users; several test users on one goal, side by side in one report (P4.2) |
