@@ -85,6 +85,18 @@ Read this block first. It describes the founder's local machine as of this push,
 - **Not verified:** against real GitHub.
 - **P4.1 (active staging scan) was not built.**
 
+### Added 2026-09-25 by Claude Code (cloud): launch gates SD-2.2 and SD-3.1
+- **SD-2.2:** browser snapshots are bounded on the server:
+  - page text 8,000 characters;
+  - 150 elements, each with 300-character text;
+  - 20 errors and 20 notices of up to 300 characters each;
+  - a 300-character note;
+  - titles trimmed to 500 characters.
+
+  The extension's own caps sit below these. Request bodies over 1 MB get 413, and chunked bodies get 411, before parsing.
+- **SD-3.1:** `tests/test_ownership.py` lists every route (72) and fails on a new unlisted one. Every route taking a run, key, site, test user, offer, installation, workspace or invitation id refuses another user (403 or 404).
+- **Tests:** 363 API tests pass.
+
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.

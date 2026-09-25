@@ -47,7 +47,30 @@ async def _lifespan(_app: FastAPI):
         yield
 
 
+MAX_BODY = 1_000_000  # SD-2.2: the biggest real request (a branding logo) is about 270 kB
+
+
+class BodyLimit:
+    """Refuse request bodies over MAX_BODY before anything parses them, and bodies that do not say their size
+    (chunked uploads), which browsers, the extension and MCP clients never send. The Dodo webhook has its own
+    tighter limit."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["method"] in ("POST", "PUT", "PATCH", "DELETE"):
+            headers = dict(scope["headers"])
+            length = headers.get(b"content-length")
+            if length is None and b"chunked" in headers.get(b"transfer-encoding", b"").lower():
+                return await JSONResponse(status_code=411, content={"detail": "Send a Content-Length header."})(scope, receive, send)
+            if length is not None and (not length.isdigit() or int(length) > MAX_BODY):
+                return await JSONResponse(status_code=413, content={"detail": "Request body too large."})(scope, receive, send)
+        return await self.inner(scope, receive, send)
+
+
 app = FastAPI(title="Walkthru API", lifespan=_lifespan)
+app.add_middleware(BodyLimit)  # added first, so CORS wraps it and the browser can read the 413
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(WEB_ORIGINS),

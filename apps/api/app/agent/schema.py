@@ -2,18 +2,23 @@
 
 import re
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
 Action = Literal["click", "type", "scroll", "back", "done", "give_up"]
 
 
+# Snapshot limits (SD-2.2): the extension sends at most 120 elements, 80-character labels and 6,000 characters of
+# text; these caps leave headroom and bound what reaches model prompts (cost and prompt-injection surface).
+Line = Annotated[str, Field(max_length=300)]
+
+
 class Element(BaseModel):
-    id: int
-    tag: str  # a, button, input, select, textarea
-    text: str = ""  # visible text or aria-label, already redacted client side
-    type: str | None = None  # input type
+    id: int = Field(ge=0, le=100_000)
+    tag: str = Field(max_length=20)  # a, button, input, select, textarea
+    text: str = Field(default="", max_length=300)  # visible text or aria-label, already redacted client side
+    type: str | None = Field(default=None, max_length=40)  # input type
     state: Literal["filled", "empty", "checked", "unchecked"] | None = None  # form fields only; never the value
 
 
@@ -47,13 +52,13 @@ class BrowserDiagnostics(BaseModel):
 class Observation(BaseModel):
     """One page snapshot from the content script. PII is masked before upload."""
 
-    url: str
-    title: str = ""
-    elements: list[Element] = Field(default_factory=list)
-    text: str = ""  # visible text, trimmed client side
-    errors: list[str] = Field(default_factory=list)  # visible error messages
-    notices: list[str] = Field(default_factory=list)  # visible confirmations, e.g. 'Message sent'
-    note: str | None = None  # executor feedback: "element not found", "captcha", ...
+    url: str = Field(max_length=8000)  # the page's own address; long tracking URLs exist, so the bound is generous
+    title: Annotated[str, BeforeValidator(lambda v: v[:500] if isinstance(v, str) else v)] = ""  # trimmed, never refused mid-run
+    elements: list[Element] = Field(default_factory=list, max_length=150)
+    text: str = Field(default="", max_length=8000)  # visible text, trimmed client side
+    errors: list[Line] = Field(default_factory=list, max_length=20)  # visible error messages
+    notices: list[Line] = Field(default_factory=list, max_length=20)  # visible confirmations, e.g. 'Message sent'
+    note: str | None = Field(default=None, max_length=300)  # executor feedback: "element not found", "captcha", ...
     diagnostics: BrowserDiagnostics | None = None
     scroll_pct: int | None = Field(default=None, ge=0, le=100)  # how far down the page the viewport is
     at_end: bool | None = None  # the viewport reaches the bottom of the page
