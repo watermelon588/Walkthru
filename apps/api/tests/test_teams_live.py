@@ -174,6 +174,8 @@ def test_email_invitation_works_once_for_its_verified_address(live):
     assert [(t["id"], t["role"], t["active"]) for t in mine] == [(team, "member", True)]
     events = [e["type"] for e in api.get(f"/teams/{team}/activity", headers=bob["h"]).json()["events"]]
     assert events[:3] == ["member.joined", "invite.sent", "team.created"]
+    sent_event = api.get(f"/teams/{team}/activity", headers=bob["h"]).json()["events"][1]
+    assert sent_event["detail"]["email"] != bob["email"] and sent_event["detail"]["email"].endswith("@example.com")
     stored = live["psql"]("select token_hash from public.team_invites where team_id = %s", (team,))
     assert stored and all(sent["code"] not in row[0] for row in stored)  # only the hash is kept
 
@@ -475,7 +477,13 @@ def test_account_deletion_waits_for_workspaces_with_members(live):
         teams.before_account_delete(owner["id"])
     assert refused.value.status_code == 409 and "Shared" in refused.value.detail and "Solo" not in refused.value.detail
     teams.before_account_delete(member["id"])  # members may always delete their account
+    api.post(f"/teams/{team}/messages", json={"body": "Last words"}, headers=member["h"])
+    teams.forget_user(member["id"])
     live["psql"]("delete from auth.users where id = %s", (member["id"],))
+    left = api.get(f"/teams/{team}/messages", headers=owner["h"]).json()["messages"]
+    assert [(m["author_name"], m["author_id"], m["body"]) for m in left] == [("Former member", None, "Last words")]
+    joined = next(e for e in api.get(f"/teams/{team}/activity", headers=owner["h"]).json()["events"] if e["type"] == "member.joined")
+    assert joined["actor_name"] == "Former member"
     teams.before_account_delete(owner["id"])
     live["psql"]("delete from auth.users where id = %s", (owner["id"],))
     assert live["psql"]("select count(*) from public.teams where id in (%s, %s)", (solo, team))[0][0] == 0

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { ReportView } from '../components/ReportView'
+import { ShareToTeam } from '../components/ShareToTeam'
 import { btnGhost } from '../components/Shared'
 import { copyText } from '../lib/clipboard'
 import { deleteRun, emailRun, findingsCsv, getBranding, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Brand, type Run } from '../lib/runs'
@@ -191,6 +192,7 @@ function Actions({ run, branded, onShared }: { run: Run; branded: boolean; onSha
       <button type="button" onClick={share} disabled={busy !== null} className={btnGhost}>
         <LinkIcon weight="light" className="size-4" /> {run.public ? 'Copy public link' : 'Share'}
       </button>
+      <ShareToTeam runId={run.id} />
       <button type="button" onClick={exportCsv} className={btnGhost}>
         <DownloadSimpleIcon weight="light" className="size-4" /> Export CSV
       </button>

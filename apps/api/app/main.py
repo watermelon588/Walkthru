@@ -756,6 +756,7 @@ def delete_account(body: DeleteAccount, user: dict = Depends(require_user)) -> d
     if not user.get("email") or body.confirm.strip().lower() != user["email"].lower():
         raise HTTPException(422, "Type your account email exactly to confirm deletion.")
     teams.before_account_delete(user["id"])
+    teams.forget_user(user["id"])
     retention.delete_account(user["id"])
     auth.forget(user["id"])
     return {"deleted": True}

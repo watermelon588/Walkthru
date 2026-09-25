@@ -196,6 +196,22 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'team',
+    title: 'Team workspaces',
+    body: (
+      <>
+        <p>On the Plus plan, <Link to="/app/team">Team</Link> gives your team, or your client, one shared place: the reports you share, a findings board where each problem gets a status and an owner, comment threads on reports and findings, and a chat that stays with the work. People you invite do not need a plan of their own.</p>
+        <ul>
+          <li><strong>Roles.</strong> The owner runs the workspace on their Plus plan. Admins invite and manage people. Members share reports and triage findings. Viewers read, chat and comment, which suits clients.</li>
+          <li><strong>Invite by email</strong> for one person: the invitation works only for that address, once they confirm it, for 7 days. Or make an <strong>invite link</strong> with a code people can type, a number of uses, an end date and, if you like, your company's email domain.</li>
+          <li><strong>Share a report</strong> with Share to workspace on its page, or turn on auto-share in the workspace settings so every new run, scan and watch check lands there.</li>
+          <li><strong>Findings board.</strong> One row per problem and site across all shared reports. A finding marked fixed that shows up again in a later report is flagged "Found again after a fix".</li>
+        </ul>
+        <p>A workspace has 3 seats, counting open email invitations. If the owner's Plus plan ends, the workspace stays readable but pauses chat, sharing, triage and invitations until the owner renews or hands it to a member on Plus. Reports someone shared stay when they leave; deleting a run removes it everywhere.</p>
+      </>
+    ),
+  },
+  {
     id: 'your-data',
     title: 'Your data',
     body: (
