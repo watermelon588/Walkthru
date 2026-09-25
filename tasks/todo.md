@@ -168,7 +168,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: a blocked AI crawler on the fixture sends exactly one email; an unchanged week sends none.
 
 ### Session 12 (11-02 to 11-08)
-- [ ] **V20 Walkthru MCP server** (M)
+- [x] **V20 Walkthru MCP server** (M), done 2026-09-25: verified live with the official MCP client (all five tools, revoked key refused)
   - Accept:
     - A remote MCP server at `/mcp` (streamable HTTP, official `mcp` Python SDK).
     - Personal API keys in `api_keys`: shown once, stored as SHA-256, revocable. Plus only.

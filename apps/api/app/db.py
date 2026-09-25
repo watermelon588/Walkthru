@@ -224,3 +224,38 @@ if __name__ == "__main__":
     load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
     setup()
     print(json.dumps({"ok": True, "runs": get_run("__none__") is None}))
+
+
+# ---------- personal API keys for the MCP server (Plus; ARCHITECTURE.md `mcp`) ----------
+# Only the SHA-256 of a key is stored. The table has no anon or authenticated grants: the API reads it as the service role.
+
+
+def insert_api_key(user_id: str, name: str, key_hash: str) -> dict:
+    rows = _request("POST", "/rest/v1/api_keys", json_body={"user_id": user_id, "name": name, "key_hash": key_hash},
+                    params={"select": "id,name,created_at"}, prefer="return=representation") or []
+    return rows[0]
+
+
+def api_keys_for_user(user_id: str) -> list[dict]:
+    return _request("GET", "/rest/v1/api_keys", params={"user_id": f"eq.{user_id}", "revoked_at": "is.null",
+                                                         "select": "id,name,created_at,last_used_at", "order": "created_at.desc"}) or []
+
+
+def revoke_api_key(user_id: str, key_id: str) -> bool:
+    rows = _request("PATCH", "/rest/v1/api_keys", params={"id": f"eq.{key_id}", "user_id": f"eq.{user_id}", "revoked_at": "is.null", "select": "id"},
+                    json_body={"revoked_at": _now()}, prefer="return=representation") or []
+    return bool(rows)
+
+
+def api_key_owner(key_hash: str) -> dict | None:
+    rows = _request("GET", "/rest/v1/api_keys", params={"key_hash": f"eq.{key_hash}", "revoked_at": "is.null", "select": "id,user_id", "limit": "1"}) or []
+    return rows[0] if rows else None
+
+
+def touch_api_key(key_id: str) -> None:
+    _request("PATCH", "/rest/v1/api_keys", params={"id": f"eq.{key_id}"}, json_body={"last_used_at": _now()}, prefer="return=minimal")
+
+
+def user_scans_today(user_id: str) -> int:
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    return len(_rows({"user_id": f"eq.{user_id}", "kind": "eq.scan", "created_at": f"gte.{today}", "select": "id"}))

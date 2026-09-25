@@ -68,7 +68,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
 | `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
 | `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
-| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Planned, post-launch |
+| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Built 2026-09-25 |
 | `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
@@ -178,7 +178,8 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - **Storage:** a `kind='compare'` run with side-by-side categories.
 - **Cost:** one model call per URL (first impression). Rate limited per plan.
 
-### `mcp` (post-launch)
+### `mcp` (built 2026-09-25)
+- **As built:** `app/mcp_server.py` on the official SDK (`mcp` 2.x, `MCPServer`), stateless JSON over streamable HTTP, registered as a plain route at `/mcp` (no mounted sub-app, so no trailing-slash redirect on POST). An ASGI wrapper checks the key and the Plus plan on every request and passes the user to the tools through a context variable; the SDK's OAuth resource-server mode was not used because it needs an authorization server. Tool errors use `ToolError` so the agent sees the reason. `scan_site` and `rerun` share `main.run_scan` with Instant Scan, store private owner scans on the paid tier (never the free capacity) and stop at 50 a day per user. Keys: `GET/POST /me/api-keys`, `DELETE /me/api-keys/{id}`, at most 5 active, table locked to the service role. Settings has an "API keys and MCP" section with copy-ready Claude Code and Cursor setup; docs `#mcp`.
 - **Server:** a remote MCP server at `/mcp` over streamable HTTP, mounted in the FastAPI app with the official `mcp` Python SDK. The founder approved the MCP feature on 2026-09-24, and with it this new dependency. Nothing to install on the user's side: they paste the URL and key into Claude Code or Cursor.
 - **Auth:** a personal API key in a bearer header.
   - Table `api_keys(id, user_id, name, key_hash, created_at, last_used_at, revoked_at)`.
