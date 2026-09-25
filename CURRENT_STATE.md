@@ -4,7 +4,9 @@ _Last updated: 2026-09-25_
 
 ## Handoff for the next agent (2026-09-25, Claude Code, written before pushing)
 
-Read this block first. It describes the founder's local machine as of this push, so a cloud agent does not redo or undo it.
+Read this block first.
+
+> **IMPORTANT, FIX BEFORE DEPLOYMENT:** [docs/agent-safety-plan.md](docs/agent-safety-plan.md). The extension currently lets the agent act on any site (for example liking posts on Instagram with the user's login), its snapshot misses icon buttons and scrolled content, and failed runs can blame the site. Nothing in that plan is built yet; all GATE items are launch blockers. It describes the founder's local machine as of this push, so a cloud agent does not redo or undo it.
 
 ### Local state at this push
 - Local `main` equals `origin/main` after this push. Nothing local is left uncommitted except git-ignored files.
