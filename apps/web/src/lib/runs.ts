@@ -96,6 +96,8 @@ export type Report = {
   /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
   /** Only on competitor comparisons (kind 'compare'): one entry per site, yours first. */
   compare?: CompareSite[]
+  /** Signup funnel numbers, paid runs only (apps/api/app/agent/funnel.py). null means not measured. */
+  funnel?: Funnel & { previous?: Funnel }
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
@@ -273,3 +275,5 @@ export type CompareSite = {
   error?: string
 }
 export const startCompare = (site: string, competitors: string[]) => api<{ run_id: string }>('/compare', { site, competitors })
+
+export type Funnel = { steps_to_goal: number | null; fields_typed: number; errors_seen: number; safe_stops: number; first_useful_step: number | null; seconds_to_first_useful: number | null }
