@@ -195,3 +195,4 @@ class Report(BaseModel):
     model: str | None = None  # which models ran the test and wrote the report, shown on the report
     pages: dict[str, list[str]] = Field(default_factory=dict)  # finding fingerprint -> every affected page
     launch_ready: LaunchReady | None = None  # app/agent/score.py; absent on reports written before 2026-09-24
+    funnel: dict | None = None  # app/agent/funnel.py, paid runs only; `previous` holds the last run of the same goal

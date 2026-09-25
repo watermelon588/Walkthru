@@ -21,7 +21,7 @@ from pydantic import BaseModel, EmailStr, Field
 from starlette.routing import Route
 
 from app import auth, db, deliver, mcp_server, plans, retention, watch
-from app.agent import compare, fix_prompt, goal, report, runtime, score
+from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
 from app.auth import require_user
@@ -302,6 +302,11 @@ def finish_run(run_id: str, values: dict) -> None:
             rep.comparison = compare.attach(row, rep.model_dump())
         except Exception:  # a failed comparison must never lose the report
             log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
+        if row.get("tier") == "paid":
+            rep.funnel = funnel.metrics(values.get("steps", []), values.get("status", row["status"]))
+            before = db.get_run(rep.comparison.previous_run_id) if rep.comparison else None
+            if before and (before.get("report") or {}).get("funnel"):
+                rep.funnel["previous"] = {k: v for k, v in before["report"]["funnel"].items() if k != "previous"}
         db.set_report(run_id, rep.model_dump())
         to = db.user_email(str(row["user_id"])) if row.get("user_id") and os.environ.get("RESEND_API_KEY") else None
         if to:

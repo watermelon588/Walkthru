@@ -70,6 +70,8 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
           {/* `ignore` is only passed on the owner's page, so strangers on /r/ see the score but not the badge code. */}
           {r.launch_ready && <LaunchReady score={r.launch_ready} runId={run.id} isPublic={run.public} isScan={isScan} isOwner={!!ignore} />}
 
+          {r.funnel && <FunnelNumbers funnel={r.funnel} />}
+
           {/* The first thing a rerun owner wants to know. */}
           {r.comparison && <RerunComparison comparison={r.comparison} linkPrevious={!!ignore} />}
 
@@ -243,5 +245,21 @@ function Item({ term, desc }: { term: string; desc: string }) {
       <dt className="text-xs text-muted">{term}</dt>
       <dd className="mt-1 leading-relaxed">{desc}</dd>
     </div>
+  )
+}
+
+/** Signup funnel numbers (paid runs), with the last run of the same goal alongside when there is one. */
+function FunnelNumbers({ funnel }: { funnel: NonNullable<NonNullable<Run['report']>['funnel']> }) {
+  const was = funnel.previous
+  const show = (v: number | null, unit = '') => (v == null ? 'Not reached' : `${v}${unit}`)
+  const note = (v: number | null | undefined, unit = '') => (was && v !== undefined ? `was ${v == null ? 'not reached' : `${v}${unit}`}` : undefined)
+  return (
+    <section aria-label="Signup funnel" className="report-summary mt-4 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3 lg:grid-cols-5">
+      <Stat label="Steps to the goal" value={show(funnel.steps_to_goal)} note={note(was?.steps_to_goal)} />
+      <Stat label="First useful screen" value={funnel.first_useful_step == null ? 'Not reached' : `Step ${funnel.first_useful_step}`} note={funnel.seconds_to_first_useful != null ? `after ${funnel.seconds_to_first_useful} s` : note(was?.first_useful_step)} />
+      <Stat label="Fields typed" value={String(funnel.fields_typed)} note={note(was?.fields_typed)} />
+      <Stat label="Errors seen" value={String(funnel.errors_seen)} note={note(was?.errors_seen)} />
+      <Stat label="Safe stops" value={String(funnel.safe_stops)} note={note(was?.safe_stops)} />
+    </section>
   )
 }
