@@ -95,7 +95,7 @@ Read this block first. It describes the founder's local machine as of this push,
 
   The extension's own caps sit below these. Request bodies over 1 MB get 413, and chunked bodies get 411, before parsing.
 - **SD-3.1:** `tests/test_ownership.py` lists every route (72) and fails on a new unlisted one. Every route taking a run, key, site, test user, offer, installation, workspace or invitation id refuses another user (403 or 404).
-- **Tests:** 363 API tests pass.
+- **Tests:** 397 API tests pass.
 
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
