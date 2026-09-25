@@ -20,6 +20,7 @@ Web on Vercel (free), API on Render (free), database and sign-in on Supabase (ex
    | `GROQ_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY` | the same keys as `apps/api/.env` |
    | `PAGESPEED_API_KEY` | optional (mobile speed findings) |
    | `RESEND_API_KEY`, `RESEND_FROM` | leave empty: without your own domain Resend cannot mail other people, and "Email me" opens the user's mail app instead |
+   | `FOUNDER_EMAIL` | your own email: each plan request is mailed there. Resend's test sender reaches the email your Resend account uses, so this works before you own a domain |
 
    Payments: the `DODO_*` variables, filled in by [docs/billing.md](billing.md). Leave them empty and checkout simply stays off.
 

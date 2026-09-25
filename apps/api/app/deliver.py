@@ -44,3 +44,20 @@ def send_watch(to: str, site: str, link: str, diff: dict) -> bool:
     r = httpx.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}"},
                    json={"from": FROM, "to": [to], "subject": f"Walkthru watch: {site} changed", "html": body}, timeout=15)
     return r.status_code in (200, 201)
+
+
+def send_access_request(to: str, email: str, plan: str, note: str, request_id: str) -> bool:
+    """Tell the founder a plan request is waiting (FOUNDER_EMAIL). Approval stays in scripts/billing.py."""
+    key = os.environ.get("RESEND_API_KEY")
+    if not key:
+        return False
+    body = (
+        f"<p><strong>{html.escape(email)}</strong> asked for <strong>{html.escape(plan)}</strong>.</p>"
+        f"<p>What they will test: {html.escape(note) or 'not said'}</p>"
+        f"<p>Approve (they then pay from Plan &amp; billing):<br><code>scripts/billing.py approve {html.escape(request_id)}</code>"
+        f" (add <code>--founding</code> for the founding price)</p>"
+        f"<p>Or decline: <code>scripts/billing.py reject {html.escape(request_id)}</code></p>"
+    )
+    r = httpx.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}"},
+                   json={"from": FROM, "to": [to], "subject": f"Walkthru: {plan} request from {email}", "html": body}, timeout=15)
+    return r.status_code in (200, 201)

@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { btnPrimary } from '../components/Shared'
+import { plans as tiers } from '../content'
 import { getBilling, requestAccess, startCheckout, type BillingOffer, type BillingStatus } from '../lib/runs'
 
 const PLAN_NAME: Record<BillingOffer['plan'], string> = { launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
+// What each plan adds, from the pricing cards (content.ts), minus the run count shown above it.
+const includes = (plan: BillingOffer['plan']) => tiers.find((t) => t.name === PLAN_NAME[plan])?.features.filter((f) => !/test runs|Opens after/.test(f)).join(', ')
 const money = (cents: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(cents / 100)
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 const time = (iso: string) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -196,6 +199,7 @@ function RequestForm({ prices, renewing, onDone }: { prices: BillingStatus['pric
                 <span className="text-xs leading-relaxed text-muted">
                   {p.runs} test runs, {p.days} days{founding ? `. Founding price ${money(founding.price_cents, 'USD')} for early users` : ''}
                 </span>
+                <span className="text-xs leading-relaxed text-ink">{includes(p.plan)}</span>
               </label>
             )
           })}

@@ -77,7 +77,8 @@ def main() -> None:
     try:
         if args.cmd == "list":
             for req in db.pending_access_requests():
-                print(f"request {req['id']}  {req['plan']:<6}  user {req['user_id']}  {req['created_at'][:16]}  {req['note']!r}")
+                who = db.user_email(req["user_id"]) or f"user {req['user_id']}"
+                print(f"request {req['id']}  {req['plan']:<6}  {who}  {req['created_at'][:16]}  {req['note']!r}")
             for off in db.open_offers():
                 print(f"offer   {off['id']}  {off['plan']:<6}  {dollars(off['price_cents'])}  user {off['user_id']}  until {off['checkout_expires_at'][:16]}")
         elif args.cmd == "products":

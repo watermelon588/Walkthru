@@ -218,3 +218,41 @@ def test_verify_finding_shares_the_daily_scan_cap(monkeypatch, passes, fake_db, 
         assert not _call(c, key, "verify_finding", {"run_id": run_id, "rule": "No X-Content-Type-Options"})[0]
         error, text = _call(c, key, "verify_finding", {"run_id": run_id, "rule": "No X-Content-Type-Options"}, id_=11)
         assert error and "limit resets at midnight UTC" in text
+
+
+def test_repeated_rules_get_their_own_ids_and_answers_are_text_only(monkeypatch, passes, fake_db, site):
+    fake_keys(monkeypatch)
+    plus(passes)
+    cookie = {"kind": "security", "severity": "medium", "rule": "sec.cookie.flags_missing", "detail": "d", "fix": "f", "evidence": "e"}
+    run_id = _stored(fake_db, site.url, [cookie | {"title": 'Cookie "session" is missing HttpOnly'}, cookie | {"title": 'Cookie "__Host-csrf" breaks its __Host- prefix rules'}])
+    with TestClient(app) as c:
+        key = c.post("/me/api-keys", json={"name": "claude"}).json()["key"]
+        got = _rpc(c, key, "tools/call", {"name": "get_report", "arguments": {"run_id": run_id}}).json()["result"]
+        assert "structuredContent" not in got  # one copy of the answer, not two
+        report = got["content"][0]["text"]
+        assert "(id: sec.cookie.flags_missing)" in report and "(id: sec.cookie.flags_missing#2)" in report
+        error, recipe = _call(c, key, "get_finding", {"run_id": run_id, "rule": "sec.cookie.flags_missing#2"})
+        assert not error and "__Host-csrf" in recipe and 'verify_finding("' + run_id + '", "sec.cookie.flags_missing#2")' in recipe
+
+
+def test_owner_scans_add_https_and_run_owner_checks_on_verified_hosts(monkeypatch, site):
+    from app import main
+    from app.agent import report as report_mod
+    from app.agent.schema import Report
+
+    seen = {}
+    monkeypatch.setattr(main.fetch, "get", lambda c, url, **k: seen.setdefault("url", url) and None)
+    with pytest.raises(ValueError):
+        main.run_scan("example.com", user_id=USER)
+    assert seen["url"] == "https://example.com"
+
+    monkeypatch.undo()
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    monkeypatch.setattr(db, "insert_run", lambda *a, **k: None)
+    monkeypatch.setattr(db, "set_report", lambda *a, **k: None)
+    monkeypatch.setattr(report_mod, "run_report", lambda *a, **k: seen.update(k) or Report(summary="s", findings=[], top_fixes=[]))
+    monkeypatch.setattr(main, "_verified", lambda s, u: u == USER)
+    main.run_scan(site.url, user_id=USER)
+    assert seen["verified"] is True
+    main.run_scan(site.url)  # anonymous Instant Scans never run owner-only checks
+    assert seen["verified"] is False

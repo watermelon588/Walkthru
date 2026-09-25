@@ -84,8 +84,8 @@ def _summary(row: dict, full: bool = False) -> str:
         lines += ["", "## Fix these first", *[f"{i + 1}. {fix}" for i, fix in enumerate(rep["top_fixes"])]]
     findings = rep.get("findings") or []
     lines += ["", f"## Findings ({len(findings)})"]
-    for f in findings:
-        lines.append(f"- [{f['severity']}] {f['kind']}: {f['title']} (id: {finding_id(f)})" + (f"\n  Evidence: {f['evidence']}\n  Fix: {f['fix']}" if full else ""))
+    for fid, f in _ids(findings):
+        lines.append(f"- [{f['severity']}] {f['kind']}: {f['title']} (id: {fid})" + (f"\n  Evidence: {f['evidence']}\n  Fix: {f['fix']}" if full else ""))
     if not full and findings:
         lines += ["", "Call get_report for evidence and fixes, or get_fix_prompt for a prompt to apply them."]
     if findings:
@@ -100,14 +100,25 @@ def finding_id(finding: dict) -> str:
     return finding.get("rule") or fingerprint(finding)
 
 
-def _find(row: dict, rule: str) -> dict:
-    """The report finding a rule id, fingerprint or exact title names."""
+def _ids(findings: list[dict]) -> list[tuple[str, dict]]:
+    """Each finding with an id unique in its report. Two cookies can break the same rule, so the second is rule#2."""
+    seen: dict[str, int] = {}
+    out = []
+    for f in findings:
+        base = finding_id(f)
+        seen[base] = seen.get(base, 0) + 1
+        out.append((base if seen[base] == 1 else f"{base}#{seen[base]}", f))
+    return out
+
+
+def _find(row: dict, rule: str) -> tuple[str, dict]:
+    """The report finding (and its id) that an id, fingerprint or exact title names."""
     from app.agent.compare import fingerprint
 
     wanted = rule.strip().lower()
-    for f in (row.get("report") or {}).get("findings", []):
-        if wanted in {(f.get("rule") or "").lower(), fingerprint(f), f["title"].lower()} - {""}:
-            return f
+    for fid, f in _ids((row.get("report") or {}).get("findings", [])):
+        if wanted in {fid.lower(), fingerprint(f), f["title"].lower()} - {""}:
+            return fid, f
     raise ToolError(f"The report of run {row['id']} has no finding {rule!r}. Call get_report to see each finding's id.")
 
 
@@ -142,20 +153,20 @@ def _scan(site: str) -> dict:
     return db.get_run(run_id)
 
 
-@server.tool()
+@server.tool(structured_output=False)  # text only: a structured copy doubles what the agent reads
 def scan_site(url: str) -> str:
     """Scan a public website: SEO across up to 10 pages, AI search readiness (GEO), passive security headers and a
     first impression. Takes about 20 seconds. Returns the report summary and findings."""
     return _summary(_scan(url))
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def get_report(run_id: str) -> str:
     """Read one of your Walkthru reports in full: summary, Launch Ready score, every finding with its evidence and fix."""
     return _summary(_row(run_id), full=True)
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def get_fix_prompt(run_id: str, style: str = "full") -> str:
     """A Markdown prompt listing every finding in the report with where it is, the required change and an acceptance
     check, ready for you to apply in this codebase. style: "full" or "chat" (shorter)."""
@@ -168,7 +179,7 @@ def get_fix_prompt(run_id: str, style: str = "full") -> str:
     return fix_prompt.build(row, row["report"], ignored, "chat" if style == "chat" else "full")
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def rerun(run_id: str) -> str:
     """Run the server-side checks again on the site of an earlier run, after you applied fixes. User journeys rerun
     from the Walkthru Chrome extension."""
@@ -188,19 +199,19 @@ def rerun(run_id: str) -> str:
     return _summary(fresh) + "\n".join(note)
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def get_finding(run_id: str, rule: str) -> str:
     """Everything the report holds about one finding: why it matters, the evidence, every affected page, the change to
     make (with ready-made code when Walkthru has it) and how to confirm the fix. rule: the finding's id from get_report."""
     from app.agent import fix_prompt
 
     row = _row(run_id)
-    f = _find(row, rule)
+    fid, f = _find(row, rule)
     rep = row["report"]
     pages = (rep.get("pages") or {}).get(finding_id(f)) or (rep.get("pages") or {}).get(_fingerprint(f)) or []
     lines = [
         f"# {f['title']}",
-        f"id: {finding_id(f)}. {f['severity'].capitalize()} {f['kind']} finding on {row['site']} (run {row['id']}).",
+        f"id: {fid}. {f['severity'].capitalize()} {f['kind']} finding on {row['site']} (run {row['id']}).",
         "",
         "## Why it matters",
         fix_prompt._mask(f["detail"]),
@@ -216,18 +227,18 @@ def get_finding(run_id: str, rule: str) -> str:
         lines += ["", f"Ready-made fix for `{code['file']}` ({code['note']}):", "", "```", code["code"].rstrip(), "```"]
     lines += ["", "## Done when",
               ("Rerun the journey in the Walkthru Chrome extension: journey findings need a real browser."
-               if f["kind"] == "ux" else f'verify_finding("{row["id"]}", "{finding_id(f)}") answers fixed.')]
+               if f["kind"] == "ux" else f'verify_finding("{row["id"]}", "{fid}") answers fixed.')]
     return "\n".join(lines)
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def verify_finding(run_id: str, rule: str) -> str:
     """After fixing one finding, re-run only the check behind it on the pages it affected and answer fixed or still
     broken. Faster than rerun. Counts toward the same daily limit as scans. rule: the finding's id from get_report."""
     from app.main import _verified
 
     row = _row(run_id)
-    f = _find(row, rule)
+    _, f = _find(row, rule)
     if f["kind"] == "ux":
         raise ToolError("This finding comes from a user journey. Rerun the journey from the Walkthru Chrome extension to check it.")
     user = _user.get()
@@ -312,7 +323,7 @@ def recheck(site: str, finding: dict, pages: list[str], *, verified: bool) -> st
     return "\n".join(lines)
 
 
-@server.tool()
+@server.tool(structured_output=False)
 def list_runs(site: str = "", limit: int = 10) -> str:
     """Your most recent Walkthru runs and scans, newest first, optionally only for one site (any part of the address)."""
     # ponytail: reads every run of the user (the export query); add a limited query if accounts grow past a few hundred runs

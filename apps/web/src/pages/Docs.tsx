@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { brand } from '../brand'
 import { contact } from '../content'
 import { DocLayout, type DocSection } from '../components/DocLayout'
-import { EVIDENCE_RETENTION_DAYS, PERSONA_LABEL } from '../lib/runs'
+import { EVIDENCE_RETENTION_DAYS, MCP_URL, PERSONA_LABEL } from '../lib/runs'
 
 const personas = [
   ['first_timer', 'Has never heard of your product, skims and gets impatient fast. Catches unclear headlines and too many steps.'],
@@ -187,7 +187,7 @@ const sections: DocSection[] = [
           <li>Open the <Link to="/app/mcp">MCP page</Link> and create an API key. Copy it right away: it is shown once.</li>
           <li>Add the server to your editor with the command or file that page shows you, for example in Claude Code:</li>
         </ol>
-        <pre><code>{'claude mcp add --transport http walkthru https://YOUR-WALKTHRU-API/mcp --header "Authorization: Bearer wt_..."'}</code></pre>
+        <pre><code>{`claude mcp add --transport http walkthru ${MCP_URL} --header "Authorization: Bearer wt_..."`}</code></pre>
         <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>get_finding</code>, <code>verify_finding</code>, <code>rerun</code> and <code>list_runs</code>. After fixing one finding, <code>verify_finding</code> re-checks just that finding on its pages, which is faster than a full rerun. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
         <p>Revoke a key in Settings the moment you stop using it or think it leaked.</p>
       </>
