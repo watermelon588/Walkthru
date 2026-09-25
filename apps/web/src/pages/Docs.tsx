@@ -35,7 +35,7 @@ const sections: DocSection[] = [
       <>
         <ol>
           <li>Go to the <Link to="/#scan">scan form</Link> on the home page, or the Instant Scan panel in your dashboard.</li>
-          <li>Enter your address, like <code>yoursite.com</code>. Add an email if you want the report sent to you.</li>
+          <li>Enter your address, like <code>yoursite.com</code>.</li>
           <li>Select <strong>Scan my site</strong>. The report opens when it is ready.</li>
         </ol>
         <p>The scan follows up to 10 same-site links from your homepage, honours <code>robots.txt</code> and only sends ordinary page requests. Pages that are built entirely by JavaScript are marked as checked "before JavaScript runs", so you know what was and was not measured.</p>
@@ -70,7 +70,7 @@ const sections: DocSection[] = [
           <li>Tick <strong>This is a logged-in page</strong> when testing a dashboard or account area. The test user will ask you before submitting any form there.</li>
           <li>Select <strong>Start test</strong>. The first time, Chrome asks for permission to capture screenshots of the tested tab.</li>
         </ol>
-        <p>You will see each step and the test user's thoughts in the panel, and Scout, the {brand.name} bird, in the corner of the page. A run stops on its own when the goal is reached, after 12 steps, after 4 minutes, or if the test user leaves your site. Select <strong>Stop</strong> at any time; the steps so far still become a report.</p>
+        <p>You will see each step and the test user's thoughts in the panel, and Scout, the {brand.name} bird, in the corner of the page. A free run stops after 12 steps; paid plans allow up to 30. Runs also stop when the goal is reached, after 4 minutes, or if the test user leaves your site. Select <strong>Stop</strong> at any time; the steps so far still become a report.</p>
       </>
     ),
   },
@@ -127,7 +127,7 @@ const sections: DocSection[] = [
     title: 'Verify your domain',
     body: (
       <>
-        <p>Verifying proves you own a site. It unlocks the full security check (exposed files and keys leaked into JavaScript) and lets approved send actions run during tests.</p>
+        <p>Verifying proves you own a site. It unlocks additional read-only security checks for exposed files and keys leaked into JavaScript, and lets approved send actions run during tests.</p>
         <ol>
           <li>Open <Link to="/app/settings#verify">Settings</Link> and copy your verification tag.</li>
           <li>Add it to the <code>&lt;head&gt;</code> of your homepage, or put the token alone in a file at <code>/.well-known/walkthru.txt</code>.</li>

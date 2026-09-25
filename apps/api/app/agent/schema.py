@@ -1,9 +1,10 @@
 """Wire contracts between the extension and the persona agent."""
 
+import re
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 Action = Literal["click", "type", "scroll", "back", "done", "give_up"]
 
@@ -103,6 +104,52 @@ class Finding(BaseModel):
     detail: str = Field(max_length=600)
     fix: str = Field(max_length=400)
     evidence: str | None = Field(default=None, max_length=300, description="Step number, URL, header or snippet that shows it.")
+    rule: str | None = Field(default=None, max_length=100, description="Stable check id; generated for older callers and model findings.")
+
+    @model_validator(mode="after")
+    def ensure_rule(self) -> "Finding":
+        if not self.rule:
+            self.rule = finding_rule(self.kind, self.title)
+        return self
+
+
+def finding_rule(kind: str, title: str) -> str:
+    """One stable id per check, including titles with counts, scores, paths or cookie names.
+
+    The known variable-title checks have explicit ids. Other deterministic titles
+    use a compact normalized slug; new findings therefore always carry an id.
+    """
+    name = title.casefold()
+    prefix = {"security": "sec", "accessibility": "a11y", "performance": "perf"}.get(kind, kind)
+    fixed = {
+        ("security", "no hsts header"): "sec.hsts.missing",
+        ("security", "site is served over plain http"): "sec.http.plain",
+        ("security", "local development uses plain http"): "sec.http.local",
+        ("geo", "robots.txt blocks ai search assistants"): "geo.robots.blocks_search_bot",
+    }
+    if (kind, name) in fixed:
+        return fixed[(kind, name)]
+    variable = (
+        ("security", r'^cookie "', "sec.cookie.flags_missing"),
+        ("security", r"^anyone can read \d+ of your database table", "sec.supabase.public_table"),
+        ("security", r"^\d+ database functions? (?:is|are) callable", "sec.supabase.public_rpc"),
+        ("security", r"^anyone can list the files in \d+ storage bucket", "sec.supabase.public_bucket"),
+        ("security", r"^\d+ resources load over plain http", "sec.mixed_content"),
+        ("seo", r"^\d+ of \d+ images have no alt text", "seo.image.alt_missing"),
+        ("accessibility", r"^(?:\d+ images are missing text alternatives|image is missing text alternative)", "a11y.image.alt_missing"),
+        ("accessibility", r"^(?:\d+ form controls have no accessible name|form control has no accessible name)", "a11y.control.name_missing"),
+        ("geo", r"^\d+ more pages? only render with javascript", "geo.page.javascript_only"),
+        ("performance", r"^mobile performance score \d+/100", "perf.mobile.lab_score_low"),
+        ("performance", r"^mobile core web vitals need work on ", "perf.mobile.field_vitals_poor"),
+    )
+    for rule_kind, pattern, rule in variable:
+        if kind == rule_kind and re.search(pattern, name):
+            return rule
+    if kind == "geo" and re.fullmatch(r"no (?:about|contact|about or contact) link on the homepage", name):
+        missing = "both" if " or " in name else "about" if "about" in name else "contact"
+        return f"geo.identity.{missing}_link_missing"
+    slug = re.sub(r"[^a-z0-9]+", "_", re.sub(r"\d+(?:\.\d+)?", "n", name)).strip("_")[:80]
+    return f"{prefix}.{slug or 'finding'}"
 
 
 class FirstImpression(BaseModel):
@@ -194,6 +241,7 @@ class Report(BaseModel):
     verified: bool = False
     tokens: int = 0
     checks: dict[str, Literal["complete", "unavailable"]] = Field(default_factory=dict)
+    check_reasons: dict[str, str] = Field(default_factory=dict)  # why a check was unavailable, for new reports
     site_audit: SiteAuditSummary | None = None
     geo: GeoSummary | None = None
     comparison: Comparison | None = None

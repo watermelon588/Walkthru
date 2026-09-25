@@ -10,7 +10,7 @@ const checks = [
 
 type CheckState = Partial<Record<(typeof checks)[number]['kind'], 'complete' | 'unavailable'>>
 
-export function LaunchChecks({ findings, verified, states = {} }: { findings: Finding[]; verified: boolean; states?: CheckState }) {
+export function LaunchChecks({ findings, verified, states = {}, reasons = {} }: { findings: Finding[]; verified: boolean; states?: CheckState; reasons?: Partial<Record<keyof CheckState, string>> }) {
   return (
     <section aria-labelledby="launch-checks-title" className="report-print-section print-break-before mt-14">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Technical launch checks</p>
@@ -34,7 +34,7 @@ export function LaunchChecks({ findings, verified, states = {} }: { findings: Fi
               <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
               <p className="mt-4 flex items-center gap-2 text-xs">
                 {unavailable ? <WarningCircleIcon className="size-4 text-muted" /> : items.length ? <WarningCircleIcon className="size-4 text-danger" /> : <CheckCircleIcon className="size-4 text-accent" />}
-                {unavailable ? 'Unavailable for this run' : items.length ? `${urgent} high priority` : 'No issues found in this scope'}
+                {unavailable ? reasons[kind] || 'Unavailable for this run' : items.length ? `${urgent} high priority` : 'No issues found in this scope'}
               </p>
             </article>
           )

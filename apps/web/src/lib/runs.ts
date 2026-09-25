@@ -52,6 +52,7 @@ export type Finding = {
   detail: string
   fix: string
   evidence: string | null
+  rule?: string | null
 }
 
 export type Compared = {
@@ -72,6 +73,7 @@ export type Report = {
   verified: boolean
   tokens: number
   checks?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', 'complete' | 'unavailable'>>
+  check_reasons?: Partial<Record<'accessibility' | 'performance' | 'seo' | 'security' | 'geo', string>>
   geo?: {
     score: number
     band: 'critical' | 'foundation' | 'good' | 'excellent'
@@ -200,9 +202,19 @@ export const exportAccount = () => api<Record<string, unknown>>('/account/export
 /** The server decides the plan (apps/api/app/plans.py). */
 export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
 export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
-/** Same rule as fingerprint() in apps/api/app/agent/compare.py: kind plus title, ignoring case, spacing and counts. */
-export function fingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
+/** New reports use stable rule ids; old reports keep their title-based key. */
+export function legacyFingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
   return `${f.kind}:${f.title.toLowerCase().replace(/\d+/g, '#').split(/\s+/).filter(Boolean).join(' ')}`
+}
+
+export function fingerprint(f: Pick<Finding, 'kind' | 'title'> & Partial<Pick<Finding, 'rule'>>): string {
+  return f.rule?.trim() ? `${f.kind}:${f.rule}` : legacyFingerprint(f)
+}
+
+export function ignoredKey(f: Finding, ignored: Record<string, string>): string {
+  const current = fingerprint(f)
+  const legacy = legacyFingerprint(f)
+  return current in ignored ? current : legacy in ignored ? legacy : current
 }
 
 function siteOrigin(url: string): string {
