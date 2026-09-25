@@ -86,7 +86,7 @@ The tunnel address changes every time it starts; update the Dodo endpoint when i
 
 1. Sign in on the web app, open **Plan & billing**, request Pro.
 2. On your machine: `scripts/billing.py list`, then `scripts/billing.py approve REQUEST_ID --founding`.
-3. Refresh **Plan & billing**: the offer shows. Press **Pay $15.00**, pay on Dodo's page with a test card from [Dodo's testing page](https://docs.dodopayments.com/miscellaneous/testing-process).
+3. Refresh **Plan & billing**: the offer shows. Press **Pay $15.00**, pay on Dodo's page with the test card `4242 4242 4242 4242`, any future expiry (for example 06/32), CVC `123`. Other test cards: [Dodo's testing page](https://docs.dodopayments.com/miscellaneous/testing-process).
 4. You land back on **Plan & billing**; within seconds it says the Pro pass is active, and the dashboard shows 40 runs.
 5. `scripts/billing.py show YOUR_EMAIL` shows the offer as `paid` with its payment id.
 6. Refund test: refund the payment in the Dodo dashboard. The pass ends and the account is back on Free.
