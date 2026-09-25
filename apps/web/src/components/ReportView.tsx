@@ -23,7 +23,7 @@ export function ReportView({ run, ignore }: { run: Run; ignore?: IgnoreControls 
   const steps = run.steps ?? []
   const peak = Math.max(0, ...steps.map((s) => s.confusion))
   const stuckAt = steps.findIndex((s) => s.confusion >= 2)
-  const isScan = run.kind === 'scan'
+  const isScan = run.kind !== 'test'  // scans, watch checks and comparison parts have no journey
   const counts = { high: 0, medium: 0, low: 0 }
   for (const f of r?.findings ?? []) counts[f.severity]++
   const stopped = ['gave_up', 'budget', 'stuck', 'captcha', 'stopped'].includes(run.status)

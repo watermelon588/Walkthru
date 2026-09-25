@@ -27,7 +27,11 @@ const sections: DocSection[] = [
         <p>The site address, the goal and test user you chose, and for each step: a text outline of the page (buttons, links, headings, visible errors and whether a form field is filled, never its value), the action taken, the test user's thoughts, and accessibility and page-speed measurements.</p>
         <p>Up to eight screenshots per run of the tab being tested. Form fields are visually masked and Scout is hidden before each capture.</p>
         <h3>Instant Scans</h3>
-        <p>The address you scan, the public pages we read from it, and the email address if you choose to add one. Your network address is used briefly to limit scans to five an hour and is not stored with the report.</p>
+        <p>The address you scan and the public pages we read from it. Your network address is used briefly to limit scans to five an hour and is not stored with the report. If you give an email address for the report, it is used once to send it and is not stored.</p>
+        <h3>Weekly watch and competitor comparisons (paid plans)</h3>
+        <p>The sites you choose to watch, when each was last checked and what changed, and the report of every check. For a comparison, the addresses you enter and the public pages we read from each of them, the same way a search engine reads a public page. We only read public pages of sites you do not own.</p>
+        <h3>API keys and deploy hooks</h3>
+        <p>When you create an API key for the MCP server or a deploy hook for a watched site, we store only a one-way fingerprint (a SHA-256 hash) of it, never the key itself, plus its name and when it was last used. Scans your editor starts through MCP are saved as runs in your account like any other.</p>
       </>
     ),
   },
@@ -79,7 +83,8 @@ const sections: DocSection[] = [
     body: (
       <ul>
         <li>Screenshots: deleted automatically {EVIDENCE_RETENTION_DAYS} days after the run.</li>
-        <li>Emails entered in Instant Scan: erased after {EVIDENCE_RETENTION_DAYS} days.</li>
+        <li>Emails entered for an Instant Scan report: not stored; used once to send the report.</li>
+        <li>API keys, deploy hooks and watched sites: kept until you revoke or remove them, or delete your account.</li>
         <li>Runs, steps and reports: kept until you delete them.</li>
         <li>Your account: kept until you delete it. Deleting it removes every run, report and screenshot, then the account itself.</li>
       </ul>
@@ -122,7 +127,7 @@ export default function Privacy() {
     <DocLayout
       title="Privacy policy"
       lead={`What ${brand.name} collects when you scan or test a site, why, who processes it and how to take it with you or delete it.`}
-      updated="2026-09-24"
+      updated="2026-09-25"
       sections={sections}
     />
   )

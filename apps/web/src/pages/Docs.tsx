@@ -156,14 +156,36 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'watch',
+    title: 'Weekly watch and deploy hooks',
+    body: (
+      <>
+        <p>On the Plus plan, <Link to="/app/watch">Watch</Link> rechecks up to five of your sites every week: SEO, AI search readiness and passive security, the same checks as an Instant Scan. The first check sets a baseline; after that you hear from us only when something changed, for example a deploy that blocked AI crawlers, dropped structured data or reintroduced a missing header, and when a fix landed.</p>
+        <p>To check right after every deploy, create a deploy hook for the site and send a POST to its URL from a Netlify deploy notification or a step at the end of your CI:</p>
+        <pre><code>{'curl -X POST https://YOUR-WALKTHRU-API/hooks/deploy/wh_...'}</code></pre>
+        <p>A site is checked at most once every 10 minutes, so a burst of deploys costs one check. Journeys are not part of watch; run those from the extension.</p>
+      </>
+    ),
+  },
+  {
+    id: 'compare',
+    title: 'Competitor side by side',
+    body: (
+      <>
+        <p>On paid plans, <Link to="/app/compare">Compare</Link> runs your site and up to three competitors through the same checks and puts the results in one table: Launch Ready score, AI search readiness, SEO, security hygiene, speed and accessibility, findings and the first impression. The best value in each row is highlighted, and each site links to its full report.</p>
+        <p>Competitors get public, passive checks only, the same way a search engine reads a page. Exposed-file and leaked-key checks never run on a site you have not verified. Each site counts toward your daily scan limit.</p>
+      </>
+    ),
+  },
+  {
     id: 'mcp',
     title: 'Connect your editor (MCP)',
     body: (
       <>
         <p>On the Plus plan, Claude Code, Cursor and other MCP clients can use Walkthru directly: scan a site, read a report, pull the fix prompt into the codebase they are editing, and rerun after the fixes.</p>
         <ol>
-          <li>Open <Link to="/app/settings#mcp">Settings</Link> and create an API key. Copy it right away: it is shown once.</li>
-          <li>Add the server to your editor with the command or file Settings shows you, for example in Claude Code:</li>
+          <li>Open the <Link to="/app/mcp">MCP page</Link> and create an API key. Copy it right away: it is shown once.</li>
+          <li>Add the server to your editor with the command or file that page shows you, for example in Claude Code:</li>
         </ol>
         <pre><code>{'claude mcp add --transport http walkthru https://YOUR-WALKTHRU-API/mcp --header "Authorization: Bearer wt_..."'}</code></pre>
         <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>rerun</code> and <code>list_runs</code>. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
