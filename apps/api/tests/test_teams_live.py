@@ -505,11 +505,11 @@ def test_scout_answers_from_this_workspace_only(live, monkeypatch):
     prompts = []
 
     def post(url, headers, json, timeout):
-        prompts.append(json["messages"][1]["content"])
-        return httpx.Response(200, json={"choices": [{"message": {"content": "Missing CSP on shop.acme.example is still open (report 25 Sep)."}}]},
+        prompts.append(json["contents"][0]["parts"][0]["text"])
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Missing CSP on shop.acme.example is still open (report 25 Sep)."}]}}]},
                               request=httpx.Request("POST", url))
 
-    monkeypatch.setenv("SCOUT_OPENROUTER_API_KEY", "k")
+    monkeypatch.setenv("SCOUT_GEMINI_API_KEY", "k")
     monkeypatch.setattr(scout.httpx, "post", post)
     asked = api.post(f"/teams/{team}/messages", json={"body": "@Scout what is still open on shop.acme.example?"}, headers=member["h"]).json()
     messages = api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"]
@@ -531,8 +531,8 @@ def test_scout_answers_from_this_workspace_only(live, monkeypatch):
     api.post(f"/teams/{team}/messages", json={"body": "@Scout one more"}, headers=member["h"])
     assert len(prompts) == 2 and "daily limit" in api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"][-1]["body"]
     monkeypatch.setattr(scout, "DAILY", 50)
-    monkeypatch.delenv("SCOUT_OPENROUTER_API_KEY")
-    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("SCOUT_GEMINI_API_KEY")
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     api.post(f"/teams/{team}/messages", json={"body": "@Scout hello"}, headers=member["h"])
     assert "not switched on" in api.get(f"/teams/{team}/messages", headers=member["h"]).json()["messages"][-1]["body"]
     codes = [api.post(f"/teams/{team}/messages", json={"body": f"@Scout q{i}"}, headers=member["h"]).status_code for i in range(8)]

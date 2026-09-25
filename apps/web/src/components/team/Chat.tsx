@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { deleteMessage, editMessage, listMessages, markRead, postMessage, type Member, type Message } from '../../lib/teams'
+import { brand } from '../../brand'
 import { AccountAvatar } from '../AccountAvatar'
 
 type State = { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string }
 
 const time = (iso: string) => new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 const box = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-ink focus:outline-none'
+
+/** Scout's face in chat: the static Walkthru bird on a ring in the accent colour, so it never reads as a person. */
+function ScoutAvatar() {
+  return (
+    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-bg ring-1 ring-accent/50" aria-hidden="true">
+      <img src={brand.mark} alt="" width={20} height={20} className="size-5" />
+    </span>
+  )
+}
+
+const botRow = 'flex gap-3 rounded-2xl border border-accent/30 bg-surface px-4 py-3'
 
 /** Mentions are resolved from "@Name" in the text against the workspace's members, longest name first. */
 function mentionsIn(text: string, members: Member[], me: string): string[] {
@@ -194,15 +206,16 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
             )}
             {messages.length === 0 && <li className="text-sm text-muted">{empty}</li>}
             {messages.map((m) => (
-              <li key={m.id} className="flex gap-3">
-                <AccountAvatar name={m.author_name} />
+              <li key={m.id} className={m.bot ? botRow : 'flex gap-3'}>
+                {m.bot ? <ScoutAvatar /> : <AccountAvatar name={m.author_name} />}
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted">
-                    <span className="text-sm text-ink">{m.author_name}</span>
-                    {m.bot && <span className="rounded-full border border-line px-2 py-0.5 text-[11px] text-accent">AI answer, check the report</span>}
+                    <span className={`text-sm ${m.bot ? 'text-accent' : 'text-ink'}`}>{m.author_name}</span>
+                    {m.bot && <span className="rounded-full border border-accent/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Bot</span>}
                     <time dateTime={m.created_at}>{time(m.created_at)}</time>
                     {m.edited_at && !m.deleted && <span>(edited)</span>}
                   </p>
+                  {m.bot && !m.deleted && <p className="mt-0.5 text-[11px] text-muted">AI answer from this workspace's reports. Check the report before acting on it.</p>}
                   {m.deleted ? (
                     <p className="mt-1 text-sm text-muted italic">Message deleted</p>
                   ) : editing?.id === m.id ? (
@@ -226,7 +239,12 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
                 </div>
               </li>
             ))}
-            {waiting && !answered && <li role="status" className="text-sm text-muted">Scout is reading this workspace's reports and findings…</li>}
+            {waiting && !answered && (
+              <li role="status" className={botRow}>
+                <ScoutAvatar />
+                <p className="self-center text-sm text-muted"><span className="text-accent">Scout</span> is reading this workspace's reports and findings…</p>
+              </li>
+            )}
           </ol>
           {canChat ? (
             <form onSubmit={send} className="border-t border-line px-5 py-4">

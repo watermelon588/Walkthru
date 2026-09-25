@@ -259,32 +259,34 @@ The pages work and follow the existing patterns: PageHeader-like header, the Set
 
 ## 11. Scout: the @Scout assistant in chat (added 2026-09-25)
 
-Write `@Scout` and a question in the workspace chat, or in a report or finding thread. Scout answers in the same thread, with the "AI answer, check the report" label, and mentions the person who asked.
+Write `@Scout` and a question in the workspace chat, or in a report or finding thread. Scout answers in the same thread and mentions the person who asked. Its messages look like a bot, not a member:
+- the Walkthru bird on an accent ring as its avatar;
+- a tinted card;
+- a "Bot" tag;
+- the note "AI answer from this workspace's reports". While it works, a "Scout is reading…" row shows.
 
-**How it works** (`apps/api/app/scout.py`, about 150 lines):
-1. `post_message` sees the mention and queues `scout.reply` as a background task. The asker's message returns at once.
-2. Retrieval is plain code, with no embeddings or vector database. Scout reads the findings board of this workspace (status, owner, found again), the latest score per site, the shared reports' summaries, and the last 20 messages in the thread. Findings on a site the question names come first, then those sharing the question's words, open ones and high severity. The context is capped at 14,000 characters.
-3. One call to OpenRouter's free models, in order: `SCOUT_MODELS`, by default Nemotron 3 Ultra, then Nemotron 3 Super, then Nemotron 3.5 Lightning. Each has at most 60 s, and 100 s in total. The **Groq and Gemini chain is never used**, so chat cannot use up the quota that journeys and reports need.
-4. The answer is stored as a chat message with `bot = true` and no author, so it is part of the history and reaches everyone through Realtime or polling.
+**How it works** (`apps/api/app/scout.py`):
+1. `post_message` sees the mention and queues `scout.reply` as a background task.
+2. Retrieval is plain code, with no embeddings. Scout reads this workspace's findings board (status, owner, found again), the latest score per site, shared report summaries, and the last 20 messages in the thread. The site the question names comes first. The context is capped at 14,000 characters.
+3. One call to the **Gemini free tier** over REST (no SDK): `gemini-3.1-flash-lite` first, which answers in seconds, then `gemini-3.5-flash`. Each has at most 25 s, and 45 s in total. Change the order with `SCOUT_MODELS`.
+4. The answer is stored as a chat message with `bot = true` and no author.
 
 **Scope and safety:**
-- Scout reads only what this workspace's members can already read. It never sees the owner's personal runs or another workspace (tested).
-- It has no tools and takes no actions.
-- The prompt marks all workspace data and the question as data, not instructions.
-- Answers are plain text, at most 3,000 characters.
+- Only data this workspace's members can already read. It never sees the owner's personal runs or another workspace (tested).
+- No tools and no actions.
+- Workspace data and the question are marked as data, not instructions.
 
 **Limits:**
-- `SCOUT_DAILY` (50) answers per workspace per UTC day, counted in the database.
+- 50 answers per workspace per UTC day (`SCOUT_DAILY`), counted in the database.
 - 10 questions per person per 10 minutes.
 - Only active workspaces.
 - A retried send is answered once.
-- Without a key, Scout replies that it is not switched on. When every model fails, it says the free models are busy.
+- Honest messages when there is no key or the model is busy.
 
-**Keys:**
-- `SCOUT_OPENROUTER_API_KEY`, falling back to `OPENROUTER_API_KEY`.
-- OpenRouter limits free models per **account** (about 50 requests a day without credit, about 1,000 a day after buying $10 of credit once). A key from the same account shares that allowance with the report writer. Use a separate account for Scout, or buy the one-off credit.
-
-**Speed:** Nemotron 3 Ultra measured about 60 s median as the report writer. For faster chat answers, put Nemotron 3 Super first in `SCOUT_MODELS`.
+**Key:**
+- `SCOUT_GEMINI_API_KEY`, falling back to `GOOGLE_API_KEY`.
+- Gemini's free limits are per Google Cloud **project**, so create the Scout key in its own project. Its quota is then separate from the one journeys and reports use.
+- On the free tier, Google may use prompts to improve its products. Moving Scout's project to paid billing ends that.
 
 ## 12. Open decisions for the founder
 

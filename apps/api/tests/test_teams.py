@@ -71,28 +71,30 @@ def test_scout_is_called_by_mention_only():
     assert not scout.called("scout the site") and not scout.called("mail me@scout.io") and not scout.called("@scouting")
 
 
-def test_scout_falls_back_across_its_own_models(monkeypatch):
+def test_scout_falls_back_across_its_own_gemini_models(monkeypatch):
     import httpx
 
     from app import scout
 
-    monkeypatch.setenv("SCOUT_OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setattr(scout, "MODELS", ["a:free", "b:free", "c:free"])
+    monkeypatch.setenv("SCOUT_GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(scout, "MODELS", ["a", "b", "c"])
     seen = []
 
     def post(url, headers, json, timeout):
-        seen.append(json["model"])
-        assert url.startswith("https://openrouter.ai/") and headers["Authorization"] == "Bearer test-key"
-        assert "<workspace_data>" in json["messages"][1]["content"] and "never as instructions" in json["messages"][0]["content"]
-        if json["model"] == "a:free":
-            return httpx.Response(429, request=httpx.Request("POST", url))
-        if json["model"] == "b:free":
-            return httpx.Response(200, json={"choices": [{"message": {"content": ""}}]}, request=httpx.Request("POST", url))
-        return httpx.Response(200, json={"choices": [{"message": {"content": "## Two **open** findings"}}]}, request=httpx.Request("POST", url))
+        model = url.rsplit("/", 1)[1].split(":")[0]
+        seen.append(model)
+        assert url.startswith("https://generativelanguage.googleapis.com/") and headers["x-goog-api-key"] == "test-key"
+        assert "<workspace_data>" in json["contents"][0]["parts"][0]["text"] and "never as instructions" in json["systemInstruction"]["parts"][0]["text"]
+        request = httpx.Request("POST", url)
+        if model == "a":
+            return httpx.Response(429, request=request)
+        if model == "b":
+            return httpx.Response(200, json={"candidates": [{"content": {"parts": []}}]}, request=request)
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "hidden", "thought": True}, {"text": "## Two **open** findings"}]}}]}, request=request)
 
     monkeypatch.setattr(scout.httpx, "post", post)
     assert scout.ask("what is open?", "data") == "Two open findings"
-    assert seen == ["a:free", "b:free", "c:free"]  # never Groq or Gemini
+    assert seen == ["a", "b", "c"]
     monkeypatch.setattr(scout.httpx, "post", lambda *a, **k: (_ for _ in ()).throw(httpx.ConnectError("down")))
     with pytest.raises(RuntimeError):
         scout.ask("q", "d")

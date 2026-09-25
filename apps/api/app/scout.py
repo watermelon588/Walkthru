@@ -2,8 +2,8 @@
 chat (docs/team-collaboration.md, "Scout").
 
 Retrieval is plain code, no embeddings: the question's words and any site it names pick the findings and reports that
-go into one prompt. One model call through OpenRouter's free models, which are Scout's own provider: the Groq and
-Gemini chain that runs journeys and writes reports is never used here, so chat cannot use up their free quota.
+go into one prompt. One call to Gemini's free tier (Flash-Lite first: answers in seconds). Scout has its own key, ideally
+from its own Google Cloud project, so chat never uses up the quota the journey and report models need.
 Scout reads only what the workspace members can already read, takes no actions and has no tools.
 """
 
@@ -23,12 +23,11 @@ log = logging.getLogger("walkthru.scout")
 
 NAME = "Scout"
 MENTION = re.compile(r"(?<![\w@])@scout\b", re.IGNORECASE)
-MODELS = [m.strip() for m in os.environ.get("SCOUT_MODELS", "nvidia/nemotron-3-ultra-550b-a55b-20260604:free,"
-                                            "nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-3.5-lightning:free").split(",") if m.strip()]
+MODELS = [m.strip() for m in os.environ.get("SCOUT_MODELS", "gemini-3.1-flash-lite,gemini-3.5-flash").split(",") if m.strip()]
 DAILY = int(os.environ.get("SCOUT_DAILY", "50"))  # answers per workspace per UTC day, counted in the database
-URL = os.environ.get("SCOUT_OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions")  # any OpenAI-compatible endpoint
+URL = os.environ.get("SCOUT_GEMINI_URL", "https://generativelanguage.googleapis.com/v1beta")  # overridable for tests
 CONTEXT_CHARS = 14_000
-BUDGET_S = 100  # the whole answer, across fallbacks
+BUDGET_S = 45  # the whole answer, across fallbacks
 STOP = frozenset(re.findall(r"\w+", "a an and are at be can did do does for from has have how i in is it its me my of on or our please scout "
                                      "show tell that the this to us was we what when where which who why with you your about any there them they"))
 
@@ -44,7 +43,7 @@ Answer the member's question using only the workspace data given to you. Rules:
 
 
 def key() -> str | None:
-    return os.environ.get("SCOUT_OPENROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY") or None
+    return os.environ.get("SCOUT_GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or None
 
 
 def called(text: str) -> bool:
@@ -112,23 +111,23 @@ def context(team_id: str, question: str, thread: str, board: list[dict], runs: l
 
 
 def ask(question: str, data: str) -> str:
-    """One answer from the first OpenRouter free model that gives one. Raises RuntimeError when none does."""
+    """One answer from the first Gemini model that gives one. Raises RuntimeError when none does."""
     token = key()
     if not token:
         raise RuntimeError("no key")
     deadline = time.monotonic() + BUDGET_S
-    messages = [{"role": "system", "content": SYSTEM},
-                {"role": "user", "content": f"<workspace_data>\n{data}\n</workspace_data>\n\nQuestion from a member:\n{question}"}]
+    body = {"systemInstruction": {"parts": [{"text": SYSTEM}]},
+            "contents": [{"role": "user", "parts": [{"text": f"<workspace_data>\n{data}\n</workspace_data>\n\nQuestion from a member:\n{question}"}]}],
+            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024}}
     for model in MODELS:
         left = deadline - time.monotonic()
-        if left < 5:
+        if left < 3:
             break
         try:
-            r = httpx.post(URL, headers={"Authorization": f"Bearer {token}", "X-Title": "Walkthru Scout"}, timeout=httpx.Timeout(min(60, left), connect=5.0),
-                           json={"model": model, "messages": messages, "temperature": 0.2, "max_tokens": 1500, "reasoning": {"exclude": True}})
+            r = httpx.post(f"{URL}/models/{model}:generateContent", headers={"x-goog-api-key": token}, json=body, timeout=httpx.Timeout(min(25, left), connect=5.0))
             r.raise_for_status()
-            choice = (r.json().get("choices") or [{}])[0]
-            answer = str((choice.get("message") or {}).get("content") or "").strip()
+            parts = (((r.json().get("candidates") or [{}])[0].get("content") or {}).get("parts") or [])
+            answer = "".join(str(p.get("text") or "") for p in parts if not p.get("thought")).strip()
             if answer:
                 return re.sub(r"\*\*|__|^#+\s*", "", answer, flags=re.MULTILINE)[:3000]
             log.warning("scout: %s gave an empty answer", model)
@@ -151,7 +150,7 @@ def reply(team_id: str, thread: str, question: str, asker: dict) -> None:
         if answers_today(team_id) >= DAILY:
             text = f"I have answered {DAILY} questions in this workspace today, my daily limit. Ask me again tomorrow."
         elif not key():
-            text = "I am not switched on yet: the Walkthru admin needs to add an OpenRouter key (SCOUT_OPENROUTER_API_KEY)."
+            text = "I am not switched on yet: the Walkthru admin needs to add a Gemini key (SCOUT_GEMINI_API_KEY)."
         else:
             members = db.team_members(team_id)
             names = {m["user_id"]: m["name"] for m in members}

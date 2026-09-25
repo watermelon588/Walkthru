@@ -62,15 +62,16 @@ Read this block first. It describes the founder's local machine as of this push,
 
 ### Added 2026-09-25 by Claude Code (cloud): Scout in team chat
 - `@Scout <question>` in any workspace thread gets an answer from this workspace's findings board, shared reports and recent messages (`app/scout.py`, docs/team-collaboration.md section 11).
-- **Provider:** OpenRouter free Nemotron models only (Ultra, then Super, then Lightning). It never uses Groq or Gemini.
+- **Provider:** Gemini free tier over REST (`gemini-3.1-flash-lite`, then `gemini-3.5-flash`).
+- **Look:** Scout messages are styled as a bot (bird avatar, tinted card, Bot tag).
 - **Limits:** 50 answers per workspace per day, 10 questions per person per 10 minutes.
 - **Founder:**
   1. Apply the schema (adds `team_messages.bot`).
-  2. Set `SCOUT_OPENROUTER_API_KEY` in `apps/api/.env`, ideally from a separate OpenRouter account so its free daily requests are its own.
+  2. Set `SCOUT_GEMINI_API_KEY` in `apps/api/.env`, from its own Google Cloud project so its free quota is separate.
 - **Verified:**
-  - API tests with a fake OpenRouter: fallback, workspace-only context (another workspace and the owner's personal runs never reach the prompt), daily cap, no-key message, rate limit, retries answered once.
-  - A browser run against a fake OpenRouter.
-- **Not verified:** the real OpenRouter models, which this sandbox cannot reach.
+  - API tests with a fake Gemini: fallback, thought parts skipped, workspace-only context, daily cap, no-key message, rate limit, retries answered once.
+  - A browser run against a fake Gemini.
+- **Not verified:** the real Gemini API, which this sandbox cannot reach.
 
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
