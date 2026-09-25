@@ -81,9 +81,9 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `citation-tracking` | Prompts, free-engine answers, mentions, citations, share of voice, sources, accuracy | `watch`, `entitlements` | Planned, P3.2 and P3.3 |
 | `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Built 2026-09-25 |
 | `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Built 2026-09-25 (docs/billing.md) |
-| `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
+| `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Branded PDF built 2026-09-25 (P4.3); V7 close-out open |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
-| `personas-plus` | Custom test users and several test users per report | `entitlements` | Planned, post-launch |
+| `personas-plus` | Custom test users and several test users per report | `entitlements` | Built 2026-09-25 (P4.2): `app/plus.py`, `test_users`, `runs.group_id` |
 | `cloud-runner` | Headless Chrome on the API VM driving the same `inject.js` for public journeys without an install | `entitlements` | Conditional on the extension funnel experiment |
 
 Dependency direction is one way. `entitlements` comes first because every paid promise depends on it.
