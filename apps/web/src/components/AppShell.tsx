@@ -22,14 +22,15 @@ const help: { href: string; label: string; icon: Icon }[] = [
 const item = 'flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors lg:min-h-9'
 
 /** Signed-in frame. Desktop: a quiet sidebar. Phones: a top bar with a drawer holding the same navigation. */
-export function AppShell({ children, title }: { children: ReactNode; title?: string }) {
+export function AppShell({ children, title, plainTitle = false }: { children: ReactNode; title?: string; plainTitle?: boolean }) {
   const drawer = useRef<HTMLDialogElement>(null)
   const { pathname } = useLocation()
   useEffect(() => { drawer.current?.close() }, [pathname])
 
   return (
     <div className="min-h-[100dvh] bg-bg text-ink lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] print:block">
-      {title && <title>{`${title} · ${brand.name}`}</title>}
+      {/* plainTitle: a branded report's title is the PDF's default file name, so it carries no Walkthru name */}
+      {title && <title>{plainTitle ? title : `${title} · ${brand.name}`}</title>}
       <SkipLink />
 
       <aside className="no-print sticky top-0 hidden h-[100dvh] flex-col border-r border-line px-4 py-6 lg:flex">

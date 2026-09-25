@@ -5,7 +5,7 @@ import { AppShell } from '../components/AppShell'
 import { ReportView } from '../components/ReportView'
 import { btnGhost } from '../components/Shared'
 import { copyText } from '../lib/clipboard'
-import { deleteRun, emailRun, findingsCsv, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Run } from '../lib/runs'
+import { deleteRun, emailRun, findingsCsv, getBranding, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Brand, type Run } from '../lib/runs'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -18,13 +18,19 @@ export default function Report() {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [ignored, setIgnored] = useState<Record<string, string>>({})
   const [paid, setPaid] = useState(false)
+  const [brand, setBrand] = useState<Brand | null>(null)  // Plus: the owner's branding for the printed report
   const site = state.kind === 'ready' ? state.run.site : null
 
   // Accepted findings for this site, and whether the plan allows accepting more (paid plans).
   useEffect(() => {
     if (!site) return
     ignoredFindings(site).then(setIgnored).catch(() => setIgnored({}))
-    getPlan().then((p) => setPaid(p.plan !== 'free')).catch(() => setPaid(false))
+    getPlan()
+      .then((p) => {
+        setPaid(p.plan !== 'free')
+        if (p.plan === 'plus') getBranding().then((b) => setBrand(b.active ? b.brand : null)).catch(() => setBrand(null))
+      })
+      .catch(() => setPaid(false))
   }, [site])
 
   useEffect(() => {
@@ -43,7 +49,7 @@ export default function Report() {
   }, [id, navigate])
 
   return (
-    <AppShell title="Report">
+    <AppShell plainTitle={!!brand && state.kind === 'ready'} title={brand && state.kind === 'ready' ? `${brand.name} launch report, ${state.run.site.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : 'Report'}>
       <Link to="/app" className="no-print inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
         <ArrowLeftIcon className="size-4" /> All runs
       </Link>
@@ -60,9 +66,10 @@ export default function Report() {
               onStopped={(steps) => setState({ kind: 'ready', run: { ...state.run, status: 'stopped', steps } })}
             />
           )}
-          {state.run.report && <Actions run={state.run} onShared={() => setState({ kind: 'ready', run: { ...state.run, public: true } })} />}
+          {state.run.report && <Actions run={state.run} branded={!!brand} onShared={() => setState({ kind: 'ready', run: { ...state.run, public: true } })} />}
           <ReportView
             run={state.run}
+            brand={brand}
             ignore={{
               ignored,
               canIgnore: paid,
@@ -111,7 +118,7 @@ function EndRunningRun({ run, onStopped }: { run: Run; onStopped: (steps: Run['s
   )
 }
 
-function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
+function Actions({ run, branded, onShared }: { run: Run; branded: boolean; onShared: () => void }) {
   const navigate = useNavigate()
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -188,7 +195,7 @@ function Actions({ run, onShared }: { run: Run; onShared: () => void }) {
         <DownloadSimpleIcon weight="light" className="size-4" /> Export CSV
       </button>
       <button type="button" onClick={savePdf} disabled={busy !== null} className={btnGhost}>
-        <PrinterIcon weight="light" className="size-4" /> {busy === 'pdf' ? 'Preparing PDF' : 'Save PDF'}
+        <PrinterIcon weight="light" className="size-4" /> {busy === 'pdf' ? 'Preparing PDF' : branded ? 'Save branded PDF' : 'Save PDF'}
       </button>
       <button type="button" onClick={email} disabled={busy !== null} className={btnGhost}>
         <EnvelopeSimpleIcon weight="light" className="size-4" /> Email me

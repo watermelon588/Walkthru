@@ -7,7 +7,7 @@ import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
 
-export type RunOptions = { site: string; goal: string; persona: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean };
+export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean };
 export type Progress = {
   phase: "idle" | "starting" | "running" | "finished" | "error";
   steps: Step[];
@@ -81,6 +81,13 @@ async function settled(tabId: number, signal: AbortSignal) {
   }
 }
 
+/** Back to where the first test user started, so every test user in a set begins on the same page. */
+export async function openStart(url: string, signal: AbortSignal) {
+  const tab = await activeTab();
+  await chrome.tabs.update(tab.id!, { url });
+  await settled(tab.id!, signal);
+}
+
 export async function runTest(opts: RunOptions, onProgress: (p: Progress) => void) {
   const steps: Step[] = [];
   let capturedCount = 0;
@@ -94,7 +101,8 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     // Chrome's side panel does not grant activeTab to captureVisibleTab. The API only
     // accepts activeTab or <all_urls>, so request the optional capture permission from
     // this explicit Start Test gesture. Chrome prompts once and remembers the choice.
-    const granted = await chrome.permissions.request({ origins: ["<all_urls>"] });
+    // Later test users in a set start without a new click, so ask only when the permission is missing.
+    const granted = await chrome.permissions.contains({ origins: ["<all_urls>"] }) || await chrome.permissions.request({ origins: ["<all_urls>"] });
     if (!granted) throw new Error("Walkthru needs screenshot access to save visual evidence. Allow it and start again.");
     const tab = await activeTab();
     tabId = tab.id!;

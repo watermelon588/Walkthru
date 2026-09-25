@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { copyText } from '../lib/clipboard'
 import { API, type Report } from '../lib/runs'
+import { band } from '../lib/score'
 
 type Score = NonNullable<Report['launch_ready']>
 
@@ -12,12 +13,6 @@ const AREAS: { id: keyof Score['areas']; label: string; weight: number }[] = [
   { id: 'speed', label: 'Speed and accessibility', weight: 15 },
 ]
 
-// Same bands as the badge (app/agent/score.py `band`).
-function band(score: number): { label: string; tone: string } {
-  if (score >= 85) return { label: 'Launch ready', tone: 'text-accent' }
-  if (score >= 60) return { label: 'Almost ready', tone: 'text-ink' }
-  return { label: 'Needs work', tone: 'text-danger' }
-}
 
 /** One number for the whole report, the areas behind it, and the badge for public reports. */
 export function LaunchReady({ score, runId, isPublic, isScan, isOwner }: { score: Score; runId: string; isPublic: boolean; isScan: boolean; isOwner: boolean }) {

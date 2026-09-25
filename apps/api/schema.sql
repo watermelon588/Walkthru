@@ -248,3 +248,37 @@ create policy "owner reads billing offers" on public.billing_offers
 grant select on public.billing_offers to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---------- Plus: custom test users and several test users per report (P4.2), branded PDF (P4.3), 2026-09-25 ----------
+-- API-only tables (service role): browsers never read or write them directly.
+
+-- A test user the owner describes in their own words. The run stores its name in runs.persona, so every page that
+-- shows a built-in test user's label shows this name the same way.
+create table if not exists public.test_users (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 40),
+  description text not null check (char_length(description) between 10 and 300),
+  created_at timestamptz not null default now(),
+  unique (user_id, name)
+);
+alter table public.test_users enable row level security;
+revoke all on public.test_users from anon, authenticated;
+
+-- Several test users on one goal: their runs share a group id, and each report shows the group side by side.
+alter table public.runs add column if not exists group_id uuid;
+create index if not exists runs_group on public.runs (group_id) where group_id is not null;
+
+-- The owner's branding for printed reports: name, logo (a small PNG, JPEG or WebP data URL), color, footer line.
+create table if not exists public.report_brands (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 80),
+  color text not null default '#1b1b1f' check (color ~ '^#[0-9a-f]{6}$'),
+  footer text not null default '' check (char_length(footer) <= 120),
+  logo text check (logo is null or char_length(logo) <= 300000),
+  updated_at timestamptz not null default now()
+);
+alter table public.report_brands enable row level security;
+revoke all on public.report_brands from anon, authenticated;
+
+notify pgrst, 'reload schema';

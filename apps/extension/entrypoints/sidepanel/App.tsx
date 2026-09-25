@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { getPlan, getSession, WEB_URL, type GoalPlan, type PlanSummary } from "../../lib/api";
+import { getPlan, getSession, getTestUsers, WEB_URL, type GoalPlan, type PlanSummary, type TestUser } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
 import { suggestGoals } from "../../lib/goals";
-import { runTest, snapshotActiveTab, type Progress, type RunOptions } from "./run";
+import { openStart, runTest, snapshotActiveTab, type Progress, type RunOptions } from "./run";
 
 const PERSONAS = [
   ["first_timer", "First-time visitor"],
@@ -11,6 +11,9 @@ const PERSONAS = [
   ["buyer", "Small-business buyer"],
   ["skeptic", "Skeptical developer"],
 ] as const;
+
+/** One finished test user in a set (Plus: several test users per report). */
+type Result = { label: string; status?: string; runId?: string; error?: string };
 
 const STATUS_COPY: Record<string, string> = {
   done: "Reached the goal.",
@@ -27,6 +30,10 @@ export function App() {
   const [site, setSite] = useState<string>("");
   const [goal, setGoal] = useState("Sign up for an account");
   const [persona, setPersona] = useState<(typeof PERSONAS)[number][0]>("first_timer");
+  const [chosen, setChosen] = useState<string[]>(["first_timer"]); // Plus: several test users, run one after another
+  const [custom, setCustom] = useState<TestUser[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [current, setCurrent] = useState<{ index: number; total: number; label: string } | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -53,6 +60,14 @@ export function App() {
     else setPlan(null);
   }, [signedIn, finished]);
   const canLogIn = plan?.logged_in ?? false;
+  const isPlus = plan?.plan === "plus";
+  useEffect(() => {
+    if (isPlus) getTestUsers().then(setCustom).catch(() => setCustom([]));
+    else setCustom([]);
+  }, [isPlus, signedIn]);
+  const options: [string, string][] = [...PERSONAS.map(([v, l]) => [v, l] as [string, string]), ...custom.map((t): [string, string] => [`custom:${t.id}`, t.name])];
+  const labelOf = (value: string) => options.find(([v]) => v === value)?.[1] ?? value;
+  const people = isPlus ? chosen.filter((c) => options.some(([v]) => v === c)) : [persona];
 
   // Goals this page can actually support, read from its links and buttons (like "Sign up" or "Pricing").
   useEffect(() => {
@@ -63,9 +78,10 @@ export function App() {
     snapshotActiveTab().then((obs) => setSuggestions(obs ? suggestGoals(obs.elements) : []));
   }, [site]);
 
-  const running = progress.phase === "running" || progress.phase === "starting";
+  const running = current !== null || progress.phase === "running" || progress.phase === "starting";
   const outOfRuns = plan?.runs_left === 0;
-  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true && !outOfRuns;
+  const tooMany = !!plan && people.length > plan.runs_left;
+  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true && !outOfRuns && people.length > 0 && !tooMany;
   // Say why Start is disabled instead of leaving a dead button.
   const blocked = running || canStart
     ? null
@@ -77,7 +93,11 @@ export function App() {
           ? "Give the test user a goal."
           : outOfRuns
             ? `No test runs left ${plan?.plan === "free" ? "this month" : "in this pass"}. Instant Scans stay free.`
-            : null;
+            : people.length === 0
+              ? "Pick at least one test user."
+              : tooMany
+                ? `Each test user uses one run, and ${plan?.runs_left} are left. Pick fewer test users.`
+                : null;
   const agentState: AgentState = progress.phase === "error"
     ? "stopped"
     : progress.phase === "finished"
@@ -85,10 +105,11 @@ export function App() {
       : running
         ? "observing"
         : "ready";
+  const who = current && current.total > 1 ? `${current.label} (${current.index + 1} of ${current.total}): ` : "";
   const agentActivity = progress.phase === "starting"
-    ? "Reading the page"
+    ? `${who}Reading the page`
     : progress.phase === "running"
-      ? `Testing step ${Math.max(1, progress.steps.length)}`
+      ? `${who}Testing step ${Math.max(1, progress.steps.length)}`
       : progress.phase === "finished"
         ? STATUS_COPY[progress.status ?? ""] ?? "Run finished"
         : progress.phase === "error"
@@ -99,12 +120,36 @@ export function App() {
     e.preventDefault();
     if (!canStart) return;
     abort.current = new AbortController();
+    const signal = abort.current.signal;
     setUnderstood(null);
-    const opts: RunOptions = { site, goal: goal.trim(), persona, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal: abort.current.signal };
-    await runTest(opts, (p) => {
-      if (p.plan) setUnderstood(p.plan);
-      setProgress(p);
-    });
+    setResults([]);
+    const startUrl = site;
+    // Several test users on one goal share a group id, so each report shows them side by side.
+    const group_id = people.length > 1 ? crypto.randomUUID() : undefined;
+    const done: Result[] = [];
+    try {
+      for (const [index, who] of people.entries()) {
+        if (signal.aborted) break;
+        setCurrent({ index, total: people.length, label: labelOf(who) });
+        if (index > 0) await openStart(startUrl, signal);
+        let last: Progress = { phase: "idle", steps: [] };
+        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal };
+        await runTest(opts, (p) => {
+          last = p;
+          if (p.plan) setUnderstood(p.plan);
+          setProgress(p);
+        });
+        done.push({ label: labelOf(who), status: last.status, runId: last.runId, error: last.phase === "error" ? last.message : undefined });
+        setResults([...done]);
+        if (last.phase === "error") break; // a plan limit or a broken session would fail the next test user too
+      }
+    } finally {
+      setCurrent(null);
+    }
+  }
+
+  function toggle(value: string, on: boolean) {
+    setChosen((list) => (on ? [...list, value] : list.filter((v) => v !== value)));
   }
 
   return (
@@ -139,15 +184,31 @@ export function App() {
             ))}
           </div>
         )}
-        <label htmlFor="persona">
-          Test user
-          <select id="persona" value={persona} onChange={(e) => setPersona(e.target.value as typeof persona)} disabled={running}>
-            {PERSONAS.map(([v, l]) => {
-              const included = !plan || plan.personas.includes(v);
-              return <option key={v} value={v} disabled={!included}>{included ? l : `${l} (paid plans)`}</option>;
-            })}
-          </select>
-        </label>
+        {isPlus ? (
+          <fieldset className="people" disabled={running}>
+            <legend>Test users</legend>
+            {options.map(([v, l]) => (
+              <label key={v} className="row">
+                <input type="checkbox" checked={chosen.includes(v)} onChange={(e) => toggle(v, e.target.checked)} />
+                {l}
+              </label>
+            ))}
+            <p className="hint">
+              Pick several to see them side by side in one report. They run one after another, each from this page, and each uses one run.{" "}
+              <a href={`${WEB_URL}/app/settings#test-users`} target="_blank" rel="noreferrer">Add your own test users</a>
+            </p>
+          </fieldset>
+        ) : (
+          <label htmlFor="persona">
+            Test user
+            <select id="persona" value={persona} onChange={(e) => setPersona(e.target.value as typeof persona)} disabled={running}>
+              {PERSONAS.map(([v, l]) => {
+                const included = !plan || plan.personas.includes(v);
+                return <option key={v} value={v} disabled={!included}>{included ? l : `${l} (paid plans)`}</option>;
+              })}
+            </select>
+          </label>
+        )}
         <label className="row" htmlFor="logged">
           <input id="logged" type="checkbox" checked={loggedIn && canLogIn} onChange={(e) => setLoggedIn(e.target.checked)} disabled={running || !canLogIn} />
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
@@ -160,7 +221,7 @@ export function App() {
         )}
         <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">
-          <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : "Start test"}</button>
+          <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : people.length > 1 ? `Start ${people.length} tests` : "Start test"}</button>
           {running && <button type="button" onClick={() => abort.current?.abort()}>Stop</button>}
         </div>
         {blocked && <p className="hint" role="status">{blocked}</p>}
@@ -178,7 +239,22 @@ export function App() {
       {progress.phase === "error" && <p className="error">{progress.message}</p>}
       {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}
 
-      {progress.phase === "finished" && (
+      {results.length > 1 && !running && (
+        <section className="summary" aria-label="Results for each test user">
+          <h2>{results.length} test users finished</h2>
+          <ul className="results">
+            {results.map((r) => (
+              <li key={r.runId ?? r.label}>
+                <span>{r.label}: {r.error ?? STATUS_COPY[r.status ?? ""] ?? "Finished."}</span>
+                {r.runId && <a href={`${WEB_URL}/app/runs/${r.runId}`} target="_blank" rel="noreferrer">Report</a>}
+              </li>
+            ))}
+          </ul>
+          <p>Each report shows all of them side by side, with the problems several test users hit.</p>
+        </section>
+      )}
+
+      {progress.phase === "finished" && results.length <= 1 && (
         <section className="summary" aria-label="Result">
           <h2>{STATUS_COPY[progress.status ?? ""]}</h2>
           <p>{progress.steps.length} steps. Highest confusion: {Math.max(0, ...progress.steps.map((s) => s.confusion))} of 3.</p>

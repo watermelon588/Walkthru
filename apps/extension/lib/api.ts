@@ -36,11 +36,15 @@ export type StopReply = {
 export type StartBody = {
   site: string;
   goal: string;
-  persona: string;
+  persona: string; // a built-in key, or "custom:<id>" for a Plus test user
+  group_id?: string; // Plus: several test users on one goal share it and appear side by side in each report
   logged_in: boolean;
   max_steps: number;
   observation: Observation;
 };
+
+/** A Plus owner's own test user (`GET /me/test-users`). */
+export type TestUser = { id: string; name: string; description: string };
 
 /** What `GET /me/plan` returns: the server decides the plan and its limits (apps/api/app/plans.py). */
 export type PlanSummary = {
@@ -118,6 +122,7 @@ export async function uploadEvidenceImage(path: string, dataUrl: string): Promis
 }
 
 export const getPlan = () => call<PlanSummary>("/me/plan");
+export const getTestUsers = () => call<TestUser[]>("/me/test-users");
 export const startRun = (body: StartBody) => call<RunReply>("/runs", body);
 export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
   call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });
