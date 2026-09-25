@@ -109,7 +109,11 @@ def test_every_route_is_classified():
 @pytest.fixture
 def user_a_owns_everything(monkeypatch, fake_db, passes):
     """User A's run, test user, key, watched site, offer, GitHub installation, workspace and invitation. User B (the
-    caller) is on Plus, so plan checks never hide a missing ownership check."""
+    caller) is on Plus, and the in-memory rate limits start empty, so neither hides a missing ownership check."""
+    from app import main, teams
+
+    for hits in (main._billing_hits, main._github_hits, main._scan_hits, teams._hits):
+        hits.clear()
     fake_db[RUN] = {"id": RUN, "user_id": OWNER, "site": "https://a.example/", "status": "running", "steps": [], "tier": "paid", "kind": "test",
                     "report": {"summary": "s", "findings": [], "top_fixes": []}, "public": False}
     passes.append({"user_id": USER, "plan": "plus", "starts_at": "2000-01-01T00:00:00+00:00", "expires_at": "2999-01-01T00:00:00+00:00", "runs_granted": 150})
