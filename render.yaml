@@ -33,6 +33,25 @@ services:
         sync: false
       - key: PAGESPEED_API_KEY
         sync: false
+      # Billing (payment.md). Webhook URL in Dodo: https://YOUR-API.onrender.com/webhooks/dodo
+      - key: DODO_PAYMENTS_API_KEY
+        sync: false
+      - key: DODO_PAYMENTS_WEBHOOK_KEY
+        sync: false
+      - key: DODO_PAYMENTS_BUSINESS_ID
+        sync: false
+      - key: DODO_PAYMENTS_ENVIRONMENT   # test_mode until live verification clears
+        value: test_mode
+      - key: DODO_PRODUCT_LAUNCH
+        sync: false
+      - key: DODO_PRODUCT_PRO_FOUNDING
+        sync: false
+      - key: DODO_PRODUCT_PRO
+        sync: false
+      - key: DODO_PRODUCT_PLUS_FOUNDING
+        sync: false
+      - key: DODO_PRODUCT_PLUS
+        sync: false
       - key: RESEND_API_KEY     # optional: without it "Email me" opens the user's mail app
         sync: false
       - key: RESEND_FROM

@@ -76,11 +76,13 @@ def passes(monkeypatch):
     table: list[dict] = []
 
     def active_entitlement(user_id, now):
-        live = [p for p in table if p["user_id"] == user_id and p["starts_at"] <= now < p["expires_at"]]
+        live = [p for p in table if p["user_id"] == user_id and p["starts_at"] <= now < p["expires_at"] and not p.get("revoked_at")]
         return max(live, key=lambda p: p["expires_at"], default=None)
 
     monkeypatch.setattr(db, "active_entitlement", active_entitlement)
     monkeypatch.setattr(db, "entitlements_for_user", lambda user_id: [p for p in table if p["user_id"] == user_id])
+    monkeypatch.setattr(db, "access_requests_for_user", lambda user_id, limit=20: [])  # test_billing.py fakes the billing tables
+    monkeypatch.setattr(db, "offers_for_user", lambda user_id, limit=20: [])
     return table
 
 

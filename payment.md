@@ -2,7 +2,7 @@
 
 **Status:** Accepted for the V1 launch process  
 **Decision date:** 2026-09-23  
-**Implementation status:** Designed, not yet implemented. T14 remains the implementation task.  
+**Implementation status:** V10 built 2026-09-25 (request, founder approval, Dodo checkout, signed idempotent webhook, refunds and disputes). Runbook: [docs/billing.md](docs/billing.md). The cost ledger and run reservation are not built yet.  
 **Scope:** Founder-gated paid access, Dodo Payments, internal usage credits, model-cost controls and the path to self-serve billing.
 
 ## Executive decision

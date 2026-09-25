@@ -29,7 +29,7 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 | Data | Supabase Postgres (RLS on every table) + private Storage (screenshots) | `runs` table + RLS live; `run-evidence` bucket and owner/public-report policies are declared in `apps/api/schema.sql` but still need applying to the project |
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
-| Payments | Dodo Payments (test mode first) | Not started |
+| Payments | Dodo Payments (test mode first) | Built, awaiting founder keys (docs/billing.md) |
 | Hosting | Vercel (web), Oracle Always Free VM or ~$5 VPS (API) | Not started |
 
 ## Key decisions
@@ -69,7 +69,7 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
 | `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
 | `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Planned, post-launch |
-| `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
+| `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Built 2026-09-25 (docs/billing.md) |
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
 | `personas-plus` | Custom test users and several test users per report | `entitlements` | Planned, post-launch |

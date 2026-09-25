@@ -123,3 +123,93 @@ grant select on public.finding_states to authenticated;
 -- column there leaked Instant Scan and owner addresses. The API now sends report emails without storing them.
 alter table public.runs drop column if exists email;
 notify pgrst, 'reload schema';
+
+-- ---------- V10 billing (2026-09-25, payment.md) ----------
+-- Founder-approved 30-day passes paid through Dodo. Nothing here is writable from a browser: the API and the
+-- founder's scripts write with the secret key. Owners may read their own requests and offers; webhook events and
+-- the admin audit log are server-only. Supabase grants new public tables to anon/authenticated by default, so
+-- every table below revokes that first and grants back only what a policy allows.
+
+-- A signed-in user asks for paid access. At most one pending request per user.
+create table if not exists public.access_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  plan text not null check (plan in ('launch', 'pro', 'plus')),
+  note text not null default '' check (char_length(note) <= 500),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamptz not null default now(),
+  decided_at timestamptz
+);
+create unique index if not exists access_requests_one_pending on public.access_requests (user_id) where status = 'pending';
+create index if not exists access_requests_user_created on public.access_requests (user_id, created_at desc);
+
+-- The founder's immutable offer: exact plan, price, product, runs and days, bound to one user.
+-- Checkout is possible only while status = 'approved' and before checkout_expires_at (24 hours).
+create table if not exists public.billing_offers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  request_id uuid references public.access_requests (id) on delete set null,
+  plan text not null check (plan in ('launch', 'pro', 'plus')),
+  founding boolean not null default false,
+  price_cents integer not null check (price_cents > 0),
+  currency text not null default 'USD',
+  product_id text not null,
+  runs integer not null check (runs > 0),
+  days integer not null check (days between 1 and 31),
+  status text not null default 'approved' check (status in ('approved', 'paid', 'cancelled', 'refunded')),
+  checkout_expires_at timestamptz not null,
+  payment_id text unique,
+  paid_at timestamptz,
+  approved_by text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists billing_offers_user_created on public.billing_offers (user_id, created_at desc);
+
+-- Every verified Dodo webhook, once. The webhook-id primary key makes redelivery a no-op.
+create table if not exists public.billing_events (
+  webhook_id text primary key,
+  event_type text not null,
+  object_id text,
+  body_sha256 text not null,
+  received_at timestamptz not null default now(),
+  processed_at timestamptz,
+  result text
+);
+
+-- Founder actions: approvals, rejections, offers, cancellations.
+create table if not exists public.admin_audit_log (
+  id bigint generated always as identity primary key,
+  actor text not null,
+  action text not null,
+  target text not null,
+  detail jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+-- A pass bought through Dodo points at its offer and payment; each can grant at most one pass.
+alter table public.entitlements add column if not exists offer_id uuid unique references public.billing_offers (id) on delete set null;
+alter table public.entitlements add column if not exists payment_id text unique;
+alter table public.entitlements add column if not exists revoked_at timestamptz;
+alter table public.entitlements add column if not exists revoked_reason text;
+-- Passes are money: browsers may only read them (RLS already blocks writes; this removes the privilege too).
+revoke insert, update, delete, truncate on public.entitlements from anon, authenticated;
+
+alter table public.access_requests enable row level security;
+alter table public.billing_offers enable row level security;
+alter table public.billing_events enable row level security;
+alter table public.admin_audit_log enable row level security;
+revoke all on public.access_requests, public.billing_offers, public.billing_events, public.admin_audit_log from anon, authenticated;
+
+drop policy if exists "owner reads access requests" on public.access_requests;
+create policy "owner reads access requests" on public.access_requests
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+grant select on public.access_requests to authenticated;
+
+drop policy if exists "owner reads billing offers" on public.billing_offers;
+create policy "owner reads billing offers" on public.billing_offers
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+grant select on public.billing_offers to authenticated;
+
+notify pgrst, 'reload schema';

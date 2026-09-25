@@ -223,7 +223,27 @@ export async function getFixPrompt(runId: string, style: 'full' | 'chat'): Promi
   return res.text()
 }
 
-export const getVerification = () => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
+/** Paid access (payment.md): request, founder approval, Dodo checkout. Prices and terms come from the server. */
+export type BillingOffer = { id: string; plan: 'launch' | 'pro' | 'plus'; founding: boolean; price_cents: number; currency: string; runs: number; days: number; status: 'approved' | 'paid' | 'cancelled' | 'refunded'; checkout_expires_at: string; paid_at: string | null; created_at: string; open: boolean }
+export type BillingStatus = {
+  checkout_enabled: boolean
+  plan: PlanSummary
+  requests: { id: string; plan: BillingOffer['plan']; note: string; status: 'pending' | 'approved' | 'rejected'; created_at: string; decided_at: string | null }[]
+  offers: BillingOffer[]
+  passes: { plan: BillingOffer['plan']; starts_at: string; expires_at: string; runs_granted: number; source: string; revoked_at: string | null; revoked_reason: string | null }[]
+  prices: { plan: BillingOffer['plan']; founding: boolean; price_cents: number; runs: number; days: number }[]
+}
+export const getBilling = () => api<BillingStatus>('/billing', undefined, true, 'GET')
+export const requestAccess = (plan: BillingOffer['plan'], note: string) => api<{ id: string; status: 'pending' }>('/billing/access-requests', { plan, note })
+/** Opens Dodo's hosted checkout. Only an https dodopayments.com address is followed. */
+export async function startCheckout(offerId: string): Promise<string> {
+  const { checkout_url } = await api<{ checkout_url: string }>(`/billing/offers/${encodeURIComponent(offerId)}/checkout`)
+  const url = new URL(checkout_url)
+  if (url.protocol !== 'https:' || !url.hostname.endsWith('.dodopayments.com')) throw new Error('Unexpected payment address')
+  return url.href
+}
+
+export const getVerification =() => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
 
