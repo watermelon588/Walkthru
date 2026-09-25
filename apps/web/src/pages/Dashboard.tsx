@@ -147,14 +147,14 @@ export default function Dashboard() {
           <ol className="grid gap-px overflow-hidden rounded-2xl bg-line">
             {runs.runs.map((r) => (
               <li key={r.id} className="grid bg-bg transition-colors hover:bg-surface sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                <Link to={`/app/runs/${r.id}`} className="min-w-0 px-5 pt-4 pb-2 focus-visible:outline-2 focus-visible:outline-accent sm:py-4">
+                <Link to={r.kind === 'compare' ? `/app/compare/${r.id}` : `/app/runs/${r.id}`} className="min-w-0 px-5 pt-4 pb-2 focus-visible:outline-2 focus-visible:outline-accent sm:py-4">
                   <div className="min-w-0">
-                    <p className="truncate">{r.kind === 'scan' ? 'Instant Scan' : r.goal}</p>
+                    <p className="truncate">{r.kind === 'scan' ? 'Instant Scan' : r.kind === 'watch' ? 'Weekly watch' : r.goal}</p>
                     <p className="mt-0.5 truncate font-mono text-xs text-muted">{r.site}</p>
                   </div>
                 </Link>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-4 text-xs text-muted sm:justify-end sm:py-4 sm:pl-0">
-                    <span>{r.kind === 'scan' ? 'Instant Scan' : PERSONA_LABEL[r.persona] ?? r.persona}</span>
+                    <span>{r.kind === 'test' ? PERSONA_LABEL[r.persona] ?? r.persona : r.kind === 'watch' ? 'Weekly watch' : r.kind === 'compare' ? 'Comparison' : 'Instant Scan'}</span>
                     {r.steps.some((step) => step.evidence) && <span>{r.steps.filter((step) => step.evidence).length} frames</span>}
                     {r.report && <span>{r.report.findings.length} findings</span>}
                     {r.kind === 'test' && <StatusPill status={r.status} />}

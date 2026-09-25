@@ -3,6 +3,7 @@ value comes from the site itself and nothing is invented. Each fix: id, title, f
 
 import json
 import re
+import secrets
 from urllib.parse import urlsplit
 
 from selectolax.parser import HTMLParser
@@ -37,7 +38,7 @@ def framework(html: str) -> str | None:
 
 
 def build(root_url: str, pages: list[tuple[str, str]], objects: list[dict], *, root_objects: list[dict], blocked: list[str],
-          shell: bool, llms_ok: bool | None) -> list[dict]:
+          shell: bool, llms_ok: bool | None, indexing: bool = False) -> list[dict]:
     """Fixes for what the GEO audit found, most valuable first. `objects` is JSON-LD from every audited page, `root_objects`
     from the homepage only (the site's name comes from there). llms_ok is None when llms.txt was not checked."""
     root_html = pages[0][1] if pages else ""
@@ -88,5 +89,17 @@ def build(root_url: str, pages: list[tuple[str, str]], objects: list[dict], *, r
         out.append({
             "id": "llms", "title": "Add an llms.txt map (low impact)", "file": "llms.txt",
             "code": "\n".join(lines) + "\n", "note": "Save as /llms.txt at your site root. Low measured impact today, so do it after the fixes above.",
+        })
+    if indexing:
+        key = secrets.token_hex(16)
+        out.append({
+            "id": "indexnow", "title": "Optional: add an IndexNow key file", "file": f"public/{key}.txt",
+            "code": key + "\n",
+            "note": f"Publish at {base}/{key}.txt. Keep this key for future URL submissions. IndexNow announces changes to supporting search engines; it does not guarantee indexing.",
+        })
+        out.append({
+            "id": "bing", "title": "Optional: submit the sitemap to Bing Webmaster Tools", "file": "Bing Webmaster Tools",
+            "code": f"{base}/sitemap.xml",
+            "note": "Verify this site in Bing Webmaster Tools, then submit the sitemap URL above. This is a manual owner step, not an automatic submission.",
         })
     return out

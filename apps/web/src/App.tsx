@@ -10,6 +10,10 @@ const Login = lazy(() => import('./pages/Login'))
 const Public = lazy(() => import('./pages/Public'))
 const Report = lazy(() => import('./pages/Report'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Mcp = lazy(() => import('./pages/Mcp'))
+const Watch = lazy(() => import('./pages/Watch'))
+const Compare = lazy(() => import('./pages/Compare'))
+const CompareResult = lazy(() => import('./pages/Compare').then((m) => ({ default: m.CompareResult })))
 const Docs = lazy(() => import('./pages/Docs'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -53,6 +57,10 @@ export default function App() {
           <Route path="/security" element={<Security />} />
           <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/app/mcp" element={<RequireAuth><Mcp /></RequireAuth>} />
+          <Route path="/app/watch" element={<RequireAuth><Watch /></RequireAuth>} />
+          <Route path="/app/compare" element={<RequireAuth><Compare /></RequireAuth>} />
+          <Route path="/app/compare/:id" element={<RequireAuth><CompareResult /></RequireAuth>} />
           <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
           <Route path="/r/:id" element={<Public />} />
           <Route path="*" element={<NotFound />} />

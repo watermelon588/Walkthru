@@ -1,16 +1,176 @@
 # Walkthru Task List
 
-Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order (ROADMAP.md "Session plan"). The v1 history below stays for reference. Sizes: S = 1-2 files, M = 3-5 files.
+Definition of done: see ROADMAP.md. The v1.2 flagship plan comes first, in phase order (ROADMAP.md "Phases" and "Session plan"). The v1.1 and v1 history below stays for reference. Sizes: S = 1-2 files, M = 3-5 files, L = 6+ files.
 
-## v1.1 plan (updated 2026-09-24)
+Every task follows ROADMAP.md "Build rules": deterministic first, free tier only, reuse open source after a licence check (table in docs/decisions.md, 2026-09-25 "Premium depth"), name each new dependency, never attack a site. "Reuse" lines name the repo and licence to port from. Ported rules keep their notice in `apps/api/THIRD_PARTY.md` (created by the first task that ports code).
 
-### Founder track (in parallel with sessions 1 to 6)
+## v1.2 flagship plan (2026-09-25)
+
+### Founder track (now)
 - [x] Confirm prices: Pro $19 and Plus $49, founding $15 and $39 (2026-09-24)
+- [x] Approve reusing permissive open source and the free-tier-only rule (2026-09-25)
 - [ ] A1: 30 free Instant Scans with a "$9 founding Launch Pack" line. Gate: 5 paid of the first 100 scans.
-- [ ] A2: 20 beta users on the unpacked extension. Gate: 5 or more finish a run within 48 hours.
+- [ ] A2: 20 beta users on the extension. Gate: 5 or more finish a run within 48 hours.
 - [ ] A3: headline test, "Can ChatGPT read your site?" against "Find where users get stuck". Gate: 1.5x scan starts.
-- [ ] Buy the domain by 10-05; Chrome Web Store account ($5); Oracle VM; Dodo account, with live-mode verification started now
-- [ ] Enable Google and GitHub sign-in; rotate Supabase secrets before session 6
+- [ ] A4: 10 Supabase-backed launches see their backend exposure result on their verified domain. Gate: 3 say they would pay for it.
+- [ ] Buy the domain this week; point `api.<domain>` at Render until the VM is ready
+- [ ] Chrome Web Store account ($5); Google Cloud VM by UPI prepay (e2-micro first; e2-small only if the worker needs 2 GB); Dodo live-mode verification started
+- [ ] PageSpeed Insights API key (free) into the API env
+- [ ] Google Cloud OAuth consent screen with the Search Console read-only scope (start verification early)
+- [ ] Create the Walkthru GitHub App (read-only Contents and Metadata) before Phase 2
+- [ ] Enable Google and GitHub sign-in; rotate Supabase secrets
+- [ ] Decide the plan allocation marked "proposed" in SPEC.md
+
+### Phase 0: honest paid plans (sessions 16 to 18, before any charge)
+
+- [ ] **P0.1 Truth pass** (M)
+  - Accept:
+    - SPEC, landing, docs and security page claim only checks that exist (SPEC's free security row says TLS; the code has none until P1.2).
+    - Plain http on `localhost`, `127.*` and private addresses is never "high"; it is a local-dev note (briefing audit finding).
+    - Every `Finding` gets a stable `rule` id (for example `sec.hsts.missing`, `geo.robots.blocks_search_bot`). `compare.fingerprint` prefers `rule` over the title and falls back to the title for old reports.
+    - PageSpeed runs when `PAGESPEED_API_KEY` is set; "not measured" keeps its reason otherwise.
+  - Verify: pytest that every scanner emits a `rule`; an old report still compares; a localhost scan has no high http finding.
+  - Files: `app/agent/schema.py`, `app/agent/compare.py`, every `app/scans/*.py`, SPEC.md, `apps/web/src/content.ts`.
+- [x] **P0.2 Signup funnel numbers (V18)** (S), done 2026-09-25 by Claude Code (`app/agent/funnel.py`, report `funnel`, shown on paid reports with the previous run's numbers)
+  - Accept: `report.funnel` on paid runs: steps to the goal, fields typed, errors seen, safe stops, time to the first useful screen; compared across reruns.
+  - Verify: pytest over stored steps; shown on the report.
+- [ ] **P0.3 First impression v2 and landing copy review (V19)** (M)
+  - Reuse: none needed; checklist written from the geo-optimizer-skill negative-signals list (MIT) and standard 5-second-test questions.
+  - Accept:
+    - Input is the first journey screenshot when present (extension already captures it) plus the page text; Instant Scans use text only and say so.
+    - A fixed checklist, each item pass or fail with the quoted evidence: says what it is, says who it is for, states an outcome, primary CTA visible, social proof, pricing reachable in one click, contact or company identity.
+    - Clarity is computed from the checklist in code, not asked of the model.
+    - Copy review (paid): up to 3 rewrites each for headline, subheadline and CTA, each quoting the text it replaces, labelled suggestions.
+    - Free vision model from the chain (Gemini Flash free tier; bake-off picks between free vision models); one call per report.
+  - Verify: pytest with a fake model; the briefing's clear page is rated clear; no rewrite without a quote.
+  - Files: `app/agent/report.py`, `app/agent/schema.py`, `app/agent/runtime.py`, `ReportView.tsx`.
+- [x] **P0.4 Competitor side by side (V21), moved up** (M), done 2026-09-25
+  - Accept: `POST /compare` with up to 3 URLs; passive scans only; Launch Ready, GEO, SEO and security side by side; rows where a competitor beats the user's site come first.
+  - Verify: pytest and one live comparison of 3 real sites.
+- [ ] **Checkpoint P0:** every row of SPEC's plans table points at working code or says "coming" with a date; founder reviews one Pro report.
+
+### Phase 1: reasons to pay (sessions 19 to 23, before launch)
+
+- [x] **P1.1 Backend exposure check** (M), built 2026-09-25 by Claude Code (`app/scans/backend.py`, wired in `site.py`, `tests/test_backend.py`, 4 tests). Supabase: config and secret-key detection on every plan; verified domains get HEAD row counts, RPC listing (never called) and public bucket listing, with RLS SQL. Tables come from the OpenAPI list and from `.from()`/`.rpc()` calls in the bundles, because newer publishable keys cannot read the list (found live on Walkthru's own project: `runs` 21 public rows, by design). Firebase Realtime Database read checked. **Still open:** the Firestore unauthenticated read and the hard-fixture trap.
+  - Reuse: [Perufitlife/supabase-security-skill](https://github.com/Perufitlife/supabase-security-skill) (MIT), [humora2504/vibeproof](https://github.com/humora2504/vibeproof) (MIT), [GerardoRdz96/rlsgate](https://github.com/GerardoRdz96/rlsgate) (MIT). Not [hand-dot/supabase-rls-checker](https://github.com/hand-dot/supabase-rls-checker) (no licence: ideas only).
+  - Accept:
+    - Every plan: find a Supabase URL and anon key, or a Firebase config, in HTML and bundles, and explain that security now depends on RLS or rules.
+    - Verified domains (paid): read-only probe with the public key only. For each table the public API exposes, a `HEAD` with `Prefer: count=exact` reports how many rows anyone can read. Storage: which buckets list files publicly. RPC: which functions answer anonymously (listed, never called with arguments). Firebase: whether the database or Firestore answers an unauthenticated read.
+    - Never stores or shows row contents; never writes; stops at 50 tables; 10 s budget.
+    - Fix recipe: the SQL to enable RLS and an owner-only policy per exposed table.
+  - Verify: pytest against a recorded fixture API (open table, closed table, public bucket); an unverified domain never sends a probe request.
+  - Files: `app/scans/backend.py` (new), `app/scans/site.py`, `app/agent/report.py`, `tests/test_backend.py` (new), `evals/fixtures/hard` traps.
+- [ ] **P1.2 Security parity** (L)
+  - Reuse:
+    - [mdn/mdn-http-observatory](https://github.com/mdn/mdn-http-observatory) (MPL-2.0): rewrite its header tests and scoring in Python (no code copied).
+    - [google/csp-evaluator](https://github.com/google/csp-evaluator) (Apache-2.0): port the CSP checks (`unsafe-inline`, `unsafe-eval`, wildcards, missing `object-src`, `base-uri`).
+    - [RetireJS/retire.js](https://github.com/RetireJS/retire.js) (Apache-2.0): its `jsrepository.json` data, refreshed weekly, matched against script URLs, banners and file hashes.
+    - [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) (MIT): its `gitleaks.toml` patterns replace our 6 secret regexes (Go regex adjusted to Python).
+    - [EdOverflow/can-i-take-over-xyz](https://github.com/EdOverflow/can-i-take-over-xyz) (CC-BY-4.0, attribution): takeover fingerprints for dangling CNAMEs.
+    - Python `ssl` stdlib for certificate expiry and TLS version (not sslyze, which is AGPL-3.0).
+  - Accept:
+    - Header quality, not presence: CSP findings name the weak directive; HSTS max-age and preload; cookie prefixes; SRI on third-party scripts; CORS `*` with credentials or a reflected origin.
+    - Vulnerable JavaScript libraries with the CVE and the fixed version.
+    - Exposed source maps and more exposed paths (`/.env.local`, `/.env.production`, `/.git/`, backup and dump files, `/server-status`, `phpinfo`), verified domains only.
+    - Certificate expires within 21 days; TLS below 1.2; no CAA record (over the existing DNS-over-HTTPS client).
+    - Dangling DNS for subdomains found in the crawl, verified domains only.
+  - Verify: one hard-fixture trap per new rule, none on the easy fixture; python.org and 2 other real sites show no false alarms.
+  - Files: `app/scans/security.py`, `app/scans/tls.py` (new), `app/scans/data/` (retire.js and gitleaks data), `tests/test_security_parity.py` (new), `apps/api/THIRD_PARTY.md` (new).
+- [ ] **P1.3 Fix plan v2** (M)
+  - Accept:
+    - Stack detection in code from headers and HTML: Vercel, Netlify, Cloudflare, Render; Next.js, Vite, Astro, Lovable, Bolt; Supabase, Firebase.
+    - A recipe per `rule` and stack (for example HSTS in `vercel.json`, `next.config.js`, `netlify.toml` or `_headers`), in a data file, no model call.
+    - Batches in order (security, backend exposure, UX blockers, GEO, SEO, accessibility, performance), each ending with "stop and verify".
+    - Every finding: why it matters, the change for the detected stack, the risk (CSP starts in report-only mode), and a local check (`curl -sI ... | grep -i strict-transport-security`).
+    - Manual steps (DNS, hosting, email provider) listed separately.
+    - The chat version is split into batches of 4,000 characters or less instead of "and N more".
+  - Verify: pytest that a Vercel and a Netlify fixture get different recipes for the same rule; no secret unmasked; every finding appears once.
+  - Files: `app/agent/fix_prompt.py`, `app/agent/recipes.json` (new), `app/scans/stack.py` (new), tests.
+- [ ] **P1.4 MCP depth** (S, coordinate with the MCP owner first)
+  - Accept: `get_finding(run_id, rule)` returns the full recipe; `verify_finding(run_id, rule)` re-runs only the check behind that rule and answers fixed or still broken; same plan checks and limits as `rerun`.
+  - Verify: MCP client test flips one fixture finding after a fix.
+- [x] **P1.5 GEO depth pass** (L), done 2026-09-25 (Codex; 200 API tests, Ruff, web build and lint pass)
+  - Reuse: [Auriti-Labs/geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill) (MIT): port the checks we lack. Its 47 citability methods are based on Princeton KDD 2024; keep the source note.
+  - Accept:
+    - AI discovery endpoints (`/.well-known/ai.txt`, `llms-full.txt`), labelled low measured impact.
+    - Freshness: visible dates, `dateModified`, sitemap `lastmod`.
+    - Negative signals: CTA overload, boilerplate, keyword stuffing.
+    - Prompt injection in page content (hidden instructions to AI, HTML comments aimed at models).
+    - Trust stack: identity, social proof, external citations, consistency.
+    - RAG chunk readiness: sections that stand alone, question headings, answer-first paragraphs.
+    - Deterministic citability score per page: statistics with sources, quotations, definitions, comparison tables.
+    - Firewall blocking: citation bots get a challenge page (Cloudflare "Block AI bots" pattern) even when robots.txt allows them.
+    - Entity: Wikidata search by name and domain (free API); Google Knowledge Graph Search (free key) when set.
+    - Fix pack adds an IndexNow key file and a Bing Webmaster submission note (ChatGPT Search leans on Bing's index).
+  - Verify: one fixture trap per new check; showcase stays 95 or more; re-weighting documented in SPEC.
+  - Files: `app/scans/geo.py`, `app/scans/geo_fixes.py`, `tests/test_geo.py`, SPEC.md.
+- [ ] **P1.6 SEO depth pass** (M) **IN PROGRESS (Codex, 2026-09-25): scanner, tests, SPEC; separate from P1.7**
+  - Reuse: [puneetindersingh/open-seo-crawler](https://github.com/puneetindersingh/open-seo-crawler) (MIT), [PhialsBasement/LibreCrawl](https://github.com/PhialsBasement/LibreCrawl) (MIT), [kemalai/FreeCrawl-SEO-Tool](https://github.com/kemalai/FreeCrawl-SEO-Tool) (MIT, its 167-check list is the checklist).
+  - Accept: hreflang errors; oversized or unsized images and non-modern formats; rich-result schema validation (required properties per type); generic anchor text; pages with one internal link in; pagination; canonical pointing at a noindex or redirected page; mobile Core Web Vitals for the top 5 pages on paid plans through the free PageSpeed quota.
+  - Verify: fixture traps; python.org shows no false alarms.
+- [ ] **P1.7 Agent readiness score** (S)
+  - Accept: 0 to 100 from existing evidence: labelled fields and accessible names (axe), no CAPTCHA before value, stable controls across reruns, SearchAction schema, WebMCP-style labelled forms, and whether the journey reached its goal. Shown next to the GEO score as "Can AI agents use your site?".
+  - Verify: pytest over stored runs; the showcase and hard fixtures score differently for the stated reasons.
+- [ ] **Checkpoint P1:** hard-fixture recall 85% or more including the new traps; easy fixture and 3 real sites have no false alarms; founder reviews one Pro report and one fix plan applied by a coding agent.
+
+### Launch track (sessions 24 to 26)
+- [ ] **V11a Domain and store submission** (session 20): `api.<domain>` on Render; production extension build; listing submitted.
+- [ ] **V10 Billing with Dodo** (session 24): see the v1.1 entry below.
+- [ ] **V11b Production on the VM** (session 25): see the v1.1 V11 entry; plus a `worker` process for code scans and Nuclei (Phase 2) with its own queue table.
+- [ ] **V7 Evidence and PDF close-out; V9 landing, pricing and onboarding copy; Dodo live** (session 26).
+- [ ] **Checkpoint D (launch gate):** stranger path in production; launch Tue 2026-10-27, 2026-11-03 at the latest.
+
+### Phase 2: code access (sessions 28 and 29, after launch)
+
+- [ ] **P2.1 GitHub App connect** (M)
+  - Accept: Settings > "Connect a repository" installs the Walkthru GitHub App on chosen repos (read-only Contents and Metadata); installation id stored per user and site; short-lived installation tokens are minted per scan and never stored; uninstall or disconnect removes access. Supabase's GitHub sign-in token is not used (it is not refreshed and has no repo scope).
+  - Verify: pytest for the token flow with a recorded GitHub API; a disconnected repo cannot be scanned.
+  - Files: `app/github.py` (new), `schema.sql` (`repos` table; schema change after launch needs the founder), Settings page.
+- [ ] **P2.2 Code scans on the worker** (L)
+  - Reuse (each runs as a separate binary on the VM):
+    - [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) (MIT): secrets in the repo and its history.
+    - [google/osv-scanner](https://github.com/google/osv-scanner) (Apache-2.0): vulnerable dependencies from lockfiles.
+    - [opengrep/opengrep](https://github.com/opengrep/opengrep) (LGPL-2.1, engine only) with **Walkthru's own rules**. Not the Semgrep or Opengrep community rules: both carry the Commons Clause, which forbids selling them.
+    - Walkthru rules for AI-built apps: service-role or secret keys in client code, `NEXT_PUBLIC_`/`VITE_` secrets, API routes without an auth check, `dangerouslySetInnerHTML` with request data, SQL built from strings, permissive CORS, `eval`.
+    - Supabase migrations: tables without `enable row level security`, policies `using (true)`, `security definer` functions exposed to `anon`. Logic from the MIT Supabase scanners in P1.1.
+  - Accept: shallow clone into a temp dir, 2 minute budget, 500 MB cap, deleted in a `finally`; findings join the report as `kind="code"` with file and line; secret values masked.
+  - Verify: a fixture repo with planted secrets, a vulnerable package, an open policy and an unauthenticated route yields exactly those findings; the temp dir is gone after success and after failure.
+- [ ] **P2.3 File and line in the fix plan** (S): each code-placed finding names `path:line`; web-only findings name the likely file from stack detection.
+- [ ] **P2.4 Nuclei with safe templates on verified domains** (M)
+  - Reuse: [projectdiscovery/nuclei](https://github.com/projectdiscovery/nuclei) (MIT) and [nuclei-templates](https://github.com/projectdiscovery/nuclei-templates) (MIT).
+  - Accept: tags `exposure`, `misconfig`, `takeover`, `tech`, `cve` only; `-etags intrusive,dos,fuzz`; rate limit 10 requests a second; verified domains only; Pro and Plus.
+  - Verify: a test asserts the command line can never include an excluded tag; one fixture exposure found.
+- [ ] **Checkpoint P2:** fixture repo complete; nothing left on disk; founder reviews one report with code findings.
+
+### Phase 3: measurement (sessions 30 to 32, Plus opens)
+
+- [ ] **P3.1 Search Console and Bing Webmaster connect** (M)
+  - Accept: Google OAuth with `webmasters.readonly`; Search Analytics (queries, clicks, impressions, CTR, position, last 28 days) and URL Inspection for audited pages (2,000 a day per property); Bing Webmaster API with the user's own key. Joined to findings: "ranks 11 for X at 3% CTR", "not indexed: reason".
+  - Verify: recorded API responses in pytest; live on the founder's own site.
+- [ ] **P3.2 AI citation tracking** (L)
+  - Reuse: [ai-search-guru/getcito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool) (MIT) for the data model (prompts, answers, mentions, citations, share of voice).
+  - Accept:
+    - Prompts suggested in code from the site's title, headings and category, editable by the owner.
+    - Engines on free quotas: Gemini 2.5 Flash with Google Search grounding (free tier lists 500 grounded requests a day, shared; verify on our key) and Groq Compound (free-tier daily limit; `compound-mini` was retired 2026-09-21). ChatGPT and Perplexity show "not measured".
+    - Mention, citation (the grounding sources), position and share of voice against named competitors, computed in code from the answer text and sources.
+    - A daily cap counted in the database, like `FREE_RUNS_PER_DAY`, shares the free quota fairly; checks queue when it is used up.
+    - Proposed limits: Launch Pack one snapshot of 10 prompts; Pro 10 prompts weekly on Gemini; Plus 25 prompts per site weekly on both engines.
+  - Verify: pytest with recorded answers; the showcase prompt set tracked twice.
+- [ ] **P3.3 Sources and accuracy** (M): sources grouped by type (the user's site, competitors, Reddit, G2, Product Hunt, YouTube, Wikipedia, listicles) with "get listed here" actions; accuracy compares the answer's price and feature claims with the site's own pages (one free-chain call per answer, labelled).
+- [ ] **P3.4 Weekly watch and deploy webhook (V12)** (M): as in the v1.1 entry, plus tracking changes (a lost citation, a new competitor) in the same once-per-change email.
+- [ ] **P3.5 AI traffic** (M): upload a server or Vercel log; count hits by AI crawler and status (reuse geo-optimizer-skill's `geo logs` bot list, MIT); optional GA4 Data API connect for visits referred by chatgpt.com, perplexity.ai, gemini.google.com and copilot.
+- [ ] **P3.6 Citability rewrites** (S): for the 3 weakest pages by citability score, one free-chain call each, suggestions quoting the text they replace.
+- [ ] **Checkpoint P3:** stable week-over-week tracking on the showcase; Plus opens with watch, tracking, MCP, competitor compare and branded PDF.
+
+### Phase 4: Plus depth and paid engines (revenue-gated)
+- [ ] **P4.1 Opt-in active scan of a staging URL** (Plus): [zaproxy/zaproxy](https://github.com/zaproxy/zaproxy) (Apache-2.0) in Docker on the worker; verified domain, an owner-entered staging URL, a signed confirmation per scan, one at a time. Never on production URLs.
+- [ ] **P4.2 Custom test users and several test users per report (V13).** Ideas from [neuhai/UXAgent](https://github.com/neuhai/UXAgent) (no licence: ideas only) and [m-naw/ux-explore](https://github.com/m-naw/ux-explore) (Apache-2.0).
+- [ ] **P4.3 Branded PDF for Plus.**
+- [ ] **P4.4 Fix pull request** through the GitHub App (Contents and Pull requests write, a separate opt-in); the owner approves each PR.
+- [ ] **P4.5 Paid engines and Claude Haiku** (ChatGPT and Perplexity tracking; Haiku for journeys and reports) when payment.md's caps allow.
+- [ ] **P4.6 Cloud runner (V14)**, only if A2 missed its gate.
+
+## v1.1 plan (2026-09-24, kept for history; open items moved into v1.2 above)
 
 ### Session 1 (09-25 to 09-26)
 - [x] **V1 Server-owned plans** (M), done 2026-09-24
@@ -104,7 +264,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 ### Session 6 (10-06 to 10-08)
 - [ ] Founder: Google Cloud project with billing prepaid by UPI (Rs 500 to 1,000); enable Vertex AI and Claude Haiku 4.5 in Model Garden; create a service account key; set `CLAUDE_VERTEX_PROJECT` and `GOOGLE_APPLICATION_CREDENTIALS`.
 - [ ] Measured comparison, about $1 to $2: Claude Haiku 4.5 against the free chain on the same hard and showcase journeys (trap recall, false dones, speed, cost). Decide what the pricing page may claim.
-- [ ] **V11 Production and store** (M)
+- [ ] **V11 Production and store** (M), moved: V11a (session 20) and V11b (session 25) in v1.2
   - Accept:
     - Domain and HTTPS.
     - Vercel with SPA rewrites.
@@ -129,7 +289,7 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: pytest with a fake 60-page site.
 
 ### Session 8 (10-11 to 10-13)
-- [ ] **V10 Billing with Dodo** (M)
+- [ ] **V10 Billing with Dodo** (M), moved to v1.2 session 24
   - Accept, all per payment.md:
     - Access request.
     - Founder approval creates an offer.
@@ -142,17 +302,17 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 - [ ] Rerun, fix prompt, fix pack, badge and test-mode billing verified; founder reviews one full Pro report
 
 ### Session 9 (10-14 to 10-15)
-- [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S)
+- [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S), moved to v1.2 session 26
   - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
-- [ ] **V18 Signup funnel numbers** (S)
+- [ ] **V18 Signup funnel numbers** (S), moved to P0.2
   - Accept: `report.funnel` on paid runs holds steps to the goal, fields typed, errors seen, safe stops and time to the first useful screen; compared across reruns.
   - Verify: pytest over stored steps.
-- [ ] **V19 Landing copy review** (S)
+- [ ] **V19 Landing copy review** (S), moved to P0.3 (now screenshot-based)
   - Accept: one free-chain model call on homepage and pricing text; verdicts and up to 3 rewrite options, labeled as suggestions; paid runs only.
   - Verify: pytest with a fake model.
 
 ### Session 10 (10-16 to 10-18)
-- [ ] **V9 Landing, pricing and onboarding copy** (S)
+- [ ] **V9 Landing, pricing and onboarding copy** (S), moved to v1.2 session 26
   - Accept: the "launch check for apps built with AI" hero; the SPEC.md plans table; Plus as a waitlist; onboarding for install, permissions and domain verification.
   - Verify: web build and lint; phone and desktop check.
 - [ ] Switch Dodo to live once verification clears
@@ -163,12 +323,12 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
 
 ### Session 11 (10-21 to 11-01)
 - [ ] Fix what real users hit in launch week
-- [ ] **V12 Weekly watch and deploy webhook** (M)
+- [ ] **V12 Weekly watch and deploy webhook** (M), moved to P3.4
   - Accept: `sites` table; a weekly job scans due sites and emails only on change; `POST /hooks/deploy/{token}` at most once per 10 minutes.
   - Verify: a blocked AI crawler on the fixture sends exactly one email; an unchanged week sends none.
 
 ### Session 12 (11-02 to 11-08)
-- [ ] **V20 Walkthru MCP server** (M)
+- [x] **V20 Walkthru MCP server** (M), done 2026-09-25: verified live with the official MCP client (all five tools, revoked key refused)
   - Accept:
     - A remote MCP server at `/mcp` (streamable HTTP, official `mcp` Python SDK).
     - Personal API keys in `api_keys`: shown once, stored as SHA-256, revocable. Plus only.
@@ -177,22 +337,22 @@ Definition of done: see ROADMAP.md. The v1.1 plan comes first, in session order 
   - Verify: Claude Code connects with a Plus key, scans the fixture, reads the fix prompt and reruns; a revoked or non-Plus key is refused.
 
 ### Session 13 (11-09 to 11-15)
-- [ ] **V21 Competitor side by side** (M)
+- [x] **V21 Competitor side by side** (M), done under P0.4 on 2026-09-25
   - Accept: `POST /compare` with up to 3 URLs; passive scans only, no deep security on unverified sites; side-by-side report.
   - Verify: pytest and one live comparison.
-- [ ] Branded PDF for Plus (your logo, no Walkthru branding)
+- [ ] Branded PDF for Plus (your logo, no Walkthru branding), moved to P4.3 (ships with Plus in session 32)
 - [ ] Open Plus to the waitlist
 
 ### Session 14 (11-16 to 11-22)
-- [ ] **V13 Custom test users and several test users per report** (M, Plus)
+- [ ] **V13 Custom test users and several test users per report** (M, Plus), moved to P4.2
 
 ### Session 15 (late November, conditional)
-- [ ] **V14 Cloud runner**, only if A2 missed its gate: headless Chrome on the VM drives the built `inject.js` over CDP; public pages only, one run at a time, same safety code.
+- [ ] **V14 Cloud runner** (moved to P4.6), only if A2 missed its gate: headless Chrome on the VM drives the built `inject.js` over CDP; public pages only, one run at a time, same safety code.
 
 ### Next versions (not scheduled)
 - [ ] Preview-deploy check (GitHub Action with a PR comment)
 - [ ] Findings to GitHub Issues or Linear
-- [ ] AI citation tracking add-on
+- [ ] AI citation tracking add-on, now P3.2 on free engines
 - [ ] Self-serve checkout after payment.md's V2 gate
 
 ## v1 history

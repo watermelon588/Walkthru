@@ -1,4 +1,4 @@
-import { BookOpenTextIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, SignOutIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
@@ -8,6 +8,9 @@ import { Logo, SkipLink } from './Shared'
 
 const workspace: { to: string; label: string; icon: Icon; end?: boolean }[] = [
   { to: '/app', label: 'Runs', icon: PathIcon, end: true },
+  { to: '/app/compare', label: 'Compare', icon: ScalesIcon },
+  { to: '/app/watch', label: 'Watch', icon: EyeIcon },
+  { to: '/app/mcp', label: 'MCP', icon: TerminalWindowIcon },
   { to: '/app/settings', label: 'Settings', icon: GearSixIcon },
 ]
 const help: { href: string; label: string; icon: Icon }[] = [

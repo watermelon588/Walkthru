@@ -12,7 +12,7 @@ executes the action in the real tab
 masks fields + captures bounded JPEG    ── private Storage object + evidence metadata ─▶ exact run step
                                         ... loop until done / give_up / step budget ...
                                                                synthesize report ─▶ Supabase ─▶ report page + email
-Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), GEO readiness (AI crawler access, content before JavaScript, structured data, answerability), and security hygiene (headers, TLS, cookies, public files, secrets in JS).
+Server-only scans (no browser): accessibility basics (HTML structure and names), mobile performance (PageSpeed API), SEO (HTML, robots, sitemap), GEO readiness (AI crawler access, content before JavaScript, structured data, answerability), and security hygiene (headers, cookies, public files, secrets in JS). Planned in v1.2: header quality, TLS, vulnerable libraries, backend exposure, citation tracking, Search Console data, and a VM worker for repository code scans and safe Nuclei templates.
 
 Web app (React)  ──  Supabase Auth (JWT)  ──  API verifies JWT on every call; the API decides the plan
 Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webhook ─▶ API ─▶ entitlements table
@@ -30,7 +30,7 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
 | Payments | Dodo Payments (test mode first) | Not started |
-| Hosting | Vercel (web), Oracle Always Free VM or ~$5 VPS (API) | Not started |
+| Hosting | Vercel (web), Render free (beta API), then a Google Cloud VM paid by UPI prepay (API and worker; Oracle needs a card) | Beta config done |
 
 ## Key decisions
 1. **Browser runs on the user's machine, brain on our server.** No Chromium on our server, hosting stays $0-5, logged-in pages work without sharing passwords.
@@ -65,10 +65,21 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Built 2026-09-24 |
 | `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
 | `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Built 2026-09-24 |
-| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned |
-| `copy-review` | One model call on homepage and pricing text, paid runs only | `entitlements` | Planned |
-| `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, post-launch |
-| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Planned, post-launch |
+| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned, P0.2 |
+| `copy-review` | Screenshot-based first impression checklist and rewrites, one free vision call | `entitlements` | Planned, P0.3 |
+| `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, P0.4 (moved before launch) |
+| `rule-ids` | Stable `rule` id on every finding; compare, recipes and MCP key on it | none | Planned, P0.1 |
+| `backend-exposure` | Supabase and Firebase detection; read-only row-count probe on verified domains | site audit | Planned, P1.1 |
+| `security-parity` | Header quality, CSP, CORS, SRI, vulnerable JS libraries, source maps, secrets, TLS, CAA, takeovers | site audit | Planned, P1.2 |
+| `stack-detect` + `recipes` | Hosting, framework and backend from headers and HTML; per-rule, per-stack fixes in a data file | `rule-ids` | Planned, P1.3 |
+| `geo-depth` | Ported geo-optimizer checks, citability score, firewall blocking, entity checks | `geo-scan` | Planned, P1.5 |
+| `seo-depth` | Ported crawler checks, per-page Core Web Vitals on paid plans | site audit | Planned, P1.6 |
+| `agent-readiness` | Can AI agents use the site: score from axe, journeys and schema | journeys, `geo-scan` | Planned, P1.7 |
+| `github-app` | Per-repo install, short-lived installation tokens | auth | Planned, P2.1 |
+| `worker` | One-at-a-time jobs on the VM: code scans (gitleaks, osv-scanner, OpenGrep) and safe Nuclei | `github-app`, `entitlements` | Planned, P2.2 and P2.4 |
+| `search-data` | Search Console and Bing Webmaster data joined to findings | auth (Google OAuth) | Planned, P3.1 |
+| `citation-tracking` | Prompts, free-engine answers, mentions, citations, share of voice, sources, accuracy | `watch`, `entitlements` | Planned, P3.2 and P3.3 |
+| `mcp` | Remote MCP server with personal API keys (Plus) | `fix-prompt`, `rerun-compare`, `entitlements` | Built 2026-09-25 |
 | `billing` | Founder-approved 30-day passes through Dodo, per payment.md | `entitlements` | Planned |
 | `evidence-pdf` | Close T18 to T21; branded PDF for Plus | `entitlements` | Partly built |
 | `watch` | Weekly server-side scan per saved site, deploy webhook, email only on change | `rerun-compare`, `entitlements` | Planned, post-launch |
@@ -178,7 +189,8 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - **Storage:** a `kind='compare'` run with side-by-side categories.
 - **Cost:** one model call per URL (first impression). Rate limited per plan.
 
-### `mcp` (post-launch)
+### `mcp` (built 2026-09-25)
+- **As built:** `app/mcp_server.py` on the official SDK (`mcp` 2.x, `MCPServer`), stateless JSON over streamable HTTP, registered as a plain route at `/mcp` (no mounted sub-app, so no trailing-slash redirect on POST). An ASGI wrapper checks the key and the Plus plan on every request and passes the user to the tools through a context variable; the SDK's OAuth resource-server mode was not used because it needs an authorization server. Tool errors use `ToolError` so the agent sees the reason. `scan_site` and `rerun` share `main.run_scan` with Instant Scan, store private owner scans on the paid tier (never the free capacity) and stop at 50 a day per user. Keys: `GET/POST /me/api-keys`, `DELETE /me/api-keys/{id}`, at most 5 active, table locked to the service role. Settings has an "API keys and MCP" section with copy-ready Claude Code and Cursor setup; docs `#mcp`.
 - **Server:** a remote MCP server at `/mcp` over streamable HTTP, mounted in the FastAPI app with the official `mcp` Python SDK. The founder approved the MCP feature on 2026-09-24, and with it this new dependency. Nothing to install on the user's side: they paste the URL and key into Claude Code or Cursor.
 - **Auth:** a personal API key in a bearer header.
   - Table `api_keys(id, user_id, name, key_hash, created_at, last_used_at, revoked_at)`.
@@ -205,10 +217,23 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - `POST /hooks/deploy/{token}` (Vercel or Netlify deploy hook) triggers the same scan. It is rate limited to one scan every 10 minutes per site.
 - Journeys on deploy need `cloud-runner`, so watch covers the server-side checks only.
 
+### Flagship modules (v1.2, 2026-09-25)
+Build rules and phases: ROADMAP.md. Licences: docs/decisions.md 2026-09-25. Everything below is deterministic unless it says otherwise, and every model call uses the free chain.
+
+- **`rule-ids`:** `Finding.rule` (for example `sec.csp.unsafe_inline`). `compare.fingerprint` uses it when present, the normalized title otherwise, so old reports still compare.
+- **`backend-exposure`** (`app/scans/backend.py`): regexes over HTML and same-origin bundles find `*.supabase.co` URLs with an anon key, or a Firebase config. Unverified domains get the explanation only. Verified domains: `GET /rest/v1/` lists exposed tables; `HEAD /rest/v1/<table>?select=*` with `Prefer: count=exact` reads the row count from `Content-Range`; storage bucket listing; Firebase unauthenticated read. Never reads row contents, never writes, 50 tables, 10 s. Same SSRF-safe client as every scan.
+- **`security-parity`** (`app/scans/security.py`, `app/scans/tls.py`): rule data in `app/scans/data/` (retire.js repository JSON and gitleaks patterns, refreshed by a script, notices in `apps/api/THIRD_PARTY.md`). TLS and certificate expiry through the `ssl` stdlib; CAA over the DNS-over-HTTPS client from `email-check`.
+- **`stack-detect` + `recipes`** (`app/scans/stack.py`, `app/agent/recipes.json`): `{rule: {stack: {file, snippet, check, risk}}}` with a generic fallback. `fix_prompt.py` renders batches with a "stop and verify" step after each.
+- **`agent-readiness`:** computed in `report.py` from axe results, the journey outcome, CAPTCHA stops, control stability across reruns and schema; shown next to the GEO score.
+- **`github-app`** (`app/github.py`): the App's private key lives in the API env; an installation token is minted per job (valid one hour) and never stored. Table `repos(user_id, site, installation_id, repo_full_name)`.
+- **`worker`:** a second process on the VM polling a `jobs` table (`kind`, `run_id`, `status`, `started_at`), one job at a time. Code scan: shallow clone into `tempfile.TemporaryDirectory`, run gitleaks, osv-scanner and OpenGrep (with Walkthru rules in `apps/api/rules/`) as subprocesses with timeouts, parse JSON, mask secrets, delete the directory in `finally`, attach `kind="code"` findings with `path:line` to the run's report. Nuclei: fixed argument list with an allow-list of tags and `-etags intrusive,dos,fuzz`, verified domains only. Render free cannot host it (memory), so it arrives with the Google Cloud VM (V11b): e2-micro (1 GB) with swap first, e2-small (2 GB) only if measured memory needs it.
+- **`search-data`:** Google OAuth with the `webmasters.readonly` scope, refresh token stored encrypted server-side; Search Analytics and URL Inspection (2,000 a day per property). Bing Webmaster with the user's own API key.
+- **`citation-tracking`:** tables `prompts(site_id, text)` and `answers(prompt_id, engine, checked_at, text, sources, mentioned, cited, position)`. Engines: Gemini 2.5 Flash with Google Search grounding and Groq Compound, free quotas only, behind a database-counted daily cap like `FREE_RUNS_PER_DAY`. Mentions, citations, position and share of voice are computed in code; accuracy uses one free-chain call per answer. Runs from the `watch` job.
+
 ### `cloud-runner` (conditional)
 - **Why:** removes the install step for public-page journeys.
 - **Built only if** fewer than 25% of beta users who click "Run a test" finish a run.
-- **How:** the Oracle ARM VM runs headless Chrome. A worker drives the built `inject.js` over CDP, the same way `evals/e2e_extension.py` already does, and calls the same `/runs` step API.
+- **How:** the API VM runs headless Chrome. A worker drives the built `inject.js` over CDP, the same way `evals/e2e_extension.py` already does, and calls the same `/runs` step API.
 - **Limits:** public pages only, one concurrent run, and the same safety code. Logged-in journeys always stay in the owner's browser.
 
 ## Experimental TypeSafe decision path
@@ -244,7 +269,8 @@ or bounded action           |
 - **Database access:** the API uses Supabase's HTTPS Data API (`app/db.py`), not a Postgres socket. The direct host is IPv6-only and raw Postgres was unreliable from the founder's network; HTTPS goes through Cloudflare and reuses one connection. `python -m app.db` (schema) still uses SQL.
 - **Agent state:** LangGraph uses an in-memory checkpointer unless `CHECKPOINTER=postgres`. Use Postgres when the API runs next to the database or on more than one instance.
 - **Models:** free chain of Groq gpt-oss-120b, gpt-oss-20b, Qwen, then Gemini 3.5-flash and 3.1-flash-lite (`GROQ_MODELS`, `GEMINI_MODELS`). Each Groq model has its own 8k tokens/min budget; zero retries so a 429 moves on instantly.
-- **Pro and Plus model:** Claude Haiku 4.5 on Google Cloud (Vertex AI) through the `anthropic[vertex]` SDK (approved 2026-09-24), wrapped like the OpenRouter runner: a forced tool call returns the schema. When `CLAUDE_VERTEX_PROJECT` is set, paid runs put Claude first for the goal planner, test user and report writer, with the free chain behind it; free runs never reach it. Each report's `model` field states which models ran. Auth uses Google application default credentials.
+- **Free tier only (founder, 2026-09-25):** every plan runs on the free chain until revenue pays for a model within payment.md's caps. The Claude path below stays wired and off.
+- **Pro and Plus model (off):** Claude Haiku 4.5 on Google Cloud (Vertex AI) through the `anthropic[vertex]` SDK (approved 2026-09-24), wrapped like the OpenRouter runner: a forced tool call returns the schema. When `CLAUDE_VERTEX_PROJECT` is set, paid runs put Claude first for the goal planner, test user and report writer, with the free chain behind it; free runs never reach it. Each report's `model` field states which models ran. Auth uses Google application default credentials.
 - **Report writer:** the report calls (`runtime.call`, first impression and synthesis) try Groq gpt-oss-120b, then OpenRouter Nemotron 3 Ultra (`OPENROUTER_MODELS`, 90 s budget, plain httpx), then the rest of the chain. Persona steps never wait on OpenRouter. Chosen by `evals/model_bakeoff.py`; see docs/decisions.md.
 
 ## Journey safety and grounding

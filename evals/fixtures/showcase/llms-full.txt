@@ -1,0 +1,9 @@
+# Showcase
+
+Showcase is a product site used to test public journeys and AI search readiness.
+
+## Pages
+- [About](/about.html)
+- [Documentation](/docs.html)
+- [Pricing](/pricing.html)
+- [Contact](/contact.html)
