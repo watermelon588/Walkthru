@@ -12,7 +12,9 @@ const host = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '')
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
 /** Every finding across the workspace's shared reports, one row per site and problem, with its status and owner. */
-export function Findings({ teamId, me, members, live, signal, canChat, canModerate }: { teamId: string; me: string; members: Member[]; live: boolean; signal: number; canChat: boolean; canModerate: boolean }) {
+export function Findings({ teamId, me, members, live, signal, chatSignal, canChat, canModerate }: {
+  teamId: string; me: string; members: Member[]; live: boolean; signal: number; chatSignal: number; canChat: boolean; canModerate: boolean
+}) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [filter, setFilter] = useState<Filter>('active')
   const [severity, setSeverity] = useState<'all' | BoardItem['severity']>('all')
@@ -118,7 +120,7 @@ export function Findings({ teamId, me, members, live, signal, canChat, canModera
                 {open === f.thread && (
                   <div className="mt-3">
                     <Chat teamId={teamId} thread={f.thread} me={me} members={members} canChat={canChat} canModerate={canModerate}
-                      live={live} signal={signal} title={`Comments on ${f.title}`} empty="No comments yet. Say what you found or what you changed." compact />
+                      live={live} signal={chatSignal} title={`Comments on ${f.title}`} empty="No comments yet. Say what you found or what you changed." compact />
                   </div>
                 )}
               </div>
