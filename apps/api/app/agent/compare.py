@@ -7,12 +7,28 @@ from urllib.parse import urlsplit
 import httpx
 
 from app import db
+from app.agent.schema import finding_rule
+
+
+def legacy_fingerprint(finding: dict) -> str:
+    """Title key used by reports and ignored findings written before rule ids."""
+    title = re.sub(r"\d+", "#", finding["title"].lower())
+    return f"{finding['kind']}:{' '.join(title.split())}"
 
 
 def fingerprint(finding: dict) -> str:
-    """Stable id for a finding across runs: kind plus title, ignoring case, spacing and counts ("3 more pages")."""
-    title = re.sub(r"\d+", "#", finding["title"].lower())
-    return f"{finding['kind']}:{' '.join(title.split())}"
+    """Prefer the stable rule id; old report rows still use the title key."""
+    rule = finding.get("rule")
+    return f"{finding['kind']}:{rule}" if isinstance(rule, str) and rule.strip() else legacy_fingerprint(finding)
+
+
+def is_ignored(finding: dict, ignored: set[str] | dict) -> bool:
+    generated = f"{finding['kind']}:{finding_rule(finding['kind'], finding['title'])}"
+    return fingerprint(finding) in ignored or legacy_fingerprint(finding) in ignored or generated in ignored
+
+
+def _pages(pages: dict, finding: dict) -> list[str]:
+    return pages.get(fingerprint(finding), pages.get(legacy_fingerprint(finding), []))
 
 
 def _words(text: str) -> set[str]:
@@ -21,6 +37,10 @@ def _words(text: str) -> set[str]:
 
 def _same(a: dict, b: dict) -> bool:
     if fingerprint(a) == fingerprint(b):
+        return True
+    if a.get("rule") and b.get("rule") and a["kind"] != "ux":
+        return False
+    if legacy_fingerprint(a) == legacy_fingerprint(b):
         return True
     if a["kind"] != "ux" or b["kind"] != "ux":
         return False
@@ -37,14 +57,14 @@ def compare(previous: list[dict], current: list[dict], ignored: set[str] | dict 
             prev_pages: dict | None = None, cur_pages: dict | None = None, audited: list[str] | None = None) -> dict:
     """Finding by finding, and page by page where the reports know the pages. A finding that vanished only because
     none of its pages were audited this time is "not re-checked", never "fixed"."""
-    before = [p for p in previous if fingerprint(p) not in ignored]
-    after = [c for c in current if fingerprint(c) not in ignored]
+    before = [p for p in previous if not is_ignored(p, ignored)]
+    after = [c for c in current if not is_ignored(c, ignored)]
     prev_pages, cur_pages, seen = prev_pages or {}, cur_pages or {}, set(audited or [])
     fixed, not_rechecked, still = [], [], []
     for p in before:
         if any(_same(p, c) for c in after):
             continue
-        was = prev_pages.get(fingerprint(p), [])
+        was = _pages(prev_pages, p)
         if was and audited is not None and not seen & set(was):
             not_rechecked.append(_brief(p) | {"pages_unchecked": was})
         else:
@@ -53,7 +73,7 @@ def compare(previous: list[dict], current: list[dict], ignored: set[str] | dict 
         match = next((p for p in before if _same(c, p)), None)
         if match is None:
             continue
-        was, now = prev_pages.get(fingerprint(match), []), cur_pages.get(fingerprint(c), [])
+        was, now = _pages(prev_pages, match), _pages(cur_pages, c)
         item = _brief(c)
         if was or now:
             item |= {"pages_fixed": [u for u in was if u not in now and u in seen], "pages_new": [u for u in now if u not in was],

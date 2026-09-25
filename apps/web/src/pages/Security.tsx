@@ -57,7 +57,7 @@ const sections: DocSection[] = [
     title: 'Protecting your data',
     body: (
       <ul>
-        <li>All traffic uses HTTPS. Every API call is checked against your signed-in session.</li>
+        <li>Production web and API traffic uses HTTPS. Private API calls require your signed-in session; public scans and shared reports have separate access rules.</li>
         <li>Database rows are protected by row-level security, so each account can only read its own runs.</li>
         <li>Screenshots are stored privately and shown through links that expire after an hour. They are deleted after {EVIDENCE_RETENTION_DAYS} days.</li>
         <li>Deleting your account removes stored files first, then run history, then the account, so nothing is left behind unreachable.</li>

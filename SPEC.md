@@ -8,9 +8,9 @@ _Updated 2026-09-25 after the premium depth review (docs/decisions.md, "Premium 
 
 1. **Can a stranger get in?** AI test users walk through real flows (landing, signup, onboarding, dashboard, checkout up to payment) in the owner's own Chrome, think aloud, and show where they got stuck. Logged-in pages work without sharing a password.
 2. **Can Google and AI search read you?** SEO plus **GEO (AI search readiness)**: whether ChatGPT, Claude, Perplexity and Google's AI answers can fetch, understand and quote the site.
-3. **Are you leaking anything?** Security hygiene at least as deep as the free ZAP baseline, plus what AI-built apps get wrong most: a database readable without login (Supabase RLS, Firebase rules). Read-only probes run only on owner-verified domains; with a connected repository, code scans find secrets, vulnerable packages and open policies. Never an attack.
+3. **Are you leaking anything?** Current passive checks cover headers, cookies, HTTP transport, exposed files and browser-shipped keys. Owner-verified domains also get bounded read-only Supabase and Firebase checks. The broader security parity checks are planned for P1.2; repository code scans are planned for P2. Never an attack.
 
-Plus accessibility and mobile performance evidence, an agent readiness score (can AI agents use your site), and one fix plan for the detected stack that a coding agent can follow batch by batch.
+Accessibility and mobile performance evidence are available when measured. Agent readiness is planned for P1.7, and stack-specific fix recipes are planned for P1.3. The current paid fix prompt lists grounded findings and acceptance checks.
 
 **Why this position:** "AI users test your site" is a crowded category ([Meerkat](https://runmeerkat.com/pricing), [CanaryUsers](https://www.canaryusers.ai/), [Swarm](https://www.useswarm.co/), [Uxia](https://www.uxia.app/), checked 2026-09-24). None of them lists SEO, GEO or security. GEO tools ([Otterly](https://www.frase.io/blog/the-10-best-ai-visibility-tools-in-2026)) never try a flow. Walkthru is the only one report that covers all of it, and the only one that tests logged-in pages inside the owner's own browser session. Details: `founder/competitor-matrix.md`.
 
@@ -19,7 +19,7 @@ Plus accessibility and mobile performance evidence, an agent readiness score (ca
 - **Secondary:** agencies handing sites to clients.
 
 **Product rules:**
-- **Every plan gets the same page checks and the same honesty rules.** Code runs every SEO, GEO, security, accessibility and email check that reads public pages on every plan, and grounding applies to all. Paid plans add depth: more pages, read-only probes on verified domains, code scans, real search data, citation tracking, where a test can go and what happens over time. Every report says which models ran. (Founder decisions 2026-09-24 and 2026-09-25.)
+- **Every plan gets the same baseline page checks and honesty rules.** SEO, GEO, passive security and static accessibility run on public pages across plans; free email checks cover SPF and DMARC, while paid adds MX. Paid plans add depth: more pages and read-only probes on verified domains. Code scans, real search data and citation tracking are marked as coming in the plan table. Every report says which models ran. (Founder decisions 2026-09-24 and 2026-09-25.)
 - **Free tier only, deterministic first.** Every plan runs on the free model chain and free API quotas. Claude Haiku 4.5 is wired and stays off until revenue pays for it within payment.md's caps. A model call is used only where judgement or writing is the product. (Founder decision 2026-09-25.)
 - **Open source before scratch.** Checks are ported from permissively licensed projects after a licence check (docs/decisions.md 2026-09-25), with notices kept in `apps/api/THIRD_PARTY.md`.
 - **Every claim is grounded.** Findings cite a step, a URL, a header or a snippet. Walkthru never blames the site for its own stops.
@@ -29,6 +29,8 @@ Plus accessibility and mobile performance evidence, an agent readiness score (ca
 
 Prices confirmed by the founder on 2026-09-24. Shown as list price, with the founding price in brackets for the first 50 customers, locked for 12 months. V1 paid access follows [payment.md](payment.md): founder-approved 30-day passes through Dodo, no auto-renewal until the V2 gate.
 
+**Availability:** Dodo test-mode checkout is targeted for 2026-10-17 (V10), with live billing targeted for 2026-10-23. Development passes currently exercise paid features. A row marked "coming" is a roadmap target, not a check the current report performs. PageSpeed mobile data requires a configured free `PAGESPEED_API_KEY`; otherwise the report explains that it was not measured.
+
 | | Free | Launch Pack | Pro | Plus |
 |---|---|---|---|---|
 | Price | $0 | $9 once | $19/mo ($15 founding) | $49/mo ($39 founding) |
@@ -37,31 +39,31 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | **AI readiness score (GEO)** | Homepage score and top 3 fixes | Full site | Full site, up to 50 pages | Full site, up to 50 pages, every site |
 | **"What AI search sees"** | Yes | Yes | Yes | Yes |
 | **GEO fix pack** (robots.txt rules, JSON-LD, llms.txt draft, rendering fix for your framework) | Preview of 1 fix | Yes | Yes | Yes |
-| **Agent fix plan**: batches for Cursor, Claude Code, Lovable or Bolt, with a recipe for the detected stack, a risk note and a local check per finding (P1.3); file and line with a connected repo (P2.3) | Locked, shows how many fixes it holds | Yes | Yes | Yes |
-| **Agent readiness score**: can AI agents complete your flows (P1.7) | Yes | Yes | Yes | Yes |
+| **Agent fix prompt**: grounded findings and fixes now; stack recipes and per-finding checks coming 2026-10-09 (P1.3), file and line coming 2026-11-17 (P2.3) | Locked, shows how many fixes it holds | Current prompt | Current prompt | Current prompt |
+| **Agent readiness score**: can AI agents complete your flows (coming 2026-10-12, P1.7) | Coming | Coming | Coming | Coming |
 | **Launch Ready score**: UX, GEO, SEO, security and speed in one number, with a live badge for your site | Yes | Yes | Yes | Yes |
 | **Signup email check**: SPF, DMARC and MX records, plus auth-mailer limits spotted in journeys | SPF and DMARC | Full | Full | Full |
 | **Ignore a finding** ("won't fix", with a reason) | No | Yes | Yes | Yes |
-| **First impression**: screenshot-based checklist with quoted evidence (P0.3) | Yes (text only on Instant Scan) | Yes | Yes | Yes |
-| **Signup funnel numbers**: steps, fields, errors and time to the first useful screen, across reruns (coming, P0.2) | No | Yes | Yes | Yes |
-| **Landing copy review**: headline, subheadline and CTA rewrites quoting the text they replace (coming, P0.3) | No | Yes | Yes | Yes |
+| **First impression**: text-based summary now; screenshot checklist with quoted evidence coming 2026-09-29 (P0.3) | Text summary | Text summary | Text summary | Text summary |
+| **Signup funnel numbers**: steps, fields, errors and time to the first useful screen, across reruns (P0.2) | No | Yes | Yes | Yes |
+| **Landing copy review**: headline, subheadline and CTA rewrites quoting the text they replace (coming 2026-09-29, P0.3) | No | Coming | Coming | Coming |
 | **Competitor side by side** (passive scans) | No | 3 competitors | 3 competitors | 3 competitors per site |
-| **Backend exposure** (Supabase, Firebase; P1.1) | Detects a public backend key and explains the risk | + read-only probe on verified domains: tables readable without login (row counts only), public buckets | Same as Launch Pack | Same as Launch Pack |
-| **Code scan** of a connected GitHub repository: secrets, vulnerable packages, open database policies, risky code (P2, proposed) | No | 1 scan | 1 repo, on every paid run | 5 repos, on every push |
-| **Search Console and Bing Webmaster data** joined to findings (P3.1, proposed) | No | No | Yes | Yes |
-| **AI citation tracking** on free engines (Gemini with Google Search, Groq Compound): mentions, citations, share of voice, sources, accuracy (P3.2, proposed) | No | One snapshot of 10 prompts | 10 prompts weekly | 25 prompts per site weekly |
-| **Opt-in active scan of a staging URL** (P4.1, revenue-gated) | No | No | No | Yes |
+| **Backend exposure** (P1.1): browser key and config detection; bounded Supabase and Firebase Realtime Database reads on verified domains. Firestore check coming 2026-10-04 | Key and config detection | + verified-domain probes | Same as Launch Pack | Same as Launch Pack |
+| **Code scan** of a connected GitHub repository (coming 2026-11-10, P2) | No | Coming | Coming | Coming |
+| **Search Console and Bing Webmaster data** joined to findings (coming 2026-11-24, P3.1) | No | No | Coming | Coming |
+| **AI citation tracking** on free engines (coming 2026-12-01, P3.2) | No | Coming | Coming | Coming |
+| **Opt-in active scan of a staging URL** (revenue-gated, date not set, P4.1) | No | No | No | Coming |
 | **Walkthru MCP server**: Claude Code, Cursor and other agents scan, read the fix prompt and rerun from the editor | No | No | No | Yes |
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
 | Test runs | 3 a month | 20 within 30 days | 40 a month | 150 a month |
 | Pages the test user may enter | Public pages | Public and logged-in | Public and logged-in | Public and logged-in |
-| Test users | First-time visitor | All 4 | All 4 | All 4 + custom test users |
+| Test users | First-time visitor | All 4 | All 4 | All 4; custom users coming after launch (P4.2) |
 | Steps per run | 12 | 30 | 30 | 30 |
 | Rerun and compare (fixed, still broken, new) | No | Yes | Yes | Yes |
 | SEO | 10 pages | 50 pages | 50 pages | 50 pages |
-| Security hygiene | Header quality (CSP, HSTS, CORS, SRI), cookies, https; TLS and certificate expiry from P1.2 | + exposed files, source maps, leaked keys (gitleaks patterns), vulnerable JavaScript libraries on verified domains (P1.2) | Same, + safe Nuclei templates on verified domains (P2.4) | Same as Pro |
+| Security hygiene | Current: CSP, HSTS, content type, framing and referrer headers; cookie flags, HTTP redirects and mixed content. CORS, SRI, TLS and certificate expiry coming 2026-10-07 (P1.2) | + exposed files and JS key patterns on verified domains now; source maps and vulnerable JS libraries coming 2026-10-07 | Same current checks; safe Nuclei templates coming 2026-11-17 (P2.4) | Same as Pro |
 | One real form send on a verified domain, after you confirm | No | Yes | Yes | Yes |
-| Evidence report with screenshots, PDF | Web report | PDF | PDF | PDF with your own logo, no Walkthru branding |
+| Evidence report with screenshots, PDF | Web report | Web report with screenshots when captured; PDF closeout coming 2026-10-23 (V7) | Same as Launch Pack | Branded PDF coming 2026-12-08 (P4.3) |
 | Sites tested per month or pass (local dev servers do not count) | 1 | 1 | 2 | 5 |
 | Shareable public report with AI readiness badge | Yes | Yes | Yes | Yes |
 
@@ -108,6 +110,8 @@ The step loop, safety model, redaction, evidence and grounding are unchanged fro
 `apps/api/app/scans/seo_depth.py` extends the bounded site crawl with conservative checks for invalid or nonreciprocal hreflang, required Google rich-result fields on Product, SoftwareApplication and BreadcrumbList markup, generic content anchors, lazy images without HTML dimensions, large image responses and large older-format images, a page with only one observed incoming link when the crawl is complete, pagination links and canonicals, and canonicals pointing at a known or safely fetched noindex or redirect target. The crawler keeps numeric `?page=` URLs up to page 100 while dropping tracking and other query variants. Checks use fetched pages where possible; image HEADs and unseen canonical reads are same-origin, robots-aware where applicable, bounded by time and count. An unmeasured image size or canonical target is never called healthy. The check inventory was reviewed against MIT [Open SEO Crawler](https://github.com/puneetindersingh/open-seo-crawler), [LibreCrawl](https://github.com/PhialsBasement/LibreCrawl) and [FreeCrawl](https://github.com/kemalai/FreeCrawl-SEO-Tool); required schema fields and pagination advice follow Google Search Central's current documentation. Licence notices are in `apps/api/THIRD_PARTY.md`.
 
 Paid reports send at most the first five audited URLs to the existing PageSpeed Insights integration with `strategy=mobile` and `PAGESPEED_API_KEY`. Requests run with three workers and a 15-second request timeout. The report shows URL-level real-user LCP, CLS and INP when PageSpeed supplies them, alongside the separate Lighthouse lab score. Missing field data and failed API calls are labelled unavailable. Free reports retain the homepage-only check. The PageSpeed scan follows the site crawl so it can use the exact audited URLs.
+
+Every new finding carries a stable `rule` id. Rerun comparison, ignored findings, fix prompts and weekly watch prefer it; reports saved before P0.1 still compare through their title-based key. Local and private-address HTTP is labelled as a development note, never a high-severity transport finding. When PageSpeed is not configured or returns no usable result, the report displays the reason instead of implying that speed passed.
 
 ## GEO readiness (new)
 

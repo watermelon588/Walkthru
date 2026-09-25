@@ -20,6 +20,29 @@ def test_fingerprint_ignores_case_numbers_and_spacing():
     assert compare.fingerprint(f("seo", "Missing meta description")) != compare.fingerprint(f("geo", "Missing meta description"))
 
 
+def test_rule_id_is_preferred_and_old_report_still_compares_with_its_page_map():
+    old = f("security", "No HSTS header")
+    current = old | {"rule": "sec.hsts.missing"}
+    assert compare.fingerprint(current) == "security:sec.hsts.missing"
+    old_key, new_key = compare.fingerprint(old), compare.fingerprint(current)
+    result = compare.compare([old], [current], prev_pages={old_key: ["https://site.test/a"]},
+                             cur_pages={new_key: ["https://site.test/b"]},
+                             audited=["https://site.test/a", "https://site.test/b"])
+    assert result["fixed"] == result["new"] == []
+    assert result["still_broken"][0]["pages_fixed"] == ["https://site.test/a"]
+    assert result["still_broken"][0]["pages_new"] == ["https://site.test/b"]
+    assert compare.compare([old], [current], {old_key}) == {"fixed": [], "still_broken": [], "new": [], "not_rechecked": []}
+    assert compare.compare([old], [current], {new_key}) == {"fixed": [], "still_broken": [], "new": [], "not_rechecked": []}
+
+
+def test_two_new_checks_with_the_same_title_keep_distinct_rule_ids():
+    first = f("security", "Configuration issue") | {"rule": "sec.headers.configuration"}
+    second = f("security", "Configuration issue") | {"rule": "sec.cookies.configuration"}
+    result = compare.compare([first], [second])
+    assert len(result["fixed"]) == len(result["new"]) == 1
+    assert result["still_broken"] == []
+
+
 def test_fixed_still_broken_and_new():
     before = [f("seo", "Missing meta description"), f("security", "No HSTS header"), f("ux", "Sign-up button hidden in the footer")]
     after = [f("security", "No HSTS header"), f("ux", "Sign-up is hidden in the footer"), f("geo", "No structured data")]

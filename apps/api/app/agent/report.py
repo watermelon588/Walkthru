@@ -7,6 +7,7 @@ Only first_impression and synthesize call the LLM; the scans are plain code.
 from __future__ import annotations
 
 import operator
+import os
 import re
 from typing import Annotated, TypedDict
 
@@ -33,6 +34,7 @@ class ReportState(TypedDict, total=False):
     performance: list[dict]
     accessibility_measured: bool
     performance_measured: bool
+    performance_reason: str
     seo_measured: bool
     security_measured: bool
     site_audit: dict
@@ -72,6 +74,9 @@ def _scan(state: ReportState, which: str) -> dict:
                 urls = (audit.get("urls") or [state["site"]])[:5] if state.get("paid", False) else [state["site"]]
                 findings, measured, vitals = performance.scan_pages(urls, c, limit=5 if state.get("paid", False) else 1)
                 result = {which: [f.model_dump() for f in findings], "performance_measured": measured}
+                if not measured:
+                    result["performance_reason"] = ("PageSpeed is not configured for this run." if not os.environ.get("PAGESPEED_API_KEY")
+                                                    else "PageSpeed did not return usable mobile results for this run.")
                 if audit:
                     result["site_audit"] = {**audit, "mobile_vitals": vitals}
                 return result
@@ -119,11 +124,13 @@ def site_scan(state: ReportState) -> dict:
                                 max_pages=site.PAID_MAX_PAGES if paid else site.DEFAULT_MAX_PAGES,
                                 time_limit=site.PAID_TIME_LIMIT if paid else site.DEFAULT_TIME_LIMIT)
             mail, mail_note = email.check(state["site"], c, full=state.get("paid", False))
+        by_title = {(f.kind, f.title): f.model_dump() for f in [*result.seo, *result.security, *(result.geo.findings if result.geo else [])]}
         return {
             "seo": [finding.model_dump() for finding in result.seo],
             "geo": [finding.model_dump() for finding in result.geo.findings] if result.geo else [],
             "geo_summary": result.geo.summary() if result.geo else {},
-            "finding_pages": {compare.fingerprint({"kind": kind, "title": title}): urls for kind, title, urls in result.pages},
+            "finding_pages": {compare.fingerprint(by_title.get((kind, title), {"kind": kind, "title": title})): urls
+                              for kind, title, urls in result.pages},
             "security": [finding.model_dump() for finding in result.security + mail],
             "notes": [mail_note] if mail_note else [],
             "seo_measured": result.coverage.pages_scanned > 0,
@@ -186,7 +193,7 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
         if accessibility.get("status") == "complete":
             accessibility_measured = True
         for issue in accessibility.get("issues", []):
-            rule = issue.get("rule", "browser-audit")
+            rule = issue.get("rule") or "browser-audit"
             severity = issue.get("severity") if issue.get("severity") in rank else "medium"
             entry = rules.setdefault(rule, {"message": issue.get("message"), "severity": severity, "targets": [], "steps": [], "url": step.get("url", "?")})
             if rank[severity] > rank[entry["severity"]]:
@@ -216,6 +223,7 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
                 detail=f"The real-browser audit found the {rule} rule failing on {len(targets)} element{'s' if len(targets) != 1 else ''}: {shown}."[:600],
                 fix=f"Fix each listed element so it passes the {rule} rule, then rerun this journey.",
                 evidence=f"step {', '.join(map(str, e['steps'][:5]))}: {e['url']}"[:300],
+                rule=f"a11y.axe.{re.sub(r'[^a-z0-9-]+', '_', rule.casefold()).strip('_')[:89]}" if rule != "browser-audit" else None,
             )
         )
 
@@ -302,7 +310,7 @@ LOCAL_NOTE = (
     "those are judged on the deployed site."
 )
 # Only these security checks mean something on a dev server (they describe the code, not the host).
-CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle")
+CODE_LEVEL_SECURITY = ("is publicly readable", "in a JavaScript bundle", "Local development uses plain http", "Local form submits over plain http")
 
 
 # Error text a journey can show that comes from the auth provider's mailer, not from the site's own code.
@@ -394,7 +402,8 @@ def synthesize(state: ReportState) -> dict:
     code_findings, local, steps, fi = inputs["code_findings"], inputs["local"], inputs["steps"], inputs["fi"]
     browser_accessibility, browser_performance = inputs["browser_accessibility"], inputs["browser_performance"]
     syn, used = runtime.call(Synthesis, inputs["messages"], paid=state.get("paid", False))
-    written = [f.model_copy(update={"kind": "ux", "title": plain(f.title), "detail": plain(f.detail), "fix": plain(f.fix)})
+    written = [Finding.model_validate(f.model_dump() | {"kind": "ux", "title": plain(f.title), "detail": plain(f.detail),
+                                                        "fix": plain(f.fix), "rule": None})
                for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))]
     findings = written + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
@@ -413,6 +422,9 @@ def synthesize(state: ReportState) -> dict:
             "security": "unavailable" if local else "complete" if state.get("security_measured", False) else "unavailable",
             "geo": "complete" if state.get("geo_summary") else "unavailable",
         },
+        check_reasons={"performance": "Local development performance is not measured; check the deployed site."
+                       if local else state.get("performance_reason", "No mobile performance result was available.")}
+        if local or (not state.get("performance_measured", False) and not browser_performance) else {},
         site_audit=state.get("site_audit"),
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),

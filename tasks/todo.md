@@ -6,6 +6,8 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 ## v1.2 flagship plan (2026-09-25)
 
+System design and hardening tasks before going live (SD-1.1 to SD-10.4, with hardness and human flags): [docs/system-design.md](../docs/system-design.md). Claim with `- [~]` there. (added by Claude Code, 2026-09-25)
+
 ### Founder track (now)
 - [x] Confirm prices: Pro $19 and Plus $49, founding $15 and $39 (2026-09-24)
 - [x] Approve reusing permissive open source and the free-tier-only rule (2026-09-25)
@@ -23,7 +25,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 ### Phase 0: honest paid plans (sessions 16 to 18, before any charge)
 
-- [ ] **P0.1 Truth pass** (M)
+- [x] **P0.1 Truth pass** (M), done 2026-09-25 by Codex: claims aligned with shipped checks; stable `rule` ids and legacy comparison fallback; local HTTP is a development note; PageSpeed unavailability has a reason.
   - Accept:
     - SPEC, landing, docs and security page claim only checks that exist (SPEC's free security row says TLS; the code has none until P1.2).
     - Plain http on `localhost`, `127.*` and private addresses is never "high"; it is a local-dev note (briefing audit finding).
@@ -31,7 +33,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
     - PageSpeed runs when `PAGESPEED_API_KEY` is set; "not measured" keeps its reason otherwise.
   - Verify: pytest that every scanner emits a `rule`; an old report still compares; a localhost scan has no high http finding.
   - Files: `app/agent/schema.py`, `app/agent/compare.py`, every `app/scans/*.py`, SPEC.md, `apps/web/src/content.ts`.
-- [x] **P0.2 Signup funnel numbers (V18)** (S), done 2026-09-25 by Claude Code (`app/agent/funnel.py`, report `funnel`, shown on paid reports with the previous run's numbers)
+- [x] **P0.2 Signup funnel numbers (V18)** (S), built by Claude Code and closed out by Codex 2026-09-25: distinct fields, deduplicated errors, first-useful timing, saved prior-run comparison and report display verified.
   - Accept: `report.funnel` on paid runs: steps to the goal, fields typed, errors seen, safe stops, time to the first useful screen; compared across reruns.
   - Verify: pytest over stored steps; shown on the report.
 - [ ] **P0.3 First impression v2 and landing copy review (V19)** (M)
@@ -104,10 +106,12 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
     - Fix pack adds an IndexNow key file and a Bing Webmaster submission note (ChatGPT Search leans on Bing's index).
   - Verify: one fixture trap per new check; showcase stays 95 or more; re-weighting documented in SPEC.
   - Files: `app/scans/geo.py`, `app/scans/geo_fixes.py`, `tests/test_geo.py`, SPEC.md.
-- [ ] **P1.6 SEO depth pass** (M) **IN PROGRESS (Codex, 2026-09-25): scanner, tests, SPEC; separate from P1.7**
+- [x] **P1.6 SEO depth pass** (M) **DONE (Codex, 2026-09-25); separate from P1.7**
   - Reuse: [puneetindersingh/open-seo-crawler](https://github.com/puneetindersingh/open-seo-crawler) (MIT), [PhialsBasement/LibreCrawl](https://github.com/PhialsBasement/LibreCrawl) (MIT), [kemalai/FreeCrawl-SEO-Tool](https://github.com/kemalai/FreeCrawl-SEO-Tool) (MIT, its 167-check list is the checklist).
   - Accept: hreflang errors; oversized or unsized images and non-modern formats; rich-result schema validation (required properties per type); generic anchor text; pages with one internal link in; pagination; canonical pointing at a noindex or redirected page; mobile Core Web Vitals for the top 5 pages on paid plans through the free PageSpeed quota.
-  - Verify: fixture traps; python.org shows no false alarms.
+  - Verify: fixture traps and an owner-verified public site show no new depth false alarms. The founder's Vercel portfolio replaced python.org because an unverified production-site crawl was rejected by automatic approval review.
+  - [x] Scanner, five-page paid mobile PageSpeed coverage, report UI, fixture tests, and docs implemented; 213 API tests pass, Ruff and web checks pass. The local easy fixture has no new depth findings.
+  - [x] Read-only audit of `https://portfolio-web-six-psi-43.vercel.app/`: 1 page, crawl complete, no SEO depth findings; existing HTML-shell findings accurately identify missing server-rendered elements.
 - [ ] **P1.7 Agent readiness score** (S)
   - Accept: 0 to 100 from existing evidence: labelled fields and accessible names (axe), no CAPTCHA before value, stable controls across reruns, SearchAction schema, WebMCP-style labelled forms, and whether the journey reached its goal. Shown next to the GEO score as "Can AI agents use your site?".
   - Verify: pytest over stored runs; the showcase and hard fixtures score differently for the stated reasons.
@@ -304,7 +308,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 ### Session 9 (10-14 to 10-15)
 - [ ] **V7 Evidence and PDF close-out (T18 to T21)** (S), moved to v1.2 session 26
   - Accept: a fresh screenshot-backed fixture run; private, public and printed PDF views all show step evidence.
-- [ ] **V18 Signup funnel numbers** (S), moved to P0.2
+- [x] **V18 Signup funnel numbers** (S), completed under P0.2 on 2026-09-25
   - Accept: `report.funnel` on paid runs holds steps to the goal, fields typed, errors seen, safe stops and time to the first useful screen; compared across reruns.
   - Verify: pytest over stored steps.
 - [ ] **V19 Landing copy review** (S), moved to P0.3 (now screenshot-based)

@@ -65,15 +65,15 @@ Build order and dates: [ROADMAP.md](ROADMAP.md). Product rules: [SPEC.md](SPEC.m
 | `share-loop` | Launch Ready score, live badge, public report meta with the score | `geo-scan` | Built 2026-09-24 |
 | `email-check` | Signup email records over DNS-over-HTTPS; auth-mailer limits in journey errors | none | Built 2026-09-24 |
 | `finding-states` | Ignore a finding with a reason; respected by compare, fix prompt and watch | `rerun-compare` | Built 2026-09-24 |
-| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Planned, P0.2 |
+| `funnel-metrics` | Steps, fields, errors and time to the first useful screen, per run and across reruns | `rerun-compare` | Built and verified, P0.2 |
 | `copy-review` | Screenshot-based first impression checklist and rewrites, one free vision call | `entitlements` | Planned, P0.3 |
 | `competitor-compare` | Passive scans of up to 3 competitor URLs next to the user's site | `geo-scan`, `entitlements` | Planned, P0.4 (moved before launch) |
-| `rule-ids` | Stable `rule` id on every finding; compare, recipes and MCP key on it | none | Planned, P0.1 |
+| `rule-ids` | Stable `rule` id on every finding; compare and fix prompts use it with old-report fallback | none | Built and verified, P0.1 |
 | `backend-exposure` | Supabase and Firebase detection; read-only row-count probe on verified domains | site audit | Planned, P1.1 |
 | `security-parity` | Header quality, CSP, CORS, SRI, vulnerable JS libraries, source maps, secrets, TLS, CAA, takeovers | site audit | Planned, P1.2 |
 | `stack-detect` + `recipes` | Hosting, framework and backend from headers and HTML; per-rule, per-stack fixes in a data file | `rule-ids` | Planned, P1.3 |
 | `geo-depth` | Ported geo-optimizer checks, citability score, firewall blocking, entity checks | `geo-scan` | Planned, P1.5 |
-| `seo-depth` | Ported crawler checks, per-page Core Web Vitals on paid plans | site audit | Planned, P1.6 |
+| `seo-depth` | Bounded SEO checks and mobile Core Web Vitals on up to five paid-plan pages | site audit | Built and verified, P1.6 |
 | `agent-readiness` | Can AI agents use the site: score from axe, journeys and schema | journeys, `geo-scan` | Planned, P1.7 |
 | `github-app` | Per-repo install, short-lived installation tokens | auth | Planned, P2.1 |
 | `worker` | One-at-a-time jobs on the VM: code scans (gitleaks, osv-scanner, OpenGrep) and safe Nuclei | `github-app`, `entitlements` | Planned, P2.2 and P2.4 |
