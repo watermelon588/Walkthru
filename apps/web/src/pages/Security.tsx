@@ -61,6 +61,7 @@ const sections: DocSection[] = [
         <li>Database rows are protected by row-level security, so each account can only read its own runs.</li>
         <li>Screenshots are stored privately and shown through links that expire after an hour. They are deleted after {EVIDENCE_RETENTION_DAYS} days.</li>
         <li>Deleting your account removes stored files first, then run history, then the account, so nothing is left behind unreachable.</li>
+        <li>API keys for the MCP server and deploy-hook URLs are shown once and stored only as SHA-256 fingerprints. Each key can reach only its owner's runs, every call re-checks the plan, and a key can be revoked at once from the MCP page. Deploy hooks run at most one check every 10 minutes.</li>
       </ul>
     ),
   },
@@ -81,7 +82,7 @@ export default function Security() {
     <DocLayout
       title="Security"
       lead={`${brand.name} drives a real browser on sites you care about. Here is exactly what it can touch, what it cannot, and how to reach us if something looks wrong.`}
-      updated="2026-09-24"
+      updated="2026-09-25"
       sections={sections}
     />
   )

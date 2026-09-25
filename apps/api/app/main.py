@@ -5,6 +5,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from itertools import pairwise
 from typing import Literal
 from urllib.parse import urlsplit
@@ -19,7 +20,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field
 from starlette.routing import Route
 
-from app import auth, db, deliver, mcp_server, plans, retention
+from app import auth, db, deliver, mcp_server, plans, retention, watch
 from app.agent import compare, fix_prompt, goal, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import Observation, StepEvidence
@@ -77,6 +78,7 @@ if os.environ.get("WARMUP", "1") == "1":
 
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
+    watch.start_background()  # same switch: background jobs off in tests and one-off scripts
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
@@ -354,7 +356,7 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep["report"]}
 
 
-def run_scan(site: str, *, user_id: str | None = None) -> tuple[str, dict]:
+def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tuple[str, dict]:
     """One server-side scan, stored as a run. Anonymous Instant Scans are public; an owner's scan (MCP) is private.
     Raises ValueError with a message for the caller when the site cannot be scanned."""
     fetch.assert_public(site)
@@ -364,7 +366,7 @@ def run_scan(site: str, *, user_id: str | None = None) -> tuple[str, dict]:
         raise ValueError("That site did not respond. Check the address and try again.")
     run_id = uuid.uuid4().hex
     # Owners' scans use the paid tier so they never count against the free daily capacity.
-    db.insert_run(run_id, user_id, str(resp.url), "Instant Scan", "stranger", "paid" if user_id else "free", False, kind="scan", public=user_id is None)
+    db.insert_run(run_id, user_id, str(resp.url), "Instant Scan", "stranger", "paid" if user_id else "free", False, kind=kind, public=user_id is None)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text))
     db.set_report(run_id, rep.model_dump(), status="done")
     return run_id, {"site": str(resp.url), "report": rep.model_dump()}
@@ -392,6 +394,152 @@ def create_api_key(body: NewApiKey, user: dict = Depends(require_user)) -> dict:
         raise HTTPException(409, f"You already have {mcp_server.MAX_KEYS} keys. Revoke one you no longer use.")
     key, hashed = mcp_server.new_key()
     return db.insert_api_key(user["id"], body.name.strip(), hashed) | {"key": key}
+
+
+def _plan_name(user_id: str) -> str:
+    return plans.current(user_id)["plan"].name
+
+
+# ---------- weekly watch (Plus) and deploy hooks ----------
+
+
+class WatchSite(BaseModel):
+    site: str = Field(pattern=r"^https?://", max_length=2000)
+
+
+@app.get("/watch")
+def list_watched(user: dict = Depends(require_user)) -> dict:
+    plan = plans.current(user["id"])["plan"]
+    return {"sites": db.sites_for_user(user["id"]) if plan.name == "plus" else [], "plan": plan.name, "limit": plan.sites,
+            "email": bool(os.environ.get("RESEND_API_KEY"))}
+
+
+@app.post("/watch")
+def add_watched(body: WatchSite, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    plan = plans.current(user["id"])["plan"]
+    if plan.name != "plus":
+        raise HTTPException(402, "Weekly watch is part of the Plus plan.")
+    try:
+        fetch.assert_public(body.site)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+    site = compare.origin(body.site) + "/"
+    current = db.sites_for_user(user["id"])
+    if any(s["site"] == site for s in current):
+        raise HTTPException(409, "You already watch that site.")
+    if len(current) >= plan.sites:
+        raise HTTPException(409, f"Your plan watches up to {plan.sites} sites. Remove one first.")
+    row = db.add_site(user["id"], site)
+    background.add_task(_watch_check, row, "added")  # the baseline every later check compares with
+    return row
+
+
+def _watch_check(site: dict, reason: str) -> None:
+    try:
+        watch.check(site, reason)
+    except Exception:  # background work: the next weekly pass retries
+        log.warning("watch check failed for %s", site.get("site"), exc_info=True)
+
+
+@app.delete("/watch/{site_id}")
+def remove_watched(site_id: str, user: dict = Depends(require_user)) -> dict:
+    if not re.fullmatch(r"[0-9a-f-]{36}", site_id) or not db.remove_site(user["id"], site_id):
+        raise HTTPException(404, "You do not watch that site.")
+    return {"removed": site_id}
+
+
+def _owned_site(site_id: str, user_id: str) -> dict:
+    site = next((s for s in db.sites_for_user(user_id) if s["id"] == site_id), None)
+    if site is None:
+        raise HTTPException(404, "You do not watch that site.")
+    return site
+
+
+@app.post("/watch/{site_id}/check")
+def check_watched_now(site_id: str, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    """Check now, for example right after a deploy. Shares the deploy hook's 10-minute limit."""
+    if _plan_name(user["id"]) != "plus":
+        raise HTTPException(402, "Weekly watch is part of the Plus plan.")
+    site = _owned_site(site_id, user["id"])
+    if not db.claim_hook(site_id, (datetime.now(UTC) - watch.HOOK_COOLDOWN).isoformat()):
+        raise HTTPException(429, "This site was checked in the last 10 minutes. Try again shortly.")
+    background.add_task(_watch_check, site, "manual")
+    return {"queued": True}
+
+
+@app.post("/watch/{site_id}/hook")
+def create_deploy_hook(site_id: str, request: Request, user: dict = Depends(require_user)) -> dict:
+    """A URL to POST after each deploy (a Netlify deploy notification, a CI step). Shown once; a new one replaces the old."""
+    if _plan_name(user["id"]) != "plus":
+        raise HTTPException(402, "Deploy hooks are part of the Plus plan.")
+    _owned_site(site_id, user["id"])
+    token, hashed = watch.new_hook()
+    db.update_site(site_id, {"hook_hash": hashed})
+    return {"url": f"{str(request.base_url).rstrip('/')}/hooks/deploy/{token}"}
+
+
+@app.post("/hooks/deploy/{token}", status_code=202)
+def deploy_hook(token: str, background: BackgroundTasks) -> dict:
+    site = db.site_by_hook(watch.hook_hash(token)) if token.startswith("wh_") else None
+    if site is None:
+        raise HTTPException(404, "Unknown deploy hook.")
+    if _plan_name(str(site["user_id"])) != "plus":
+        raise HTTPException(402, "Deploy hooks are part of the Plus plan.")
+    if not db.claim_hook(site["id"], (datetime.now(UTC) - watch.HOOK_COOLDOWN).isoformat()):
+        raise HTTPException(429, "Checked in the last 10 minutes; this deploy is covered by that check.")
+    background.add_task(_watch_check, site, "deploy")
+    return {"queued": True}
+
+
+# ---------- competitor side by side (paid plans) ----------
+
+MAX_COMPETITORS = 3
+
+
+class CompareRequest(BaseModel):
+    site: str = Field(pattern=r"^https?://", max_length=2000)
+    competitors: list[str] = Field(min_length=1, max_length=MAX_COMPETITORS)
+
+
+@app.post("/compare")
+def start_compare(body: CompareRequest, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+    """Your site and up to three competitors through the same passive checks, side by side. Deep security checks
+    never run on sites you have not verified, so competitors only get public checks."""
+    if _plan_name(user["id"]) == "free":
+        raise HTTPException(402, "Competitor comparison is part of the paid plans.")
+    urls = list(dict.fromkeys([body.site, *body.competitors]))
+    for url in urls:
+        if not re.match(r"^https?://", url):
+            raise HTTPException(422, f"Use a full address beginning with http:// or https://: {url}")
+        try:
+            fetch.assert_public(url)
+        except ValueError as e:
+            raise HTTPException(422, f"{url}: {e}") from e
+    if db.user_scans_today(user["id"]) + len(urls) > mcp_server.SCANS_PER_DAY:
+        raise HTTPException(429, f"That would pass your {mcp_server.SCANS_PER_DAY} scans for today. Try again tomorrow.")
+    run_id = uuid.uuid4().hex
+    db.insert_run(run_id, user["id"], body.site, f"Compared with {len(urls) - 1} competitor{'s' if len(urls) > 2 else ''}", "stranger", "paid", False, kind="compare")
+    background.add_task(_compare, run_id, user["id"], urls)
+    return {"run_id": run_id}
+
+
+def _compare(run_id: str, user_id: str, urls: list[str]) -> None:
+    def one(url: str) -> dict:
+        try:
+            part_id, fresh = run_scan(url, user_id=user_id, kind="compare_part")
+        except Exception as e:  # noqa: BLE001 - one unreachable competitor must not sink the comparison
+            return {"site": url, "error": str(e) if isinstance(e, ValueError) else "The scan failed."}
+        rep = fresh["report"]
+        counts = {s: sum(f["severity"] == s for f in rep["findings"]) for s in ("high", "medium", "low")}
+        return {"site": fresh["site"], "run_id": part_id, "score": (rep.get("launch_ready") or {}).get("score"),
+                "areas": (rep.get("launch_ready") or {}).get("areas", {}), "geo": (rep.get("geo") or {}).get("score"),
+                "findings": counts, "pages": (rep.get("site_audit") or {}).get("pages_scanned"),
+                "impression": (rep.get("first_impression") or {}).get("what")}
+
+    with ThreadPoolExecutor(max_workers=len(urls)) as pool:
+        sites = list(pool.map(one, urls))
+    sites[0]["yours"] = True
+    db.set_report(run_id, {"compare": sites}, status="done")
 
 
 @app.delete("/me/api-keys/{key_id}")

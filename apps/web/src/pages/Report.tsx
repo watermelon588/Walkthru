@@ -14,6 +14,7 @@ const POLL_MS = 5000
 
 export default function Report() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [ignored, setIgnored] = useState<Record<string, string>>({})
   const [paid, setPaid] = useState(false)
@@ -31,6 +32,7 @@ export default function Report() {
     const load = () =>
       getRun(id)
         .then((run) => {
+          if (run?.kind === 'compare') return navigate(`/app/compare/${run.id}`, { replace: true })  // comparisons have their own page
           setState(run ? { kind: 'ready', run } : { kind: 'missing' })
           // Keep polling while the run is in progress or the report is still being written.
           if (run && (run.status === 'running' || !run.report)) timer = window.setTimeout(load, POLL_MS)
@@ -38,7 +40,7 @@ export default function Report() {
         .catch((e: Error) => setState({ kind: 'error', message: e.message }))
     load()
     return () => window.clearTimeout(timer)
-  }, [id])
+  }, [id, navigate])
 
   return (
     <AppShell title="Report">

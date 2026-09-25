@@ -94,6 +94,8 @@ export type Report = {
     robots_respected: boolean
   } | null
   /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
+  /** Only on competitor comparisons (kind 'compare'): one entry per site, yours first. */
+  compare?: CompareSite[]
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
 }
 
@@ -103,7 +105,7 @@ export type Run = {
   site: string
   goal: string
   persona: string
-  kind: 'test' | 'scan'
+  kind: 'test' | 'scan' | 'watch' | 'compare' | 'compare_part'
   status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop' | 'looping'
   steps: Step[]
   report: Report | null
@@ -143,7 +145,7 @@ export const EVIDENCE_RETENTION_DAYS = 30
 /** Reads go straight to Supabase; row-level security limits them to the signed-in user's runs (or public ones). */
 export async function listRuns(): Promise<Run[]> {
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase.from('runs').select(COLUMNS).order('created_at', { ascending: false }).limit(50)
+  const { data, error } = await supabase.from('runs').select(COLUMNS).neq('kind', 'compare_part').order('created_at', { ascending: false }).limit(50)
   if (error) throw error
   return data as Run[]
 }
@@ -247,3 +249,27 @@ export const listApiKeys = () => api<ApiKey[]>('/me/api-keys', undefined, true, 
 export const createApiKey = (name: string) => api<ApiKey & { key: string }>('/me/api-keys', { name })
 export const revokeApiKey = (id: string) => api<{ revoked: string }>(`/me/api-keys/${id}`, undefined, true, 'DELETE')
 export const MCP_URL = `${API}/mcp`
+
+/** Weekly watch (Plus). */
+export type WatchChanges = { new: string[]; fixed: string[]; score: number | null; at: string; reason: string; run_id: string; baseline: boolean }
+export type WatchedSite = { id: string; site: string; last_run_id: string | null; last_changes: WatchChanges | null; next_check_at: string; last_hook_at: string | null }
+export const getWatch = () => api<{ sites: WatchedSite[]; plan: PlanSummary['plan']; limit: number; email: boolean }>('/watch', undefined, true, 'GET')
+export const watchSite = (site: string) => api<WatchedSite>('/watch', { site })
+export const unwatchSite = (id: string) => api<{ removed: string }>(`/watch/${id}`, undefined, true, 'DELETE')
+export const checkSiteNow = (id: string) => api<{ queued: boolean }>(`/watch/${id}/check`)
+export const createDeployHook = (id: string) => api<{ url: string }>(`/watch/${id}/hook`)
+
+/** Competitor side by side (paid plans). */
+export type CompareSite = {
+  site: string
+  run_id?: string
+  yours?: boolean
+  score?: number | null
+  areas?: Record<string, number | null>
+  geo?: number | null
+  findings?: { high: number; medium: number; low: number }
+  pages?: number | null
+  impression?: string | null
+  error?: string
+}
+export const startCompare = (site: string, competitors: string[]) => api<{ run_id: string }>('/compare', { site, competitors })

@@ -139,3 +139,23 @@ alter table public.api_keys enable row level security;
 revoke all on public.api_keys from anon, authenticated;  -- belt and braces: RLS has no policies either
 create index if not exists api_keys_user on public.api_keys (user_id) where revoked_at is null;
 notify pgrst, 'reload schema';
+
+-- 2026-09-25: weekly watch (Plus). One row per watched site; the API checks due rows weekly and on a deploy hook.
+-- Runs gain two kinds: 'watch' (a watch check, a normal report) and 'compare' (competitor side by side).
+create table if not exists public.sites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  site text not null,
+  watch boolean not null default true,
+  hook_hash text unique,
+  last_run_id text,
+  last_changes jsonb,
+  next_check_at timestamptz not null default now(),
+  last_hook_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, site)
+);
+alter table public.sites enable row level security;
+revoke all on public.sites from anon, authenticated;
+create index if not exists sites_due on public.sites (next_check_at) where watch;
+notify pgrst, 'reload schema';

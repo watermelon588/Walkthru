@@ -3,7 +3,6 @@ import type { Session } from '@supabase/supabase-js'
 import { useState, type FormEvent } from 'react'
 import { AccountAvatar } from '../components/AccountAvatar'
 import { AppShell } from '../components/AppShell'
-import { ApiKeys } from '../components/ApiKeys'
 import { DomainVerification } from '../components/DomainVerification'
 import { YourData } from '../components/YourData'
 import { AgentPresence } from '../components/AgentPresence'
@@ -169,7 +168,6 @@ function SettingsContent({ session }: { session: Session }) {
         </aside>
       </div>
       <DomainVerification />
-      <ApiKeys />
       <YourData email={session.user.email ?? ''} />
     </>
   )
