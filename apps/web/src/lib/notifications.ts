@@ -1,11 +1,11 @@
 import { createContext, useContext } from 'react'
 
 /** The sidebar sections that can carry a count (apps/api/app/notify.py SECTIONS). */
-export type Section = 'runs' | 'team' | 'compare' | 'watch' | 'billing'
+export type Section = 'runs' | 'team' | 'compare' | 'watch' | 'billing' | 'visibility'
 export type Counts = Record<Section, number>
 export type Notification = { id: number; section: Section; kind: string; title: string; body: string; link: string; created_at: string }
 
-export const EMPTY: Counts = { runs: 0, team: 0, compare: 0, watch: 0, billing: 0 }
+export const EMPTY: Counts = { runs: 0, team: 0, compare: 0, watch: 0, billing: 0, visibility: 0 }
 /** Fired on window when a notification arrives, so an open page can refresh itself (detail: Notification). */
 export const NOTIFICATION_EVENT = 'walkthru:notification'
 
@@ -19,5 +19,6 @@ export function sectionFor(pathname: string): Section | null {
   if (pathname.startsWith('/app/compare')) return 'compare'
   if (pathname.startsWith('/app/watch')) return 'watch'
   if (pathname.startsWith('/app/billing')) return 'billing'
+  if (pathname.startsWith('/app/visibility')) return 'visibility'
   return null
 }

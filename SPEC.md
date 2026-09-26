@@ -51,7 +51,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 | **Backend exposure** (P1.1): browser key and config detection; bounded Supabase and Firebase Realtime Database reads on verified domains. Firestore check coming 2026-10-04 | Key and config detection | + verified-domain probes | Same as Launch Pack | Same as Launch Pack |
 | **Code scan** of a connected GitHub repository (coming 2026-11-10, P2) | No | Coming | Coming | Coming |
 | **Search Console and Bing Webmaster data** joined to findings (coming 2026-11-24, P3.1) | No | No | Coming | Coming |
-| **AI citation tracking** on free engines (coming 2026-12-01, P3.2) | No | Coming | Coming | Coming |
+| **AI citation tracking** on free engines (P3.2, built 2026-09-26): AI with web search (gpt-oss-120b) names and cites; Gemini from memory names only; ChatGPT and Perplexity not measured | No | One check of 10 prompts | 10 prompts weekly, web engine | 25 prompts per site weekly, both engines |
 | **Opt-in active scan of a staging URL** (revenue-gated, date not set, P4.1) | No | No | No | Coming |
 | **Walkthru MCP server**: Claude Code, Cursor and other agents scan, read the fix prompt and rerun from the editor | No | No | No | Yes |
 | **GEO and SEO watch** (weekly, email only on change, deploy webhook) | No | No | No | Yes |
@@ -84,7 +84,7 @@ Prices confirmed by the founder on 2026-09-24. Shown as list price, with the fou
 
 **Next versions, not in v1.2:** the preview-deploy check (GitHub Action with a PR comment) and exporting findings to GitHub Issues or Linear.
 
-**AI citation tracking (Phase 3)** runs only on free engines (Gemini with Google Search grounding, Groq Compound) under a database-counted daily cap. ChatGPT and Perplexity are labelled "not measured" until revenue pays for their APIs (Phase 4). It reports what those engines said; it never promises citations or rankings.
+**AI citation tracking (Phase 3)** runs only on free engines under a database-counted daily cap. Measured 2026-09-26: Gemini's Google Search grounding returns quota 0 on free keys and Groq Compound is not available, so the engines are Groq gpt-oss-120b with its browser_search tool (answers with sources) and Gemini from memory (mentions only); Gemini grounding switches on with `GEMINI_GROUNDING=1` and a billed key. ChatGPT and Perplexity are labelled "not measured" until revenue pays for their APIs (Phase 4). It reports what those engines said; it never promises citations or rankings.
 
 **Plus launches as a waitlist** until weekly watch, citation tracking and branded PDFs ship (ROADMAP Phase 3). Nothing is sold before it exists.
 

@@ -121,6 +121,12 @@ Read this block first.
 - Sign-in: Back from Google or GitHub no longer leaves the buttons frozen on "Opening Google..." (bfcache restore resets the page), a provider that never opens frees the buttons after 10 s with a message, and the email button no longer says "Sending link..." during an OAuth redirect.
 - Not tested live: a notification arriving over Realtime in a signed-in browser (the in-app browser had no session). API tests cover the rows and counts; the toaster was checked in a browser.
 
+### Added 2026-09-26 by Claude Code (local): AI citation tracking (P3.2)
+- `app/citations.py`, tables `citation_sites`, `citation_prompts`, `citation_checks` (applied on Supabase, browsers refused), `/citations` routes, web page `/app/visibility` ("AI answers" in the sidebar, with its own notification count).
+- Engines, measured on the founder's keys on 2026-09-26: Gemini's Google Search grounding answers quota 0 on free keys and Groq Compound does not exist on this account, so the plan's two engines were replaced. "AI with web search" is Groq `openai/gpt-oss-120b` with `browser_search` (one search, 1,600 to 7,600 tokens, real sources). "Gemini, from memory" (mentions only). `GEMINI_GROUNDING=1` with a billed Gemini key turns Google Search on. ChatGPT and Perplexity: not measured.
+- Mention, citation, ranks and share of voice are computed in code. Prompts are suggested from the homepage. Limits (proposed, founder to confirm): Launch one check of 10 prompts, Pro 10 prompts weekly on the web engine, Plus 25 prompts per site weekly on both. Queue with daily caps (`CITATION_WEB_PER_DAY` 20, `CITATION_MEMORY_PER_DAY` 300) and a minute between web checks, because journeys share Groq's 8,000 tokens a minute. A notification when a set finishes.
+- Founder decisions: the caps above; and SPEC.md's rule "Plus is a waitlist until watch, citation tracking and branded PDFs ship" is now met, so the Plus pricing card can leave the waitlist when you choose.
+
 ### Next steps, in order
 1. Founder: sign in and watch a grant from the admin panel arrive as a toast and a Plan & billing badge; run `python -m admin setup` if not done; the safety red-team pass above.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.

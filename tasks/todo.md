@@ -154,7 +154,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 - [ ] **P3.1 Search Console and Bing Webmaster connect** (M)
   - Accept: Google OAuth with `webmasters.readonly`; Search Analytics (queries, clicks, impressions, CTR, position, last 28 days) and URL Inspection for audited pages (2,000 a day per property); Bing Webmaster API with the user's own key. Joined to findings: "ranks 11 for X at 3% CTR", "not indexed: reason".
   - Verify: recorded API responses in pytest; live on the founder's own site.
-- [~] **P3.2 AI citation tracking** (L), in progress: Claude Code (local), 2026-09-26
+- [x] **P3.2 AI citation tracking** (L), built 2026-09-26 by Claude Code (local): `app/citations.py`, `/citations` routes, `/app/visibility` (AI answers), `tests/test_citations.py`. Engines changed after measuring the free quotas (SPEC.md). Still open: the showcase prompt set tracked twice on real engines (needs a signed-in Plus account).
   - Reuse: [ai-search-guru/getcito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool) (MIT) for the data model (prompts, answers, mentions, citations, share of voice).
   - Accept:
     - Prompts suggested in code from the site's title, headings and category, editable by the owner.
