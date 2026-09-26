@@ -228,7 +228,7 @@ Logs:
 
 | # | Item | Size | GATE |
 |---|---|---|---|
-| 1 | `policy.py`: modes, blocklist, popular-site rule, goal rules; `POST /runs` returns the mode; refusal codes | M | Yes |
+| 1 | `policy.py`: modes, blocklist, popular-site rule, goal rules; `POST /runs` returns the mode; refusal codes (**done 2026-09-26**, see the status note) | M | Yes |
 | 2 | Action gate: social and commerce verbs, Visitor-mode typing rule, signed-in detection (server and extension, with tests) | M | Yes |
 | 3 | DNS TXT verification, re-check within 24 hours and after redirects | S | Yes |
 | 4 | Snapshot: icon labels, viewport first, re-snapshot after scroll, smooth scroll with settle wait; feed fixture | M | Yes |
@@ -239,6 +239,22 @@ Logs:
 | 9 | Vision fallback | M | No, first update after launch |
 | 10 | Cursor overlay, human pacing, banner | S to M | No |
 | 11 | Claude Haiku for Pro and Plus | S (switch) | Revenue-gated |
+
+**Status of item 1 (built 2026-09-26):**
+- `apps/api/app/agent/policy.py` and `blocklist.json` (10 categories plus an empty "site owner opt-out" list). A listed entry matches the host and its subdomains, so `gov.uk` or the `bank` TLD covers every site under it.
+- `POST /runs` checks, in code and before the goal planner's model call, without using a run:
+  - a blocked `site`, or a tested tab already on a blocked host: 403 `blocked_site`, unless the user verified that exact host;
+  - bulk goals, on any site: 422 `goal_refused`;
+  - social and commerce goals (like, follow, share, post, comment, message, buy, add to cart, checkout, pay, trade, donate and similar) on an unverified site: 422 `goal_refused`;
+  - a signed-in (`logged_in`) test on an unverified domain: 403 `visitor_mode_limit`.
+
+  The message is the plain `detail`; the code is in the `X-Walkthru-Code` header (exposed to CORS). Goal text is NFKC-folded and invisible characters are dropped first.
+- The reply and the run state carry `mode` (`owner` or `visitor`). `verified` stays for the extension's existing send confirmation.
+- `POST /runs/{id}/observe`: when the tested tab reaches a blocked host (a share link out to Facebook, a payment page on a bank), the run stops truthfully with the reason in the report and `code: blocked_site`.
+- The side panel says logged-in tests need a verified domain.
+- Tests: `apps/api/tests/test_policy.py` (goal wording that must and must not match, host matching, the Instagram goal, refusals before any model call, mid-run stop).
+- **Popular-site rule: not built, on purpose.** Every unverified host already runs in Visitor mode, so a top-sites list would change nothing, and it would add a data licence to check. Revisit only if Owner mode ever stops requiring verification.
+- **Known limits:** the goal rules read English only, and wording can always be found that they miss. They save a model call and give a clear message; the real boundary is item 2 (the per-step action gate in `persona._enforce` and `execute.ts`), which does not depend on how the goal was worded.
 
 **Done means:**
 - every GATE row has its tests;

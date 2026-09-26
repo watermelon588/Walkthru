@@ -244,6 +244,7 @@ def test_stuck_loop(monkeypatch):
 
 def test_safe_mode_blocks_dangerous_click(monkeypatch, passes):
     passes.append({"user_id": USER, "plan": "pro", "starts_at": "2000-01-01T00:00:00+00:00", "expires_at": "2999-01-01T00:00:00+00:00", "runs_granted": 40})  # logged-in pages need a paid plan
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)  # signed-in pages need a verified domain
     use([PersonaStep(thought="delete", action="click", target_id=1, confusion=0)], monkeypatch)
     c = TestClient(app)
     settings = page("https://fixture.test/settings", [{"id": 1, "tag": "button", "text": "Delete account"}])

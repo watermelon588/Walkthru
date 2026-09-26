@@ -38,6 +38,7 @@ class SessionState(TypedDict, total=False):
     persona_prompt: str  # a Plus owner's custom test user, in their own words (app/plus.py); built-in ones use PERSONAS
     logged_in: bool
     verified: bool  # the signed-in owner proved control of this domain
+    mode: str  # "owner" or "visitor", decided by the server at the start (app/agent/policy.py)
     max_steps: int
     observation: dict  # latest Observation
     first_text: str  # page text of the first observation, kept for the report

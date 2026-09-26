@@ -214,6 +214,7 @@ export function App() {
           This is a logged-in page (safe mode: no destructive clicks, confirm before submits)
         </label>
         {plan && !canLogIn && <p className="hint">Logged-in pages need a paid plan. Free runs test public pages.</p>}
+        {canLogIn && loggedIn && <p className="hint">Logged-in tests run only on a domain you verified in Settings.</p>}
         {plan && (
           <p className="hint" role="status">
             {plan.runs_left} of {plan.runs_allowed} test runs left {plan.plan === "free" ? "this month" : "in your pass"}, up to {plan.max_steps} steps each.
