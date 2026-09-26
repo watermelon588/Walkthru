@@ -247,6 +247,11 @@ def audit(actor: str, action: str, target: str, detail: dict) -> None:
     _insert("admin_audit_log", {"actor": actor[:200], "action": action, "target": target, "detail": detail})
 
 
+def app_event(kind: str, user_id: str | None, detail: dict) -> None:
+    """Feedback or a server error for the founder's admin panel (apps/api/admin)."""
+    _insert("app_events", {"kind": kind, "user_id": user_id, "detail": detail})
+
+
 def public_reports(user_id: str) -> list[dict]:
     """The owner's shared reports, newest first: the badge follows the latest one for its site."""
     return _rows({"user_id": f"eq.{user_id}", "public": "eq.true", "report": "not.is.null",

@@ -528,4 +528,16 @@ create table if not exists public.github_installations (
 );
 alter table public.github_installations enable row level security;
 revoke all on public.github_installations from anon, authenticated;
+-- Founder admin panel (apps/api/admin): feedback from signed-in users and unhandled server errors.
+-- Server-side only: browsers can neither read nor write it; the API writes with the secret key.
+create table if not exists public.app_events (
+  id bigint generated always as identity primary key,
+  kind text not null check (kind in ('feedback', 'server_error')),
+  user_id uuid references auth.users(id) on delete set null,
+  detail jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists app_events_recent on public.app_events (created_at desc);
+alter table public.app_events enable row level security;
+revoke all on public.app_events from anon, authenticated;
 notify pgrst, 'reload schema';

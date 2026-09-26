@@ -48,6 +48,8 @@ cd apps/api && python -m venv .venv && .venv/Scripts/python -m pip install -e ".
 .venv/Scripts/python -m app.db            # apply schema.sql to Supabase (idempotent)
 .venv/Scripts/python scripts/test_user.py # throwaway account + session for local testing
 .venv/Scripts/python scripts/grant_plan.py EMAIL pro   # dev pass to test paid plans for free (--revoke to end it)
+.venv/Scripts/python -m admin setup   # once: founder admin password + authenticator code (writes hashes to .env)
+.venv/Scripts/python -m admin         # founder admin panel on http://127.0.0.1:8020 (this computer only, never deployed)
 
 # extension
 cd apps/extension && npm install

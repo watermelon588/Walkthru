@@ -355,3 +355,6 @@ export const listGitHubRepos = () => api<{ repos: GitHubRepo[]; errors: string[]
 export const disconnectGitHub = (id: number) => api<{ removed: number }>(`/github/installations/${id}`, undefined, true, 'DELETE')
 export const fixPullRequest = (runId: string, repo: GitHubRepo, confirm: boolean) =>
   api<FixPr>(`/runs/${runId}/fix-pr`, { installation_id: repo.installation_id, repo: repo.full_name, confirm })
+
+/** A note to the founder; read in the admin panel only (apps/api/admin). */
+export const sendFeedback = (message: string, page: string) => api<{ sent: boolean }>('/feedback', { message, page })

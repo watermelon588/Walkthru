@@ -1,7 +1,7 @@
 """Founder tool for paid access (payment.md): review requests, approve exact offers, check Dodo products.
 
-There is deliberately no admin web page or admin API: approvals run here, on the founder's machine, with the
-Supabase secret key from apps/api/.env. Every change is written to admin_audit_log.
+There is no admin page on the public site or API: approvals run here or in the local admin panel (`python -m admin`),
+on the founder's machine, with the Supabase secret key from apps/api/.env. Every change is written to admin_audit_log.
 
     .venv/Scripts/python scripts/billing.py list                          # pending requests and open offers
     .venv/Scripts/python scripts/billing.py approve REQUEST_ID            # offer the requested plan at list price

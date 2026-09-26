@@ -316,3 +316,15 @@ Steps arrive about 5 s apart even when the server answers in 1.5 s: the rest is 
 **Market reference:** open-source GEO ([geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill), [GetCito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool)); paid GEO trackers from $29 (Otterly) to $99+ (Profound), [comparison](https://discoveredlabs.com/blog/profound-vs-peec-vs-otterly-which-ai-visibility-platform-should-you-buy); vibe-coded app risk ([Symbiotic, 1,072 apps](https://www.symbioticsec.ai/blog/we-scanned-1-072-vibe-coded-apps-98-had-security-flaws)); code scanning stack ([appsecsanta](https://appsecsanta.com/open-source-tools)); [Semgrep rules licence](https://semgrep.dev/legal/rules-license/).
 
 **Timeline effect:** launch moves one week, from 10-20 (realistic 10-27) to 10-27 (realistic 11-03); Plus opens about 12-08. Plan allocation of the new features is proposed in SPEC.md until the founder confirms it.
+
+## 2026-09-26 Founder admin panel: local only, password plus authenticator
+
+**Decision:** the founder's admin panel (`apps/api/admin`, `python -m admin`) runs on the founder's own computer, bound to 127.0.0.1, and is never deployed with the public API. It replaces running `scripts/billing.py` and `scripts/grant_plan.py` by hand for the daily jobs: decide plan requests (grant free, send a payment offer once Dodo is on, decline), grant or end a pass, the founder's own access, users with their plan (email, sign-in method, dates only), and one activity feed (new users, feedback, server errors, payments, admin actions).
+
+**Why local only:** an internet-facing page that can hand out paid plans is the most valuable target in the product. On the founder's machine the panel adds no public attack surface at all; it uses the same Supabase secret key the founder scripts already use there. The honest limit: whoever controls that computer controls Walkthru either way, because the secret key is in `apps/api/.env`.
+
+**Walls:** scrypt password hash (never the password) and a TOTP authenticator code to sign in, a code used once; 5 misses lock it for 15 minutes; one session at a time, 15 minutes idle and 8 hours at most, HttpOnly SameSite=Strict cookie; every change needs a current authenticator code and a CSRF token; Host and Origin allow-lists (DNS rebinding); server-rendered HTML with no JavaScript and a CSP that allows none; every value escaped; every sign-in, failure and change in `admin_audit_log`.
+
+**If it ever has to be reachable remotely:** put it behind Cloudflare Access or Tailscale, never on an open port.
+
+**Feeds:** `app_events` (server-side only, no browser access) holds user feedback (`POST /feedback`, signed-in, 5 an hour) and unhandled server errors (route template, error type, short message; never bodies or query strings).
