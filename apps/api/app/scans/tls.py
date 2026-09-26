@@ -96,7 +96,7 @@ def _accepts_legacy(host: str, address: str, port: int) -> bool:
 
 def dns(c: httpx.Client, name: str, rtype: str) -> tuple[int, list[str]]:
     """(DNS status, answer data) over DNS-over-HTTPS. Status 3 is NXDOMAIN."""
-    code = {"CAA": 257, "CNAME": 5, "A": 1}[rtype]
+    code = {"CAA": 257, "CNAME": 5, "A": 1, "TXT": 16}[rtype]
     r = c.get(RESOLVER, params={"name": name, "type": rtype}, headers={"accept": "application/dns-json"}, timeout=3)
     r.raise_for_status()
     body = r.json()

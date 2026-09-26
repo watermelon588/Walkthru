@@ -124,6 +124,20 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'visitor-mode',
+    title: "Why can't Walkthru test Instagram?",
+    body: (
+      <>
+        <p>Test users run in your own browser, with your own logins. On sites you do not own, a test user that likes, follows, posts or buys would act as you, could get your account banned, and would test someone else's site without their permission. So {brand.name} refuses banking, trading, social, webmail and similar sites outright, and on any site you have not verified it acts as a visitor.</p>
+        <ul>
+          <li><strong>A visitor</strong> reads, scrolls, clicks links, menus and tabs, and uses the site's search box. It never fills in other forms, signs in, likes, follows, posts, messages, buys or adds to a cart, and it stops if the page shows you are signed in.</li>
+          <li><strong>On your verified domain</strong> it does what a real visitor does, including sign-up forms and signed-in pages, with safe mode still blocking payments, deletions and cancellations.</li>
+        </ul>
+        <p>These rules are checked by our server at every step, not by the AI, so no goal or page text can talk a test user past them. If a site shows a CAPTCHA or bot check, you solve it yourself and press Continue, or the report says the site's bot protection stopped the test.</p>
+      </>
+    ),
+  },
+  {
     id: 'verify',
     title: 'Verify your domain',
     body: (
@@ -131,7 +145,7 @@ const sections: DocSection[] = [
         <p>Verifying proves you own a site. It unlocks the full security check (exposed files and backups, keys leaked into JavaScript, public source maps and subdomain takeover) and lets approved send actions run during tests.</p>
         <ol>
           <li>Open <Link to="/app/settings#verify">Settings</Link> and copy your verification tag.</li>
-          <li>Add it to the <code>&lt;head&gt;</code> of your homepage, or put the token alone in a file at <code>/.well-known/walkthru.txt</code>.</li>
+          <li>Add it to the <code>&lt;head&gt;</code> of your homepage, put the token alone in a file at <code>/.well-known/walkthru.txt</code>, or add a DNS TXT record named <code>_walkthru</code> with the value <code>walkthru-verification=your-token</code>. The DNS record suits sites you cannot edit, like a Lovable or Framer build.</li>
           <li>Run a new scan or test. Verification is checked each time.</li>
         </ol>
         <pre><code>{'<meta name="walkthru-verification" content="your-token">'}</code></pre>

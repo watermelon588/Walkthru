@@ -540,4 +540,42 @@ create table if not exists public.app_events (
 create index if not exists app_events_recent on public.app_events (created_at desc);
 alter table public.app_events enable row level security;
 revoke all on public.app_events from anon, authenticated;
+-- Agent safety (docs/agent-safety-plan.md section 6): one row per journey started or refused. Who tested which host,
+-- in which mode, and each action type with its target label, never typed values. Kept 90 days for abuse questions
+-- (retention job), even after the run itself is deleted. Server-side only.
+create table if not exists public.run_audit (
+  id bigint generated always as identity primary key,
+  run_id text,
+  user_id uuid,
+  host text not null,
+  mode text not null check (mode in ('owner', 'visitor')),
+  goal text not null default '',
+  code text,  -- null for a started run, else the refusal or stop reason code
+  status text,
+  actions jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists run_audit_host_recent on public.run_audit (host, created_at desc);
+create index if not exists run_audit_user_recent on public.run_audit (user_id, created_at desc);
+create index if not exists run_audit_run on public.run_audit (run_id);
+alter table public.run_audit enable row level security;
+revoke all on public.run_audit from anon, authenticated;
+
+-- Kill switches: journeys off for everyone, one account or one target host, in seconds, from the admin panel or by
+-- automatic suspension. until null = until lifted.
+create table if not exists public.run_blocks (
+  id bigint generated always as identity primary key,
+  scope text not null check (scope in ('global', 'user', 'host')),
+  value text not null default '',
+  reason text not null default '',
+  created_by text not null default 'system',
+  created_at timestamptz not null default now(),
+  until timestamptz,
+  lifted_at timestamptz
+);
+alter table public.run_blocks enable row level security;
+revoke all on public.run_blocks from anon, authenticated;
+
+alter table public.app_events drop constraint if exists app_events_kind_check;
+alter table public.app_events add constraint app_events_kind_check check (kind in ('feedback', 'server_error', 'abuse'));
 notify pgrst, 'reload schema';

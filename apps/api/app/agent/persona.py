@@ -14,11 +14,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from app.agent import goal as goals
-from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_destructive, is_sending
+from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_basket, is_commerce, is_destructive, is_search_field, is_sending, is_social
 from app.agent.schema import Observation, PersonaStep
 
 # looping: Walkthru stopped the test user for going in circles (its own limit, never a site problem).
-Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "safe_stop", "looping"]
+# bot_wall: the site's bot protection stopped the test. agent_lost: Walkthru could not find or use the control it
+# needed (its own limit, docs/agent-safety-plan.md section 8), so the site is not blamed.
+Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "bot_wall", "safe_stop", "looping", "agent_lost"]
 
 PERSONAS = {
     "first_timer": "a first-time visitor who has never heard of this product, skims, and gets impatient fast",
@@ -77,6 +79,10 @@ def system_prompt(state: SessionState) -> str:
         f"If a form asks for identity, use this test identity: {identity}\n"
         "Never click anything that pays, deletes or cancels. If the goal is to send a message, press the send button; "
         "Walkthru decides whether it is safe to actually send."
+        + ("" if state.get("verified") else
+           "\nThe owner has not verified this domain, so you are a visitor: read, scroll, click links, menus and tabs, and use the "
+           "site's search box. Walkthru ends the test at the first other form field and at any like, follow, share, post, "
+           "message, buy or add-to-cart control, so reach as much of the goal as a visitor can before that.")
     )
 
 
@@ -155,9 +161,13 @@ def build_graph(model: Any, checkpointer: Any):
             # The test user says the checklist is complete but chose another action anyway: the goal is met, stop here.
             step = PersonaStep(thought=f"{step.thought} (Walkthru: every checkpoint of the goal is complete, so the test ends here.)",
                                action="done", confusion=step.confusion, progress=plan_done)
-        step, safe_stop = _enforce(step, state)
+        step, stop = _enforce(step, state)
         observed = state["observation"]
-        record = step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | metadata | ({"safe_stop": True} if safe_stop else {})
+        record = step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | metadata | ({"safe_stop": True, "code": stop} if stop else {})
+        if step.target_id is not None:  # the control's label, for the run audit log (never the typed value)
+            target = next((e for e in observed.get("elements", []) if e["id"] == step.target_id), None)
+            if target:
+                record["target_label"] = (target.get("text") or "")[:80]
         if step.action == "click" and state.get("verified"):
             target = next((e for e in state["observation"].get("elements", []) if e["id"] == step.target_id), {})
             if is_sending(target.get("text", "")) and target.get("tag") != "a":
@@ -198,7 +208,12 @@ def build_graph(model: Any, checkpointer: Any):
         if last["action"] == "done":
             return {"status": "done"}
         if last["action"] == "give_up":
-            return {"status": "gave_up"}
+            return {"status": "agent_lost" if _lost(steps) else "gave_up"}
+        note = (state["observation"].get("note") or "").lower()
+        if "bot wall" in note:
+            return {"status": "bot_wall"}  # the site's bot protection, never solved or bypassed (plan section 7)
+        if "captcha" in note:
+            return {"status": "captcha"}
         checkpoints = (state.get("plan") or {}).get("checkpoints", [])
         plan_done = state.get("plan_done", 0)
         url = state["observation"].get("url", "")
@@ -208,13 +223,10 @@ def build_graph(model: Any, checkpointer: Any):
             return {"status": "done", "plan_done": plan_done}
         if len(steps) >= state.get("max_steps", MAX_STEPS):
             return {"status": "budget"}
-        note = (state["observation"].get("note") or "").lower()
-        if "captcha" in note:
-            return {"status": "captcha"}
         tail = steps[-LOOP_LIMIT:]
         keys = {json.dumps({k: s.get(k) for k in ("action", "target_id", "text", "url", "scroll_pct")}) for s in tail}
         if len(tail) == LOOP_LIMIT and len(keys) == 1:
-            return {"status": "stuck"}
+            return {"status": "agent_lost" if _lost(steps) else "stuck"}
         # Going in circles: arriving at the same page for the third time (the start page counts as the first visit).
         visits = [_page(state.get("start_url", ""))] + [_page(s["result_url"]) for s in steps if s.get("result_url") and s["result_url"] != s.get("url")]
         if visits.count(_page(url)) >= LOOP_LIMIT:
@@ -252,6 +264,17 @@ def _confirmed(state: SessionState) -> bool:
     return bool(last.get("notices_after")) or bool(last.get("result_url") and last["result_url"] != last.get("url"))
 
 
+MISSING = "does not exist)"  # _enforce's note when the model picked an element the snapshot never listed
+
+
+def _lost(steps: list[dict]) -> bool:
+    """The run ended because Walkthru could not find the control it needed: in its last three actions the model
+    picked an element that was not on the page, or the executor could not find it. That is Walkthru's limit
+    (an unlabelled icon, a control the snapshot missed), not proof the site is broken."""
+    recent = [s for s in steps if s["action"] not in ("done", "give_up")][-LOOP_LIMIT:]
+    return any(MISSING in s.get("thought", "") or "not found" in (s.get("note_after") or "") for s in recent)
+
+
 def _page(url: str) -> str:
     return url.split("#")[0].rstrip("/").lower()
 
@@ -270,35 +293,54 @@ def _identity_value(label: str, input_type: str | None, run_id: str) -> str:
     return "Hello, this is a Walkthru test message."
 
 
-def _enforce(step: PersonaStep, state: SessionState) -> tuple[PersonaStep, bool]:
+VISITOR_MODE = "visitor mode"  # marks a step Walkthru stopped on purpose; report.NOT_A_SITE_PROBLEM reads it
+
+
+def _visitor_stop(step: PersonaStep, what: str, never: str) -> PersonaStep:
+    thought = (f"{step.thought} (Walkthru stopped at {what} by design: in {VISITOR_MODE} it never {never}. "
+               "Verify the domain in Settings to test forms and actions. Everything up to here worked.)")
+    return PersonaStep(thought=thought, action="done", confusion=step.confusion)
+
+
+def _enforce(step: PersonaStep, state: SessionState) -> tuple[PersonaStep, str | None]:
     """Code-level safety: replace unsafe or invalid choices instead of trusting the prompt.
 
-    Returns (step, safe_stop). safe_stop means Walkthru ended the journey at a button on purpose.
+    Returns (step, stop code). A code means Walkthru ended the journey on purpose: safe_stop (a send or destructive
+    button) or visitor_mode_limit (a form or a social or commerce control on an unverified site).
     """
     elements = {e["id"]: e for e in state["observation"].get("elements", [])}
     if step.action not in ("click", "type"):
-        return step, False
+        return step, None
     el = elements.get(step.target_id)
     if el is None:
         thought = f"{step.thought} (element #{step.target_id} does not exist)"
-        return PersonaStep(thought=thought, action="scroll", confusion=max(step.confusion, 2)), False
+        return PersonaStep(thought=thought, action="scroll", confusion=max(step.confusion, 2)), None
     label = el.get("text", "")
+    if not state.get("verified"):
+        # Visitor mode (docs/agent-safety-plan.md section 4): read, click links and menus, search. Never fill in a form,
+        # like, follow, post, buy or add to a cart on a site the user has not proved they own.
+        if step.action == "type" and not is_search_field(el):
+            return _visitor_stop(step, f"the '{label}' field", "fills in forms"), "visitor_mode_limit"
+        # Buttons act; plain links only navigate, except an add-to-cart link, which changes the cart on some shops.
+        acts = step.action == "click" and (el.get("tag") != "a" or is_basket(label))
+        if acts and not is_sending(label) and (is_social(label) or is_commerce(label)):  # send buttons: the rule below
+            return _visitor_stop(step, f"'{label}'", "likes, follows, posts, messages, buys or adds to a cart"), "visitor_mode_limit"
     if step.action == "type" and not (step.text or "").strip():
         # Models sometimes pick a field but forget the text; typing nothing would loop forever.
-        return step.model_copy(update={"text": _identity_value(label, el.get("type"), state["run_id"])}), False
+        return step.model_copy(update={"text": _identity_value(label, el.get("type"), state["run_id"])}), None
     button = step.action == "click" and el.get("tag") != "a"  # plain links only navigate
     if is_destructive(label) and (state.get("logged_in") or button):
         if state.get("logged_in"):
-            return PersonaStep(thought=f"{step.thought} (blocked by safe mode: '{label}')", action="give_up", confusion=step.confusion), False
+            return PersonaStep(thought=f"{step.thought} (blocked by safe mode: '{label}')", action="give_up", confusion=step.confusion), None
         thought = f"{step.thought} (Walkthru stopped at '{label}' by design: it never pays, deletes or cancels. The flow worked up to this point.)"
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), True
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), "safe_stop"
     if is_sending(label) and button and any(s.get("sent") for s in state.get("steps", [])):
         thought = f"{step.thought} (Walkthru never sends twice in one run; a message was already sent.)"
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), False
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), None
     if is_sending(label) and button and not state.get("verified"):
         thought = (
             f"{step.thought} (Walkthru stopped at '{label}' by design: it only sends real messages on a domain the owner "
             "has verified, after they confirm. Everything up to this button worked.)"
         )
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), True
-    return step, False
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), "safe_stop"
+    return step, None

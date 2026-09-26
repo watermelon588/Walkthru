@@ -20,7 +20,9 @@ const STATUS_COPY: Record<string, string> = {
   gave_up: "Gave up before reaching the goal.",
   budget: "Ran out of steps before reaching the goal.",
   stuck: "Kept trying the same thing and got stuck.",
-  captcha: "Stopped at a CAPTCHA.",
+  captcha: "The site showed a CAPTCHA, so the test stopped. That is the site's bot protection, not a usability problem.",
+  bot_wall: "The site's bot protection stopped the test. That is not a usability problem. Allowlist Walkthru or test your staging URL.",
+  agent_lost: "Scout could not find the control for this step. It may be an unlabelled icon; this may not affect people.",
   stopped: "Ended early. A partial report is being prepared.",
   safe_stop: "Everything worked up to the send button. Walkthru only sends on verified domains, after you approve.",
   looping: "Walkthru stopped the test user for going in circles. That is Walkthru's limit, not a problem with your site.",
@@ -257,7 +259,7 @@ export function App() {
 
       {progress.phase === "finished" && results.length <= 1 && (
         <section className="summary" aria-label="Result">
-          <h2>{STATUS_COPY[progress.status ?? ""]}</h2>
+          <h2>{(progress.code && progress.message) || STATUS_COPY[progress.status ?? ""]}</h2>
           <p>{progress.steps.length} steps. Highest confusion: {Math.max(0, ...progress.steps.map((s) => s.confusion))} of 3.</p>
           {progress.status === "safe_stop" && (
             <p>

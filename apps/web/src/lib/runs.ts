@@ -120,7 +120,7 @@ export type Run = {
   goal: string
   persona: string
   kind: 'test' | 'scan' | 'watch' | 'compare' | 'compare_part'
-  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'stopped' | 'safe_stop' | 'looping'
+  status: 'running' | 'done' | 'gave_up' | 'budget' | 'stuck' | 'captcha' | 'bot_wall' | 'stopped' | 'safe_stop' | 'looping' | 'agent_lost'
   steps: Step[]
   report: Report | null
   public: boolean
@@ -136,9 +136,11 @@ export const STATUS_LABEL: Record<Run['status'], string> = {
   budget: 'Ran out of steps',
   stuck: 'Got stuck',
   captcha: 'Stopped at a CAPTCHA',
+  bot_wall: 'Stopped by bot protection',
   stopped: 'Ended early',
   safe_stop: 'Stopped before sending',
   looping: 'Stopped going in circles',
+  agent_lost: 'Walkthru lost the control',
 }
 
 export const PERSONA_LABEL: Record<string, string> = {
@@ -273,7 +275,7 @@ export async function startCheckout(offerId: string): Promise<string> {
   return url.href
 }
 
-export const getVerification =() => api<{ token: string; meta: string; file: string }>('/verification', undefined, true, 'GET')
+export const getVerification = () => api<{ token: string; meta: string; file: string; txt_name: string; txt_value: string }>('/verification', undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
 export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
 

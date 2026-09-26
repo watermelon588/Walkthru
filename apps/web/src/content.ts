@@ -78,7 +78,7 @@ export const footer = {
   columns: [
     { title: 'Product', links: [{ label: 'How it works', href: '/#how' }, { label: 'Sample report', href: '/#report' }, { label: 'Pricing', href: '/#pricing' }, { label: 'FAQ', href: '/#faq' }] },
     { title: 'Get started', links: [{ label: 'Scan my site', href: '/#scan' }, { label: 'Documentation', href: '/docs' }, { label: 'Install the extension', href: '/docs#install' }, { label: 'Sign in', href: '/login' }] },
-    { title: 'Legal', links: [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Security', href: '/security' }] },
+    { title: 'Legal', links: [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Security', href: '/security' }, { label: 'Walkthru bot', href: '/bot' }] },
   ],
 }
 
@@ -87,6 +87,7 @@ export const contact = {
   hello: 'hello@walkthru.dev',
   privacy: 'privacy@walkthru.dev',
   security: 'security@walkthru.dev',
+  abuse: 'abuse@walkthru.dev',
 }
 
 export const faqs = [

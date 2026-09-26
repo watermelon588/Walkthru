@@ -9,7 +9,8 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 from selectolax.parser import HTMLParser
 
-UA = "Mozilla/5.0 (compatible; WalkthruBot/0.1; +https://walkthru.dev/bot)"
+# Identifiable, with the page that explains the bot and how to opt out (apps/web/src/pages/Bot.tsx).
+UA = f"Mozilla/5.0 (compatible; WalkthruBot/0.1; +{os.environ.get('WEB_URL', 'https://walkthru.dev').rstrip('/')}/bot)"
 ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8"
 MAX_TEXT = 300_000
 MAX_REDIRECTS = 5

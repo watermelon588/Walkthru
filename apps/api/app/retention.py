@@ -78,6 +78,12 @@ def start_background() -> None:
                     log.info("evidence purge: %s", result)
             except Exception:  # a failed pass retries next interval
                 log.exception("evidence purge failed")
+            try:
+                from app import abuse
+
+                abuse.purge_old()  # the run audit log keeps 90 days (docs/agent-safety-plan.md section 6)
+            except Exception:
+                log.exception("run audit purge failed")
             stop.wait(INTERVAL_S)
 
     threading.Thread(target=loop, name="evidence-retention", daemon=True).start()
