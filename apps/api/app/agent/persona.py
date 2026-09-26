@@ -14,11 +14,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from app.agent import goal as goals
-from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_destructive, is_sending
+from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_destructive, is_sending, search_field, visitor_blocked
 from app.agent.schema import Observation, PersonaStep
 
 # looping: Walkthru stopped the test user for going in circles (its own limit, never a site problem).
-Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "safe_stop", "looping"]
+# visitor_limit: on a domain the user has not verified, Walkthru stopped at a control only verified owners may use
+# (a form field, a Like or Buy button). Its own rule, never a site problem; the rest of the journey was not tested.
+Status = Literal["running", "done", "gave_up", "budget", "stuck", "captcha", "safe_stop", "looping", "visitor_limit"]
 
 PERSONAS = {
     "first_timer": "a first-time visitor who has never heard of this product, skims, and gets impatient fast",
@@ -77,7 +79,14 @@ def system_prompt(state: SessionState) -> str:
         f"If a form asks for identity, use this test identity: {identity}\n"
         "Never click anything that pays, deletes or cancels. If the goal is to send a message, press the send button; "
         "Walkthru decides whether it is safe to actually send."
+        + ("" if state.get("verified") else VISITOR_NOTE)
     )
+
+
+VISITOR_NOTE = (
+    "\nThe owner has not verified this domain, so you are a visitor: read, scroll, open menus and follow links, and type only into "
+    "search boxes. Walkthru ends the test at any other field and at Like, Follow, Comment, Share, Buy or similar buttons."
+)
 
 
 def render_observation(obs: dict) -> str:
@@ -155,9 +164,9 @@ def build_graph(model: Any, checkpointer: Any):
             # The test user says the checklist is complete but chose another action anyway: the goal is met, stop here.
             step = PersonaStep(thought=f"{step.thought} (Walkthru: every checkpoint of the goal is complete, so the test ends here.)",
                                action="done", confusion=step.confusion, progress=plan_done)
-        step, safe_stop = _enforce(step, state)
+        step, stop = _enforce(step, state)
         observed = state["observation"]
-        record = step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | metadata | ({"safe_stop": True} if safe_stop else {})
+        record = step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | metadata | ({stop: True} if stop else {})
         if step.action == "click" and state.get("verified"):
             target = next((e for e in state["observation"].get("elements", []) if e["id"] == step.target_id), {})
             if is_sending(target.get("text", "")) and target.get("tag") != "a":
@@ -195,6 +204,8 @@ def build_graph(model: Any, checkpointer: Any):
         last = steps[-1]
         if last.get("safe_stop"):
             return {"status": "safe_stop"}
+        if last.get("visitor_limit"):
+            return {"status": "visitor_limit"}
         if last["action"] == "done":
             return {"status": "done"}
         if last["action"] == "give_up":
@@ -270,35 +281,48 @@ def _identity_value(label: str, input_type: str | None, run_id: str) -> str:
     return "Hello, this is a Walkthru test message."
 
 
-def _enforce(step: PersonaStep, state: SessionState) -> tuple[PersonaStep, bool]:
+def _enforce(step: PersonaStep, state: SessionState) -> tuple[PersonaStep, str | None]:
     """Code-level safety: replace unsafe or invalid choices instead of trusting the prompt.
 
-    Returns (step, safe_stop). safe_stop means Walkthru ended the journey at a button on purpose.
+    Returns (step, stop). stop is "safe_stop" when Walkthru ended the journey at a send or destructive button on
+    purpose, "visitor_limit" when it ended at a control only a verified owner may use (docs/agent-safety-plan.md, item 2).
     """
     elements = {e["id"]: e for e in state["observation"].get("elements", [])}
     if step.action not in ("click", "type"):
-        return step, False
+        return step, None
     el = elements.get(step.target_id)
     if el is None:
         thought = f"{step.thought} (element #{step.target_id} does not exist)"
-        return PersonaStep(thought=thought, action="scroll", confusion=max(step.confusion, 2)), False
+        return PersonaStep(thought=thought, action="scroll", confusion=max(step.confusion, 2)), None
     label = el.get("text", "")
+    if not state.get("verified"):
+        shown = label[:60] or f"element #{step.target_id}"
+        if step.action == "type" and el.get("tag") != "select" and not search_field(el.get("tag", ""), el.get("type"), label):
+            thought = (f"{step.thought} (Walkthru stopped at the '{shown}' field by design: on a domain the owner has not verified, the test user "
+                       "only types into search boxes. Verify this domain to test forms. Everything up to this field worked.)")
+            return PersonaStep(thought=thought, action="done", confusion=step.confusion), "visitor_limit"
+        # Send buttons keep their own rule below: stopped unless verified, then confirmed by the owner.
+        if step.action == "click" and visitor_blocked(label, link=el.get("tag") == "a") and not is_sending(label):
+            thought = (f"{step.thought} (Walkthru stopped at '{shown}' by design: on a domain the owner has not verified, the test user does not "
+                       "like, follow, post, buy, sign in with another account or send anything. Verify this domain to test it. Everything up to "
+                       "this control worked.)")
+            return PersonaStep(thought=thought, action="done", confusion=step.confusion), "visitor_limit"
     if step.action == "type" and not (step.text or "").strip():
         # Models sometimes pick a field but forget the text; typing nothing would loop forever.
-        return step.model_copy(update={"text": _identity_value(label, el.get("type"), state["run_id"])}), False
+        return step.model_copy(update={"text": _identity_value(label, el.get("type"), state["run_id"])}), None
     button = step.action == "click" and el.get("tag") != "a"  # plain links only navigate
     if is_destructive(label) and (state.get("logged_in") or button):
         if state.get("logged_in"):
-            return PersonaStep(thought=f"{step.thought} (blocked by safe mode: '{label}')", action="give_up", confusion=step.confusion), False
+            return PersonaStep(thought=f"{step.thought} (blocked by safe mode: '{label}')", action="give_up", confusion=step.confusion), None
         thought = f"{step.thought} (Walkthru stopped at '{label}' by design: it never pays, deletes or cancels. The flow worked up to this point.)"
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), True
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), "safe_stop"
     if is_sending(label) and button and any(s.get("sent") for s in state.get("steps", [])):
         thought = f"{step.thought} (Walkthru never sends twice in one run; a message was already sent.)"
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), False
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), None
     if is_sending(label) and button and not state.get("verified"):
         thought = (
             f"{step.thought} (Walkthru stopped at '{label}' by design: it only sends real messages on a domain the owner "
             "has verified, after they confirm. Everything up to this button worked.)"
         )
-        return PersonaStep(thought=thought, action="done", confusion=step.confusion), True
-    return step, False
+        return PersonaStep(thought=thought, action="done", confusion=step.confusion), "safe_stop"
+    return step, None

@@ -179,7 +179,8 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     # Blocked sites, social and commerce goals off a verified domain, and bulk goals: refused in code before any model
     # call, without using a run (app/agent/policy.py).
     try:
-        policy.check(body.site, body.goal, start_url=body.observation.url, logged_in=body.logged_in, verified=verifying.result)
+        policy.check(body.site, body.goal, start_url=body.observation.url, logged_in=body.logged_in, verified=verifying.result,
+                     signed_in_page=policy.signed_in(body.observation.model_dump(mode="json")))
     except policy.Refused as e:
         log.info("run refused %s %s", e.code, policy.host(body.site))
         raise HTTPException(e.status, e.message, headers={"X-Walkthru-Code": e.code}) from e
@@ -254,6 +255,9 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     if cat:
         reason = f"The test reached {policy.host(body.observation.url)[:120]}, a {cat} site Walkthru does not run on, so it stopped there."
         return stop_run(run_id, background, StopRequest(reason=reason), user=user) | {"code": "blocked_site"}
+    # Visitor mode stops on a page that shows someone's account (the user signed in during the run, or a login went through).
+    if not live.values.get("verified") and policy.signed_in(body.observation.model_dump(mode="json")):
+        return stop_run(run_id, background, StopRequest(reason=policy.SIGNED_IN_MESSAGE), user=user) | {"code": "signed_in_unverified"}
     resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")

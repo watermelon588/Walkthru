@@ -184,7 +184,7 @@ def render_steps(steps: list[dict]) -> str:
             line += f"; page then confirmed: {' | '.join(s['notices_after'])}"
         if s.get("note_after"):
             line += f"; executor: {s['note_after']}"
-        if s.get("safe_stop"):
+        if s.get("safe_stop") or s.get("visitor_limit"):
             line += " [Walkthru stopped here on purpose; not a site problem]"
         lines.append(line)
     return "\n".join(lines)
@@ -269,7 +269,7 @@ def _words(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 3}  # crude stem: "framed" ~ "frame"
 
 
-NOT_A_SITE_PROBLEM = ("working contact method", "not sent:", "safe mode", "never sends twice", "owner declined", "owner pressed stop")
+NOT_A_SITE_PROBLEM = ("working contact method", "not sent:", "safe mode", "visitor mode", "never sends twice", "owner declined", "owner pressed stop")
 
 
 def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
@@ -277,7 +277,7 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
     out = set()
     for i, s in enumerate(steps, start=1):
         note = (s.get("note_after") or "").lower()
-        if s.get("safe_stop"):
+        if s.get("safe_stop") or s.get("visitor_limit"):
             continue
         walkthru_note = any(k in note for k in NOT_A_SITE_PROBLEM)
         # An interruption is only evidence when the browser run broke, not when the owner pressed Stop.
@@ -379,6 +379,8 @@ def synthesis_inputs(state: ReportState) -> dict:
     if steps:
         outcome = {
             "safe_stop": "stopped by Walkthru at the send button (by design)",
+            "visitor_limit": ("stopped by Walkthru at a control it uses only on domains the owner verified (visitor mode, by design). "
+                              "Not a site problem, and the steps after it were not tested; never report them as missing or broken"),
             "looping": "stopped by Walkthru because the test user started going in circles. That is Walkthru's own limit, not a site problem; never report the repeated visits as a site problem",
         }.get(state.get("status", ""), state.get("status"))
         intent = f" Understood as: {state['intent']}." if state.get("intent") else ""

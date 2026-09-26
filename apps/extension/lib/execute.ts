@@ -1,7 +1,7 @@
 /** Runs one PersonaStep inside the page. Returns a note for the agent when something went wrong. */
 
 import { findById } from "./snapshot";
-import { isDestructive, isSending } from "./safety";
+import { isDestructive, isSending, SEARCH, visitorBlocked } from "./safety";
 
 export type Step = {
   thought: string;
@@ -26,6 +26,29 @@ export function submits(el: Element): boolean {
     return !!input.form && ["submit", "image"].includes(input.type);
   }
   return false;
+}
+
+/** A field a visitor may type into: a search box, by type, role, label or its search form. */
+export function searchField(el: Element): boolean {
+  if (el.tagName !== "INPUT") return false;
+  const input = el as HTMLInputElement;
+  if (input.type === "search" || el.getAttribute("role") === "searchbox") return true;
+  if (input.type !== "text") return false;
+  const named = [el.getAttribute("aria-label"), input.placeholder, input.labels?.[0]?.textContent].some((t) => t && SEARCH.test(t));
+  return named || !!el.closest('form[role="search"], search');
+}
+
+/** A form submit that is not a search: only a verified owner submits forms. */
+function submitsNonSearch(el: Element): boolean {
+  if (!submits(el)) return false;
+  const form = (el as HTMLButtonElement).form;
+  return !(form && (form.getAttribute("role") === "search" || [...form.elements].some((f) => searchField(f))));
+}
+
+/** A link that only navigates (a real href), as opposed to an anchor used as a button. */
+function navigates(el: Element): boolean {
+  const href = (el.getAttribute("href") ?? "").trim().toLowerCase();
+  return el.tagName === "A" && href !== "" && !href.startsWith("#") && !href.startsWith("javascript:");
 }
 
 const APP_LINKS: Record<string, string> = { mailto: "an email app", tel: "a phone call", sms: "a text message" };
@@ -53,6 +76,13 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
       const button = step.action === "click" && el.tagName !== "A";
       const shown = text.trim().slice(0, 40);
       if (isDestructive(text) && (opts.logged_in || button)) return { ok: false, note: `blocked by safe mode: "${shown}"` };
+      if (!opts.verified) {
+        // Visitor mode, mirroring _enforce in the API (which decides first): stricter here because the page is at hand.
+        if (step.action === "type" && el.tagName !== "SELECT" && !searchField(el)) return { ok: false, note: "visitor mode: this field is not a search box; verify this domain to test forms" };
+        if (step.action === "click" && !isSending(text) && (visitorBlocked(text, navigates(el)) || submitsNonSearch(el))) {
+          return { ok: false, note: `visitor mode: "${shown}" only runs on a domain the owner verified` };
+        }
+      }
       if (button && isSending(text)) {
         if (!opts.verified) return { ok: false, note: `not sent: "${shown}" only fires on a domain the owner has verified` };
         if (opts.dryRun) return { ok: true, submits: submits(el), confirm: "send" };
