@@ -7,7 +7,7 @@ from app import db
 
 log = logging.getLogger("walkthru.notify")
 
-SECTIONS = ("runs", "team", "compare", "watch", "billing")
+SECTIONS = ("runs", "team", "compare", "watch", "billing", "visibility")
 PLAN_NAME = {"launch": "Launch Pack", "pro": "Pro", "plus": "Plus"}
 
 

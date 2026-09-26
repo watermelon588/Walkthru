@@ -605,4 +605,51 @@ begin
   end if;
 end
 $$;
+-- AI citation tracking (P3.2, 2026-09-26): does AI name and cite this site for the owner's prompts, against named
+-- competitors. Server-side only: the API reads and writes these for the owner. See app/citations.py.
+create table if not exists public.citation_sites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  site text not null,                        -- origin, https://example.com
+  brand text not null check (char_length(brand) between 1 and 80),
+  competitors jsonb not null default '[]'::jsonb,  -- [{"name": "Notion", "domain": "notion.so"}], at most 5
+  next_check_at timestamptz,                 -- weekly for Pro and Plus, null when checks are manual only
+  last_batch_at timestamptz,
+  created_at timestamptz not null default now(),
+  unique (user_id, site)
+);
+create table if not exists public.citation_prompts (
+  id uuid primary key default gen_random_uuid(),
+  site_id uuid not null references public.citation_sites(id) on delete cascade,
+  prompt text not null check (char_length(prompt) between 3 and 300),
+  created_at timestamptz not null default now()
+);
+create index if not exists citation_prompts_site on public.citation_prompts (site_id);
+create table if not exists public.citation_checks (
+  id bigint generated always as identity primary key,
+  site_id uuid not null references public.citation_sites(id) on delete cascade,
+  batch_id uuid not null,
+  prompt_id uuid references public.citation_prompts(id) on delete set null,
+  prompt text not null,
+  engine text not null check (engine in ('web', 'memory')),
+  status text not null default 'queued' check (status in ('queued', 'done', 'failed')),
+  model text not null default '',
+  answer text not null default '',
+  sources jsonb not null default '[]'::jsonb,   -- [{"url", "title", "domain"}] the engine searched, in order
+  result jsonb not null default '{}'::jsonb,    -- mention, citation and position for the site and each competitor
+  tokens integer not null default 0,
+  attempts integer not null default 0,
+  created_at timestamptz not null default now(),
+  checked_at timestamptz
+);
+create index if not exists citation_checks_site on public.citation_checks (site_id, created_at desc);
+create index if not exists citation_checks_queue on public.citation_checks (status, created_at) where status = 'queued';
+create index if not exists citation_checks_today on public.citation_checks (engine, checked_at desc);
+alter table public.citation_sites enable row level security;
+alter table public.citation_prompts enable row level security;
+alter table public.citation_checks enable row level security;
+revoke all on public.citation_sites, public.citation_prompts, public.citation_checks from anon, authenticated;
+
+alter table public.notifications drop constraint if exists notifications_section_check;
+alter table public.notifications add constraint notifications_section_check check (section in ('runs', 'team', 'compare', 'watch', 'billing', 'visibility'));
 notify pgrst, 'reload schema';

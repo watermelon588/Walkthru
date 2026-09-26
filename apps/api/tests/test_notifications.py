@@ -15,7 +15,7 @@ def test_counts_per_section_only_for_the_caller_and_read_by_section(fake_db):
     notify.report_ready(OTHER, "b" * 32, "https://other.test", "Theirs")
     c = TestClient(app)
     body = c.get("/me/notifications").json()
-    assert body["counts"] == {"runs": 1, "team": 0, "compare": 0, "watch": 0, "billing": 1}
+    assert body["counts"] == {"runs": 1, "team": 0, "compare": 0, "watch": 0, "billing": 1, "visibility": 0}
     assert {n["title"] for n in body["recent"]} == {"Your Plus plan is active", "Report ready: Sign up for an account"}
     assert c.post("/me/notifications/read", json={"section": "billing"}).status_code == 200
     assert c.get("/me/notifications").json()["counts"]["billing"] == 0

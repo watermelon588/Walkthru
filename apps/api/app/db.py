@@ -280,6 +280,83 @@ def purge_run_audit(before: str) -> None:
     _request("DELETE", "/rest/v1/run_audit", params={"created_at": f"lt.{before}"}, prefer="return=minimal")
 
 
+# ---------- AI citation tracking (P3.2, app/citations.py) ----------
+
+_CITE_SITE = "id,user_id,site,brand,competitors,next_check_at,last_batch_at,created_at"
+_CITE_CHECK = "id,site_id,batch_id,prompt_id,prompt,engine,status,model,answer,sources,result,tokens,attempts,created_at,checked_at"
+
+
+def citation_sites(user_id: str) -> list[dict]:
+    return _select("citation_sites", {"user_id": f"eq.{user_id}", "select": _CITE_SITE, "order": "created_at.asc"})
+
+
+def citation_site(site_id: str) -> dict | None:
+    rows = _select("citation_sites", {"id": f"eq.{site_id}", "select": _CITE_SITE, "limit": "1"})
+    return rows[0] if rows else None
+
+
+def add_citation_site(row: dict) -> dict:
+    return _insert("citation_sites", row) or {}
+
+
+def update_citation_site(site_id: str, values: dict) -> None:
+    _update("citation_sites", {"id": f"eq.{site_id}"}, values)
+
+
+def delete_citation_site(site_id: str) -> None:
+    _request("DELETE", "/rest/v1/citation_sites", params={"id": f"eq.{site_id}"}, prefer="return=minimal")
+
+
+def due_citation_sites(now: str, limit: int = 20) -> list[dict]:
+    return _select("citation_sites", {"next_check_at": f"lte.{now}", "select": _CITE_SITE, "order": "next_check_at.asc", "limit": str(limit)})
+
+
+def citation_prompts(site_id: str) -> list[dict]:
+    return _select("citation_prompts", {"site_id": f"eq.{site_id}", "select": "id,prompt,created_at", "order": "created_at.asc"})
+
+
+def replace_citation_prompts(site_id: str, prompts: list[str]) -> list[dict]:
+    _request("DELETE", "/rest/v1/citation_prompts", params={"site_id": f"eq.{site_id}"}, prefer="return=minimal")
+    if not prompts:
+        return []
+    return _request("POST", "/rest/v1/citation_prompts", json_body=[{"site_id": site_id, "prompt": p} for p in prompts],
+                    params={"select": "id,prompt,created_at"}, prefer="return=representation") or []
+
+
+def add_citation_checks(rows: list[dict]) -> None:
+    if rows:
+        _request("POST", "/rest/v1/citation_checks", json_body=rows, prefer="return=minimal")
+
+
+def queued_citation_checks(limit: int = 20) -> list[dict]:
+    return _select("citation_checks", {"status": "eq.queued", "select": _CITE_CHECK, "order": "created_at.asc", "limit": str(limit)})
+
+
+def claim_citation_check(check_id: int, attempts: int) -> bool:
+    """Take a queued check once, even with several workers: the attempts count moves only from the value we read."""
+    rows = _update("citation_checks", {"id": f"eq.{check_id}", "status": "eq.queued", "attempts": f"eq.{attempts}"}, {"attempts": attempts + 1})
+    return bool(rows)
+
+
+def finish_citation_check(check_id: int, values: dict) -> None:
+    _update("citation_checks", {"id": f"eq.{check_id}"}, values | {"checked_at": _now()})
+
+
+def citation_checks_for(site_id: str, since: str | None = None, limit: int = 500) -> list[dict]:
+    params = {"site_id": f"eq.{site_id}", "select": _CITE_CHECK, "order": "created_at.desc", "limit": str(limit)}
+    if since:
+        params["created_at"] = f"gte.{since}"
+    return _select("citation_checks", params)
+
+
+def citation_checks_done_since(engine: str, since: str) -> int:
+    return len(_select("citation_checks", {"engine": f"eq.{engine}", "checked_at": f"gte.{since}", "select": "id", "limit": "5000"}))
+
+
+def citation_batches_since(site_id: str, since: str) -> int:
+    return len({r["batch_id"] for r in _select("citation_checks", {"site_id": f"eq.{site_id}", "created_at": f"gte.{since}", "select": "batch_id", "limit": "5000"})})
+
+
 def add_notification(row: dict) -> None:
     _insert("notifications", row)
 

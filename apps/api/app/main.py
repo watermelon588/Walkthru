@@ -5,7 +5,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from itertools import pairwise
 from typing import Literal
 from urllib.parse import urlsplit
@@ -21,7 +21,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
-from app import abuse, auth, billing, db, deliver, github, mcp_server, notify, plans, plus, retention, teams, watch
+from app import abuse, auth, billing, citations, db, deliver, github, mcp_server, notify, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
@@ -104,6 +104,7 @@ if os.environ.get("WARMUP", "1") == "1":
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     retention.start_background()
     watch.start_background()  # same switch: background jobs off in tests and one-off scripts
+    citations.start_background()
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
@@ -310,7 +311,7 @@ def my_notifications(user: dict = Depends(require_user)) -> dict:
 
 class ReadNotifications(BaseModel):
     model_config = {"extra": "forbid"}
-    section: Literal["runs", "team", "compare", "watch", "billing"] | None = None  # None marks everything read
+    section: Literal["runs", "team", "compare", "watch", "billing", "visibility"] | None = None  # None marks everything read
 
 
 @app.post("/me/notifications/read")
@@ -635,6 +636,132 @@ def _plan_name(user_id: str) -> str:
 
 class WatchSite(BaseModel):
     site: str = Field(pattern=r"^https?://", max_length=2000)
+
+
+# ---------- AI citation tracking (P3.2, app/citations.py) ----------
+
+
+class CitationSite(BaseModel):
+    model_config = {"extra": "forbid"}
+    site: str = Field(pattern=r"^https?://", max_length=2000)
+    brand: str = Field(default="", max_length=80)
+    competitors: list[str] = Field(default_factory=list, max_length=citations.MAX_COMPETITORS)
+
+
+class CitationEdit(BaseModel):
+    model_config = {"extra": "forbid"}
+    brand: str | None = Field(default=None, min_length=1, max_length=80)
+    competitors: list[str] | None = Field(default=None, max_length=citations.MAX_COMPETITORS)
+    prompts: list[str] | None = Field(default=None, max_length=25)
+
+
+def _citation_limit(user_id: str) -> citations.Limit:
+    lim = citations.limit_for(user_id)
+    if lim is None:
+        raise HTTPException(402, "AI answer tracking is part of the paid plans.")
+    return lim
+
+
+def _citation_site(site_id: uuid.UUID, user: dict) -> dict:
+    site = db.citation_site(str(site_id))
+    if site is None or str(site["user_id"]) != user["id"]:
+        raise HTTPException(404, "unknown site")
+    return site
+
+
+def _competitors(raw: list[str], own: str) -> list[dict]:
+    out = [c for c in (citations.parse_competitor(r) for r in raw) if c and c["domain"] != own]
+    return list({(c["name"].lower(), c["domain"]): c for c in out}.values())[: citations.MAX_COMPETITORS]
+
+
+def _citation_view(site: dict, lim: citations.Limit | None) -> dict:
+    return citations.summary(site) | {"prompts": db.citation_prompts(site["id"]),
+                                      "limit": {"prompts": lim.prompts, "engines": list(lim.engines), "weekly": lim.weekly} if lim else None}
+
+
+@app.get("/citations")
+def list_citation_sites(user: dict = Depends(require_user)) -> dict:
+    lim = citations.limit_for(user["id"])
+    return {"plan": plans.current(user["id"])["plan"].name, "sites": db.citation_sites(user["id"]),
+            "limit": {"sites": lim.sites, "prompts": lim.prompts, "engines": list(lim.engines), "weekly": lim.weekly} if lim else None,
+            "engines": [{"engine": e, "label": citations.label(e)} for e in citations.ENGINES], "not_measured": citations.NOT_MEASURED}
+
+
+@app.post("/citations")
+def add_citation_site(body: CitationSite, user: dict = Depends(require_user)) -> dict:
+    """Start tracking a site: suggested prompts come from its homepage, in code; the owner edits them after."""
+    lim = _citation_limit(user["id"])
+    mine = db.citation_sites(user["id"])
+    origin = compare.origin(body.site.strip())
+    if any(s["site"] == origin for s in mine):
+        raise HTTPException(409, "You already track this site.")
+    if len(mine) >= lim.sites:
+        raise HTTPException(409, f"Your plan tracks {lim.sites} site{'s' if lim.sites > 1 else ''}. Remove one first.")
+    try:
+        fetch.assert_public(origin)
+        with fetch.client(timeout=10) as c:
+            resp = fetch.get(c, origin)
+    except ValueError as e:
+        raise HTTPException(422, str(e)) from e
+    html = resp.text if resp is not None and resp.status_code < 400 else ""
+    own = citations.domain_of(origin)
+    brand = body.brand.strip() or citations.brand_from(html, own)
+    competitors = _competitors(body.competitors, own)
+    site = db.add_citation_site({"user_id": user["id"], "site": origin, "brand": brand, "competitors": competitors,
+                                 "next_check_at": (datetime.now(UTC) + timedelta(minutes=1)).isoformat() if lim.weekly else None})
+    db.replace_citation_prompts(site["id"], citations.suggest(html, brand, competitors)[: lim.prompts])
+    return _citation_view(site, lim)
+
+
+@app.get("/citations/{site_id}")
+def get_citation_site(site_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
+    return _citation_view(_citation_site(site_id, user), citations.limit_for(user["id"]))
+
+
+@app.post("/citations/{site_id}")
+def edit_citation_site(site_id: uuid.UUID, body: CitationEdit, user: dict = Depends(require_user)) -> dict:
+    site = _citation_site(site_id, user)
+    lim = _citation_limit(user["id"])
+    values = {}
+    if body.brand is not None:
+        values["brand"] = " ".join(body.brand.split())
+    if body.competitors is not None:
+        values["competitors"] = _competitors(body.competitors, citations.domain_of(site["site"]))
+    if values:
+        db.update_citation_site(site["id"], values)
+    if body.prompts is not None:
+        clean = list(dict.fromkeys(p for p in (" ".join(x.split())[:300] for x in body.prompts) if len(p) >= 3))
+        if len(clean) > lim.prompts:
+            raise HTTPException(409, f"Your plan tracks {lim.prompts} prompts per site.")
+        db.replace_citation_prompts(site["id"], clean)
+    return _citation_view(db.citation_site(site["id"]) or site, lim)
+
+
+@app.post("/citations/{site_id}/check")
+def check_citations_now(site_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
+    """Queue every prompt on every engine the plan includes. Answers arrive over the next minutes (the free quotas are
+    paced), and a notification says when the set is done."""
+    site = _citation_site(site_id, user)
+    lim = _citation_limit(user["id"])
+    now = datetime.now(UTC)
+    if lim.batches_per_pass is not None:
+        since = plans.current(user["id"]).get("since") or (now - timedelta(days=30)).isoformat()
+        if db.citation_batches_since(site["id"], since) >= lim.batches_per_pass:
+            raise HTTPException(402, "The Launch Pack includes one check of your prompts. Pro and Plus check weekly.")
+    if site.get("last_batch_at") and now - datetime.fromisoformat(site["last_batch_at"]) < citations.MANUAL_EVERY:
+        raise HTTPException(429, "These prompts were checked in the last day. Try again tomorrow.")
+    prompts = db.citation_prompts(site["id"])[: lim.prompts]
+    if not prompts:
+        raise HTTPException(409, "Add at least one prompt first.")
+    batch = citations.queue_batch(site, prompts, lim.engines)
+    return {"batch_id": batch, "queued": len(prompts) * len(lim.engines)}
+
+
+@app.delete("/citations/{site_id}")
+def delete_citation_site(site_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
+    site = _citation_site(site_id, user)
+    db.delete_citation_site(site["id"])
+    return {"deleted": str(site_id)}
 
 
 @app.get("/watch")

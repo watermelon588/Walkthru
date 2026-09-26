@@ -50,6 +50,8 @@ ROUTES: dict[str, str | tuple[str, dict | None]] = {
     "POST /billing/access-requests": "self",
     "POST /feedback": "self",
     "GET /runs/policy": "self",
+    "GET /citations": "self",
+    "POST /citations": "self",
     "GET /me/notifications": "self",
     "POST /me/notifications/read": "self",
     "GET /verification": "self",
@@ -71,6 +73,10 @@ ROUTES: dict[str, str | tuple[str, dict | None]] = {
     "DELETE /me/test-users/{test_user_id}": (f"/me/test-users/{ID}", None),
     "DELETE /me/api-keys/{key_id}": (f"/me/api-keys/{ID}", None),
     "DELETE /watch/{site_id}": (f"/watch/{ID}", None),
+    "GET /citations/{site_id}": (f"/citations/{ID}", None),
+    "POST /citations/{site_id}": (f"/citations/{ID}", {"brand": "Mine now"}),
+    "POST /citations/{site_id}/check": (f"/citations/{ID}/check", {}),
+    "DELETE /citations/{site_id}": (f"/citations/{ID}", None),
     "POST /watch/{site_id}/check": (f"/watch/{ID}/check", {}),
     "POST /watch/{site_id}/hook": (f"/watch/{ID}/hook", {}),
     "DELETE /github/installations/{installation_id}": ("/github/installations/7", None),
@@ -125,6 +131,7 @@ def user_a_owns_everything(monkeypatch, fake_db, passes):
     monkeypatch.setattr(db, "revoke_api_key", lambda user_id, kid: user_id == OWNER)
     monkeypatch.setattr(db, "remove_site", lambda user_id, sid: user_id == OWNER)
     monkeypatch.setattr(db, "sites_for_user", lambda user_id: [{"id": ID, "site": "https://a.example/"}] if user_id == OWNER else [])
+    monkeypatch.setattr(db, "citation_site", lambda sid: {"id": sid, "user_id": OWNER, "site": "https://a.example", "brand": "A", "competitors": []})
     monkeypatch.setattr(db, "get_offer", lambda oid: {"id": oid, "user_id": OWNER, "status": "approved"})
     monkeypatch.setattr(db, "remove_github_installation", lambda user_id, iid: user_id == OWNER)
     monkeypatch.setattr(db, "github_installations", lambda user_id: [{"installation_id": 7, "account_login": "a"}] if user_id == OWNER else [])
