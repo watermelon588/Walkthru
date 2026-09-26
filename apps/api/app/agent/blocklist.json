@@ -1,0 +1,52 @@
+{
+  "_note": "Hosts the agent never runs on unless the user verified that exact domain (app/agent/policy.py, docs/agent-safety-plan.md section 4). An entry matches the host and every subdomain, so a public suffix such as gov.uk covers every site under it. Keep entries lowercase, without www. Opt-outs from site owners go in site owner opt-out within 24 hours.",
+  "banking and payments": [
+    "bank", "sbi", "paypal.com", "paypal.me", "stripe.com", "wise.com", "venmo.com", "cash.app", "revolut.com", "monzo.com", "n26.com",
+    "klarna.com", "payoneer.com", "skrill.com", "squareup.com", "razorpay.com", "paytm.com", "phonepe.com", "chase.com",
+    "bankofamerica.com", "wellsfargo.com", "citi.com", "citibank.com", "capitalone.com", "americanexpress.com", "discover.com",
+    "usbank.com", "hsbc.com", "hsbc.co.uk", "barclays.co.uk", "lloydsbank.com", "natwest.com", "santander.com", "santander.co.uk",
+    "onlinesbi.com", "hdfcbank.com", "icicibank.com", "axisbank.com", "kotak.com", "westernunion.com", "remitly.com", "zellepay.com"
+  ],
+  "brokerage, trading and crypto": [
+    "robinhood.com", "zerodha.com", "groww.in", "upstox.com", "angelone.in", "etrade.com", "schwab.com", "fidelity.com", "vanguard.com",
+    "interactivebrokers.com", "webull.com", "etoro.com", "trading212.com", "tradingview.com", "coinbase.com", "binance.com", "binance.us",
+    "kraken.com", "crypto.com", "bybit.com", "okx.com", "kucoin.com", "gemini.com", "bitfinex.com", "bitstamp.net", "wazirx.com",
+    "coindcx.com", "metamask.io", "uniswap.org", "opensea.io", "polymarket.com"
+  ],
+  "government and tax": [
+    "gov", "mil", "gov.uk", "gov.in", "nic.in", "gouv.fr", "gc.ca", "canada.ca", "gov.au", "govt.nz", "gob.mx", "gov.br", "go.jp",
+    "gov.sg", "europa.eu", "bund.de", "gov.za", "gov.ie", "gov.ph", "gov.pk", "gov.ng", "gob.es", "gov.it", "admin.ch", "gov.cn",
+    "gov.bd", "gov.ae", "gov.sa"
+  ],
+  "healthcare portals": [
+    "mychart.com", "nhs.uk", "kaiserpermanente.org", "onemedical.com", "zocdoc.com", "practo.com", "followmyhealth.com"
+  ],
+  "webmail": [
+    "gmail.com", "mail.google.com", "outlook.com", "outlook.live.com", "outlook.office.com", "hotmail.com", "live.com", "mail.yahoo.com",
+    "proton.me", "protonmail.com", "icloud.com", "mail.zoho.com", "mail.aol.com", "gmx.com", "gmx.net", "fastmail.com", "tuta.com",
+    "mail.yandex.ru"
+  ],
+  "social networks": [
+    "instagram.com", "facebook.com", "fb.com", "messenger.com", "threads.net", "threads.com", "whatsapp.com", "x.com", "twitter.com",
+    "linkedin.com", "tiktok.com", "reddit.com", "youtube.com", "pinterest.com", "snapchat.com", "tumblr.com", "discord.com",
+    "telegram.org", "vk.com", "weibo.com", "quora.com", "bsky.app", "mastodon.social", "twitch.tv"
+  ],
+  "dating": [
+    "tinder.com", "bumble.com", "hinge.co", "match.com", "okcupid.com", "pof.com", "grindr.com", "badoo.com", "happn.com",
+    "eharmony.com", "shaadi.com", "jeevansathi.com"
+  ],
+  "adult": [
+    "xxx", "porn", "adult", "sex", "pornhub.com", "xvideos.com", "xnxx.com", "xhamster.com", "onlyfans.com", "fansly.com",
+    "chaturbate.com", "stripchat.com", "redtube.com", "youporn.com"
+  ],
+  "gambling": [
+    "bet", "casino", "poker", "bet365.com", "draftkings.com", "fanduel.com", "pokerstars.com", "stake.com", "betway.com",
+    "williamhill.com", "888casino.com", "betfair.com", "dream11.com"
+  ],
+  "password managers and identity providers": [
+    "accounts.google.com", "myaccount.google.com", "pay.google.com", "login.microsoftonline.com", "login.live.com",
+    "account.microsoft.com", "appleid.apple.com", "idmsa.apple.com", "okta.com", "auth0.com", "onelogin.com", "1password.com",
+    "lastpass.com", "bitwarden.com", "dashlane.com", "keepersecurity.com", "github.com", "gitlab.com"
+  ],
+  "site owner opt-out": []
+}

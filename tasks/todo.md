@@ -118,7 +118,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 - [ ] **Checkpoint P1:** hard-fixture recall 85% or more including the new traps; easy fixture and 3 real sites have no false alarms; founder reviews one Pro report and one fix plan applied by a coding agent.
 
 ### Launch track (sessions 24 to 26)
-- [ ] **IMPORTANT, FIX BEFORE DEPLOYMENT: agent safety, permission and trust plan** ([docs/agent-safety-plan.md](../docs/agent-safety-plan.md)). Site modes (Owner, Visitor, Blocked) decided by the server, blocklist and goal rules, social and commerce actions blocked in code, snapshot perception fixes, honest failure wording, bot-wall handling, rate limits, audit log, kill switch, privacy, terms and Chrome Web Store disclosures. Every GATE item ships with tests before launch.
+- [ ] **IMPORTANT, FIX BEFORE DEPLOYMENT: agent safety, permission and trust plan** ([docs/agent-safety-plan.md](../docs/agent-safety-plan.md)). Site modes (Owner, Visitor, Blocked) decided by the server, blocklist and goal rules, social and commerce actions blocked in code, snapshot perception fixes, honest failure wording, bot-wall handling, rate limits, audit log, kill switch, privacy, terms and Chrome Web Store disclosures. Every GATE item ships with tests before launch. Item 1 (modes, blocklist, goal rules in `app/agent/policy.py`) done 2026-09-26; next is item 2, the per-step action gate.
 - [ ] **V11a Domain and store submission** (session 20): `api.<domain>` on Render; production extension build; listing submitted.
 - [ ] **V10 Billing with Dodo** (session 24): see the v1.1 entry below.
 - [ ] **V11b Production on the VM** (session 25): see the v1.1 V11 entry; plus a `worker` process for code scans and Nuclei (Phase 2) with its own queue table.

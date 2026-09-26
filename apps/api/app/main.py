@@ -22,7 +22,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
 from app import auth, billing, db, deliver, github, mcp_server, plans, plus, retention, teams, watch
-from app.agent import compare, fix_prompt, funnel, goal, report, runtime, score
+from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
 from app.auth import require_user
@@ -77,6 +77,7 @@ app.add_middleware(
     allow_origin_regex=r"chrome-extension://.*",
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["X-Walkthru-Code"],  # the stop-reason code on a refused run (app/agent/policy.py)
 )
 
 
@@ -144,7 +145,8 @@ def _reply(run_id: str, tier: str, result: dict, background: BackgroundTasks) ->
     status = "running" if running else values["status"]
     db.update_run(run_id, status, values.get("steps", []), values.get("tokens", 0))
     if running:
-        return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value, "verified": bool(values.get("verified"))}
+        return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value, "verified": bool(values.get("verified")),
+                "mode": policy.mode(bool(values.get("verified")))}
     background.add_task(finish_run, run_id, values)
     return {"run_id": run_id, "status": status, "steps": values["steps"]}
 
@@ -174,6 +176,13 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     marks.append(("plan_check", time.monotonic()))
     plan = usage["plan"]
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
+    # Blocked sites, social and commerce goals off a verified domain, and bulk goals: refused in code before any model
+    # call, without using a run (app/agent/policy.py).
+    try:
+        policy.check(body.site, body.goal, start_url=body.observation.url, logged_in=body.logged_in, verified=verifying.result)
+    except policy.Refused as e:
+        log.info("run refused %s %s", e.code, policy.host(body.site))
+        raise HTTPException(e.status, e.message, headers={"X-Walkthru-Code": e.code}) from e
     # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
     goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
     marks.append(("goal_planner", time.monotonic()))
@@ -187,7 +196,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     marks.append(("verify_domain_wait", time.monotonic()))
     state = body.model_dump(mode="json", exclude={"group_id"}) | {"persona": persona, **({"persona_prompt": persona_prompt} if persona_prompt else {}),
                                                               "max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
-                                            "first_text": body.observation.text[:6000], "verified": verified, "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
+                                            "first_text": body.observation.text[:6000], "verified": verified, "mode": policy.mode(verified), "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
     marks.append(("first_step", time.monotonic()))
     reply = _reply(run_id, tier, result, background)
@@ -235,10 +244,16 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
         raise HTTPException(409, "run already finished")
     if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
         raise HTTPException(422, "evidence path does not belong to this run")
-    if not runtime.get_state(row["tier"], _cfg(run_id)).next:
+    live = runtime.get_state(row["tier"], _cfg(run_id))
+    if not live.next:
         # The live agent state is gone (API restarted with the in-memory checkpointer). Close the run
         # truthfully with its saved steps instead of failing; the extension shows "Ended early".
         return stop_run(run_id, background, StopRequest(reason="the Walkthru server restarted and lost the live test"), user=user)
+    # The tested tab reached a blocked host (a link out to Instagram, a bank's payment page): stop there, truthfully.
+    cat = policy.left_for(body.observation.url, row["site"], bool(live.values.get("verified")))
+    if cat:
+        reason = f"The test reached {policy.host(body.observation.url)[:120]}, a {cat} site Walkthru does not run on, so it stopped there."
+        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | {"code": "blocked_site"}
     resume = {"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")

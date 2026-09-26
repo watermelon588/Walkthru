@@ -79,6 +79,8 @@ def test_unreachable_database_is_a_503_not_a_hang(monkeypatch):
 def test_lost_live_state_closes_run_instead_of_erroring(monkeypatch, fake_db):
     """After an API restart the in-memory agent state is gone; the next observation ends the run truthfully."""
     monkeypatch.setattr(runtime, "checkpointer", lambda: MemorySaver())
+    for key in ("GROQ_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.setenv(key, "test")  # building the graph builds its model clients; nothing is called
     runtime.graph.cache_clear()
     monkeypatch.setattr(db, "mark_run_stopped", lambda run_id, steps, tokens=0: fake_db[run_id].update(status="stopped", steps=steps) or True)
     fake_db["r1"] = {"id": "r1", "user_id": USER, "status": "running", "tier": "free", "steps": [{"thought": "t", "action": "click", "target_id": 1, "text": None, "confusion": 0, "url": "https://x.io/"}], "tokens": 0}

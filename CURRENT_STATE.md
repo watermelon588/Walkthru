@@ -6,7 +6,7 @@ _Last updated: 2026-09-25_
 
 Read this block first.
 
-> **IMPORTANT, FIX BEFORE DEPLOYMENT:** [docs/agent-safety-plan.md](docs/agent-safety-plan.md). The extension currently lets the agent act on any site (for example liking posts on Instagram with the user's login), its snapshot misses icon buttons and scrolled content, and failed runs can blame the site. Nothing in that plan is built yet; all GATE items are launch blockers. It describes the founder's local machine as of this push, so a cloud agent does not redo or undo it.
+> **IMPORTANT, FIX BEFORE DEPLOYMENT:** [docs/agent-safety-plan.md](docs/agent-safety-plan.md). Item 1 is built (2026-09-26): `app/agent/policy.py` refuses blocked sites (banking, trading, social, webmail and similar, `app/agent/blocklist.json`), social and commerce goals on unverified sites, bulk goals, and signed-in tests on unverified domains, before any model call; `POST /runs` returns `mode` (owner or visitor) and a refused run carries `X-Walkthru-Code`; a run whose tab reaches a blocked host stops truthfully. Still open and still launch blockers: items 2 to 8 (the per-step action gate with Visitor-mode typing, DNS TXT verification, snapshot fixes, honest failure wording and bot walls, rate limits and audit log, legal pages, unlisted beta).
 
 ### Local state at this push
 - Local `main` equals `origin/main` after this push. Nothing local is left uncommitted except git-ignored files.

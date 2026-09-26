@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from langgraph.checkpoint.memory import MemorySaver
 
-from app import plans
+from app import main, plans
 from app.agent import runtime
 from app.agent.persona import build_graph
 from app.agent.schema import PersonaStep
@@ -92,6 +92,7 @@ def test_free_capacity_guard_stops_free_runs_only(monkeypatch, passes):
 def test_pro_pass_unlocks_logged_in_pages_personas_and_30_steps(monkeypatch, passes, fake_db):
     g = graph(monkeypatch)
     grant(passes, "pro")
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)  # signed-in pages need a verified domain
     r = start(TestClient(app), logged_in=True, persona="skeptic", max_steps=30)
     assert r.status_code == 200
     run_id = r.json()["run_id"]
