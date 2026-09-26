@@ -32,6 +32,7 @@ const Report = page(() => import('./pages/Report'))
 const Settings = page(() => import('./pages/Settings'))
 const Feedback = page(() => import('./pages/Feedback'))
 const Bot = page(() => import('./pages/Bot'))
+const Visibility = page(() => import('./pages/Visibility'))
 const Billing = page(() => import('./pages/Billing'))
 const Mcp = page(() => import('./pages/Mcp'))
 const Watch = page(() => import('./pages/Watch'))
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="/app/billing" element={<RequireAuth><Billing /></RequireAuth>} />
             <Route path="/app/mcp" element={<RequireAuth><Mcp /></RequireAuth>} />
             <Route path="/app/watch" element={<RequireAuth><Watch /></RequireAuth>} />
+            <Route path="/app/visibility" element={<RequireAuth><Visibility /></RequireAuth>} />
             <Route path="/app/compare" element={<RequireAuth><Compare /></RequireAuth>} />
             <Route path="/app/compare/:id" element={<RequireAuth><CompareResult /></RequireAuth>} />
             <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />

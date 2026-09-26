@@ -172,6 +172,21 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'ai-answers',
+    title: 'AI answers: are you named and cited?',
+    body: (
+      <>
+        <p>On paid plans, <Link to="/app/visibility">AI answers</Link> asks AI the questions your buyers ask, then checks in code whether the answer names your brand, cites your pages, and which competitors it names instead. Start with your site and up to five competitors; prompts are suggested from your homepage and you can change every one.</p>
+        <ul>
+          <li><strong>AI with web search</strong> (gpt-oss-120b) searches the web once per prompt and answers from what it found, so it shows real citations with their sources.</li>
+          <li><strong>Gemini, from memory</strong> (Plus) answers from what the model already knows. It shows whether AI knows your brand at all, so it counts mentions only.</li>
+          <li>ChatGPT and Perplexity are not measured yet.</li>
+        </ul>
+        <p>Share of voice is how often each brand is named across the answers. Launch Pack checks once, Pro every week, Plus every week on both engines. Answers arrive over a few minutes because free AI quotas are paced, and you get a notification when a set is done. It reports what the AI said on the day; nobody can promise a citation.</p>
+      </>
+    ),
+  },
+  {
     id: 'watch',
     title: 'Weekly watch and deploy hooks',
     body: (

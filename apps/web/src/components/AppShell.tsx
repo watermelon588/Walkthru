@@ -1,4 +1,4 @@
-import { BookOpenTextIcon, ChatCircleTextIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, ChatCircleTextIcon, ChatsCircleIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
@@ -13,6 +13,7 @@ const workspace: { to: string; label: string; icon: Icon; end?: boolean; section
   { to: '/app/team', label: 'Team', icon: UsersThreeIcon, section: 'team' },
   { to: '/app/compare', label: 'Compare', icon: ScalesIcon, section: 'compare' },
   { to: '/app/watch', label: 'Watch', icon: EyeIcon, section: 'watch' },
+  { to: '/app/visibility', label: 'AI answers', icon: ChatsCircleIcon, section: 'visibility' },
   { to: '/app/mcp', label: 'MCP', icon: TerminalWindowIcon },
   { to: '/app/billing', label: 'Plan & billing', icon: CreditCardIcon, section: 'billing' },
   { to: '/app/settings', label: 'Settings', icon: GearSixIcon },

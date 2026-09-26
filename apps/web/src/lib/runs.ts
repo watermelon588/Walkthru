@@ -360,3 +360,31 @@ export const fixPullRequest = (runId: string, repo: GitHubRepo, confirm: boolean
 
 /** A note to the founder; read in the admin panel only (apps/api/admin). */
 export const sendFeedback = (message: string, page: string) => api<{ sent: boolean }>('/feedback', { message, page })
+
+// ---------- AI answers: citation tracking (apps/api/app/citations.py) ----------
+
+export type CitationBrand = { name: string; domain: string; you: boolean; mentioned: boolean; mention_rank: number | null; cited: boolean; source_rank: number | null }
+export type CitationAnswer = {
+  id: number; prompt: string; engine: 'web' | 'memory'; status: 'queued' | 'done' | 'failed'; model: string; answer: string
+  sources: { url: string; title: string; domain: string }[]; result: { brands?: CitationBrand[] }; checked_at: string | null
+}
+export type CitationSite = { id: string; site: string; brand: string; competitors: { name: string; domain: string }[]; next_check_at: string | null; last_batch_at: string | null }
+export type CitationLimit = { sites?: number; prompts: number; engines: ('web' | 'memory')[]; weekly: boolean }
+export type CitationView = {
+  site: CitationSite
+  prompts: { id: string; prompt: string }[]
+  limit: CitationLimit | null
+  engines: { engine: 'web' | 'memory'; label: string; cites: boolean }[]
+  not_measured: string[]
+  status: { queued: number; done: number; failed: number }
+  share_of_voice: { name: string; domain: string; you: boolean; mentions: number; citations: number; share: number; answers: number }[]
+  answers: CitationAnswer[]
+  trend: { at: string; answers: number; mentioned: number; cited: number }[]
+}
+export const getCitations = () =>
+  api<{ plan: string; sites: CitationSite[]; limit: CitationLimit | null; engines: { engine: string; label: string }[]; not_measured: string[] }>('/citations', undefined, true, 'GET')
+export const trackCitations = (site: string, competitors: string[]) => api<CitationView>('/citations', { site, competitors })
+export const getCitationSite = (id: string) => api<CitationView>(`/citations/${encodeURIComponent(id)}`, undefined, true, 'GET')
+export const editCitationSite = (id: string, body: { brand?: string; competitors?: string[]; prompts?: string[] }) => api<CitationView>(`/citations/${encodeURIComponent(id)}`, body)
+export const checkCitationsNow = (id: string) => api<{ queued: number }>(`/citations/${encodeURIComponent(id)}/check`)
+export const untrackCitations = (id: string) => api<{ deleted: string }>(`/citations/${encodeURIComponent(id)}`, undefined, true, 'DELETE')
