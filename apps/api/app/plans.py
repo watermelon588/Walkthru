@@ -57,7 +57,7 @@ def current(user_id: str) -> dict:
         month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         plan, since, until, allowed = PLANS["free"], month.isoformat(), (month + timedelta(days=32)).replace(day=1).isoformat(), PLANS["free"].runs
     runs = db.test_runs_since(user_id, since)
-    return {"plan": plan, "until": until, "allowed": allowed, "used": len(runs), "sites": {s for r in runs if (s := _site(r["site"]))}}
+    return {"plan": plan, "since": since, "until": until, "allowed": allowed, "used": len(runs), "sites": {s for r in runs if (s := _site(r["site"]))}}
 
 
 def check_start(state: dict, *, site: str, persona: str, logged_in: bool) -> None:
