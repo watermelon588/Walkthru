@@ -62,10 +62,14 @@ def run() -> None:
         sys.exit(f"Missing {', '.join(missing)} in apps/api/.env. Run: .venv/Scripts/python -m admin setup")
     import uvicorn
 
-    from admin.app import PORT, app
+    from admin.app import PORT
 
     print(f"Walkthru admin on http://127.0.0.1:{PORT} (this computer only). Ctrl+C to stop.")
-    uvicorn.run(app, host="127.0.0.1", port=PORT, proxy_headers=False, server_header=False, log_level="warning")
+    # Reloads when its code or the app code it uses changes, so the panel never runs an old version (a stale panel
+    # once granted plans without telling anyone). A reload signs you out, which is the safe direction.
+    here = os.path.dirname(os.path.abspath(__file__))
+    uvicorn.run("admin.app:app", host="127.0.0.1", port=PORT, proxy_headers=False, server_header=False, log_level="warning",
+                reload=True, reload_dirs=[here, os.path.join(here, "..", "app")])
 
 
 if __name__ == "__main__":
