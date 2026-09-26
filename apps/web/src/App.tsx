@@ -1,33 +1,51 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
 import { Toaster } from './components/Toaster'
 import { NotificationsProvider } from './components/NotificationsProvider'
 import Landing from './pages/Landing'
 
 // Landing is the LCP path, so it ships in the main bundle. Everything else loads on demand.
-const RequireAuth = lazy(() => import('./components/RequireAuth').then((m) => ({ default: m.RequireAuth })))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const AgentLab = lazy(() => import('./pages/AgentLab'))
-const Login = lazy(() => import('./pages/Login'))
-const Public = lazy(() => import('./pages/Public'))
-const Report = lazy(() => import('./pages/Report'))
-const Settings = lazy(() => import('./pages/Settings'))
-const Feedback = lazy(() => import('./pages/Feedback'))
-const Bot = lazy(() => import('./pages/Bot'))
-const Billing = lazy(() => import('./pages/Billing'))
-const Mcp = lazy(() => import('./pages/Mcp'))
-const Watch = lazy(() => import('./pages/Watch'))
-const Compare = lazy(() => import('./pages/Compare'))
-const Teams = lazy(() => import('./pages/Teams'))
-const Team = lazy(() => import('./pages/Team'))
-const TeamReport = lazy(() => import('./pages/TeamReport'))
-const Join = lazy(() => import('./pages/Join'))
-const CompareResult = lazy(() => import('./pages/Compare').then((m) => ({ default: m.CompareResult })))
-const Docs = lazy(() => import('./pages/Docs'))
-const Privacy = lazy(() => import('./pages/Privacy'))
-const Terms = lazy(() => import('./pages/Terms'))
-const Security = lazy(() => import('./pages/Security'))
-const NotFound = lazy(() => import('./pages/NotFound'))
+
+/** A lazy page that survives a stale bundle: after a deploy (or a renamed file in dev) the old chunk is gone, the
+ *  import fails and React would show a blank page. Reload once to fetch the current version; a second failure is real. */
+function page<T extends ComponentType<any>>(load: () => Promise<{ default: T }>) { // any: React.lazy's own constraint
+  return lazy(async () => {
+    try {
+      const mod = await load()
+      try { sessionStorage.removeItem(RELOADED) } catch { /* storage can be blocked */ }
+      return mod
+    } catch (error) {
+      let tried = true
+      try { tried = sessionStorage.getItem(RELOADED) === '1'; sessionStorage.setItem(RELOADED, '1') } catch { /* no storage: never loop */ }
+      if (!tried) window.location.reload()
+      throw error
+    }
+  })
+}
+const RELOADED = 'walkthru.chunk-reload'
+const RequireAuth = page(() => import('./components/RequireAuth').then((m) => ({ default: m.RequireAuth })))
+const Dashboard = page(() => import('./pages/Dashboard'))
+const AgentLab = page(() => import('./pages/AgentLab'))
+const Login = page(() => import('./pages/Login'))
+const Public = page(() => import('./pages/Public'))
+const Report = page(() => import('./pages/Report'))
+const Settings = page(() => import('./pages/Settings'))
+const Feedback = page(() => import('./pages/Feedback'))
+const Bot = page(() => import('./pages/Bot'))
+const Billing = page(() => import('./pages/Billing'))
+const Mcp = page(() => import('./pages/Mcp'))
+const Watch = page(() => import('./pages/Watch'))
+const Compare = page(() => import('./pages/Compare'))
+const Teams = page(() => import('./pages/Teams'))
+const Team = page(() => import('./pages/Team'))
+const TeamReport = page(() => import('./pages/TeamReport'))
+const Join = page(() => import('./pages/Join'))
+const CompareResult = page(() => import('./pages/Compare').then((m) => ({ default: m.CompareResult })))
+const Docs = page(() => import('./pages/Docs'))
+const Privacy = page(() => import('./pages/Privacy'))
+const Terms = page(() => import('./pages/Terms'))
+const Security = page(() => import('./pages/Security'))
+const NotFound = page(() => import('./pages/NotFound'))
 
 /** New page: start at the top. With a #hash: scroll to it once the (lazy) page has rendered it. */
 function ScrollManager() {
