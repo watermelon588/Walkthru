@@ -48,6 +48,7 @@ ROUTES: dict[str, str | tuple[str, dict | None]] = {
     "POST /account/delete": "self",
     "GET /billing": "self",
     "POST /billing/access-requests": "self",
+    "POST /feedback": "self",
     "GET /verification": "self",
     "GET /teams": "self",
     "POST /teams": "self",

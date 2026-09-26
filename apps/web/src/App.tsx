@@ -10,6 +10,7 @@ const Login = lazy(() => import('./pages/Login'))
 const Public = lazy(() => import('./pages/Public'))
 const Report = lazy(() => import('./pages/Report'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Feedback = lazy(() => import('./pages/Feedback'))
 const Billing = lazy(() => import('./pages/Billing'))
 const Mcp = lazy(() => import('./pages/Mcp'))
 const Watch = lazy(() => import('./pages/Watch'))
@@ -62,6 +63,7 @@ export default function App() {
           <Route path="/security" element={<Security />} />
           <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+          <Route path="/app/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
           <Route path="/app/billing" element={<RequireAuth><Billing /></RequireAuth>} />
           <Route path="/app/mcp" element={<RequireAuth><Mcp /></RequireAuth>} />
           <Route path="/app/watch" element={<RequireAuth><Watch /></RequireAuth>} />

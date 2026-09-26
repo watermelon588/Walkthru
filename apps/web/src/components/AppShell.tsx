@@ -1,4 +1,4 @@
-import { BookOpenTextIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, ChatCircleTextIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
@@ -19,6 +19,7 @@ const workspace: { to: string; label: string; icon: Icon; end?: boolean }[] = [
 const help: { href: string; label: string; icon: Icon }[] = [
   { href: '/docs', label: 'Documentation', icon: BookOpenTextIcon },
   { href: '/docs#install', label: 'Install the extension', icon: PuzzlePieceIcon },
+  { href: '/app/feedback', label: 'Send feedback', icon: ChatCircleTextIcon },
 ]
 
 const item = 'flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors lg:min-h-9'

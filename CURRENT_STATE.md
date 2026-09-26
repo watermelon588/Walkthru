@@ -99,6 +99,14 @@ Read this block first.
 - **SD-3.1:** `tests/test_ownership.py` lists every route (72) and fails on a new unlisted one. Every route taking a run, key, site, test user, offer, installation, workspace or invitation id refuses another user (403 or 404).
 - **Tests:** 397 API tests pass.
 
+### Added 2026-09-26 by Claude Code (local): founder admin panel
+- `apps/api/admin` (`python -m admin setup` once, then `python -m admin`, http://127.0.0.1:8020). Local only by design (docs/decisions.md 2026-09-26): never mount it in the public API or deploy it.
+- Plan requests (grant free, send a Dodo payment offer when billing is configured, decline), grant or end a pass by email, "Your access" (always ADMIN_EMAIL, whatever the form says), users with plan and dates only, and an activity feed (new users, feedback, server errors, payment events, admin actions).
+- Sign-in: scrypt password hash plus TOTP; a code works once; 5 misses lock it for 15 minutes; every change needs a current code and a CSRF token; Host and Origin allow-lists; no JavaScript, CSP allows none; everything audited in `admin_audit_log`.
+- New `app_events` table (applied on Supabase, browsers refused) fed by `POST /feedback` (signed-in, 5 an hour, new Send feedback page in the sidebar) and by a catch-all handler that records unhandled server errors (route template and error type only) and answers a generic 500.
+- Founder still to do: run `python -m admin setup` in a terminal (choose the password, add the key to an authenticator app). The panel refuses to start until then.
+- Tests: `tests/test_admin.py` (7) including host and origin refusal, lockout, code replay, CSRF, escaping; API 404 pass.
+
 ### Next steps, in order
 1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.

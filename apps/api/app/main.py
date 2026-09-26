@@ -110,6 +110,20 @@ app.add_exception_handler(PoolTimeout, _database_unavailable)
 app.add_exception_handler(db.DatabaseUnavailable, _database_unavailable)
 
 
+def _server_error(request: Request, error: Exception) -> JSONResponse:
+    """Any unhandled error: a generic answer for the caller, one line in the founder's admin panel."""
+    route = getattr(request.scope.get("route"), "path", "?")  # the route template, never the query string
+    log.error("unhandled error on %s %s", request.method, route, exc_info=error)
+    try:
+        db.app_event("server_error", None, {"method": request.method, "route": route, "error": type(error).__name__, "message": str(error)[:300]})
+    except Exception:  # recording must never hide the original error
+        log.warning("could not record the server error", exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+
+
+app.add_exception_handler(Exception, _server_error)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -929,6 +943,28 @@ def _billing_rate_limit(user_id: str) -> None:
     if len(hits) >= BILLING_LIMIT:
         raise HTTPException(429, "Too many billing requests. Try again in an hour.")
     _billing_hits[user_id] = hits + [now]
+
+
+class Feedback(BaseModel):
+    model_config = {"extra": "forbid"}
+    message: str = Field(min_length=3, max_length=2000)
+    page: str = Field(default="", max_length=200)  # where they were, for context
+
+
+_feedback_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the other limits
+FEEDBACK_LIMIT, FEEDBACK_WINDOW = 5, 3600
+
+
+@app.post("/feedback")
+def send_feedback(body: Feedback, user: dict = Depends(require_user)) -> dict:
+    """Signed-in users write to the founder. Stored for the admin panel only; never shown to other users."""
+    now = time.time()
+    hits = [t for t in _feedback_hits.get(user["id"], []) if now - t < FEEDBACK_WINDOW]
+    if len(hits) >= FEEDBACK_LIMIT:
+        raise HTTPException(429, "Thanks, we have your messages. You can send more in an hour.")
+    _feedback_hits[user["id"]] = hits + [now]
+    db.app_event("feedback", user["id"], {"message": body.message.strip(), "page": body.page.strip()})
+    return {"sent": True}
 
 
 @app.get("/billing")
