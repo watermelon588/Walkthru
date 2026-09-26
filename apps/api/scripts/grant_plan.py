@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-from app import db, plans
+from app import db, notify, plans
 
 
 def user_id_for(email: str) -> str:
@@ -55,6 +55,7 @@ def main() -> None:
         db.expire_entitlements(user_id)
     elif args.plan:
         db.grant_entitlement(user_id, args.plan, args.days, args.runs or plans.PLANS[args.plan].runs, args.source)
+        notify.pass_granted(user_id, args.plan, args.days)
     else:
         ap.error("give a plan, --revoke or --show")
     print(plans.summary(plans.current(user_id)))

@@ -16,7 +16,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 from admin.auth import Guard, totp_counter
-from app import billing, db, plans
+from app import billing, db, notify, plans
 
 PORT = int(os.environ.get("ADMIN_PORT", "8020"))
 ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}  # also refuses DNS-rebinding hosts
@@ -120,6 +120,7 @@ def _grant(email: str, plan: str, days: int, request_id: str | None, actor: str)
     if user is None:
         return "no-user"
     db.grant_entitlement(user["id"], plan, days, plans.PLANS[plan].runs, "founder")
+    notify.pass_granted(user["id"], plan, days)  # their sidebar and a toast say so, live
     if request_id:
         db.decide_access_request(request_id, "approved")
     db.audit(actor, "pass.grant", user["id"], {"email": user["email"], "plan": plan, "days": days, "request_id": request_id})
@@ -370,8 +371,10 @@ def end(request: Request, csrf: str = Form(""), code: str = Form(""), email: str
 def reject(request: Request, csrf: str = Form(""), code: str = Form(""), request_id: str = Form(max_length=64)) -> Response:
     if refused := _refused(request, csrf, code):
         return refused
-    if not _uuid(request_id) or not db.decide_access_request(request_id, "rejected"):
+    req = db.get_access_request(request_id) if _uuid(request_id) else None
+    if not req or not db.decide_access_request(request_id, "rejected"):
         return _home("no-request")
+    notify.request_declined(req["user_id"])
     db.audit(_admin_email() or "admin", "request.reject", request_id, {})
     return _home("rejected")
 
@@ -395,6 +398,7 @@ def offer(request: Request, csrf: str = Form(""), code: str = Form(""), request_
     if not db.decide_access_request(req["id"], "approved"):
         db.mark_offer(made["id"], "approved", {"status": "cancelled"})
         return _home("no-request")
+    notify.offer_ready(req["user_id"], req["plan"], f"${made['price_cents'] / 100:.2f}", expires.strftime("%b %d, %H:%M"))
     db.audit(_admin_email() or "admin", "offer.create", made["id"], {"request_id": req["id"], "plan": req["plan"], "founding": is_founding})
     return _home("offered")
 

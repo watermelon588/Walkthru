@@ -21,7 +21,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
-from app import abuse, auth, billing, db, deliver, github, mcp_server, plans, plus, retention, teams, watch
+from app import abuse, auth, billing, db, deliver, github, mcp_server, notify, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
@@ -290,6 +290,35 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     return _reply(run_id, row["tier"], result, background)
 
 
+# ---------- in-app notifications (sidebar counts and toasts; app/notify.py) ----------
+
+
+@app.get("/me/notifications")
+def my_notifications(user: dict = Depends(require_user)) -> dict:
+    """Unread counts per sidebar section, and the latest unread items. The Team count adds unread workspace chat and
+    invitations waiting, which live in their own tables."""
+    items = db.unread_notifications(user["id"])
+    counts = dict.fromkeys(notify.SECTIONS, 0)
+    for n in items:
+        counts[n["section"]] = counts.get(n["section"], 0) + 1
+    try:
+        counts["team"] += teams.attention(user)
+    except Exception:  # workspace counts are extra; never fail the sidebar over them
+        log.warning("team attention count failed", exc_info=True)
+    return {"counts": counts, "recent": items[:20]}
+
+
+class ReadNotifications(BaseModel):
+    model_config = {"extra": "forbid"}
+    section: Literal["runs", "team", "compare", "watch", "billing"] | None = None  # None marks everything read
+
+
+@app.post("/me/notifications/read")
+def read_notifications(body: ReadNotifications, user: dict = Depends(require_user)) -> dict:
+    db.read_notifications(user["id"], body.section)
+    return {"read": body.section or "all"}
+
+
 @app.get("/runs/policy")
 def run_policy(user: dict = Depends(require_user)) -> dict:
     """Asked by the extension before a test: are journeys on for this account? POST /runs enforces it regardless."""
@@ -423,6 +452,7 @@ def finish_run(run_id: str, values: dict) -> None:
             if before and (before.get("report") or {}).get("funnel"):
                 rep.funnel["previous"] = {k: v for k, v in before["report"]["funnel"].items() if k != "previous"}
         db.set_report(run_id, rep.model_dump())
+        notify.report_ready(row.get("user_id"), run_id, row["site"], row.get("goal") or "Test run")
         to = db.user_email(str(row["user_id"])) if row.get("user_id") and os.environ.get("RESEND_API_KEY") else None
         if to:
             deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
@@ -740,6 +770,7 @@ def _compare(run_id: str, user_id: str, urls: list[str]) -> None:
         sites = list(pool.map(one, urls))
     sites[0]["yours"] = True
     db.set_report(run_id, {"compare": sites}, status="done")
+    notify.comparison_ready(user_id, run_id, " vs ".join(policy.host(u) for u in urls[:4]))
 
 
 @app.delete("/me/api-keys/{key_id}")

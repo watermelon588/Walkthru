@@ -578,4 +578,31 @@ revoke all on public.run_blocks from anon, authenticated;
 
 alter table public.app_events drop constraint if exists app_events_kind_check;
 alter table public.app_events add constraint app_events_kind_check check (kind in ('feedback', 'server_error', 'abuse'));
+-- In-app notifications (2026-09-26): what the sidebar counts and toasts show. The API writes them with the secret
+-- key. A browser reads only its own rows, and Supabase Realtime pushes each new row to it (RLS decides who sees it).
+create table if not exists public.notifications (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  section text not null check (section in ('runs', 'team', 'compare', 'watch', 'billing')),
+  kind text not null,
+  title text not null check (char_length(title) <= 200),
+  body text not null default '' check (char_length(body) <= 500),
+  link text not null default '' check (link = '' or link like '/%'),
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+create index if not exists notifications_unread on public.notifications (user_id, created_at desc) where read_at is null;
+alter table public.notifications enable row level security;
+revoke all on public.notifications from anon, authenticated;
+grant select on public.notifications to authenticated;
+drop policy if exists "read own notifications" on public.notifications;
+create policy "read own notifications" on public.notifications for select to authenticated using (user_id = auth.uid());
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications') then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end
+$$;
 notify pgrst, 'reload schema';

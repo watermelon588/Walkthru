@@ -95,6 +95,18 @@ def fake_db(monkeypatch):
         {"id": len(blocks) + 1, "scope": scope, "value": value, "reason": reason, "until": until}))
     monkeypatch.setattr(db, "app_event", lambda kind, user_id, detail: events.append((kind, user_id, detail)))
     abuse.forget_blocks()
+    # In-app notifications (app/notify.py): rows.notes for asserts.
+    notes: list[dict] = []
+    rows.notes = notes
+
+    def read(user_id, section):
+        for n in notes:
+            if n["user_id"] == user_id and (section is None or n["section"] == section):
+                n["read_at"] = "now"
+
+    monkeypatch.setattr(db, "add_notification", lambda row: notes.append(dict(row, id=len(notes) + 1, created_at="2026-09-26T10:00:00", read_at=None)))
+    monkeypatch.setattr(db, "unread_notifications", lambda user_id, limit=50: [n for n in reversed(notes) if n["user_id"] == user_id and not n["read_at"]][:limit])
+    monkeypatch.setattr(db, "read_notifications", read)
     return rows
 
 

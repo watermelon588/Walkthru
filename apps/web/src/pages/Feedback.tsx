@@ -3,8 +3,9 @@ import { AppShell } from '../components/AppShell'
 import { PageHeader } from '../components/PageHeader'
 import { btnPrimary } from '../components/Shared'
 import { sendFeedback } from '../lib/runs'
+import { toast } from '../lib/toast'
 
-type State = { kind: 'idle' } | { kind: 'sending' } | { kind: 'sent' } | { kind: 'error'; message: string }
+type State = { kind: 'idle' } | { kind: 'sending' } | { kind: 'error'; message: string }
 
 /** A note straight to the founder. Stored server-side for the admin panel; nobody else can read it. */
 export default function Feedback() {
@@ -17,7 +18,8 @@ export default function Feedback() {
     try {
       await sendFeedback(message.trim(), document.referrer ? new URL(document.referrer).pathname : '')
       setMessage('')
-      setState({ kind: 'sent' })
+      setState({ kind: 'idle' })
+      toast({ title: 'Thanks, your message reached the founder', body: 'We read every one. If you left something to fix, watch this space.' })
     } catch (e) {
       setState({ kind: 'error', message: e instanceof Error ? e.message : 'Could not send your message' })
     }
@@ -40,7 +42,6 @@ export default function Feedback() {
             {state.kind === 'sending' ? 'Sending' : 'Send'}
           </button>
           <p aria-live="polite" className="text-sm">
-            {state.kind === 'sent' && <span className="text-ink">Thanks, it is on its way.</span>}
             {state.kind === 'error' && <span role="alert" className="text-danger">{state.message}</span>}
           </p>
         </div>
