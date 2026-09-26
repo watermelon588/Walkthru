@@ -19,6 +19,8 @@ from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from app.agent.safety import SIGNED_IN
+
 OWNER, VISITOR = "owner", "visitor"
 
 BLOCKLIST: dict[str, list[str]] = {k: v for k, v in json.loads((Path(__file__).parent / "blocklist.json").read_text(encoding="utf-8")).items()
@@ -119,7 +121,15 @@ def bulk(goal: str) -> bool:
 # ---------- the check at run start ----------
 
 
-def check(site: str, goal: str, *, start_url: str, logged_in: bool, verified: Callable[[], bool]) -> None:
+def signed_in(observation: dict) -> bool:
+    """The page shows someone's account: a sign-out or switch-account control is on screen."""
+    return any(SIGNED_IN.search(e.get("text") or "") for e in observation.get("elements") or [])
+
+
+SIGNED_IN_MESSAGE = "This page shows you are signed in. Verify your domain to test signed-in pages, or open the site signed out."
+
+
+def check(site: str, goal: str, *, start_url: str, logged_in: bool, verified: Callable[[], bool], signed_in_page: bool = False) -> None:
     """Raise Refused when this run may not start. `verified` (the user verified `site`) is called only when the answer
     depends on it, so the domain check keeps running in the background for ordinary runs. `start_url` is the page the
     tested tab is on, which a modified extension could set apart from `site`."""
@@ -136,6 +146,8 @@ def check(site: str, goal: str, *, start_url: str, logged_in: bool, verified: Ca
                                            f"Verify {name} in Settings, or change the goal to what a visitor would check.")
     if logged_in and not verified():
         raise Refused("visitor_mode_limit", 403, f"Testing signed-in pages needs a domain you verified. Verify {name} in Settings, then start again.")
+    if signed_in_page and not verified():
+        raise Refused("signed_in_unverified", 403, SIGNED_IN_MESSAGE)
 
 
 def left_for(url: str, site: str, verified: bool) -> str | None:
