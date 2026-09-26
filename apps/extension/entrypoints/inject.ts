@@ -2,7 +2,7 @@
  *  An unlisted script rather than a content script so the manifest carries no host_permissions;
  *  access is requested per site when a test starts. */
 
-import { snapshot } from "../lib/snapshot";
+import { settle, snapshot } from "../lib/snapshot";
 import { execute, type ExecOptions, type Step } from "../lib/execute";
 import { AGENT_BIRD, AGENT_TONE, type AgentState } from "../lib/agent-bird";
 import gsap from "gsap";
@@ -34,6 +34,7 @@ export default defineUnlistedScript(() => {
     }
     ready.then(async (agent) => {
       if (msg.type === "snapshot") {
+        await settle(); // a scroll or click may still be loading content; read the page once it is still
         const observation = snapshot();
         reply({ ...observation, diagnostics: await collectBrowserDiagnostics(document, readWebVitals()) });
       } else if (msg.type === "act") reply(execute(msg.step, document, msg.opts));

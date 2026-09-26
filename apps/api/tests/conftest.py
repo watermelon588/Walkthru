@@ -15,9 +15,13 @@ from app.main import app
 USER = "00000000-0000-0000-0000-000000000001"
 
 
+class _Rows(dict):
+    """Runs by id, plus the fake agent-safety tables (audit, blocks, events) as attributes."""
+
+
 @pytest.fixture(autouse=True)
 def fake_db(monkeypatch):
-    rows: dict[str, dict] = {}
+    rows = _Rows()
 
     def insert_run(run_id, user_id, site, goal, persona, tier, logged_in, *, kind="test", public=False, group_id=None):
         rows[run_id] = {"id": run_id, "user_id": user_id, "site": site, "goal": goal, "persona": persona, "tier": tier, "logged_in": logged_in, "status": "running", "steps": [], "kind": kind, "public": public, "report": None, "tokens": 0, "created_at": datetime.now(UTC).isoformat(), "group_id": group_id}
@@ -68,6 +72,29 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "auto_share_teams", lambda user_id: [])
     monkeypatch.setattr(db, "anonymize_team_user", lambda user_id: None)
     monkeypatch.setattr(db, "github_installations", lambda user_id: [])
+    # Agent safety (app/abuse.py): an in-memory run audit and kill-switch table. rows.audit / rows.blocks for asserts.
+    from app import abuse
+
+    audit, blocks, events = [], [], []
+    rows.audit, rows.blocks, rows.events = audit, blocks, events
+
+    def run_audit_since(since, *, host=None, user_id=None, refused=False):
+        return [a for a in audit if (a.get("code") is not None) == refused and (host is None or a["host"] == host)
+                and (user_id is None or a.get("user_id") == user_id)]
+
+    def end_run_audit(run_id, status, code, actions):
+        for a in audit:
+            if a.get("run_id") == run_id:
+                a.update(status=status, code=code, actions=actions)
+
+    monkeypatch.setattr(db, "audit_run", lambda row: audit.append(dict(row)))
+    monkeypatch.setattr(db, "end_run_audit", end_run_audit)
+    monkeypatch.setattr(db, "run_audit_since", run_audit_since)
+    monkeypatch.setattr(db, "active_run_blocks", lambda now: [b for b in blocks if not b.get("lifted_at")])
+    monkeypatch.setattr(db, "add_run_block", lambda scope, value, reason, created_by, until=None: blocks.append(
+        {"id": len(blocks) + 1, "scope": scope, "value": value, "reason": reason, "until": until}))
+    monkeypatch.setattr(db, "app_event", lambda kind, user_id, detail: events.append((kind, user_id, detail)))
+    abuse.forget_blocks()
     return rows
 
 

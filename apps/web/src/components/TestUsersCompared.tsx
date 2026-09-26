@@ -76,7 +76,7 @@ export function TestUsersCompared({ run, owner }: { run: Run; owner: boolean }) 
               return (
                 <tr key={r.id} className={`border-b border-line last:border-b-0 ${here ? 'bg-surface' : ''}`}>
                   <th scope="row" className="px-5 py-3 font-normal text-ink">{PERSONA_LABEL[r.persona] ?? r.persona}</th>
-                  <td className={`px-5 py-3 ${r.status === 'done' || r.status === 'safe_stop' ? 'text-accent' : r.status === 'running' || r.status === 'looping' ? 'text-muted' : 'text-danger'}`}>{STATUS_LABEL[r.status]}</td>
+                  <td className={`px-5 py-3 ${r.status === 'done' || r.status === 'safe_stop' ? 'text-accent' : ['running', 'looping', 'agent_lost', 'bot_wall', 'captcha'].includes(r.status) ? 'text-muted' : 'text-danger'}`}>{STATUS_LABEL[r.status]}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted">{steps.length}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted">{peak} of 3</td>
                   <td className="px-5 py-3 text-right text-xs">

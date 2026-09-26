@@ -21,7 +21,14 @@ export type StepEvidence = {
 
 export type RunReply =
   | { run_id: string; status: "running"; action: Step & { url: string }; verified?: boolean; plan?: GoalPlan }
-  | { run_id: string; status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "stopped" | "safe_stop" | "looping"; steps: (Step & { url: string })[]; plan?: GoalPlan };
+  | {
+      run_id: string;
+      status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "bot_wall" | "stopped" | "safe_stop" | "looping" | "agent_lost";
+      steps: (Step & { url: string })[];
+      plan?: GoalPlan;
+      code?: string; // the stop reason (apps/api/app/agent/policy.py STOP_REASONS) and its plain message
+      message?: string;
+    };
 
 /** How the API understood the typed goal (apps/api/app/agent/goal.py). */
 export type GoalPlan = { intent: string; checkpoints: string[] };
@@ -123,6 +130,8 @@ export async function uploadEvidenceImage(path: string, dataUrl: string): Promis
 
 export const getPlan = () => call<PlanSummary>("/me/plan");
 export const getTestUsers = () => call<TestUser[]>("/me/test-users");
+/** Are test runs on for this account right now (kill switches, automatic suspension)? The API enforces it anyway. */
+export const getRunPolicy = () => call<{ journeys: boolean; message: string }>("/runs/policy");
 export const startRun = (body: StartBody) => call<RunReply>("/runs", body);
 export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
   call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });

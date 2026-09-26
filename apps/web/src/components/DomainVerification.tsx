@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { getVerification } from '../lib/runs'
 
-type State = { kind: 'loading' } | { kind: 'ready'; meta: string; token: string; file: string } | { kind: 'error'; message: string }
+type State = { kind: 'loading' } | { kind: 'ready'; meta: string; token: string; file: string; txt_name: string; txt_value: string } | { kind: 'error'; message: string }
 
 /** Shows the owner's verification tag. One token per account verifies every site that carries it. */
 export function DomainVerification() {
@@ -24,7 +24,7 @@ export function DomainVerification() {
         <div>
           <h2 id="verify-heading" className="text-xl font-light">Verify your domain</h2>
           <p className="mt-2 max-w-[48ch] text-sm leading-relaxed text-muted">
-            Prove you own a site to unlock the full security check and let test users send forms you approve. Add either option below to the site, then run a new scan or test.
+            Prove you own a site to unlock the full security check and let test users fill in forms, sign in and send what you approve. Until then Walkthru tests the site as a visitor. Add any one option below, then run a new scan or test.
           </p>
           <Link to="/docs#verify" className="mt-4 inline-block text-sm text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">How verification works</Link>
         </div>
@@ -41,6 +41,10 @@ export function DomainVerification() {
             <div className="grid gap-5">
               <Snippet label="Option 1: add this tag inside the <head> of your homepage" value={state.meta} />
               <Snippet label={`Option 2: or put only this token in a file at ${state.file}`} value={state.token} />
+              <div className="grid gap-3">
+                <Snippet label="Option 3: or add a DNS TXT record. Name (host):" value={state.txt_name} />
+                <Snippet label="Value:" value={state.txt_value} />
+              </div>
             </div>
           )}
         </div>

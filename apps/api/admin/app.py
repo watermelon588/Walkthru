@@ -140,6 +140,7 @@ def _page(title: str, body: str, *, signed_in: bool = False, csrf: str = "") -> 
 
 
 MESSAGES = {
+    "paused": "Paused. Test runs stop within 10 seconds.", "resumed": "Resumed.",
     "granted": "Pass granted.", "ended": "Pass ended.", "rejected": "Request declined.", "offered": "Payment offer sent. It shows on their Plan & billing page for 24 hours.",
     "bad-code": "That authenticator code did not work. Nothing changed.", "no-user": "No account with that email. They need to sign in once first.",
     "bad-input": "Check the plan and the number of days.", "no-request": "That request was already decided.", "offer-failed": "Could not create the payment offer. Check the Dodo settings.",
@@ -209,6 +210,7 @@ def dashboard(request: Request, m: str = "", q: str = "") -> Response:
     email_of = {u["id"]: u["email"] for u in users}
     requests = db.pending_access_requests()
     events = _recent("app_events", "kind,user_id,detail,created_at", 50)
+    blocks = db.active_run_blocks(datetime.now(UTC).isoformat())
     payments = db._select("billing_events", {"select": "event_type,received_at,result", "order": "received_at.desc", "limit": "20"})
     audit = _recent("admin_audit_log", "actor,action,detail,created_at", 30)
     since = s.since
@@ -247,10 +249,7 @@ def dashboard(request: Request, m: str = "", q: str = "") -> Response:
                         for u in sorted(listed, key=lambda u: u["created_at"], reverse=True)[:200])
 
     feed = sorted(
-        [(x["created_at"], "Feedback" if x["kind"] == "feedback" else "Server error",
-          (f"{email_of.get(x['user_id'], 'someone')}: {x['detail'].get('message', '')}" + (f" (on {x['detail']['page']})" if x["detail"].get("page") else ""))
-          if x["kind"] == "feedback" else f"{x['detail'].get('method', '')} {x['detail'].get('route', '')}: {x['detail'].get('error', '')} {x['detail'].get('message', '')}")
-         for x in events]
+        [(x["created_at"], {"feedback": "Feedback", "abuse": "Abuse"}.get(x["kind"], "Server error"), _event_text(x, email_of)) for x in events]
         + [(u["created_at"], "New user", f"{u['email']} ({u['provider'] or 'email'})") for u in sorted(users, key=lambda u: u["created_at"], reverse=True)[:20]]
         + [(p["received_at"], "Payment", f"{p['event_type']}: {p.get('result') or 'received'}") for p in payments]
         + [(a["created_at"], "Admin", f"{a['action']} {a['detail'].get('email', '')} {a['detail'].get('plan', '')}".strip()) for a in audit],
@@ -276,6 +275,13 @@ def dashboard(request: Request, m: str = "", q: str = "") -> Response:
         <form method="post" action="/grant" class="row">{hidden}<input name="email" type="email" placeholder="Email" aria-label="Email" required>{_plan_select()}
           <input name="days" type="number" min="1" max="366" value="30" aria-label="Days">{_code_field()}<button>Grant</button></form>
         <form method="post" action="/end" class="row">{hidden}<input name="email" type="email" placeholder="Email" aria-label="Email to end the pass of" required>{_code_field()}<button class="quiet">End pass now</button></form>
+      </section>
+
+      <section><h2>Test runs</h2>
+        {_blocks_table(blocks, email_of, hidden)}
+        <form method="post" action="/block" class="row">{hidden}<select name="scope" aria-label="What to pause"><option value="host">One site</option><option value="global">Every test run</option></select>
+          <input name="value" placeholder="Site, for example example.com" aria-label="Site to pause"><input name="reason" placeholder="Reason" aria-label="Reason" required maxlength="200">{_code_field()}<button class="quiet">Pause</button></form>
+        <p class="muted small">A pause takes effect within 10 seconds, including runs already going. Accounts that keep aiming the agent at refused goals are paused here automatically.</p>
       </section>
 
       <section><h2>Users <span class="muted">{len(listed)}</span></h2>
@@ -305,6 +311,47 @@ def grant_self(request: Request, csrf: str = Form(""), code: str = Form(""), pla
     if refused := _refused(request, csrf, code):
         return refused
     return _home(_grant(_admin_email(), plan, days, None, _admin_email() or "admin"))  # always the admin's own email, never the form's
+
+
+def _event_text(x: dict, email_of: dict) -> str:
+    d = x["detail"]
+    if x["kind"] == "feedback":
+        return f"{email_of.get(x['user_id'], 'someone')}: {d.get('message', '')}" + (f" (on {d['page']})" if d.get("page") else "")
+    if x["kind"] == "abuse":
+        return f"{email_of.get(x['user_id'], 'someone')}: {d.get('reason', '')}. Last: {d.get('last_goal', '')} on {d.get('last_host', '')}"
+    return f"{d.get('method', '')} {d.get('route', '')}: {d.get('error', '')} {d.get('message', '')}"
+
+
+def _blocks_table(blocks: list[dict], email_of: dict, hidden: str) -> str:
+    if not blocks:
+        return '<p class="muted">Test runs are on for everyone.</p>'
+    what = {"global": lambda b: "Every test run", "host": lambda b: f"Site {b['value']}", "user": lambda b: f"Account {email_of.get(b['value'], b['value'])}"}
+    rows = "".join(f"""<tr><td>{e(what[b['scope']](b))}</td><td class="muted">{e(b.get('reason'))}</td><td class="muted">{e((b.get('until') or 'until lifted')[:16])}</td>
+      <td><form method="post" action="/lift" class="row">{hidden}<input type="hidden" name="block_id" value="{int(b['id'])}">{_code_field()}<button class="quiet">Resume</button></form></td></tr>""" for b in blocks)
+    return f'<table><thead><tr><th>Paused</th><th>Why</th><th>Until</th><th></th></tr></thead><tbody>{rows}</tbody></table>'
+
+
+@app.post("/block")
+def block(request: Request, csrf: str = Form(""), code: str = Form(""), scope: str = Form(max_length=10), value: str = Form("", max_length=253),
+          reason: str = Form(max_length=200)) -> Response:
+    """Kill switch (docs/agent-safety-plan.md section 5): pause every test run, or every run against one site."""
+    if refused := _refused(request, csrf, code):
+        return refused
+    host = value.strip().lower().removeprefix("https://").removeprefix("http://").split("/")[0]
+    if scope not in ("global", "host") or (scope == "host" and not host):
+        return _home("bad-input")
+    db.add_run_block(scope, host if scope == "host" else "", reason.strip() or "paused by the founder", _admin_email() or "admin")
+    db.audit(_admin_email() or "admin", "runs.pause", scope, {"host": host, "reason": reason})
+    return _home("paused")
+
+
+@app.post("/lift")
+def lift(request: Request, csrf: str = Form(""), code: str = Form(""), block_id: int = Form()) -> Response:
+    if refused := _refused(request, csrf, code):
+        return refused
+    db.lift_run_block(block_id)
+    db.audit(_admin_email() or "admin", "runs.resume", str(block_id), {})
+    return _home("resumed")
 
 
 @app.post("/end")

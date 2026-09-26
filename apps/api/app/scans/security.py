@@ -14,7 +14,7 @@ from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
 from app.scans import csp, libraries, secrets
-from app.scans.fetch import assert_public, get, origin
+from app.scans.fetch import assert_public, get, is_local_site, origin
 
 ENV = re.compile(r"^\s*[A-Z_][A-Z0-9_]*\s*=", re.MULTILINE)
 SQL_DUMP = re.compile(rb"(CREATE TABLE|INSERT INTO|-- MySQL dump|PostgreSQL database dump|-- Dump of)", re.IGNORECASE)
@@ -71,8 +71,18 @@ def verification_token(user_id: str) -> str:
     return "wt-" + hmac.new(key, user_id.encode(), hashlib.sha256).hexdigest()[:24]
 
 
+TXT_PREFIX = "walkthru-verification="
+
+
+def txt_name(url: str) -> str:
+    """Where the DNS proof lives: a TXT record on _walkthru.<host>, so it never collides with SPF or other TXT records."""
+    return f"_walkthru.{(urlsplit(url).hostname or '').rstrip('.').lower()}"
+
+
 def verify_domain(url: str, token: str, c: httpx.Client, html: str | None = None) -> bool:
-    """True when the homepage carries <meta name="walkthru-verification"> or /.well-known/walkthru.txt holds the token."""
+    """True when the owner published the token one of three ways, the same proofs Search Console accepts:
+    <meta name="walkthru-verification"> on the homepage, /.well-known/walkthru.txt, or a DNS TXT record
+    `_walkthru.<host>` holding `walkthru-verification=<token>`. Checked again at every run start, never cached."""
     if html is None:
         r = get(c, url)
         html = r.text if r is not None else ""
@@ -80,7 +90,23 @@ def verify_domain(url: str, token: str, c: httpx.Client, html: str | None = None
     if meta is not None and (meta.attributes.get("content") or "").strip() == token:
         return True
     r = get(c, f"{origin(url)}/.well-known/walkthru.txt")
-    return r is not None and r.status_code == 200 and r.text.strip() == token
+    if r is not None and r.status_code == 200 and r.text.strip() == token:
+        return True
+    return txt_verified(url, token, c)
+
+
+def txt_verified(url: str, token: str, c: httpx.Client) -> bool:
+    from app.scans.tls import dns
+
+    name = txt_name(url)
+    if is_local_site(url) or name == "_walkthru.":
+        return False  # IP addresses and local servers have no DNS to publish in
+    try:
+        _, records = dns(c, name, "TXT")
+    except (httpx.HTTPError, ValueError, KeyError):
+        return False
+    # DNS-over-HTTPS returns TXT data quoted, and long records split into several quoted strings.
+    return any("".join(part for part in r.split('"') if part.strip()).strip() == TXT_PREFIX + token for r in records)
 
 
 def check_headers(resp: httpx.Response) -> list[Finding]:

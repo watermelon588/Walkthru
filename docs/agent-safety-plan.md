@@ -1,6 +1,6 @@
 # Agent safety, permission and trust plan
 
-> **IMPORTANT: FIX BEFORE DEPLOYMENT (launch gate).** Written 2026-09-25 after a test run: the agent was told to like five posts on Instagram with the founder's logged-in account. Nothing here is built yet. Every item marked **GATE** must ship, with its tests, before the extension goes to the Chrome Web Store or the product is launched. Work through it minutely; do not shortcut any GATE item.
+> **IMPORTANT: FIX BEFORE DEPLOYMENT (launch gate).** Written 2026-09-25 after a test run: the agent was told to like five posts on Instagram with the founder's logged-in account. Items 1 to 8 are built (2026-09-26); the founder's legal review, Unlisted publish and a real-browser red-team pass remain (status below). Every item marked **GATE** must ship, with its tests, before the extension goes to the Chrome Web Store or the product is launched. Work through it minutely; do not shortcut any GATE item.
 
 ## 1. The problem, plainly
 
@@ -229,13 +229,13 @@ Logs:
 | # | Item | Size | GATE |
 |---|---|---|---|
 | 1 | `policy.py`: modes, blocklist, popular-site rule, goal rules; `POST /runs` returns the mode; refusal codes (**done 2026-09-26**, see the status note) | M | Yes |
-| 2 | Action gate: social and commerce verbs, Visitor-mode typing rule, signed-in detection (server and extension, with tests) | M | Yes |
-| 3 | DNS TXT verification, re-check within 24 hours and after redirects | S | Yes |
-| 4 | Snapshot: icon labels, viewport first, re-snapshot after scroll, smooth scroll with settle wait; feed fixture | M | Yes |
-| 5 | Honest failure (`agent_lost`), bot-wall detection and take-over, stop-reason table in API, side panel and report | M | Yes |
-| 6 | Per-target and per-user rate limits in Postgres (joins SD-2.1), audit log, kill switch and policy endpoint | M | Yes |
-| 7 | Privacy, terms, security and bot pages; Chrome Web Store disclosures; the no-cookies test | S | Yes |
-| 8 | Unlisted Chrome Web Store beta; abuse contact; auto-suspension | S | Yes |
+| 2 | Action gate: social and commerce verbs, Visitor-mode typing rule, signed-in detection (server and extension, with tests) (**done 2026-09-26**) | M | Yes |
+| 3 | DNS TXT verification, re-check within 24 hours and after redirects (**done 2026-09-26**) | S | Yes |
+| 4 | Snapshot: icon labels, viewport first, re-snapshot after scroll, smooth scroll with settle wait; feed fixture (**done 2026-09-26**) | M | Yes |
+| 5 | Honest failure (`agent_lost`), bot-wall detection and take-over, stop-reason table in API, side panel and report (**done 2026-09-26**) | M | Yes |
+| 6 | Per-target and per-user rate limits in Postgres (joins SD-2.1), audit log, kill switch and policy endpoint (**done 2026-09-26**) | M | Yes |
+| 7 | Privacy, terms, security and bot pages; Chrome Web Store disclosures; the no-cookies test (**built 2026-09-26; founder legal review open**) | S | Yes |
+| 8 | Unlisted Chrome Web Store beta; abuse contact; auto-suspension (**contact and suspension built 2026-09-26; unlisted publish is the founder's**) | S | Yes |
 | 9 | Vision fallback | M | No, first update after launch |
 | 10 | Cursor overlay, human pacing, banner | S to M | No |
 | 11 | Claude Haiku for Pro and Plus | S (switch) | Revenue-gated |
@@ -255,6 +255,16 @@ Logs:
 - Tests: `apps/api/tests/test_policy.py` (goal wording that must and must not match, host matching, the Instagram goal, refusals before any model call, mid-run stop).
 - **Popular-site rule: not built, on purpose.** Every unverified host already runs in Visitor mode, so a top-sites list would change nothing, and it would add a data licence to check. Revisit only if Owner mode ever stops requiring verification.
 - **Known limits:** the goal rules read English only, and wording can always be found that they miss. They save a model call and give a clear message; the real boundary is item 2 (the per-step action gate in `persona._enforce` and `execute.ts`), which does not depend on how the goal was worded.
+
+**Status of items 2 to 8 (built 2026-09-26 by Claude Code, local):**
+- **Item 2, the action gate.** `persona._enforce` (server) and `execute.ts` (extension) share one rule set (`safety.py` and `safety.ts`, identical verb lists). In Visitor mode: typing only into a search box; no pressing a button whose label starts with a social or commerce verb ("Like", "123 Likes. Follow", "Add to cart", even as a link); no form submit except the site's search (extension). The server never asks for such a step: it ends the run on purpose with `safe_stop` and code `visitor_mode_limit` ("Everything up to here worked"). **Deviation:** the plan's table said "the step was skipped; the journey continued where possible". A skipped step has nothing honest to continue with (the next page needs the form filled), so the run stops truthfully instead. A page showing a sign-out control or an account menu is refused at start and stops a running journey (`signed_in_unverified`); "My account" alone does not count, because logged-out shops show it. The test user's prompt says what a visitor may do, so it does not waste steps. Tests: `tests/test_action_gate.py` (injected page text included) and the extension's visitor-mode test.
+- **Item 3.** A DNS TXT record `_walkthru.<host>` holding `walkthru-verification=<token>` (read over DNS-over-HTTPS) verifies a domain, next to the meta tag and the file. Every proof is checked again at every run start and after redirects, never cached. Settings and the docs show all three.
+- **Item 4.** Icon-only controls read by `aria-label`, `aria-labelledby`, an inner svg label or `<title>`, image alt, `title` or `data-testid`. Menu items, switches, checkboxes, options and `summary` count as controls. Visible controls are numbered first (top to bottom), then the next screen down, then the rest, still capped at 120. Scrolling is smooth by one screen (instant with reduced motion), and every snapshot first waits up to 2 s for the page to stop changing. Fixtures: `evals/fixtures/hard/feed.html` (infinite feed, icon-only Like, injected text), `challenge.html` (bot wall), `account.html` (signed in), unlinked so crawls do not change.
+- **Item 5.** One table, `policy.STOP_REASONS`: code, side panel message, report line. Finished and stopped replies carry `code` and `message`; the side panel shows the message as sent. New statuses `bot_wall` and `agent_lost` (a give-up or stuck run where the model picked elements that were not on the page). Bot walls (Cloudflare, Akamai, DataDome, PerimeterX, 403 and 429 pages) and CAPTCHAs pause the run: the person solves it in the tab and presses OK, or the run stops. Reports never turn bot checks, visitor-mode stops or Walkthru's own misses into UX findings.
+- **Item 6.** `run_audit` (started and refused journeys, mode, goal, actions with control labels, never typed values; 90 days, purged by the retention job) and `run_blocks` (kill switches: global, one account, one host with its subdomains; checked at start and at every step, cached 10 s). Limits on unverified hosts: 20 journeys an hour per host across all users, and 12 per user per host. **Deviation:** the plan said start at 5 per user, but one Plus test set is up to 6 journeys on one page, so 5 would break a paid feature; 12 is two full sets. `GET /runs/policy` answers the extension before a test. Five goal or site refusals in a day pause the account and add an "abuse" line to the founder's admin panel, which also pauses and resumes runs for everyone or one site.
+- **Item 7.** Privacy (what the extension reads and never reads, the safety log), Terms (acceptable use, modes), Security (modes, blocked categories, abuse and opt-out), a `/bot` page, docs "Why can't Walkthru test Instagram?", `docs/chrome-web-store.md` with the store answers, and `apps/extension/tests/privacy.test.ts` (fails on cookie, storage, history or request APIs, or broader permissions). Opted-out and paused domains are refused for scans too.
+- **Item 8.** `abuse@` contact on the Security and bot pages; automatic suspension (item 6).
+- **Still open, the founder's:** a lawyer's review of Terms and Privacy; the contact domain (the pages still say walkthru.dev); publishing Unlisted; a real-browser red-team pass with the extension on the hard fixture (`/feed.html`, `/challenge.html`, `/account.html`, a bulk goal, an Instagram goal), which unit tests cannot replace.
 
 **Done means:**
 - every GATE row has its tests;

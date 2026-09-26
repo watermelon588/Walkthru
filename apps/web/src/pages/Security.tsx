@@ -43,6 +43,21 @@ const sections: DocSection[] = [
     ),
   },
   {
+    id: 'modes',
+    title: 'Where test users may act',
+    body: (
+      <>
+        <p>The server decides, before a run starts and again at every step. The AI cannot change it, and neither can a modified copy of the extension, because every step goes through our API.</p>
+        <ul>
+          <li><strong>Visitor mode</strong> (any site you have not verified): read, scroll, click links, menus and tabs, and use the site's search box. No other form fields, no signing in, and no liking, following, posting, messaging, buying or adding to a cart. A page that shows a signed-in account ends the run.</li>
+          <li><strong>Owner mode</strong> (a domain you <Link to="/docs#verify">verified</Link> with a meta tag, a file or a DNS record, checked again at every run): what a real visitor does, with safe mode still blocking payments, deletions and cancellations.</li>
+          <li><strong>Refused:</strong> banking and payments, trading and crypto, government and tax, healthcare portals, webmail, social networks, dating, adult, gambling, and password managers or sign-in providers, unless you verified that exact domain.</li>
+        </ul>
+        <p>Test users never solve or bypass CAPTCHAs or bot protection; you solve them yourself, or the run stops and the report says so plainly. Test runs against one unverified site are limited per hour, and every run is logged with its actions (never typed values) for 90 days.</p>
+      </>
+    ),
+  },
+  {
     id: 'scanning',
     title: 'What our scanner does',
     body: (
@@ -72,6 +87,8 @@ const sections: DocSection[] = [
       <>
         <p>If you find a security problem in {brand.name}, email <a href={`mailto:${contact.security}`}>{contact.security}</a> with the steps to reproduce it and the impact you expect. We will confirm we received it within three business days and keep you updated until it is fixed.</p>
         <p>Please test only against your own account, avoid touching other people's data, and give us a reasonable time to fix the issue before sharing it. We will not take action against good-faith research that follows these rules.</p>
+        <h3>Report abuse or opt your site out</h3>
+        <p>If {brand.name} was used against your site, or you want test users and our scanner kept off it, email <a href={`mailto:${contact.abuse}`}>{contact.abuse}</a> with the domain. We act within 24 hours. How our scanner identifies itself is on the <Link to="/bot">Walkthru bot page</Link>.</p>
       </>
     ),
   },
@@ -82,7 +99,7 @@ export default function Security() {
     <DocLayout
       title="Security"
       lead={`${brand.name} drives a real browser on sites you care about. Here is exactly what it can touch, what it cannot, and how to reach us if something looks wrong.`}
-      updated="2026-09-25"
+      updated="2026-09-26"
       sections={sections}
     />
   )

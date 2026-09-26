@@ -269,7 +269,8 @@ def _words(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 3}  # crude stem: "framed" ~ "frame"
 
 
-NOT_A_SITE_PROBLEM = ("working contact method", "not sent:", "safe mode", "never sends twice", "owner declined", "owner pressed stop")
+NOT_A_SITE_PROBLEM = ("working contact method", "not sent:", "safe mode", "visitor mode", "never sends twice", "owner declined", "owner pressed stop",
+                      "not found", "human check")
 
 
 def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
@@ -277,8 +278,8 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
     out = set()
     for i, s in enumerate(steps, start=1):
         note = (s.get("note_after") or "").lower()
-        if s.get("safe_stop"):
-            continue
+        if s.get("safe_stop") or "does not exist)" in s.get("thought", ""):
+            continue  # Walkthru stopped on purpose, or picked an element that was never on the page (its own miss)
         walkthru_note = any(k in note for k in NOT_A_SITE_PROBLEM)
         # An interruption is only evidence when the browser run broke, not when the owner pressed Stop.
         # no_change: a click that visibly did nothing (a silent submit, a dead button) is evidence too.
@@ -303,8 +304,8 @@ def grounded_ux(ux: list[Finding], code: list[Finding], steps: list[dict], statu
         words = _words(f.title)
         if any(words and len(words & _words(c.title)) / len(words | _words(c.title)) >= 0.5 for c in code):
             continue
-        if "safe mode" in f"{f.title} {f.detail}".lower():
-            continue
+        if any(k in f"{f.title} {f.detail}".lower() for k in ("safe mode", "visitor mode", "captcha", "bot check", "bot protection")):
+            continue  # Walkthru's own limits and the site's bot protection are never usability findings (plan sections 7, 8)
         kept.append(f)
     return kept
 
@@ -377,10 +378,15 @@ def synthesis_inputs(state: ReportState) -> dict:
         context.append("Context: the homepage is rendered by JavaScript. Google and screen readers do run JavaScript and see the content; "
                        "link previews (WhatsApp, LinkedIn, Slack), most AI crawlers and simpler search crawlers see an empty page. Do not overstate the impact.")
     if steps:
+        from app.agent.policy import STOP_REASONS
+
         outcome = {
             "safe_stop": "stopped by Walkthru at the send button (by design)",
             "looping": "stopped by Walkthru because the test user started going in circles. That is Walkthru's own limit, not a site problem; never report the repeated visits as a site problem",
+            **{code: f"{STOP_REASONS[code][1]} Use this wording; never report it as a UX finding" for code in ("bot_wall", "captcha", "agent_lost")},
         }.get(state.get("status", ""), state.get("status"))
+        if any(s.get("code") == "visitor_mode_limit" for s in steps):
+            outcome = f"{STOP_REASONS['visitor_mode_limit'][1]} Everything before that step worked; that stop is not a site problem"
         intent = f" Understood as: {state['intent']}." if state.get("intent") else ""
         context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}.{intent} Outcome: {outcome}.\nSteps:\n{render_steps(steps)}")
         context.append("Steps marked as stopped on purpose, or mentioning safe mode, were Walkthru's own choice. They are not site problems; never report them as findings.")

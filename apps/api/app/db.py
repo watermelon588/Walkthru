@@ -247,6 +247,39 @@ def audit(actor: str, action: str, target: str, detail: dict) -> None:
     _insert("admin_audit_log", {"actor": actor[:200], "action": action, "target": target, "detail": detail})
 
 
+def audit_run(row: dict) -> None:
+    _insert("run_audit", row)
+
+
+def end_run_audit(run_id: str, status: str, code: str | None, actions: list[dict]) -> None:
+    _update("run_audit", {"run_id": f"eq.{run_id}"}, {"status": status, "code": code, "actions": actions})
+
+
+def run_audit_since(since: str, *, host: str | None = None, user_id: str | None = None, refused: bool = False) -> list[dict]:
+    params = {"created_at": f"gte.{since}", "select": "user_id,host,code", "limit": "500", "code": "not.is.null" if refused else "is.null"}
+    if host:
+        params["host"] = f"eq.{host}"
+    if user_id:
+        params["user_id"] = f"eq.{user_id}"
+    return _select("run_audit", params)
+
+
+def active_run_blocks(now: str) -> list[dict]:
+    return _select("run_blocks", {"lifted_at": "is.null", "or": f"(until.is.null,until.gt.{now})", "select": "id,scope,value,reason,until,created_at"})
+
+
+def add_run_block(scope: str, value: str, reason: str, created_by: str, until: str | None = None) -> None:
+    _insert("run_blocks", {"scope": scope, "value": value, "reason": reason[:300], "created_by": created_by, "until": until})
+
+
+def lift_run_block(block_id: int) -> None:
+    _update("run_blocks", {"id": f"eq.{block_id}"}, {"lifted_at": _now()})
+
+
+def purge_run_audit(before: str) -> None:
+    _request("DELETE", "/rest/v1/run_audit", params={"created_at": f"lt.{before}"}, prefer="return=minimal")
+
+
 def app_event(kind: str, user_id: str | None, detail: dict) -> None:
     """Feedback or a server error for the founder's admin panel (apps/api/admin)."""
     _insert("app_events", {"kind": kind, "user_id": user_id, "detail": detail})

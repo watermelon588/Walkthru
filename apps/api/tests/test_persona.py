@@ -305,6 +305,7 @@ def test_field_state_is_shown_and_step_outcomes_are_recorded(monkeypatch):
     from app.agent.persona import render_observation
     from app.agent.report import render_steps
 
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)  # typing into forms needs a verified domain (visitor mode)
     shown = render_observation(page("https://fixture.test/contact", [{"id": 1, "tag": "input", "type": "text", "state": "filled", "text": "What's your name?"}]))
     assert "[1] input (text) [filled]: What's your name?" in shown
 
@@ -358,6 +359,7 @@ def test_confirmations_reach_the_agent_and_a_second_send_is_refused(monkeypatch)
 
 
 def test_type_without_text_uses_the_test_identity(monkeypatch):
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)  # typing into forms needs a verified domain (visitor mode)
     use([PersonaStep(thought="email", action="type", target_id=4, text=None, confusion=0)], monkeypatch)
     form = page("https://fixture.test/signup", [{"id": 4, "tag": "input", "type": "email", "state": "empty", "text": "Email"}])
     r = start(TestClient(app), form)

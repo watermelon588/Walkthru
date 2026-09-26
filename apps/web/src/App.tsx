@@ -11,6 +11,7 @@ const Public = lazy(() => import('./pages/Public'))
 const Report = lazy(() => import('./pages/Report'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Feedback = lazy(() => import('./pages/Feedback'))
+const Bot = lazy(() => import('./pages/Bot'))
 const Billing = lazy(() => import('./pages/Billing'))
 const Mcp = lazy(() => import('./pages/Mcp'))
 const Watch = lazy(() => import('./pages/Watch'))
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/docs" element={<Docs />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/bot" element={<Bot />} />
           <Route path="/security" element={<Security />} />
           <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />

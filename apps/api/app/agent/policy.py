@@ -138,6 +138,43 @@ def check(site: str, goal: str, *, start_url: str, logged_in: bool, verified: Ca
         raise Refused("visitor_mode_limit", 403, f"Testing signed-in pages needs a domain you verified. Verify {name} in Settings, then start again.")
 
 
+# One table of stop reasons (docs/agent-safety-plan.md section 11), shared by the API replies, the side panel (which
+# shows `message` as sent), the report wording and the docs. code: (side panel message, report line).
+STOP_REASONS: dict[str, tuple[str, str]] = {
+    "blocked_site": ("Walkthru does not run on banking, trading, social or similar sites. Test your own site instead.",
+                     "Run refused before it started."),
+    "visitor_mode_limit": ("Typing, sending, liking and buying are for sites you verified. Verify this domain in Settings to test forms and actions.",
+                           "Walkthru stopped at a form or an action by design: the domain is not verified, so it tested as a visitor."),
+    "signed_in_unverified": ("This page shows you are signed in. Verify your domain to test signed-in pages.",
+                             "Run stopped: the page showed a signed-in account on a domain that is not verified."),
+    "bot_wall": ("The site asked for a human check. Solve it in the tab and press Continue, or stop.",
+                 "The site stopped automated testing with a bot check. This is the site's bot protection, not a usability problem."),
+    "captcha": ("The site showed a CAPTCHA. Solve it in the tab and press Continue, or stop.",
+                "The site stopped automated testing with a CAPTCHA. This is the site's bot protection, not a usability problem."),
+    "agent_lost": ("Scout could not find the control for this step.",
+                   "Walkthru could not identify the control for this step (it may be an unlabelled icon). This may not affect people."),
+    "rate_limited": ("Too many tests on this site right now. Try again in an hour.", "Not started."),
+    "journeys_paused": ("Test runs are paused for this account or site. Contact support if you think this is a mistake.", "Not started."),
+    "goal_refused": ("Walkthru will not run this goal.", "Not started."),
+}
+
+
+def stop_reason(code: str) -> dict:
+    message, report = STOP_REASONS.get(code, ("", ""))
+    return {"code": code, "message": message, "report": report}
+
+
+SIGNED_IN_MESSAGE ="This page shows you are signed in. Walkthru only tests signed-in pages on a domain you verified. Verify it in Settings, or sign out and test as a visitor."
+
+
+def signed_in_unverified(observation: dict, verified: Callable[[], bool]) -> bool:
+    """A visitor-mode run on a page that shows the user's own account (a sign-out control, an account menu).
+    `verified` is called only when the page looks signed in."""
+    from app.agent.safety import shows_signed_in
+
+    return shows_signed_in(observation.get("elements") or []) and not verified()
+
+
 def left_for(url: str, site: str, verified: bool) -> str | None:
     """Mid-run: the category when the tested tab has reached a blocked host the user has not verified, else None.
     A verified owner may stay on their own host even when it is listed."""

@@ -21,7 +21,7 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
-from app import auth, billing, db, deliver, github, mcp_server, plans, plus, retention, teams, watch
+from app import abuse, auth, billing, db, deliver, github, mcp_server, plans, plus, retention, teams, watch
 from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
@@ -162,7 +162,10 @@ def _reply(run_id: str, tier: str, result: dict, background: BackgroundTasks) ->
         return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value, "verified": bool(values.get("verified")),
                 "mode": policy.mode(bool(values.get("verified")))}
     background.add_task(finish_run, run_id, values)
-    return {"run_id": run_id, "status": status, "steps": values["steps"]}
+    reply = {"run_id": run_id, "status": status, "steps": values["steps"]}
+    code = (values["steps"][-1].get("code") if values.get("steps") else None) or (status if status in policy.STOP_REASONS else None)
+    abuse.record_end(run_id, values.get("steps", []), status, code)
+    return reply | (policy.stop_reason(code) if code and code != "safe_stop" else {})
 
 
 def _owned(run_id: str, user: dict) -> dict:
@@ -192,10 +195,15 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     tier = "free" if plan.name == "free" else "paid"  # model routing only; limits come from `plan`
     # Blocked sites, social and commerce goals off a verified domain, and bulk goals: refused in code before any model
     # call, without using a run (app/agent/policy.py).
+    host = policy.host(body.site)
     try:
+        abuse.check_start(user["id"], host, verifying.result)  # kill switches and per-target limits (plan section 6)
         policy.check(body.site, body.goal, start_url=body.observation.url, logged_in=body.logged_in, verified=verifying.result)
+        if policy.signed_in_unverified(body.observation.model_dump(), verifying.result):
+            raise policy.Refused("signed_in_unverified", 403, policy.SIGNED_IN_MESSAGE)
     except policy.Refused as e:
-        log.info("run refused %s %s", e.code, policy.host(body.site))
+        log.info("run refused %s %s", e.code, host)
+        abuse.record_refusal(user["id"], host, policy.mode(verifying.done() and verifying.result()), body.goal, e.code)
         raise HTTPException(e.status, e.message, headers={"X-Walkthru-Code": e.code}) from e
     # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
     goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
@@ -207,6 +215,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     _background.submit(teams.auto_share, user["id"], run_id, body.site, "test")  # Plus workspaces with auto-share on
     marks.append(("insert_run", time.monotonic()))
     verified = verifying.result()  # owner-verified domains may send real messages after confirmation
+    abuse.record_start(run_id, user["id"], host, policy.mode(verified), body.goal)
     marks.append(("verify_domain_wait", time.monotonic()))
     state = body.model_dump(mode="json", exclude={"group_id"}) | {"persona": persona, **({"persona_prompt": persona_prompt} if persona_prompt else {}),
                                                               "max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
@@ -263,16 +272,28 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
         # The live agent state is gone (API restarted with the in-memory checkpointer). Close the run
         # truthfully with its saved steps instead of failing; the extension shows "Ended early".
         return stop_run(run_id, background, StopRequest(reason="the Walkthru server restarted and lost the live test"), user=user)
+    if abuse.paused(user["id"], policy.host(row["site"])):  # a kill switch turned on mid-run
+        reason = "Walkthru paused test runs for this account or site, so the test stopped here."
+        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("journeys_paused")
     # The tested tab reached a blocked host (a link out to Instagram, a bank's payment page): stop there, truthfully.
     cat = policy.left_for(body.observation.url, row["site"], bool(live.values.get("verified")))
     if cat:
         reason = f"The test reached {policy.host(body.observation.url)[:120]}, a {cat} site Walkthru does not run on, so it stopped there."
-        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | {"code": "blocked_site"}
-    resume = {"observation": body.observation.model_dump(mode="json")}
+        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("blocked_site")
+    if policy.signed_in_unverified(body.observation.model_dump(), lambda: bool(live.values.get("verified"))):
+        reason = f"The page showed a signed-in account, and {policy.host(row['site'])[:120]} is not verified, so Walkthru stopped (visitor mode)."
+        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("signed_in_unverified")
+    resume ={"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
     result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))
     return _reply(run_id, row["tier"], result, background)
+
+
+@app.get("/runs/policy")
+def run_policy(user: dict = Depends(require_user)) -> dict:
+    """Asked by the extension before a test: are journeys on for this account? POST /runs enforces it regardless."""
+    return abuse.journeys_for(user["id"])
 
 
 @app.get("/runs/{run_id}")
@@ -364,6 +385,7 @@ def stop_run(run_id: str, background: BackgroundTasks, body: StopRequest | None 
 
     values = {"status": "stopped", "steps": steps, "tokens": tokens, "first_text": first_text}
     background.add_task(finish_run, run_id, values)
+    abuse.record_end(run_id, steps, "stopped", None)
     return {"run_id": run_id, "status": "stopped", "steps": steps, "report_status": "generating"}
 
 
@@ -460,6 +482,8 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
     site = site.strip()
     if "://" not in site:
         site = f"https://{site}"  # agents and people type "example.com"
+    if policy.category(site) == "site owner opt-out" or abuse.paused(user_id or "", policy.host(site)):
+        raise ValueError("The owner of this site asked Walkthru not to scan it.")  # the /bot page promise
     fetch.assert_public(site)
     with fetch.client() as c:
         resp = fetch.get(c, site)
@@ -1058,4 +1082,5 @@ async def dodo_webhook(request: Request) -> JSONResponse:
 def verification(user: dict = Depends(require_user)) -> dict:
     """Token the site owner publishes to unlock the full security scan (exposed files, secrets in bundles)."""
     token = security.verification_token(user["id"])
-    return {"token": token, "meta": f'<meta name="walkthru-verification" content="{token}">', "file": "/.well-known/walkthru.txt"}
+    return {"token": token, "meta": f'<meta name="walkthru-verification" content="{token}">', "file": "/.well-known/walkthru.txt",
+            "txt_name": "_walkthru", "txt_value": security.TXT_PREFIX + token}

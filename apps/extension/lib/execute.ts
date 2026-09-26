@@ -1,7 +1,7 @@
 /** Runs one PersonaStep inside the page. Returns a note for the agent when something went wrong. */
 
 import { findById } from "./snapshot";
-import { isDestructive, isSending } from "./safety";
+import { isBasket, isCommerce, isDestructive, isSearchField, isSearchForm, isSending, isSocial } from "./safety";
 
 export type Step = {
   thought: string;
@@ -38,7 +38,11 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
   const win = doc.defaultView!;
   switch (step.action) {
     case "scroll":
-      if (!opts.dryRun) win.scrollBy({ top: win.innerHeight * 0.8, behavior: "instant" as ScrollBehavior });
+      if (!opts.dryRun) {
+        // One screen down, the way a person scrolls; the next snapshot waits for lazy content to settle (snapshot.settle).
+        const reduce = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+        win.scrollBy({ top: win.innerHeight * 0.85, behavior: (reduce ? "instant" : "smooth") as ScrollBehavior });
+      }
       return { ok: true };
     case "back":
       if (!opts.dryRun) win.history.back();
@@ -57,6 +61,17 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
         if (!opts.verified) return { ok: false, note: `not sent: "${shown}" only fires on a domain the owner has verified` };
         if (opts.dryRun) return { ok: true, submits: submits(el), confirm: "send" };
         if (!opts.confirmed) return { ok: false, note: `not sent: the owner has not approved "${shown}"` };
+      }
+      if (!opts.verified) {
+        // Visitor mode, mirroring persona._enforce: the server never asks for these; this is a second wall in the page.
+        if (step.action === "type" && !isSearchField(el)) return { ok: false, note: `not typed: visitor mode only uses the site's search box ("${shown}")` };
+        const acts = el.tagName !== "A" || isBasket(text);
+        if (step.action === "click" && acts && (isSocial(text) || isCommerce(text))) {
+          return { ok: false, note: `not pressed: visitor mode never likes, follows, posts, buys or adds to a cart ("${shown}")` };
+        }
+        if (step.action === "click" && submits(el) && !isSearchForm((el as HTMLButtonElement).form)) {
+          return { ok: false, note: `not submitted: visitor mode only submits the site's search ("${shown}")` };
+        }
       }
       const scheme = el.tagName === "A" ? ((el.getAttribute("href") ?? "").split(":")[0] ?? "").toLowerCase() : "";
       if (step.action === "click" && APP_LINKS[scheme]) {

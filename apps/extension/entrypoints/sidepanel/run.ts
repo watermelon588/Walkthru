@@ -1,6 +1,6 @@
 /** The step loop. Lives here (side panel page) because Chrome suspends the MV3 worker. */
 
-import { observe, startRun, stopRun, type GoalPlan, type RunReply, type StepEvidence } from "../../lib/api";
+import { getRunPolicy, observe, startRun, stopRun, type GoalPlan, type RunReply, type StepEvidence } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
@@ -16,6 +16,7 @@ export type Progress = {
   runId?: string;
   evidenceWarning?: string;
   plan?: GoalPlan; // sent once, right after the run starts
+  code?: string; // why Walkthru stopped the run on purpose (visitor_mode_limit, bot_wall, agent_lost...)
 };
 
 const SETTLE_MS = 1200;
@@ -81,6 +82,23 @@ async function settled(tabId: number, signal: AbortSignal) {
   }
 }
 
+const HUMAN_CHECK = /bot wall|captcha/;
+
+/** The site asked for a human check. Walkthru never solves or bypasses one: the person solves it in the tab, then
+ *  the test reads the page again. Cancel (or a check that is still there) lets the API stop the run truthfully. */
+async function humanCheck(tabId: number, obs: Observation, signal: AbortSignal): Promise<Observation> {
+  if (!HUMAN_CHECK.test(obs.note ?? "")) return obs;
+  await setAgentStatus(tabId, "stopped", "Waiting for you: a human check");
+  const go = window.confirm(
+    "The site asked for a human check (a CAPTCHA or bot protection).\n\n" +
+      "Solve it yourself in this tab, then press OK to continue. Walkthru never solves it for you.\n\nPress Cancel to stop the test.",
+  );
+  if (!go || signal.aborted) return obs;
+  await settled(tabId, signal);
+  await setAgentStatus(tabId, "observing", "Reading the page again");
+  return send<Observation>(tabId, { type: "snapshot" });
+}
+
 /** Back to where the first test user started, so every test user in a set begins on the same page. */
 export async function openStart(url: string, signal: AbortSignal) {
   const tab = await activeTab();
@@ -98,6 +116,8 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
   try {
     emit({ phase: "starting" });
     const origin = new URL(opts.site).origin;
+    const allowed = await getRunPolicy();
+    if (!allowed.journeys) throw new Error(allowed.message || "Test runs are paused for this account.");
     // Chrome's side panel does not grant activeTab to captureVisibleTab. The API only
     // accepts activeTab or <all_urls>, so request the optional capture permission from
     // this explicit Start Test gesture. Chrome prompts once and remembers the choice.
@@ -109,7 +129,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     const deadline = Date.now() + MAX_MINUTES * 60_000;
 
     await setAgentStatus(tabId, "observing", "Reading the page");
-    let obs = await send<Observation>(tabId, { type: "snapshot" });
+    let obs = await humanCheck(tabId, await send<Observation>(tabId, { type: "snapshot" }), opts.signal);
     let reply = await startRun({ ...opts, observation: obs });
     runId = reply.run_id;
     if (reply.plan) emit({ plan: reply.plan });
@@ -154,7 +174,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         return;
       }
       await setAgentStatus(tabId, "observing", "Reading the updated page");
-      obs = await send<Observation>(tabId, { type: "snapshot" });
+      obs = await humanCheck(tabId, await send<Observation>(tabId, { type: "snapshot" }), opts.signal);
       if (note) obs.note = obs.note ? `${obs.note}; ${note}` : note;
       const stepIndex = steps.length - 1;
       let evidence: StepEvidence | undefined;
@@ -229,5 +249,6 @@ function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => voi
   if (reply.status === "running") return;
   const last = reply.steps.at(-1);
   if (last && (last.action === "done" || last.action === "give_up") && steps.at(-1) !== last) steps.push(last);
-  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id, evidenceWarning });
+  // `message` is the API's plain stop reason (policy.STOP_REASONS), shown as sent.
+  onProgress({ phase: "finished", steps, status: reply.status, runId: reply.run_id, evidenceWarning, code: reply.code, message: reply.message });
 }

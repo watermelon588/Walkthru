@@ -72,13 +72,14 @@ def test_sign_in_needs_password_and_a_fresh_code_and_locks_after_five_misses(pan
     client, calls = panel
     assert client.get("/").headers["location"] == "/login"
     assert sign_in(client, otp="000000").headers["location"] == "/login?m=wrong"
-    ok = sign_in(client)
+    otp = code()
+    ok = sign_in(client, otp=otp)
     assert ok.headers["location"] == "/"
     cookie = ok.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie
     assert client.get("/").status_code == 200
     assert TestClient(admin_app.app, base_url=BASE, follow_redirects=False).post(
-        "/login", data={"password": PASSWORD, "code": code()}, headers=ORIGIN).headers["location"] == "/login?m=wrong"  # a code works once
+        "/login", data={"password": PASSWORD, "code": otp}, headers=ORIGIN).headers["location"] == "/login?m=wrong"  # the same code works once
 
     admin_app.guard = Guard()
     for _ in range(5):
@@ -139,3 +140,14 @@ def test_unhandled_errors_answer_generically_and_reach_the_panel(monkeypatch):
     r = TestClient(main.app, raise_server_exceptions=False).get("/me/plan")
     assert r.status_code == 500 and "secret internals" not in r.text
     assert stored == [("server_error", {"method": "GET", "route": "/me/plan", "error": "RuntimeError", "message": "secret internals"})]
+
+
+def test_pausing_test_runs_needs_a_code_and_takes_a_clean_host(panel, fake_db):
+    client, _ = panel
+    sign_in(client)
+    token = csrf_of(client)
+    form = {"csrf": token, "scope": "host", "value": "https://Shop.Example.com/path", "reason": "owner asked"}
+    assert client.post("/block", data=form | {"code": "000000"}, headers=ORIGIN).headers["location"] == "/?m=bad-code"
+    assert client.post("/block", data=form | {"code": code()}, headers=ORIGIN).headers["location"] == "/?m=paused"
+    assert fake_db.blocks[-1]["scope"] == "host" and fake_db.blocks[-1]["value"] == "shop.example.com"
+    assert client.post("/block", data=form | {"code": code(), "scope": "user"}, headers=ORIGIN).headers["location"] == "/?m=bad-input"

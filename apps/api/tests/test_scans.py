@@ -131,3 +131,20 @@ def test_performance_scan_maps_pagespeed_evidence(monkeypatch):
     assert findings[0].kind == "performance"
     assert findings[0].title == "Mobile performance score 42/100"
     assert findings[0].evidence == "PageSpeed Insights, mobile: 42"
+
+
+def test_dns_txt_record_verifies_a_domain(monkeypatch):
+    from app.scans import security, tls
+
+    seen = []
+
+    def fake_dns(c, name, rtype):
+        seen.append((name, rtype))
+        return 0, ['"v=spf1 -all"', '"walkthru-verification=" "wt-abc"']  # quoted and split, as DNS-over-HTTPS returns it
+
+    monkeypatch.setattr(tls, "dns", fake_dns)
+    monkeypatch.setattr(security, "get", lambda c, url, **k: None)  # no meta tag, no file
+    assert security.verify_domain("https://shop.example.com/pricing", "wt-abc", None)
+    assert seen == [("_walkthru.shop.example.com", "TXT")]
+    assert not security.verify_domain("https://shop.example.com/", "wt-other", None)
+    assert not security.txt_verified("http://127.0.0.1:8102/", "wt-abc", None)  # no DNS for local servers
