@@ -280,6 +280,20 @@ def purge_run_audit(before: str) -> None:
     _request("DELETE", "/rest/v1/run_audit", params={"created_at": f"lt.{before}"}, prefer="return=minimal")
 
 
+def add_notification(row: dict) -> None:
+    _insert("notifications", row)
+
+
+def unread_notifications(user_id: str, limit: int = 50) -> list[dict]:
+    return _select("notifications", {"user_id": f"eq.{user_id}", "read_at": "is.null", "select": "id,section,kind,title,body,link,created_at",
+                                     "order": "created_at.desc", "limit": str(limit)})
+
+
+def read_notifications(user_id: str, section: str | None) -> None:
+    filters = {"user_id": f"eq.{user_id}", "read_at": "is.null"} | ({"section": f"eq.{section}"} if section else {})
+    _update("notifications", filters, {"read_at": _now()})
+
+
 def app_event(kind: str, user_id: str | None, detail: dict) -> None:
     """Feedback or a server error for the founder's admin panel (apps/api/admin)."""
     _insert("app_events", {"kind": kind, "user_id": user_id, "detail": detail})

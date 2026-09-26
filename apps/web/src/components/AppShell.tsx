@@ -3,17 +3,18 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
 import { accountAvatar, accountProfile, signOut, useSession } from '../lib/auth'
+import { useNotificationCounts, type Section } from '../lib/notifications'
 import { pendingJoin } from '../lib/teams'
 import { AccountAvatar } from './AccountAvatar'
 import { Logo, SkipLink } from './Shared'
 
-const workspace: { to: string; label: string; icon: Icon; end?: boolean }[] = [
-  { to: '/app', label: 'Runs', icon: PathIcon, end: true },
-  { to: '/app/team', label: 'Team', icon: UsersThreeIcon },
-  { to: '/app/compare', label: 'Compare', icon: ScalesIcon },
-  { to: '/app/watch', label: 'Watch', icon: EyeIcon },
+const workspace: { to: string; label: string; icon: Icon; end?: boolean; section?: Section }[] = [
+  { to: '/app', label: 'Runs', icon: PathIcon, end: true, section: 'runs' },
+  { to: '/app/team', label: 'Team', icon: UsersThreeIcon, section: 'team' },
+  { to: '/app/compare', label: 'Compare', icon: ScalesIcon, section: 'compare' },
+  { to: '/app/watch', label: 'Watch', icon: EyeIcon, section: 'watch' },
   { to: '/app/mcp', label: 'MCP', icon: TerminalWindowIcon },
-  { to: '/app/billing', label: 'Plan & billing', icon: CreditCardIcon },
+  { to: '/app/billing', label: 'Plan & billing', icon: CreditCardIcon, section: 'billing' },
   { to: '/app/settings', label: 'Settings', icon: GearSixIcon },
 ]
 const help: { href: string; label: string; icon: Icon }[] = [
@@ -28,6 +29,8 @@ const item = 'flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm transitio
 export function AppShell({ children, title, plainTitle = false }: { children: ReactNode; title?: string; plainTitle?: boolean }) {
   const drawer = useRef<HTMLDialogElement>(null)
   const { pathname } = useLocation()
+  const counts = useNotificationCounts()
+  const waiting = Object.values(counts).reduce((a, b) => a + b, 0)
   const navigate = useNavigate()
   useEffect(() => { drawer.current?.close() }, [pathname])
   // An invitee who had to sign in first lands here; take them back to their invitation.
@@ -49,10 +52,11 @@ export function AppShell({ children, title, plainTitle = false }: { children: Re
         <button
           type="button"
           onClick={() => drawer.current?.showModal()}
-          aria-label="Open navigation"
-          className="grid size-10 place-items-center rounded-full border border-line transition hover:bg-surface"
+          aria-label={waiting ? `Open navigation, ${waiting} new` : 'Open navigation'}
+          className="relative grid size-10 place-items-center rounded-full border border-line transition hover:bg-surface"
         >
           <ListIcon weight="light" className="size-4" />
+          {waiting > 0 && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full bg-ink ring-2 ring-bg" />}
         </button>
       </header>
 
@@ -78,7 +82,19 @@ export function AppShell({ children, title, plainTitle = false }: { children: Re
   )
 }
 
+/** A section's unread count. Quiet ink pill; screen readers hear "Runs, 2 new". */
+function Count({ n }: { n: number }) {
+  if (n <= 0) return null
+  return (
+    <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1.5 text-[11px] leading-none font-medium text-bg tabular-nums transition-[opacity,scale] duration-150 ease-out starting:scale-90 starting:opacity-0 motion-reduce:transition-opacity">
+      <span aria-hidden>{n > 9 ? '9+' : n}</span>
+      <span className="sr-only">, {n} new</span>
+    </span>
+  )
+}
+
 function SidebarNav() {
+  const counts = useNotificationCounts()
   const { session } = useSession()
   const navigate = useNavigate()
   const profile = accountProfile(session)
@@ -87,9 +103,10 @@ function SidebarNav() {
   return (
     <>
       <nav aria-label="Workspace" className="mt-8 grid gap-1">
-        {workspace.map(({ to, label, icon: I, end }) => (
+        {workspace.map(({ to, label, icon: I, end, section }) => (
           <NavLink key={to} to={to} end={end} className={({ isActive }) => `${item} ${isActive ? 'bg-surface text-ink' : 'text-muted hover:bg-surface/60 hover:text-ink'}`}>
             <I weight="light" className="size-[18px]" aria-hidden /> {label}
+            {section && <Count n={counts[section]} />}
           </NavLink>
         ))}
       </nav>

@@ -44,6 +44,9 @@ def check(site: dict, reason: str = "weekly") -> dict:
     diff = changes(previous.get("report") if previous else None, fresh["report"]) | {"reason": reason, "run_id": run_id, "baseline": previous is None}
     db.update_site(site["id"], {"last_run_id": run_id, "last_changes": diff, "next_check_at": (datetime.now(UTC) + EVERY).isoformat()})
     if previous and (diff["new"] or diff["fixed"]):
+        from app import notify
+
+        notify.watch_changed(str(site["user_id"]), run_id, site["site"], len(diff["new"]), len(diff["fixed"]))
         to = db.user_email(str(site["user_id"]))
         if to:
             deliver.send_watch(to, site["site"], f"{WEB_URL}/app/runs/{run_id}", diff)

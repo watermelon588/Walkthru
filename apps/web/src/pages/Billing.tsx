@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { btnPrimary } from '../components/Shared'
 import { plans as tiers } from '../content'
+import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { getBilling, requestAccess, startCheckout, type BillingOffer, type BillingStatus } from '../lib/runs'
 
 const PLAN_NAME: Record<BillingOffer['plan'], string> = { launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
@@ -23,6 +24,12 @@ export default function Billing() {
 
   const refresh = useCallback(() => getBilling().then((data) => setLoad({ kind: 'ready', data })).catch((e: Error) => setLoad({ kind: 'error', message: e.message })), [])
   useEffect(() => { refresh() }, [refresh])
+  // A grant, an offer or a payment arrives live (lib/notifications): show it without a reload.
+  useEffect(() => {
+    const onNote = (e: Event) => { if ((e as CustomEvent<Notification>).detail?.section === 'billing') refresh() }
+    window.addEventListener(NOTIFICATION_EVENT, onNote)
+    return () => window.removeEventListener(NOTIFICATION_EVENT, onNote)
+  }, [refresh])
 
   // Back from Dodo: poll briefly while the webhook arrives. The server alone decides whether it was paid.
   const waiting = load.kind === 'ready' && returnedFor !== null && load.data.offers.some((o) => o.id === returnedFor && o.status === 'approved')

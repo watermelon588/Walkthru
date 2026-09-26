@@ -7,6 +7,7 @@ import { ReadinessPipeline } from '../components/ReadinessPipeline'
 import { StatusPill } from '../components/ReportView'
 import { btnGhost, ScanForm } from '../components/Shared'
 import { useSession } from '../lib/auth'
+import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { getPlan, listRuns, PERSONA_LABEL, stopRun, timeAgo, type PlanSummary, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
@@ -27,9 +28,14 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    listRuns()
+    const load = () => listRuns()
       .then((r) => setRuns({ kind: 'ready', runs: r }))
       .catch((e: Error) => setRuns({ kind: 'error', message: e.message }))
+    load()
+    // A report that finishes while this page is open appears without a reload (lib/notifications).
+    const onNote = (e: Event) => { if ((e as CustomEvent<Notification>).detail?.section === 'runs') load() }
+    window.addEventListener(NOTIFICATION_EVENT, onNote)
+    return () => window.removeEventListener(NOTIFICATION_EVENT, onNote)
   }, [])
 
   const agentState: AgentPresenceState = runs.kind === 'error'

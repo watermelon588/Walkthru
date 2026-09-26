@@ -1,12 +1,12 @@
 # Current State
 
-_Last updated: 2026-09-25_
+_Last updated: 2026-09-26_
 
-## Handoff for the next agent (2026-09-25, Claude Code, written before pushing)
+## Handoff for the next agent (2026-09-26, Claude Code local, written before pushing)
 
 Read this block first.
 
-> **IMPORTANT, FIX BEFORE DEPLOYMENT:** [docs/agent-safety-plan.md](docs/agent-safety-plan.md). Item 1 is built (2026-09-26): `app/agent/policy.py` refuses blocked sites (banking, trading, social, webmail and similar, `app/agent/blocklist.json`), social and commerce goals on unverified sites, bulk goals, and signed-in tests on unverified domains, before any model call; `POST /runs` returns `mode` (owner or visitor) and a refused run carries `X-Walkthru-Code`; a run whose tab reaches a blocked host stops truthfully. Still open and still launch blockers: items 2 to 8 (the per-step action gate with Visitor-mode typing, DNS TXT verification, snapshot fixes, honest failure wording and bot walls, rate limits and audit log, legal pages, unlisted beta).
+> **Agent safety ([docs/agent-safety-plan.md](docs/agent-safety-plan.md)):** items 1 to 8 are built and tested (item 1 by the cloud agent, 2 to 8 by the local agent on 2026-09-26; status and two deliberate deviations are at the end of that file). What still blocks launch there is the founder's: a lawyer's review of Terms and Privacy, the contact domain on the legal pages (still walkthru.dev), publishing the extension Unlisted, and one real-browser red-team pass with the extension on the hard fixture (`/feed.html`, `/challenge.html`, `/account.html`, a bulk goal, an Instagram goal).
 
 ### Local state at this push
 - Local `main` equals `origin/main` after this push. Nothing local is left uncommitted except git-ignored files.
@@ -107,10 +107,24 @@ Read this block first.
 - Founder still to do: run `python -m admin setup` in a terminal (choose the password, add the key to an authenticator app). The panel refuses to start until then.
 - Tests: `tests/test_admin.py` (7) including host and origin refusal, lockout, code replay, CSRF, escaping; API 404 pass.
 
+### Added 2026-09-26 by Claude Code (local): agent safety items 2 to 8
+- Visitor mode is enforced at every step on the server (`persona._enforce`) and mirrored in the extension (`execute.ts`): search-box typing only, no social or commerce buttons (or add-to-cart links), no non-search submits, and a page that shows a signed-in account stops the run. Stops end the run on purpose with code `visitor_mode_limit` or `signed_in_unverified`.
+- DNS TXT verification (`_walkthru.<host>` = `walkthru-verification=<token>`), shown in Settings and the docs.
+- Snapshot: icon-button labels, visible-first ordering, smooth scroll and a wait for the page to settle. Bot walls and CAPTCHAs pause for a human take-over; new statuses `bot_wall` and `agent_lost`; one table of stop reasons (`policy.STOP_REASONS`) whose message the side panel shows as sent.
+- `run_audit` (90 days, never typed values) and `run_blocks` (kill switches) tables, applied on Supabase and refused to browsers. Limits on unverified hosts: 20 journeys an hour per host, 12 per user per host. Five refused goals in a day pause the account and alert the admin panel, which can also pause everything or one site. `GET /runs/policy` for the extension.
+- Privacy, Terms and Security updated, `/bot` page, docs section "Why can't Walkthru test Instagram?", `docs/chrome-web-store.md`, and an extension test that fails on cookie, storage, history or request APIs.
+
+### Added 2026-09-26 by Claude Code (local): notifications, toasts, sign-in fix
+- `notifications` table (applied on Supabase; a browser reads only its own rows; in the realtime publication). `app/notify.py` writes them for: a pass granted (admin panel, `grant_plan.py`, Dodo payment), an offer ready, a request declined, a journey report ready, a watch check that changed, a comparison ready, a workspace mention and a finding assigned to you.
+- `GET /me/notifications` (counts per sidebar section plus recent items; Team also counts unread chat and pending invitations) and `POST /me/notifications/read`.
+- Web: `NotificationsProvider` (Supabase Realtime, focus refresh and a slow poll) puts counts on the sidebar items and a dot on the phone menu button, marks a section read when its page opens, and shows a toast for each new notification. `lib/toast.ts` plus `<Toaster />` (call `toast()` anywhere); Send feedback uses it. Dashboard and Plan & billing refresh themselves when their notification arrives.
+- Sign-in: Back from Google or GitHub no longer leaves the buttons frozen on "Opening Google..." (bfcache restore resets the page), a provider that never opens frees the buttons after 10 s with a message, and the email button no longer says "Sending link..." during an OAuth redirect.
+- Not tested live: a notification arriving over Realtime in a signed-in browser (the in-app browser had no session). API tests cover the rows and counts; the toaster was checked in a browser.
+
 ### Next steps, in order
-1. Founder: revoke the pasted MCP key; restart `.\dev`; submit one plan request to confirm the founder email arrives.
+1. Founder: sign in and watch a grant from the admin panel arrive as a toast and a Plan & billing badge; run `python -m admin setup` if not done; the safety red-team pass above.
 2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.
-3. Launch-gate agent tasks from docs/system-design.md: SD-2.2 (request and snapshot size caps), SD-9.2 (Python lockfile), SD-9.1 (CI), SD-3.1 (IDOR test for every route), SD-2.1 (shared rate limits).
+3. Launch-gate agent tasks from docs/system-design.md: SD-9.2 (Python lockfile), SD-9.1 (CI), SD-2.1 (shared rate limits for the other routes; journeys are limited in Postgres since 2026-09-26). SD-2.2 and SD-3.1 are done.
 4. Founder with an agent: Dodo test mode (docs/billing.md), then one test payment and refund.
 5. API key hardening before launch: expiry, read-only scope, register the `wt_` prefix for GitHub secret scanning; OAuth for MCP after launch.
 

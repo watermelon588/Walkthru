@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-from app import billing, db, plans
+from app import billing, db, notify, plans
 from scripts.grant_plan import user_id_for
 
 ACTOR = os.environ.get("WALKTHRU_ADMIN") or getpass.getuser()
@@ -44,6 +44,7 @@ def make_offer(user_id: str, plan: str, founding: bool, runs: int | None, reques
     billing.check_product(terms)  # refuse to send a checkout whose Dodo product charges something else
     expires = datetime.now(UTC) + timedelta(hours=billing.CHECKOUT_HOURS)
     offer = db.create_offer(terms | {"user_id": user_id, "request_id": request_id, "checkout_expires_at": expires.isoformat(), "approved_by": ACTOR})
+    notify.offer_ready(user_id, plan, dollars(offer["price_cents"]), expires.strftime("%b %d, %H:%M"))
     db.audit(ACTOR, "offer.create", offer["id"], {k: offer[k] for k in ("user_id", "plan", "founding", "price_cents", "runs", "days", "request_id")})
     print(f"offer {offer['id']}: {plan}{' (founding)' if founding else ''} {dollars(offer['price_cents'])}, {offer['runs']} runs, "
           f"{offer['days']} days. The user pays from {os.environ.get('WEB_URL', 'http://localhost:5173')}/app/billing before {expires:%Y-%m-%d %H:%M} UTC.")
@@ -99,8 +100,10 @@ def main() -> None:
                 sys.exit("the request changed while approving; the offer was cancelled")
             db.audit(ACTOR, "request.approve", req["id"], {"offer_id": offer["id"]})
         elif args.cmd == "reject":
-            if not db.decide_access_request(args.request_id, "rejected"):
+            req = db.get_access_request(args.request_id)
+            if not req or not db.decide_access_request(args.request_id, "rejected"):
                 sys.exit("no pending request with that id")
+            notify.request_declined(req["user_id"])
             db.audit(ACTOR, "request.reject", args.request_id, {"reason": args.reason})
             print("rejected")
         elif args.cmd == "offer":

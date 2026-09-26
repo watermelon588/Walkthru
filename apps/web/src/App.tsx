@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
+import { Toaster } from './components/Toaster'
+import { NotificationsProvider } from './components/NotificationsProvider'
 import Landing from './pages/Landing'
 
 // Landing is the LCP path, so it ships in the main bundle. Everything else loads on demand.
@@ -53,33 +55,36 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollManager />
-      <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-[100dvh] bg-bg" />}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/agent-lab" element={<AgentLab />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/docs" element={<Docs />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/bot" element={<Bot />} />
-          <Route path="/security" element={<Security />} />
-          <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
-          <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-          <Route path="/app/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
-          <Route path="/app/billing" element={<RequireAuth><Billing /></RequireAuth>} />
-          <Route path="/app/mcp" element={<RequireAuth><Mcp /></RequireAuth>} />
-          <Route path="/app/watch" element={<RequireAuth><Watch /></RequireAuth>} />
-          <Route path="/app/compare" element={<RequireAuth><Compare /></RequireAuth>} />
-          <Route path="/app/compare/:id" element={<RequireAuth><CompareResult /></RequireAuth>} />
-          <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
-          <Route path="/app/team" element={<RequireAuth><Teams /></RequireAuth>} />
-          <Route path="/app/team/:id/runs/:runId" element={<RequireAuth><TeamReport /></RequireAuth>} />
-          <Route path="/app/team/:id/:tab?" element={<RequireAuth><Team /></RequireAuth>} />
-          <Route path="/join" element={<Join />} />
-          <Route path="/r/:id" element={<Public />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
+      <NotificationsProvider>
+        <Toaster />
+        <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-[100dvh] bg-bg" />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/agent-lab" element={<AgentLab />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/docs" element={<Docs />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/bot" element={<Bot />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
+            <Route path="/app/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
+            <Route path="/app/billing" element={<RequireAuth><Billing /></RequireAuth>} />
+            <Route path="/app/mcp" element={<RequireAuth><Mcp /></RequireAuth>} />
+            <Route path="/app/watch" element={<RequireAuth><Watch /></RequireAuth>} />
+            <Route path="/app/compare" element={<RequireAuth><Compare /></RequireAuth>} />
+            <Route path="/app/compare/:id" element={<RequireAuth><CompareResult /></RequireAuth>} />
+            <Route path="/app/runs/:id" element={<RequireAuth><Report /></RequireAuth>} />
+            <Route path="/app/team" element={<RequireAuth><Teams /></RequireAuth>} />
+            <Route path="/app/team/:id/runs/:runId" element={<RequireAuth><TeamReport /></RequireAuth>} />
+            <Route path="/app/team/:id/:tab?" element={<RequireAuth><Team /></RequireAuth>} />
+            <Route path="/join" element={<Join />} />
+            <Route path="/r/:id" element={<Public />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </NotificationsProvider>
     </BrowserRouter>
   )
 }

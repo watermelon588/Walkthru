@@ -245,6 +245,9 @@ def _grant(offer: dict, payment_id: str) -> None:
         "user_id": offer["user_id"], "plan": offer["plan"], "starts_at": now.isoformat(),
         "expires_at": (now + timedelta(days=offer["days"])).isoformat(), "runs_granted": offer["runs"],
         "source": "dodo", "offer_id": offer["id"], "payment_id": payment_id})
+    from app import notify
+
+    notify.pass_granted(offer["user_id"], offer["plan"], offer["days"], paid=True)
 
 
 def revoke(payment_id: str | None, reason: str) -> str:

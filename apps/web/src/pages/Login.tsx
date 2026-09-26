@@ -1,5 +1,5 @@
 import { EnvelopeSimpleIcon, GithubLogoIcon, GoogleLogoIcon } from '@phosphor-icons/react'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router'
 import { brand } from '../brand'
 import { AgentPresence, type AgentPresenceState } from '../components/AgentPresence'
@@ -18,12 +18,29 @@ type Status =
 
 // Where Supabase sends people after they sign in.
 const redirectTo = `${location.origin}/app`
+// If the provider's page has not opened by then (a blocked redirect, a dropped connection), free the buttons again.
+const OAUTH_WAIT_MS = 10_000
 
 export default function Login() {
   const root = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const waiting = useRef<number | undefined>(undefined)
   const { session } = useSession()
   useReveal(root)
+  // Back from Google or GitHub without signing in: Chrome restores this page from its back-forward cache, frozen on
+  // "Opening Google...". Start fresh instead, so every button works again.
+  useEffect(() => {
+    const restored = (e: PageTransitionEvent) => {
+      if (!e.persisted) return
+      window.clearTimeout(waiting.current)
+      setStatus({ kind: 'idle' })
+    }
+    window.addEventListener('pageshow', restored)
+    return () => {
+      window.removeEventListener('pageshow', restored)
+      window.clearTimeout(waiting.current)
+    }
+  }, [])
   if (session) return <Navigate to="/app" replace />
 
   async function sendLink(e: FormEvent<HTMLFormElement>) {
@@ -39,8 +56,17 @@ export default function Login() {
   async function oauth(provider: Provider) {
     if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is not configured yet. Add the Supabase keys to apps/web/.env.' })
     setStatus({ kind: 'oauth', provider })
+    window.clearTimeout(waiting.current)
+    waiting.current = window.setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        setStatus({ kind: 'error', message: `${provider === 'google' ? 'Google' : 'GitHub'} did not open. Check your connection and try again.` })
+      }
+    }, OAUTH_WAIT_MS)
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
-    if (error) setStatus({ kind: 'error', message: error.message })
+    if (error) {
+      window.clearTimeout(waiting.current)
+      setStatus({ kind: 'error', message: error.message })
+    }
   }
 
   const busy = status.kind === 'sending' || status.kind === 'oauth'
@@ -114,7 +140,7 @@ export default function Login() {
                 />
                 <p id="email-error" role="alert" className="min-h-5 text-sm text-danger">{status.kind === 'error' ? status.message : ''}</p>
                 <button type="submit" disabled={busy} className={`${btnPrimary} mt-1 justify-center disabled:opacity-60`}>
-                  {busy ? 'Sending link...' : 'Email me a sign-in link'}
+                  {status.kind === 'sending' ? 'Sending link...' : 'Email me a sign-in link'}
                 </button>
               </form>
 

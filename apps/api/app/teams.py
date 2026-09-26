@@ -27,7 +27,7 @@ from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, EmailStr, Field
 
-from app import db, deliver, scout
+from app import db, deliver, notify, scout
 from app.agent import compare
 from app.auth import require_user
 
@@ -329,6 +329,16 @@ def list_teams(user: dict = Depends(require_user)) -> dict:
     owned = sum(1 for m in rows if m["role"] == "owner")
     return {"teams": teams, "invitations": invitations, "plus": plus, "can_create": plus and owned < MAX_OWNED and len(rows) < MAX_MEMBERSHIPS,
             "owned": owned, "max_owned": MAX_OWNED, "seats": SEATS}
+
+
+def attention(user: dict) -> int:
+    """What the sidebar's Team badge counts besides notifications: unread workspace chat and invitations waiting."""
+    rows = [m for m in db.memberships(user["id"]) if m.get("team")]
+    unread = sum(db.unread(m["team"]["id"], user["id"], m["last_read_message_id"])[0] for m in rows)
+    if user.get("email_verified") and user.get("email"):
+        mine = {m["team"]["id"] for m in rows}
+        unread += sum(1 for i in db.invites_for_email(user["email"].lower()) if i.get("team") and i["team"]["id"] not in mine)
+    return unread
 
 
 @router.post("/teams")
@@ -816,6 +826,8 @@ def triage(team_id: uuid.UUID, body: Triage, user: dict = Depends(require_user))
     if status != item["status"]:
         _event(tid, user, "finding.status", title=item["title"], site=item["site"], thread=item["thread"], old=item["status"], new=status)
     if assignee != item["assignee_id"]:
+        if assignee and assignee != user["id"]:
+            notify.send(assignee, "team", "team.assigned", f"{_name(user)} assigned you a finding", item["title"][:300], f"/app/team/{tid}/findings")
         _event(tid, user, "finding.assigned", title=item["title"], site=item["site"], thread=item["thread"],
                assignee_id=assignee, assignee_name=members[assignee]["name"] if assignee else None)
     return {**item, "status": status, "assignee_id": assignee, "assignee_name": members[assignee]["name"] if assignee else None,
@@ -878,6 +890,10 @@ def post_message(team_id: uuid.UUID, body: NewMessage, background: BackgroundTas
         raise HTTPException(409, "That message id is already taken. Send it again.")
     if asks_scout and stored.get("new"):  # a retried send is answered once
         background.add_task(scout.reply, tid, thread, text, user)
+    if stored.get("new", True):
+        for member_id in mentions:  # a toast and a badge for each person named, live
+            notify.send(member_id, "team", "team.mention", f"{_name(user)} mentioned you in {me['team']['name']}"[:200], text[:300],
+                        f"/app/team/{tid}/chat" if thread == "general" else f"/app/team/{tid}")
     if thread == "general" and stored["id"] > me["last_read_message_id"]:  # your own message counts as read
         db.update_member(tid, user["id"], {"last_read_message_id": stored["id"], "last_seen_at": _now().isoformat()}, last_read_message_id=f"lt.{stored['id']}")
     return _message_out(stored)
