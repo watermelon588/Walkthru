@@ -105,7 +105,7 @@ Also still open: V7 (evidence and PDF close-out), V9 (landing copy for the new p
 
 ## Gotchas that cost time this session
 
-- **Direct Postgres from the founder's network times out.** `python -m app.db` often fails. Schema changes go through the Supabase dashboard SQL editor: paste the new block from `apps/api/schema.sql`, then run `notify pgrst, 'reload schema';`. The API itself uses HTTPS (PostgREST) and is fine.
+- **Direct Postgres from the founder's network times out.** Schema changes are numbered files in `apps/api/migrations/`, applied with `python -m app.migrate` (one query per file, in a transaction, fail-fast timeouts) using the IPv4 session pooler URL. If it still cannot connect, paste the new migration into the Supabase SQL editor and record it in `schema_migrations` by hand. The API itself uses HTTPS (PostgREST) and is fine.
 - **Windows shell:** bash heredocs mangle `\n` and `\d`. Write edit scripts to the scratchpad with the Write tool and run them with `apps/api/.venv/Scripts/python`.
 - **Browser pane screenshots come back blank when the pane is hidden.** Verify with `get_page_text`, `find` or JavaScript instead. The pane is not signed in to the founder's account; use the test account's public report (`/r/<id>`).
 - **Free-model limits:** Groq allows 8,000 tokens a minute per model; OpenRouter free allows 50 requests a day until $10 of credit. Slowness, not failure, is the symptom.

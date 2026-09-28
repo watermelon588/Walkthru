@@ -1,0 +1,11 @@
+# gitleaks settings for this repository (SD-4.7, .github/workflows/security.yml). The default rules, plus the two
+# places that hold fake credentials on purpose. Keep this list short: every path here is a place a real key would hide.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberate test credentials and the scanner's own rule patterns"
+paths = [
+  '''^apps/api/tests/''',                         # throwaway test keys (a generated RSA key for GitHub App signing, fake tokens)
+  '''^apps/api/app/scans/data/gitleaks\.json$''', # Walkthru's bundle-secret rules: regexes and examples, not secrets
+]

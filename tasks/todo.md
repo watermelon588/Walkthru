@@ -8,6 +8,20 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 System design and hardening tasks before going live (SD-1.1 to SD-10.4, with hardness and human flags): [docs/system-design.md](../docs/system-design.md). Claim with `- [~]` there. (added by Claude Code, 2026-09-25)
 
+### Codex completion ledger (updated 2026-09-28)
+- [x] SD-3.2 auth cache: bounded LRU eviction, thread-safe access, expired-entry cleanup and documented validation window. 20 focused tests passed; Ruff clean.
+- [x] Repository reuse and launch audit, including MiroFish licence constraints, citation gaps and payment setup: [assessment](../docs/repository-opportunities-and-launch-audit-2026-09-27.md).
+- [x] Competitor comparison metric bars, severity stacks, coverage and comparable gaps; public-scope scans and extension handoff. API, web and extension tests/builds passed (CURRENT_STATE.md).
+- [x] DNS TXT ownership guidance and verification action; meta/file alternatives retained. Public competitor comparisons do not require ownership; owner journeys still do.
+- [x] Dashboard and ReadinessPipeline crashes on partial/comparison reports fixed and type/lint checked.
+- [x] P3.2 citation correctness, measurement coverage, source evidence, filters, quota/lease recovery and regression tests: [measurement v2](../docs/citation-measurement.md).
+- [ ] P3.2 live showcase checked twice and sustained weekly coverage. Distinct from the completed implementation.
+- [x] SD-8.1 structured request logs, safe error diagnostics and support IDs in web/extension errors. Privacy, concurrency, CORS and client regressions pass. [Guide](../docs/checkpoints-and-request-logs.md).
+- [x] SD-6.2 code and local verification: production persistence guard, private-schema migration, abrupt process restart, HTTP resume and cleanup tests.
+- [ ] SD-6.2 deployment acceptance: apply migration 0002, configure a confirmed VM and verify a live extension journey across restart. Overall SD-6.2 stays partial in system-design.md.
+- [x] SD-6.5 run portion: durable start/observe/stop request keys, response replay, action-ID validation, bounded extension retries, report job deduplication and lost-stop recovery. Real PostgreSQL/HTTP and extension-loop regressions pass. [Contract and evidence](../docs/run-idempotency.md).
+- [ ] SD-6.5 activation: migration 0003 plus deployed API/extension acceptance. Payment idempotency remains separate under SD-10.1; overall SD-6.5 stays partial.
+
 ### Founder track (now)
 - [x] Confirm prices: Pro $19 and Plus $49, founding $15 and $39 (2026-09-24)
 - [x] Approve reusing permissive open source and the free-tier-only rule (2026-09-25)
@@ -155,13 +169,14 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
   - Accept: Google OAuth with `webmasters.readonly`; Search Analytics (queries, clicks, impressions, CTR, position, last 28 days) and URL Inspection for audited pages (2,000 a day per property); Bing Webmaster API with the user's own key. Joined to findings: "ranks 11 for X at 3% CTR", "not indexed: reason".
   - Verify: recorded API responses in pytest; live on the founder's own site.
 - [x] **P3.2 AI citation tracking** (L), built 2026-09-26 by Claude Code (local): `app/citations.py`, `/citations` routes, `/app/visibility` (AI answers), `tests/test_citations.py`. Engines changed after measuring the free quotas (SPEC.md). Still open: the showcase prompt set tracked twice on real engines (needs a signed-in Plus account).
+  - **Correctness and coverage overhaul completed 2026-09-27 (Codex):** verified answer references, strict host matching, stable historical provenance, explicit unsupported surfaces, correct citation denominator, source evidence UI, filters, atomic bounded admission, persisted attempt quotas, leases and retry recovery. Details and validation: [citation measurement v2](../docs/citation-measurement.md). No paid APIs enabled. Live showcase remains open.
   - Reuse: [ai-search-guru/getcito](https://github.com/ai-search-guru/getcito-worlds-first-open-source-aio-aeo-or-geo-tool) (MIT) for the data model (prompts, answers, mentions, citations, share of voice).
   - Accept:
     - Prompts suggested in code from the site's title, headings and category, editable by the owner.
-    - Engines on free quotas: Gemini 2.5 Flash with Google Search grounding (free tier lists 500 grounded requests a day, shared; verify on our key) and Groq Compound (free-tier daily limit; `compound-mini` was retired 2026-09-21). ChatGPT and Perplexity show "not measured".
-    - Mention, citation (the grounding sources), position and share of voice against named competitors, computed in code from the answer text and sources.
-    - A daily cap counted in the database, like `FREE_RUNS_PER_DAY`, shares the free quota fairly; checks queue when it is used up.
-    - Proposed limits: Launch Pack one snapshot of 10 prompts; Pro 10 prompts weekly on Gemini; Plus 25 prompts per site weekly on both engines.
+    - Existing engines: Groq gpt-oss with browser search; Gemini from memory. Optional existing Gemini grounding remains off by default. Google AI Overviews/AI Mode, ChatGPT, Perplexity and Claude show "not measured".
+    - Mentions, verified citations and share of mentions against named competitors are computed in code. Mention and source order are not search rankings.
+    - Atomic daily attempt caps, global spacing, bounded backlog and recoverable leases govern the shared free capacity. Weekly is a scheduling cadence, not a guaranteed completion time.
+    - Existing limits: Launch Pack one snapshot of 10 prompts; Pro 10 prompts per site on the web engine; Plus 25 prompts per site on both engines. No pricing or allocation changes in this overhaul.
   - Verify: pytest with recorded answers; the showcase prompt set tracked twice.
 - [ ] **P3.3 Sources and accuracy** (M): sources grouped by type (the user's site, competitors, Reddit, G2, Product Hunt, YouTube, Wikipedia, listicles) with "get listed here" actions; accuracy compares the answer's price and feature claims with the site's own pages (one free-chain call per answer, labelled).
 - [ ] **P3.4 Weekly watch and deploy webhook (V12)** (M): watch, deploy hook and change email built 2026-09-25 (`app/watch.py`, `/watch`, `/hooks/deploy/{token}`, `tests/test_watch_compare.py`); still open: as in the v1.1 entry, plus tracking changes (a lost citation, a new competitor) in the same once-per-change email.
@@ -364,7 +379,7 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 ### Next versions (not scheduled)
 - [ ] Preview-deploy check (GitHub Action with a PR comment)
 - [ ] Findings to GitHub Issues or Linear
-- [ ] AI citation tracking add-on, now P3.2 on free engines
+- [x] AI citation tracking add-on, now P3.2 on free engines (implementation complete; live showcase validation remains open above)
 - [ ] Self-serve checkout after payment.md's V2 gate
 
 ## v1 history
@@ -494,15 +509,16 @@ System design and hardening tasks before going live (SD-1.1 to SD-10.4, with har
 - [ ] Buy/configure production domain and HTTPS
 - [ ] Deploy web with SPA rewrites and API with process supervision
 - [ ] Configure production CORS, extension id, Supabase redirects, Resend and PageSpeed
-- [ ] Replace per-process scan limiting with a shared production limiter
-- [ ] Add structured error logging, health checks and uptime alerts
+- [x] Replace per-process scan limiting with a shared production limiter (SD-2.1, Claude Code; shared counter applied 2026-09-27)
+- [x] Add structured error logging and request references (SD-8.1, Codex 2026-09-28); existing `/health` retained
+- [ ] Add dependency readiness checks and uptime alerts (SD-6.7, SD-8.3)
 - [ ] Document database backup, restore and migration procedures
 - [ ] Split web and extension bundles if the 500 kB warnings remain
 - [ ] Rotate development credentials before launch
 
 ### Launch validation
 
-- [ ] Replace placeholder screenshots with current product captures
+- [x] Replace placeholder screenshots with current product captures (2026-09-27: four real report crops; hero is the animated HeroDemo; hero-product and extension-panel placeholders are unused)
 - [ ] Publish one representative public demo report
 - [ ] Add extension install, permission, safe-mode and verification onboarding
 - [ ] Test 20 community sites and triage failures

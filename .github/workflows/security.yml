@@ -1,0 +1,59 @@
+# Dependency and secret scanning (SD-4.7, docs/system-design.md). The repository is public, so a leaked key is a
+# leaked key. SD-9.1 adds tests and builds; these audits stay their own workflow so they also run weekly.
+name: Security audits
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"  # Mondays: new advisories for dependencies that did not change
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [apps/web, apps/extension]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Reads package-lock.json only; nothing is installed. Shipped code only, like the task says.
+      - run: npm audit --omit=dev
+        working-directory: ${{ matrix.app }}
+
+  pip-audit:
+    name: pip-audit (apps/api)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      # The pinned lockfile (SD-9.2) is exactly what gets installed, so it is what gets audited.
+      - run: uvx pip-audit==2.10.1 -r requirements.lock --no-deps --disable-pip --progress-spinner off
+        working-directory: apps/api
+
+  gitleaks:
+    name: gitleaks (new commits)
+    # The commits of each push or pull request only. Old history still holds credentials that SD-4.8 rotates, so a
+    # full-history scan would fail until then; run one by hand (workflow_dispatch) after the rotation.
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # the commit range must be in the clone
+      - uses: gitleaks/gitleaks-action@v2  # free for personal accounts; uses .gitleaks.toml at the root
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"  # read-only token: report in the job log, not as PR comments

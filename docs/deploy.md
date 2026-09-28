@@ -1,10 +1,15 @@
 # Deploying the v0.5 friends beta
 
+For the production VM, durable agent state is a separate launch gate: follow the
+[checkpoint migration, restart drill and request-log guide](checkpoints-and-request-logs.md).
+Updated run clients also require migration 0003 and the API deployment order in [run idempotency](run-idempotency.md).
+The historical Render beta instructions below use memory unless configured otherwise.
+
 Web on Vercel (free), API on Render (free), database and sign-in on Supabase (existing project), extension as a zip your friends load themselves. About 45 minutes the first time.
 
 ## 0. Before anything goes online (10 minutes, Supabase dashboard)
 
-1. **SQL editor:** run the last block of `apps/api/schema.sql` (drops `runs.email`, see docs/decisions.md 2026-09-25). Until then, emails already stored on 5 public reports stay readable with the public key.
+1. **SQL editor:** apply the migrations (`python -m app.migrate`; the `runs.email` drop is in `apps/api/migrations/0001_initial.sql`) (drops `runs.email`, see docs/decisions.md 2026-09-25). Until then, emails already stored on 5 public reports stay readable with the public key.
 2. **Authentication > Users:** the repo is public and older commits contain the passwords of `walkthru.tester@example.com` and `walkthru.delete-check@example.com`. Delete the delete-check user, and set a new password for the tester (then put it in `apps/api/.env` as `TEST_USER_PASSWORD`).
 3. **Project Settings > API:** rotate the secret key (shared in chat on 2026-09-18). Use the new one in step 1 below.
 

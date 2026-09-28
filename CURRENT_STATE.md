@@ -1,6 +1,141 @@
 # Current State
 
-_Last updated: 2026-09-26_
+_Last updated: 2026-09-28_
+
+## GitHub publication handoff (2026-09-28, Codex)
+
+- Founder requested committing and pushing all accumulated workspace changes to `origin/main`, including both agents' work. Backend, web/extension and documentation/CI changes are grouped into commits. Existing test/build evidence is recorded below; no application code changed for this handoff.
+- Pre-push fetch found local and remote main aligned. Added/untracked text passed local checks against private environment values and common credential patterns; ignored secrets and generated files remain excluded. Gitleaks is not installed locally; the included security workflow supplies the GitHub scan. Production migrations 0002/0003 and deployed acceptance remain pending; this publication does not apply migrations.
+
+## Small auth-cache close-out (2026-09-28, Codex)
+
+- **SD-3.2 completed and marked.** Finished the existing hashed, size-capped cache with real least-recently-used eviction, expired-entry pruning on insert and a lock around cache reads/writes/account eviction. Maximum 2,000 entries per process; cache hits do not extend the five-minute validation window or token expiry. The local cache's sign-out/revocation delay is documented in `app/auth.py`.
+- Added an HTTP regression that first failed on FIFO eviction and now verifies LRU eviction and expiry cleanup below capacity. Updated the observability cache fixture for OrderedDict. Auth, rate-limit and observability suites: **20 passed**; API Ruff and whitespace checks passed. No new dependency, paid API, migration or deployment. Remaining small choices: SD-3.3 extension sender checks and SD-4.2 API security headers.
+
+## Run retry idempotency close-out (2026-09-28, Codex)
+
+- **SD-6.5 run/start/observe/stop implementation completed and marked separately.** Durable per-user UUID request claims bind the operation, run and canonical body hash; repeated completed requests replay their original response. In-flight keyed mutations of a run are serialized, changed requests conflict, and uncertain outcomes remain blocked rather than repeating work. Pending action IDs reject stale observations. [Contract, deployment order and support procedure](docs/run-idempotency.md).
+- The extension negotiates API support before enabling at most three transport attempts using the same frozen body and key. A lost reply never repeats a snapshot or browser action. Repeated action IDs stop the browser loop. Web dashboard stops also send keys. Older no-key clients retain their prior behavior and do not receive these guarantees; enforcing a minimum client version remains SD-9.4.
+- Removed blind graph-mutation retries after database errors; checkpoint reads still retry safely. Report jobs now use the existing SD-6.1 queue's stable `report:<run_id>` key. A lost database stop acknowledgement or a repeated stop can queue a missing partial report without adding duplicate jobs. No queue redesign or payment code change.
+- New migration `0003_run_idempotency.sql`: service-only RPCs, 24-hour replay limit, six-hour payload purge, tombstones until account deletion, and run-deletion fencing of late completions. No raw request bodies are stored by the ledger. **Not applied to production.** Deploy migrations 0002/0003 before the updated API and clients; VM/extension acceptance remains open. Unknown outcomes need investigation; automatic crash reconciliation is not claimed.
+- Validation: full API run **670 passed, 19 skipped**, with one obsolete test still expecting the deliberately removed graph-mutation retry. Updated that test to verify safe read retries; the complete runtime/retention selection then passed **16 tests**, including a new purge-after-storage-failure regression. No unresolved failures. All **14** new real-PostgreSQL/HTTP idempotency tests passed in the full run; models and application rows are fixture-backed. Extension **48 passed, 1 skipped** (opt-in live provider journey); web **8 passed**. Both production builds/type checks/lints, API Ruff and diff whitespace checks passed. Skipped API cases require PostgREST. Existing web bundle/dynamic-import warnings and upstream AnyIO deprecation remain.
+- Task ledgers reconciled; overall SD-6.5 stays partial for deployment and Dodo acceptance. No paid API, dependency, live schema change, commit or deployment. [Remaining tasks in difficulty order](docs/remaining-tasks-2026-09-28.md); the next batch awaits the founder's choice.
+
+## Request logs and durable checkpoint close-out (2026-09-28, Codex)
+
+- **SD-8.1 completed and marked:** allowlisted JSON request/error logs; generated request IDs, authenticated UUIDs, route templates, response status and duration. Web and extension errors include the reference ID; CORS, body-limit responses and unhandled 500s carry it too. Generic 500 records retain exception class and safe frame locations, with no raw exception message, token, email, snapshot or typed value. A failed logging sink cannot print the unsanitized record. API and standalone worker logging use the same formatter.
+- **SD-6.2 code and local proof completed; VM gate remains open.** PostgreSQL mode no longer silently falls back to memory, and `APP_ENV=production` forbids memory. Startup checks persistence before serving, rejects incompatible/missing schemas, and shutdown closes the bounded pool. Direct/session pooler supported; Supabase transaction pooler refused. Existing dependency only, with its MIT SQL notice retained.
+- New migration `apps/api/migrations/0002_agent_checkpoints.sql` installs the private checkpoint schema and atomically moves existing public checkpoint state, revoking browser/REST access. Runtime no longer does schema DDL. **This migration has not been applied to production.** It needs a stopped-service maintenance window and backup; no unsafe down migration into the public schema. The founder does not know of an available VM, so no VM was assumed or provisioned. [Activation/restart and log guide](docs/checkpoints-and-request-logs.md).
+- Real disposable PostgreSQL tests prove recovery in a fresh process after abrupt exit, private access controls, legacy migration, version/startup guards and checkpoint deletion. The HTTP journey resumes after rebuilding the pool and graph across API lifespans; the single-use MCP transport is stubbed in that test, application rows are fake, and no model is called. Two-process graph recovery is tested separately.
+- Validation: full API suite **653 passed, 19 skipped** (PostgREST-dependent tests unavailable), followed by **24 focused tests passed**, including three added startup/concurrency/HTTP-restart regressions. Extension suite **37 passed, 1 skipped** (opt-in live provider journey). API Ruff passed. Eight web tests, web production build/type check/lint and extension production build/type check/lint passed. Diff whitespace checks passed; disposable test databases were stopped and removed. Existing web bundle/dynamic-import warnings and upstream AnyIO deprecation remain.
+- Completion ledger reconciled in tasks/todo.md and docs/system-design.md; SD-4.5 and SD-6.1 left with the parallel agent. No paid API, new dependency, payment change, live schema mutation, commit or deployment. [Remaining-task snapshot in difficulty order](docs/remaining-tasks-2026-09-28.md) links to the authoritative trackers; another batch awaits the founder's choice.
+
+## AI citation correctness and coverage (2026-09-27, Codex)
+
+- Completed the P3.2 correctness chunk requested by the founder, leaving SD-4.5 and SD-6.1 implementation to the parallel agent. No new dependencies, paid API, changed pricing or provider credentials. Implementation notes: [citation measurement v2](docs/citation-measurement.md).
+- Citation evidence now requires a matched answer reference or grounding support. Retrieved pages alone do not count. Brand detection checks host boundaries; Google redirect titles never supply a destination domain. Unresolved evidence stays unknown, and memory-only/legacy answers do not dilute citation rates. Raw answers, evidence, mode, model and queued brand context are retained; historical labels remain stable.
+- AI answers shows source attribution, engine/prompt filters, excluded sample counts and actual shared queue/quota information. Google AI Overviews, AI Mode, ChatGPT, Perplexity and Claude are explicitly unmeasured. Help text no longer promises results within minutes. Editor summaries use actual mention counts and measurable citation denominators too.
+- The dedicated citation queue uses atomic bounded admission, persisted daily attempt counters, global spacing/cooldowns, ten-minute recoverable leases and stale-worker fencing. Retries count against quota. Quota responses defer work rather than permanently failing it; other failures stop after four attempts. Pagination prevents silently truncated queue/history reads. This is separate from the SD-6.1 generic jobs queue.
+- Validation: full backend suite **618 passed, 19 skipped**, then two additional regressions passed (frozen memory mode and editor measurement summary), with six editor-tool integration tests also passing. Four real PostgreSQL concurrency/recovery tests passed and are included in the full run. Seven web tests, production build, web lint, API Ruff and diff whitespace checks passed. Browser fixtures verified source disclosure, engine/prompt filtering, empty state, and 375px layout without horizontal overflow or console errors. Temporary browser fixtures and dev server were removed. Existing main-bundle size/dynamic-import warnings and upstream AnyIO deprecation remain.
+- The parallel local agent applied the citation schema with founder approval earlier today, as recorded below; this session did not reapply it. **Still open:** the showcase prompt set checked twice on live providers and sustained weekly coverage. No live provider calls were made by this session. Unsupported engines still require a separately approved integration; missing keys and incomplete provider evidence are now clearly represented.
+
+## Hero fix (2026-09-27, Claude Code local, last of the day)
+
+- Night and Signal previews and the look switch removed (`pages/landing/` deleted); the current design stays.
+- Hero realigned: one grid with the text on the logo's edge and the frame on the nav button's edge, vertically centred (checked in pixels at 1440, 1024 and 375). The placeholder mock-up is replaced by `hero-dashboard.webp` (92 kB), a real capture of the dashboard on the local test account. `hero-product.png` is no longer used anywhere.
+
+## Home page looks (2026-09-27, Claude Code local, later the same day, since removed)
+
+- The founder rejected the hero film: removed (`HeroDemo.tsx` deleted); the current hero is back to headline, CTAs and the `hero-product.png` mock-up with a faint orb.
+- Two alternative home pages to compare, home page only: Night (`pages/landing/Night.tsx`: dark, ultramarine, split hero with real captures, bento, pinned sideways steps, persona accordion) and Signal (`pages/landing/Signal.tsx`: light editorial, Bricolage Grotesque, one ultramarine block with the test user's thoughts lighting up, sticky-stack report cards, persona scroll strip). Tokens live in `pages/landing/looks.css`. A floating Current / Night / Signal switch (remembered in localStorage) shows in development or on `/?look=night` links; visitors never see it.
+- Fixed on the way: the closing scan section's orb made every look scroll sideways on phones.
+- Verified: build, lint, 7 web tests, design detector; all three looks at 1440px and 375px (no sideways scroll). Signal loads its font from Google Fonts only as a preview; self-host it (@fontsource, needs approval) if chosen.
+
+## Front-end overhaul (2026-09-27, Claude Code local)
+
+- Landing hero is now a motion-graphics film (`components/HeroDemo.tsx`): Scout types the URL, clicks through a sample signup, fills masked fields, gets stuck, the report assembles (score 58), the fix lands and the rerun reaches 91. Big orbs behind it follow the pointer, floating proof chips parallax, the stage flattens on scroll, and a band of real scanner checks drifts past below. Reduced motion shows the finished report as a still.
+- Real screenshots replace four placeholders: `report.png`, `stuck-closeup.png`, `seo.png`, `security.png` are crops of real public reports (runs 8152119f and c61d6cfd). `render.sh` no longer overwrites them. They show the local fixture sites.
+- Dashboard: `PlanMeter` shows plan, runs left (big), one cell per run and when it resets; the sidebar shows a one-line meter on every app page. Shared, cached `/me/plan` read (`loadPlan`).
+- Loading: every flat pulse block is now a shaped skeleton; report writing, comparison scanning, queued AI answers and the Instant Scan show the `Working` loader (orb plus paced steps).
+- Export: CSV and Save PDF on Compare results, AI answers, team findings board, team shared reports and team report pages (`ExportBar`, `lib/export.ts`, formula-safe CSV, test in `apps/web/tests/export.test.ts`). The report's own CSV uses the same safe writer.
+- New `/pricing` page with a checkout placeholder (no payment taken), the plan matrix from `content.planMatrix` (mirrors `plans.py` and `billing.PRICES`) and billing FAQ. Every "See the plans" link points there.
+- Orbs added to login, 404 and the closing scan section; GSAP entrance on every app page (AppShell), report captures and persona portraits animate on scroll.
+- Verified: web build, lint (0 warnings), 7 web tests, impeccable detector clean; desktop and 375px checks; film frames rendered at several times. The Browser pane was hidden, so live motion was checked by stepping the timeline, not by watching it. Open: the main bundle warning (687 kB) remains; `hero-product.png` and `extension-panel.png` are still placeholders but unused on the landing page.
+
+## Politeness to scanned sites, SD-2.3 (2026-09-28, Claude Code local, not committed)
+
+- At most 2 requests in flight to one site per API process, from any number of users (`fetch._Polite` in the scan client; a streamed response holds its slot until closed). At most 30 scans of one site an hour across all users (`main.polite`, key `target:<host>` on the shared counter): Instant Scan, MCP scans, reruns and `verify_finding`, watch checks, comparison parts. Past it: `429` "This site was scanned many times in the last hour", shown to agents and inside comparisons too.
+- Not counted: the report crawl after a journey run (bounded by per-user run limits). A popular site hitting the hourly cap is where SD-7.2 (serve the recent report) would help.
+- Tests: `tests/test_politeness.py` (8 parallel scans reach a real local site at most 2 at a time). Full API run: 643 passed; the 5 failures are Codex's in-progress SD-8.1 tests, as before.
+
+## Versioned migrations, SD-5.1 (2026-09-27, Claude Code local, not committed)
+
+- **Schema changes now go in a new numbered file** in `apps/api/migrations/` (`0002_<what>.sql`, plus `.down.sql` when reversible). `schema.sql` moved to `migrations/0001_initial.sql`; do not edit it, because the runner refuses an applied file that changed.
+- `python -m app.migrate` applies pending files (each in one transaction, one query per file), `status` lists them, `down` undoes the latest. `python -m app.db` runs the same thing. Keepalives and a TCP timeout make a dropped pooler connection fail fast.
+- Production: `schema_migrations` created and 0001 recorded on 2026-09-27 with the founder's approval, in 3.3 s over the IPv4 pooler (the old statement-by-statement way took minutes and dropped). Every table was checked over REST afterwards.
+- Tests: `tests/test_migrate.py` (6, real Postgres) plus the SQL block tests that now read 0001: 24 passed.
+
+## Dependency and secret scanning, SD-4.7 (2026-09-27, Claude Code local, not committed)
+
+- `.github/workflows/security.yml`: npm audit (web, extension, shipped dependencies), pip-audit (the API lockfile) and gitleaks (the new commits of each push or pull request) on push to main, pull requests, Mondays and by hand. `.gitleaks.toml` keeps gitleaks' default rules and allowlists only `apps/api/tests/` and the scanner's rule data.
+- Locally on 2026-09-27: npm audit found 0 vulnerabilities in both apps and pip-audit found none. gitleaks has not run yet (no binary here); its first run is the next push. The workflow only reports; making it a required check is branch protection (SD-9.1, founder).
+- History is not scanned yet on purpose: it still holds the test passwords SD-4.8 rotates. After rotating, run the workflow by hand once, with a full-history scan.
+
+## Python lockfile, SD-9.2 (2026-09-27, Claude Code local, not committed)
+
+- `apps/api/requirements.lock` pins all 90 API dependencies to the versions the suite passed with, for Windows and Linux. Install: `pip install -r requirements.lock && pip install -e . --no-deps` (AGENTS.md). Upgrade on purpose with the `uv pip compile` command at the top of the file, then rerun the tests.
+- Verified with a clean venv built only from the lock: 630 passed (Codex's in-progress `test_observability.py` excluded; one known Codex `test_admin.py` failure). A venv under a very long Windows path loses a langsmith file to the 260-character limit, so keep venvs at short paths.
+
+## Rate limits on every route, SD-2.1 (2026-09-27, Claude Code local, not committed)
+
+- `app/limits.py` plus `rate_limits`/`hit_rate_limit` in `schema.sql`. Signed-in routes count per user inside `auth.require_user`; routes without sign-in count per address through an app-wide dependency; `/mcp` counts per key. Rules and budgets are in `limits.RULES` and `limits.ROUTES`. The old in-memory limiters (scans, teams, GitHub, billing, feedback) share the Postgres counter, so limits hold across restarts and processes. Replies are `429` with `Retry-After` (exposed to the browser through CORS).
+- Applied to Supabase 2026-09-27 with the founder's approval (only the rate limit block of `schema.sql`, 7 statements). Live check: 2 allowed, the 3rd told to wait. If the database is unreachable the limiter fails open (requests are allowed) and logs a warning.
+- Production must run uvicorn with `--proxy-headers` behind Caddy or Cloudflare, or every visitor shares the proxy's address (SD-6.6).
+- Tests: `tests/test_rate_limits.py`, `tests/test_rate_limits_sql.py`, and a per-test in-memory counter in `conftest.py`. Full API run: 632 passed; the 5 failures are Codex's in-progress SD-8.1 tests (`test_observability.py`, and `test_admin.py` expecting the old error message), not the limiter.
+
+## SSRF DNS rebinding closed, SD-4.5 (2026-09-27, Claude Code local, not committed)
+
+- Scans used to check a host's address, then let httpx resolve it again, so a hostile DNS server could answer public for the check and 127.0.0.1 or 169.254.169.254 for the connection. Now every connection of `fetch.client()` resolves once, refuses any non-public address and connects to exactly that address (`app/scans/fetch.py` `_PublicOnly`, `public_addresses`, `is_public_ip`). TLS still validates the real host name. Env proxies are off for scan clients. `tls.py` uses the same rule. It sets a private httpx attribute (`transport._pool._network_backend`); `tests/test_fetch_pinning.py` fails if an httpx upgrade moves it.
+- Verified: 612 API tests pass and Ruff is clean. The three rebinding tests fail on the old code. A live HTTPS fetch of example.com and cloudflare.com works; localhost is refused.
+- `httpcore` is imported directly now. It was already installed as httpx's own dependency; it is not declared in pyproject.
+
+## AI answers page down, and MCP tools for the whole app (2026-09-27, Claude Code local, not committed)
+
+- **AI answers page fixed (schema applied 2026-09-27 with the founder's approval):** it showed "Failed to fetch" because Supabase lacked the citation v2 schema (`citation_quota`, the new `citation_checks` columns and functions), so `GET /citations/{id}` threw a 500. That 500 carried no CORS header, so the browser hid it. All 192 schema statements are now applied over the pooler, including the SD-6.1 `jobs` table. Verified: `GET /citations/{id}` returns 200 for the tracked site, and `claim_job` answers. The pooler connection dropped once mid-run (at the team_findings policy); the schema was resumed from the policy's drop statement. Use keepalives and `tcp_user_timeout` when applying it from this network.
+- Every unhandled 500 now carries CORS headers for the web app and extension (`_server_error` in `app/main.py`, `tests/test_health.py`), so pages show "Something went wrong" instead of "Failed to fetch".
+- `tests/test_citation_queue_sql.py` no longer hangs on Windows (pg_ctl output to DEVNULL); `scripts/migrate_citations.py` passes Ruff.
+- MCP now covers the rest of the app (ARCHITECTURE.md `mcp`, `/app/mcp`, Docs "Connect your editor"): `get_site_verification` (meta tag for the codebase's `<head>` per framework, file and DNS options, live check), `list_github_repos`, `open_fix_pull_request` (preview, then `confirm`), AI answers (`list_ai_answer_sites`, `track_ai_answers`, `get_ai_answers`, `set_ai_prompts`, `check_ai_answers_now`), watch (`list_watched_sites`, `watch_site`, `check_watched_site_now`, `create_deploy_hook`), `compare_sites`, `accept_finding`, `reopen_finding`, `share_report` (badge snippets), `get_plan`. Each calls the web route as the key's owner, so limits and plan rules match the website. Deletes stay in the web app. `tests/test_mcp_tools.py`.
+- Tests: API 584 passed, 19 skipped; Ruff clean; web oxlint clean. `tsc -b` reports two missing modules in `Landing.tsx` (`./landing/Night`, `./landing/Signal`) from the frontend agent's work in progress, not from this change. Not tried with a real MCP client against the running API (needs a Plus key).
+
+## Durable job queue, SD-6.1 (2026-09-27, Claude Code local, not committed)
+
+- Schema applied to Supabase on 2026-09-27 (see the AI answers note above), so the queue is live on the next API start.
+- Background work now lives in Postgres instead of the API's memory: reports after a run, comparisons, watch checks (added, manual, deploy hook, weekly), the founder's plan-request email, Scout answers, and the periodic passes (retention every 6 h, weekly watch every 30 min). A restart loses nothing; a dead worker's job is taken again after its 15-minute lease; failures retry with backoff. `app/jobs.py`, `jobs` in `schema.sql`, ARCHITECTURE.md "Background work".
+- `JOB_WORKERS` (default 4) threads per API process; `python -m app.jobs` runs them as a separate worker process (SD-6.6 will add its systemd unit).
+- Not moved: the citation queue (its own leases, written by the P3.2 work), the in-request `_background` pool (domain check, workspace auto-share) and the warmup thread.
+- Tests: 574 passed, 19 skipped (API suite without the citation SQL test, which hangs on Windows because `pg_ctl` keeps captured pipes open; `tests/test_jobs_sql.py` shows the fix: send pg_ctl's output to DEVNULL). Ruff clean. Not run against Supabase or PostgREST (no PostgREST binary here).
+
+## Dashboard incomplete-report fix (2026-09-27, Codex)
+
+- Dashboard history now guards the optional `report.findings` array before reading its length. Partial and legacy reports can render without crashing; the findings count is omitted when that data was not returned.
+- Validation: web TypeScript build check and targeted oxlint passed; `git diff --check` passed.
+- Follow-up: comparison parent runs store `{compare: sites}` with no `findings` key. `ReadinessPipeline` now checks for a findings array before filtering or counting a run as a report with prioritized fixes; the history row uses the same array check. This addresses the second dashboard crash caused by a completed comparison. TypeScript and targeted lint passed.
+
+## Comparison charts and ownership flow (2026-09-27, Codex)
+
+- Compare results now offer interactive metric bars, severity stacks, measured coverage, strongest comparable competitor gaps and links to the fix evidence. Native React/CSS uses the existing monochrome tokens without a chart dependency. Missing/failed checks never become zero scores; total/security gaps require public scope, and speed/total gaps require matching completed checks. Older reports remain readable without unsupported rankings.
+- Comparison scans always use public scope for every site, including the caller's verified site. The extension links directly to Compare with the current competitor URL prefilled and explains public visitor limits. Public comparisons do not require ownership; authenticated/form-changing owner journeys still require proof.
+- Settings now presents existing DNS TXT ownership proof first, including exact host/subdomain guidance and a Check verification action. Optional `GET /verification?site=...` validates a public URL and checks the signed-in user's existing token. Meta/file alternatives remain available. No database migration, new dependency, pricing change or paid integration.
+- Validation: 157 targeted backend tests passed; four comparison-data tests passed; extension suite 36 passed/one skipped. TypeScript and lint checks passed; web and extension production builds passed. Desktop/mobile browser fixture checks covered metric switching, severity bars, partial/all-failed data and no browser errors. No live authenticated customer scan or DNS-provider change was performed. Existing web build bundle-size/dynamic-import warnings remain.
+- Citation work is explicitly deferred by the user. Reload the rebuilt extension and restart the API to use these changes. Previous launch/audit findings below remain outstanding.
+
+## Repository and launch audit (2026-09-27, Codex)
+
+- Assessment: [repository opportunities, AI citation gaps, payment setup and reconciled launch checklist](docs/repository-opportunities-and-launch-audit-2026-09-27.md). No application code, dependencies, paid providers or pricing changed.
+- `ultimate-seo-geo` and `claude-seo` are MIT candidates for selective reference/rule reuse. MiroFish is AGPL-3.0 and cannot be copied under current AGENTS.md policy. Its underlying OASIS project is independently Apache-2.0; extending existing grouped journeys with evidence-backed persona questions is the smaller recommended path.
+- Citation correctness needs attention before expansion: Groq search results are counted as citations without answer-reference matching; Gemini source domains derive from titles; memory-only answers dilute the citation denominator; substring host matching produces false mentions; historical labels depend on the current grounding flag. Google AI Overviews/AI Mode and Claude lack adapters and explicit unmeasured labels; Perplexity is explicitly unmeasured. The 20/day global web cap cannot support the advertised allocations at scale.
+- Verified 46 citation/billing tests pass (two warnings: upstream anyio deprecation and local pytest cache permissions). Small in-memory fixtures reproduced citation/mention false positives. No live provider/payment or authenticated browser verification this session.
+- Launch documents contain stale entries: bounded auth cache, local admin, safety controls and billing core have been built; remaining operational verification, configuration and reconciliation are listed in the report. Launch dates and hosting choices still disagree across older/newer documents.
 
 ## Handoff for the next agent (2026-09-26, Claude Code local, written before pushing)
 

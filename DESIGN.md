@@ -4,7 +4,7 @@ Premium, light, minimal. Thin type, quiet colour, real photography, slow deliber
 
 ## Brand
 - Name **Walkthru**, tagline **"See where strangers get stuck."**, description, logo: all in `apps/web/src/brand.ts`. Import from there, never hardcode the name.
-- Logo: the walking bird (`src/assets/brand/walkthru-mark.png`, ink on transparent), rendered by `<Logo />` in Shared.tsx. Top nav shows the bird only (`<Logo withName={false} />`, 32px). Footer and login show bird + name. Favicon and touch icon are generated from the same mark (`public/favicon.png`, `public/apple-touch-icon.png`).
+- Logo: the walking bird (`src/assets/brand/walkthru-mark.png`, ink on transparent), rendered by `<Logo />` in Shared.tsx. Top nav, footer and login all show bird + name (`<Logo />`, 32px mark), identical everywhere. Favicon and touch icon are generated from the same mark (`public/favicon.png`, `public/apple-touch-icon.png`).
 - Other logo options the founder made (penguin, frog, face) are kept in `apps/web/design/brand-source/`.
 
 ## Tokens
@@ -38,7 +38,17 @@ One accent only. No new colours without updating this file.
 - Shared hook `useReveal` (`src/lib/motion.ts`): headline words rise (`.word`), hero blocks fade (`.hero-fade`), sections fade up on scroll (`.reveal`).
 - Landing: the "how it works" timeline line draws with scroll.
 - Every animation sits inside `gsap.matchMedia('(prefers-reduced-motion: no-preference)')`. Animate transform and opacity only.
-- Motion must explain something (order, attention, feedback). No decorative loops.
+- Motion must explain something (order, attention, feedback). Founder asked for bolder motion on 2026-09-27: the orbs, the hero film and the checks marquee are the approved loops; do not add others.
+- App pages settle in on every route change (AppShell: top-level blocks rise with a short blur, props cleared after).
+
+## Orbs, loaders and film (2026-09-27)
+- `Orb` (`components/Loading.tsx`) draws the thinking-orbs engine at any size (the library ships 20 and 64 px). Large orbs sit behind content at 20 to 40% opacity, `pointer-events-none`, scaled down with a transform on phones (never squeezed with max-width). One still frame under reduced motion; paused off screen.
+- Loading: shaped skeletons (`Skeleton`, `SkeletonRows`, `SkeletonPanel`, `SkeletonReport`) with a slow light sweep; never a flat grey block. Long waits (report being written, comparison scanning, AI answers queued, Instant Scan) use `Working`: orb, title, the current step and a step bar. Steps advance on a timer as pacing, never as a claim about server progress.
+- Plan meter (Dashboard): plan pill, runs left at display size, one cell per run (up to 50), accent when 20% or less is left, danger at zero. Sidebar shows the same numbers in one line on every app page.
+- The animated hero film was tried and removed on 2026-09-27 (founder: too much space, not attractive). Keep the hero compact.
+- Two alternative home pages (dark ultramarine "Night", light editorial "Signal") were previewed and removed on 2026-09-27; the founder kept the current design.
+- Export: `ExportBar` (CSV and Save PDF) on Compare, AI answers, team findings, team reports and shared reports. The PDF is the page itself with `PrintHeader`; collapsed details open for printing; CSV cells that start with = + - @ get an apostrophe.
+- Pricing page `/pricing`: plan cards (Pro in ink), a checkout placeholder that takes no payment, the plan matrix from `content.planMatrix` (mirror of plans.py) and billing FAQ.
 
 ## Imagery
 - Photos: real, muted, people in context. Test-user portraits are shown in grayscale.
@@ -51,7 +61,7 @@ No em dashes. Plain verbs. Button labels 1 to 4 words. One label per intent ("Sc
 
 ## Landing page composition (final)
 Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) on 2026-09-18:
-1. Hero (Silver): headline, subtext, CTAs, product screenshot
+1. Hero (Silver): one two-column grid centred on itself: headline, subtext and CTAs on the logo's edge; the real dashboard capture (`hero-dashboard.webp`) in a thin browser frame ending on the nav button's edge; a faint orb behind. Then the checks marquee
 2. How it works (Silver): drawing timeline + eye-with-desktop-icons graphic (`agent-eye.jpg`)
 3. Quote (Porcelain content): full-bleed band, reader photo fading into the surface colour behind the quote (breaks the run of split sections)
 4. Report (Silver): sticky list + screenshots
@@ -69,6 +79,7 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 | Dashboard | `/app` | Evidence-led command center. Lead with a plain-language launch-readiness promise, interactive Scout guidance, one run-to-report pipeline and recent runs with frame/finding counts. Keep controls in one clear column before history. |
 | Profile & settings | `/app/settings` | Authenticated personal or business profile stored in Supabase Auth metadata. Shows the signed-in identity, provider status and one focused profile form. |
 | Report | `/app/runs/:id`, `/r/:id` | Canonical launch-readiness report. Summary first, then a three-pane journey replay, technical checks, prioritized fixes and all findings. Private and public views share the same report body. Print styles produce the PDF rather than a second renderer. |
+| Pricing | `/pricing` | Plans, checkout placeholder until Dodo is live, line-by-line matrix, billing FAQ. |
 | Docs | `/docs` | Read mode. `DocLayout`: title, lead, sticky "On this page" index (collapsible on phones), `.prose-doc` body at ~68ch. Same layout for `/privacy`, `/terms`, `/security`. |
 | Not found | `*` | Scout in its stopped state, one line of copy, Home and Docs actions. |
 | Agent identity lab | `/agent-lab` | Five draggable SVG birds with attached names and activity labels. Prototype only, not linked from the production navigation. |
@@ -94,6 +105,12 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 - The tested-page version lives in a closed shadow root so page styles cannot break it and the test agent cannot include its own status UI in a snapshot. Evaluation fixtures stay untouched; Scout appears there only while the extension runs an evaluation.
 - State colours reuse the core palette: ink for ready or acting, accent for observing or complete, danger for stopped or failed. Changes fade rather than snap.
 - GSAP Observe is the single motion language: slow body attention, a small connected tail counter-shift and an occasional blink. State text fades between actions. All motion stops under `prefers-reduced-motion`.
+
+## Competitor comparison
+- Interactive horizontal bars use a fixed 0 to 100 score scale. Finding severity uses a shared count scale. Numeric labels and a detailed table carry the same information without relying on color.
+- Your site uses ink; competitors and medium-severity findings use a muted stripe pattern. No new palette or chart dependency. Missing/failed measurements stay explicit rather than becoming zero.
+- Point gaps require comparable measured checks; coverage is context, never a winning metric. Comparison charts are authorized for this page in addition to the existing time-series visuals.
+- Settings recommends DNS TXT ownership proof for deployed sites. Public comparisons need no ownership proof; owner actions still do.
 
 ## Launch Ready badge
 - A 20px pill for other people's sites: "Walkthru" on ink, "Launch Ready NN" on accent (85 and up), muted (60 to 84) or danger (under 60). Verdana, because Geist is not available on the sites that embed it. The SVG carries hex copies of the tokens for the same reason.
