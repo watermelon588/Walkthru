@@ -19,7 +19,7 @@ export function Locked({ children }: { children: ReactNode }) {
   return (
     <div className="mt-14 rounded-2xl border border-line px-5 py-5">
       <p className="text-sm text-ink">{children}</p>
-      <p className="mt-1 text-sm text-muted"><a href="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</a></p>
+      <p className="mt-1 text-sm text-muted"><a href="/pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</a></p>
     </div>
   )
 }

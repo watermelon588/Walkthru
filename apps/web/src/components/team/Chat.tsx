@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type Keyboard
 import { deleteMessage, editMessage, listMessages, markRead, postMessage, type Member, type Message } from '../../lib/teams'
 import { brand } from '../../brand'
 import { AccountAvatar } from '../AccountAvatar'
+import { SkeletonRows } from '../Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string }
 
@@ -182,7 +183,7 @@ function Thread({ teamId, thread, me, members, canChat, canModerate, live, signa
 
   return (
     <section aria-label={title} className="grid min-w-0 gap-4">
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading messages" className={`${compact ? 'h-24' : 'h-64'} animate-pulse rounded-2xl bg-surface motion-reduce:animate-none`} />}
+      {state.kind === 'loading' && <SkeletonRows label="Loading messages" />}
       {state.kind === 'error' && (
         <div role="alert" className="rounded-2xl border border-line px-5 py-4">
           <p className="text-sm text-danger">Could not load messages: {state.message}</p>

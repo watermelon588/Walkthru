@@ -5,10 +5,12 @@ import { AgentPresence, type AgentPresenceState } from '../components/AgentPrese
 import { AppShell } from '../components/AppShell'
 import { ReadinessPipeline } from '../components/ReadinessPipeline'
 import { StatusPill } from '../components/ReportView'
+import { Orb, Skeleton, SkeletonRows } from '../components/Loading'
+import { PlanMeter } from '../components/PlanMeter'
 import { btnGhost, ScanForm } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
-import { getPlan, listRuns, PERSONA_LABEL, stopRun, timeAgo, type PlanSummary, type Run } from '../lib/runs'
+import { listRuns, PERSONA_LABEL, stopRun, timeAgo, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
 
@@ -92,12 +94,20 @@ export default function Dashboard() {
             </p>
           )}
           <ConnectExtension />
-          <PlanLine />
         </div>
       </div>
 
+      <PlanMeter />
+
       {runs.kind === 'ready' && <ReadinessPipeline runs={runs.runs} />}
-      {runs.kind === 'loading' && <div aria-busy="true" aria-label="Loading launch readiness" className="mt-10 h-36 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {runs.kind === 'loading' && (
+        <div role="status" aria-busy="true" aria-label="Loading launch readiness" className="mt-10">
+          <Skeleton className="h-6 w-64" />
+          <div className="mt-5 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => <div key={i} className="grid gap-3 bg-bg px-5 py-5"><Skeleton className="ml-auto h-5 w-8" /><Skeleton className="mt-4 h-3.5 w-3/4" /><Skeleton className="h-3 w-1/2" /></div>)}
+          </div>
+        </div>
+      )}
 
       <section aria-label="Instant Scan" className="mt-12 grid gap-5 border-y border-line py-6 md:grid-cols-[minmax(0,0.7fr)_minmax(20rem,1.3fr)] md:items-end">
         <div>
@@ -117,15 +127,14 @@ export default function Dashboard() {
           {runs.kind === 'ready' && <span className="font-mono text-xs text-muted">{runs.runs.length} total</span>}
         </div>
         {runs.kind === 'loading' && (
-          <div aria-busy="true" aria-label="Loading runs" className="grid gap-px overflow-hidden rounded-2xl bg-line">
-            {[0, 1, 2].map((i) => <div key={i} className="h-16 animate-pulse bg-surface motion-reduce:animate-none" />)}
-          </div>
+          <SkeletonRows label="Loading runs" rows={4} />
         )}
         {runs.kind === 'error' && (
           <p role="alert" className="text-sm text-danger">Could not load runs: {runs.message}</p>
         )}
         {runs.kind === 'ready' && runs.runs.length === 0 && (
-          <div role="status" className="rounded-2xl bg-surface px-6 py-12 text-center">
+          <div role="status" className="relative isolate overflow-hidden rounded-2xl bg-surface px-6 py-12 text-center">
+            <Orb size={420} state="connecting" speed={0.5} className="pointer-events-none absolute top-1/2 left-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 opacity-25" />
             <p className="text-lg font-light">No runs yet.</p>
             <p className="mx-auto mt-2 max-w-[44ch] text-sm leading-relaxed text-muted">
               Connect the extension, open the site you want tested, click the Walkthru bird in the toolbar and start a test.
@@ -162,7 +171,7 @@ export default function Dashboard() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-4 text-xs text-muted sm:justify-end sm:py-4 sm:pl-0">
                     <span>{r.kind === 'test' ? PERSONA_LABEL[r.persona] ?? r.persona : r.kind === 'watch' ? 'Weekly watch' : r.kind === 'compare' ? 'Comparison' : 'Instant Scan'}</span>
                     {r.steps.some((step) => step.evidence) && <span>{r.steps.filter((step) => step.evidence).length} frames</span>}
-                    {r.report && <span>{r.report.findings.length} findings</span>}
+                    {Array.isArray(r.report?.findings) && <span>{r.report.findings.length} findings</span>}
                     {r.kind === 'test' && <StatusPill status={r.status} />}
                     <time dateTime={r.created_at}>{timeAgo(r.created_at)}</time>
                     {r.status === 'running' && (
@@ -189,24 +198,6 @@ export default function Dashboard() {
 
 
 /** Hands the current session to the extension so it can call the API as you. Only the extension we name receives it. */
-const PLAN_NAME: Record<PlanSummary['plan'], string> = { free: 'Free plan', launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
-
-/** Runs left in the current month or pass. Quiet when the API cannot be reached: the runs list says so already. */
-function PlanLine() {
-  const [plan, setPlan] = useState<PlanSummary | null>(null)
-  useEffect(() => {
-    getPlan().then(setPlan).catch(() => setPlan(null))
-  }, [])
-  if (!plan) return null
-  const until = plan.expires_at ? new Date(plan.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null
-  const window = plan.plan === 'free' ? `this month${until ? `, renews ${until}` : ''}` : `in your pass${until ? `, until ${until}` : ''}`
-  return (
-    <p role="status" className="font-mono text-xs text-muted md:text-right">
-      {PLAN_NAME[plan.plan]}: {plan.runs_left} of {plan.runs_allowed} test runs left {window}
-    </p>
-  )
-}
-
 function ConnectExtension() {
   const { session } = useSession()
   const [msg, setMsg] = useState<string | null>(null)

@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ChatCircleIcon, PrinterIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, ChatCircleIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { AppShell } from '../components/AppShell'
@@ -7,6 +7,11 @@ import { btnGhost } from '../components/Shared'
 import { Chat } from '../components/team/Chat'
 import { getRun, type Run } from '../lib/runs'
 import { getMembers, useTeamLive, type Members } from '../lib/teams'
+import { SkeletonReport } from '../components/Loading'
+import type { Cell } from '../lib/export'
+import { ExportBar } from '../components/ExportBar'
+
+const findingsRows = (run: Run): Cell[][] => [['kind', 'severity', 'title', 'detail', 'fix', 'evidence'], ...(run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence])]
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run; team: Members } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -37,7 +42,7 @@ export default function TeamReport() {
         <ArrowLeftIcon className="size-4" /> Workspace reports
       </Link>
 
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading the report" className="mt-8 h-24 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {state.kind === 'loading' && <SkeletonReport label="Loading the report" className="mt-8" />}
       {state.kind === 'missing' && <p role="status" className="mt-8 text-muted">This report is not shared in this workspace, or you are not a member.</p>}
       {state.kind === 'error' && <p role="alert" className="mt-8 text-sm text-danger">Could not load the report: {state.message}</p>}
 
@@ -45,7 +50,7 @@ export default function TeamReport() {
         <div className="mt-6">
           <div className="no-print mb-8 flex flex-wrap items-center gap-2">
             <a href="#comments" className={btnGhost}><ChatCircleIcon weight="light" className="size-4" /> Comments</a>
-            <button type="button" onClick={() => window.print()} className={btnGhost}><PrinterIcon weight="light" className="size-4" /> Save PDF</button>
+            <ExportBar filename={`walkthru-${state.run.id.slice(0, 8)}`} csv={() => findingsRows(state.run)} />
           </div>
           <ReportView run={state.run} />
           <section id="comments" aria-labelledby="comments-heading" className="no-print mt-16 scroll-mt-24 border-t border-line pt-10">

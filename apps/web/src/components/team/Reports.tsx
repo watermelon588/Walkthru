@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { PERSONA_LABEL, STATUS_LABEL, timeAgo, type Run } from '../../lib/runs'
 import { sharedRuns, unshareRun, type Role, type SharedRun } from '../../lib/teams'
+import { SkeletonRows } from '../Loading'
+import { fileStamp } from '../../lib/export'
+import { ExportBar } from '../ExportBar'
 
 type State = { kind: 'loading' } | { kind: 'ready'; runs: SharedRun[]; more: boolean } | { kind: 'error'; message: string }
 
@@ -38,7 +41,7 @@ export function Reports({ teamId, me, role, signal }: { teamId: string; me: stri
     }
   }
 
-  if (state.kind === 'loading') return <div aria-busy="true" aria-label="Loading shared reports" className="h-48 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />
+  if (state.kind === 'loading') return <SkeletonRows label="Loading shared reports" />
   if (state.kind === 'error') {
     return (
       <div role="alert" className="rounded-2xl border border-line px-5 py-5">
@@ -51,11 +54,17 @@ export function Reports({ teamId, me, role, signal }: { teamId: string; me: stri
 
   return (
     <section aria-labelledby="reports-heading" className="grid gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h2 id="reports-heading" className="text-xl font-light">Shared reports</h2>
         <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted">
           Share a report from its page with Share to workspace, or turn on auto-share in Settings so every new report lands here.
         </p>
+      </div>
+      {state.runs.length > 0 && <ExportBar filename={`walkthru-team-reports-${fileStamp()}`} csv={() => [
+        ['Site', 'Report', 'Status', 'Launch Ready', 'High', 'Medium', 'Low', 'Comments', 'Shared by', 'Shared at', 'Link'],
+        ...state.runs.map((r) => [r.site, what(r), STATUS_LABEL[r.status as Run['status']] ?? r.status, r.score, r.findings.high, r.findings.medium, r.findings.low, r.comments, r.shared_by_name, r.shared_at, `${location.origin}/app/team/${teamId}/runs/${r.run_id}`]),
+      ]} />}
       </div>
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       {state.runs.length === 0 ? (

@@ -5,6 +5,7 @@ import { brand } from '../brand'
 import { AgentPresence } from '../components/AgentPresence'
 import { btnGhost, btnPrimary, Footer, Nav, Words } from '../components/Shared'
 import { useReveal } from '../lib/motion'
+import { Orb } from '../components/Loading'
 
 export default function NotFound() {
   const root = useRef<HTMLDivElement>(null)
@@ -14,7 +15,8 @@ export default function NotFound() {
     <div ref={root} className="flex min-h-[100dvh] flex-col bg-bg text-ink">
       <title>{`Page not found · ${brand.name}`}</title>
       <Nav />
-      <main id="main" className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 py-24 md:px-10">
+      <main id="main" className="relative isolate mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-5 py-24 md:px-10">
+        <div aria-hidden className="pointer-events-none absolute top-1/2 right-0 -z-10 hidden -translate-y-1/2 opacity-30 md:block"><Orb size={520} state="solving" speed={0.6} /></div>
         <AgentPresence activity="Could not find this page" state="stopped" className="hero-fade mb-10" phase={0.4} />
         <h1 className="max-w-[16ch] text-5xl leading-[1.04] font-extralight tracking-[-0.035em] md:text-7xl">
           <Words text="A stranger would get stuck here." />

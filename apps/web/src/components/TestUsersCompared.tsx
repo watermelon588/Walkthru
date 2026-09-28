@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { fingerprint, groupRuns, PERSONA_LABEL, STATUS_LABEL, type Finding, type Run } from '../lib/runs'
+import { SkeletonRows } from './Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error' }
 
@@ -43,7 +44,7 @@ export function TestUsersCompared({ run, owner }: { run: Run; owner: boolean }) 
   }, [groupId, run.status, run.report])
 
   if (!groupId || state.kind === 'error') return null
-  if (state.kind === 'loading') return <div aria-busy="true" aria-label="Loading the other test users" className="no-print mt-12 h-32 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />
+  if (state.kind === 'loading') return <SkeletonRows label="Loading the other test users" className="no-print mt-12" />
   const runs = state.runs
   if (runs.length < 2) return null
   const shared = sharedProblems(runs)

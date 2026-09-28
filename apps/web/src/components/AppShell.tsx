@@ -1,4 +1,6 @@
 import { BookOpenTextIcon, ChatCircleTextIcon, ChatsCircleIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
@@ -6,6 +8,7 @@ import { accountAvatar, accountProfile, signOut, useSession } from '../lib/auth'
 import { useNotificationCounts, type Section } from '../lib/notifications'
 import { pendingJoin } from '../lib/teams'
 import { AccountAvatar } from './AccountAvatar'
+import { PlanMini } from './PlanMeter'
 import { Logo, SkipLink } from './Shared'
 
 const workspace: { to: string; label: string; icon: Icon; end?: boolean; section?: Section }[] = [
@@ -34,6 +37,13 @@ export function AppShell({ children, title, plainTitle = false }: { children: Re
   const waiting = Object.values(counts).reduce((a, b) => a + b, 0)
   const navigate = useNavigate()
   useEffect(() => { drawer.current?.close() }, [pathname])
+  // Each page settles in: its top-level blocks rise in order, then every inline style is cleared.
+  const main = useRef<HTMLElement>(null)
+  useGSAP(() => {
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from(main.current?.children ?? [], { y: 18, autoAlpha: 0, filter: 'blur(4px)', duration: 0.9, ease: 'expo.out', stagger: 0.06, clearProps: 'all' })
+    })
+  }, { scope: main, dependencies: [pathname] })
   // An invitee who had to sign in first lands here; take them back to their invitation.
   useEffect(() => { if (pendingJoin()) navigate('/join', { replace: true }) }, [navigate])
 
@@ -78,7 +88,7 @@ export function AppShell({ children, title, plainTitle = false }: { children: Re
         </div>
       </dialog>
 
-      <main id="main" className="mx-auto w-full max-w-7xl px-5 pt-8 pb-24 md:px-10 lg:pt-12">{children}</main>
+      <main ref={main} id="main" className="mx-auto w-full max-w-7xl px-5 pt-8 pb-24 md:px-10 lg:pt-12">{children}</main>
     </div>
   )
 }
@@ -120,7 +130,10 @@ function SidebarNav() {
         ))}
       </nav>
 
-      <div className="mt-auto flex items-center gap-2 border-t border-line pt-4">
+      <div className="mt-auto">
+        <PlanMini />
+      </div>
+      <div className="mt-4 flex items-center gap-2 border-t border-line pt-4">
         <Link to="/app/settings" aria-label={`Open settings for ${displayName}`} className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-2 transition hover:bg-surface">
           <AccountAvatar name={displayName} src={accountAvatar(session)} />
           <span className="min-w-0 leading-tight">

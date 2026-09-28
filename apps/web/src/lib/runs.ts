@@ -1,4 +1,6 @@
+import { toCsv } from './export'
 import { supabase } from './supabase'
+import { apiError } from './apiError'
 
 export type Step = {
   thought: string
@@ -189,17 +191,17 @@ export async function evidenceUrls(paths: string[]): Promise<Record<string, stri
 }
 
 /** Writes go through the API. */
-export async function api<T>(path: string, body?: unknown, auth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST'): Promise<T> {
+export async function api<T>(path: string, body?: unknown, auth = true, method: 'GET' | 'POST' | 'DELETE' = 'POST', requestKey?: string): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (auth) {
     const token = (await supabase?.auth.getSession())?.data.session?.access_token
     if (!token) throw new Error('Sign in first')
     headers.Authorization = `Bearer ${token}`
   }
+  if (requestKey) headers['Idempotency-Key'] = requestKey
   const res = await fetch(API + path, { method, headers, body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined })
   if (!res.ok) {
-    const detail = (await res.json().catch(() => ({}))) as { detail?: string }
-    throw new Error(detail.detail ?? `Request failed (${res.status})`)
+    throw new Error(await apiError(res))
   }
   return res.json()
 }
@@ -212,6 +214,12 @@ export const exportAccount = () => api<Record<string, unknown>>('/account/export
 /** The server decides the plan (apps/api/app/plans.py). */
 export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
 export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
+// One request shared by the sidebar meter and the page that shows it. `fresh` re-reads after a run or a grant.
+let planCache: Promise<PlanSummary> | null = null
+export function loadPlan(fresh = false): Promise<PlanSummary> {
+  if (!planCache || fresh) planCache = getPlan().catch((e) => { planCache = null; throw e })
+  return planCache
+}
 /** New reports use stable rule ids; old reports keep their title-based key. */
 export function legacyFingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
   return `${f.kind}:${f.title.toLowerCase().replace(/\d+/g, '#').split(/\s+/).filter(Boolean).join(' ')}`
@@ -251,7 +259,7 @@ export async function getFixPrompt(runId: string, style: 'full' | 'chat'): Promi
   const token = (await supabase?.auth.getSession())?.data.session?.access_token
   if (!token) throw new Error('Sign in first')
   const res = await fetch(`${API}/runs/${runId}/fix-prompt?style=${style}`, { headers: { Authorization: `Bearer ${token}` } })
-  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { detail?: string }).detail ?? `Request failed (${res.status})`)
+  if (!res.ok) throw new Error(await apiError(res))
   return res.text()
 }
 
@@ -275,14 +283,12 @@ export async function startCheckout(offerId: string): Promise<string> {
   return url.href
 }
 
-export const getVerification = () => api<{ token: string; meta: string; file: string; txt_name: string; txt_value: string }>('/verification', undefined, true, 'GET')
+export const getVerification = (site?: string) => api<{ token: string; meta: string; file: string; txt_name: string; txt_value: string; verified?: boolean; site?: string }>(`/verification${site ? `?site=${encodeURIComponent(site)}` : ''}`, undefined, true, 'GET')
 export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/account/delete', { confirm })
-export const stopRun = (id: string) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`)
+export const stopRun = (id: string, requestKey = crypto.randomUUID()) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`, undefined, true, 'POST', requestKey)
 
 export function findingsCsv(run: Run): string {
-  const esc = (v: string | null) => `"${(v ?? '').replace(/"/g, '""')}"`
-  const rows = (run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence].map(esc).join(','))
-  return ['kind,severity,title,detail,fix,evidence', ...rows].join('\n')
+  return toCsv([['kind', 'severity', 'title', 'detail', 'fix', 'evidence'], ...(run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence])])
 }
 
 export function timeAgo(iso: string): string {
@@ -320,6 +326,9 @@ export type CompareSite = {
   findings?: { high: number; medium: number; low: number }
   pages?: number | null
   impression?: string | null
+  checks?: Record<string, string>
+  scope?: 'public'
+  truncated?: boolean
   error?: string
 }
 export const startCompare = (site: string, competitors: string[]) => api<{ run_id: string }>('/compare', { site, competitors })
@@ -363,10 +372,13 @@ export const sendFeedback = (message: string, page: string) => api<{ sent: boole
 
 // ---------- AI answers: citation tracking (apps/api/app/citations.py) ----------
 
-export type CitationBrand = { name: string; domain: string; you: boolean; mentioned: boolean; mention_rank: number | null; cited: boolean; source_rank: number | null }
+export type CitationBrand = { name: string; domain: string; you: boolean; mentioned: boolean; mention_rank: number | null; cited: boolean | null; source_rank: number | null }
 export type CitationAnswer = {
   id: number; prompt: string; engine: 'web' | 'memory'; status: 'queued' | 'done' | 'failed'; model: string; answer: string
-  sources: { url: string; title: string; domain: string }[]; result: { brands?: CitationBrand[] }; checked_at: string | null
+  sources: { url: string; title: string; domain: string; cited?: boolean; attribution?: string; evidence?: { kind: string; reference: string; quote?: string; start?: number; end?: number }[] }[]
+  result: { brands?: CitationBrand[]; citation_eligible?: boolean; citation_status?: string; measurement_version?: number; raw_answer?: string; prompt_group?: string;
+    provenance?: { label: string; provider?: string; mode: string; locale?: string; prompt_version?: number } }
+  checked_at: string | null; next_attempt_at?: string | null; last_error?: string | null
 }
 export type CitationSite = { id: string; site: string; brand: string; competitors: { name: string; domain: string }[]; next_check_at: string | null; last_batch_at: string | null }
 export type CitationLimit = { sites?: number; prompts: number; engines: ('web' | 'memory')[]; weekly: boolean }
@@ -376,10 +388,12 @@ export type CitationView = {
   limit: CitationLimit | null
   engines: { engine: 'web' | 'memory'; label: string; cites: boolean }[]
   not_measured: string[]
+  capacity?: { engine: string; label: string; daily_limit: number; used: number; remaining: number; queued: number; quota_windows: number | null; configured: boolean; next_attempt_at?: string | null }[]
+  history_limited?: boolean
   status: { queued: number; done: number; failed: number }
   share_of_voice: { name: string; domain: string; you: boolean; mentions: number; citations: number; share: number; answers: number }[]
   answers: CitationAnswer[]
-  trend: { at: string; answers: number; mentioned: number; cited: number }[]
+  trend: { at: string; answers: number; mentioned: number; cited: number; citation_answers?: number }[]
 }
 export const getCitations = () =>
   api<{ plan: string; sites: CitationSite[]; limit: CitationLimit | null; engines: { engine: string; label: string }[]; not_measured: string[] }>('/citations', undefined, true, 'GET')

@@ -7,6 +7,7 @@ import { Asset, btnGhost, btnPrimary, Logo } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { useReveal } from '../lib/motion'
 import { supabase } from '../lib/supabase'
+import { Orb } from '../components/Loading'
 
 type Provider = 'google' | 'github'
 type Status =
@@ -90,7 +91,8 @@ export default function Login() {
   return (
     <div ref={root} className="grid min-h-[100dvh] bg-bg text-ink lg:grid-cols-[1fr_1.1fr]">
       <title>{`Sign in · ${brand.name}`}</title>
-      <main id="main" className="flex flex-col px-5 py-8 md:px-10">
+      <main id="main" className="relative isolate flex flex-col overflow-hidden px-5 py-8 md:px-10">
+        <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-40 -z-10 opacity-25"><Orb size={520} state="breathing" speed={0.5} /></div>
         <Logo className="self-start" />
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-16">

@@ -4,6 +4,7 @@ import { brand } from '../brand'
 import { btnGhost, btnPrimary, Footer, Nav } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { acceptInvite, clearPendingJoin, pendingJoin, previewInvite, ROLE_A, ROLE_HELP, savePendingJoin, type Preview } from '../lib/teams'
+import { SkeletonPanel } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; preview: Preview } | { kind: 'error'; message: string } | { kind: 'none' }
 
@@ -78,7 +79,7 @@ export default function Join() {
             </div>
           </>
         )}
-        {session && state.kind === 'loading' && <div aria-busy="true" aria-label="Reading the invitation" className="mt-6 h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+        {session && state.kind === 'loading' && <SkeletonPanel label="Reading the invitation" className="mt-6" />}
         {session && state.kind === 'error' && (
           <>
             <h1 className="mt-3 text-4xl font-extralight tracking-tight md:text-5xl">This invitation does not work.</h1>

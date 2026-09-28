@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { createApiKey, getPlan, listApiKeys, MCP_URL, revokeApiKey, type ApiKey } from '../lib/runs'
 import { Snippet } from './DomainVerification'
+import { SkeletonRows } from './Loading'
 
 type State = { kind: 'loading' } | { kind: 'locked' } | { kind: 'ready'; keys: ApiKey[] } | { kind: 'error'; message: string }
 
@@ -61,7 +62,7 @@ export function ApiKeys() {
         </div>
 
         <div aria-live="polite" className="min-w-0">
-          {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading your API keys" className="h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+          {state.kind === 'loading' && <SkeletonRows label="Loading your API keys" />}
           {state.kind === 'error' && (
             <div role="alert" className="rounded-2xl border border-line px-5 py-5">
               <p className="text-sm text-danger">Could not load your API keys: {state.message}</p>
@@ -71,7 +72,7 @@ export function ApiKeys() {
           {state.kind === 'locked' && (
             <div className="rounded-2xl border border-line px-5 py-5">
               <p className="text-sm text-ink">The Walkthru MCP server is part of the Plus plan.</p>
-              <p className="mt-1 text-sm text-muted">Plus opens after launch. <Link to="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
+              <p className="mt-1 text-sm text-muted">Plus opens after launch. <Link to="/pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
             </div>
           )}
           {state.kind === 'ready' && (

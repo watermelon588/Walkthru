@@ -5,6 +5,7 @@ import { AppShell } from '../components/AppShell'
 import { PageHeader } from '../components/PageHeader'
 import { btnPrimary } from '../components/Shared'
 import { acceptListedInvite, createTeam, declineInvite, listTeams, ROLE_A, ROLE_LABEL, type TeamList } from '../lib/teams'
+import { SkeletonRows } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; list: TeamList } | { kind: 'error'; message: string }
 
@@ -23,7 +24,7 @@ export default function Teams() {
         One shared place for your team or your client: every report you share, the findings you are fixing with who owns each one, and a chat that stays with the work.
       </PageHeader>
 
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading your workspaces" className="mt-14 h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {state.kind === 'loading' && <SkeletonRows label="Loading your workspaces" className="mt-14" />}
       {state.kind === 'error' && (
         <div role="alert" className="mt-14 rounded-2xl border border-line px-5 py-5">
           <p className="text-sm text-danger">Could not load your workspaces: {state.message}</p>
@@ -129,7 +130,7 @@ function CreateTeam({ list }: { list: TeamList }) {
     return (
       <div className="rounded-2xl border border-line px-5 py-5">
         <p className="text-sm text-ink">Creating a workspace is part of the Plus plan.</p>
-        <p className="mt-1 text-sm text-muted">You can still join one when a Plus teammate invites you. <Link to="/#pricing" className={link}>See the plans</Link></p>
+        <p className="mt-1 text-sm text-muted">You can still join one when a Plus teammate invites you. <Link to="/pricing" className={link}>See the plans</Link></p>
       </div>
     )
   }

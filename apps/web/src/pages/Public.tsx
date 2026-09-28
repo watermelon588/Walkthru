@@ -4,6 +4,7 @@ import { brand } from '../brand'
 import { ReportView } from '../components/ReportView'
 import { btnPrimary, Logo, SkipLink } from '../components/Shared'
 import { getRun, type Run } from '../lib/runs'
+import { SkeletonReport } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -33,7 +34,7 @@ export default function Public() {
         <Link to="/" className="text-sm text-muted hover:text-ink">Tested with {brand.name}</Link>
       </header>
       <main id="main" className="mx-auto max-w-7xl px-5 pb-24 pt-8 md:px-10">
-        {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading report" className="h-24 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+        {state.kind === 'loading' && <SkeletonReport label="Loading report" />}
         {state.kind === 'missing' && <p role="status" className="text-muted">This report is private or does not exist.</p>}
         {state.kind === 'error' && <p role="alert" className="text-sm text-danger">Could not load the report: {state.message}</p>}
         {state.kind === 'ready' && <ReportView run={state.run} />}

@@ -10,6 +10,7 @@ import { Reports } from '../components/team/Reports'
 import { Settings } from '../components/team/Settings'
 import NotFound from './NotFound'
 import { getTeam, ROLE_A, useTeamLive, type Overview as Data } from '../lib/teams'
+import { SkeletonPanel } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; team: Data } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -73,7 +74,7 @@ function Workspace({ id, tab }: { id: string; tab: string }) {
         <ArrowLeftIcon className="size-4" /> All workspaces
       </Link>
 
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading the workspace" className="mt-8 h-64 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {state.kind === 'loading' && <SkeletonPanel label="Loading the workspace" className="mt-8" />}
       {state.kind === 'error' && (
         <div role="alert" className="mt-8 rounded-2xl border border-line px-5 py-5">
           <p className="text-sm text-danger">Could not load the workspace: {state.message}</p>

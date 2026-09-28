@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { brand } from '../brand'
 import { faqs, footer, hero, navLinks, plans } from '../content'
+import { Orb, Working } from './Loading'
 
 export const btnPrimary =
   'inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm whitespace-nowrap text-bg transition hover:opacity-85 active:scale-[0.98]'
@@ -92,7 +93,7 @@ export function Nav() {
     <header className="sticky top-0 z-20 border-b border-line/70 bg-bg/80 backdrop-blur-md">
       <SkipLink />
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-10" aria-label="Main">
-        <Logo withName={false} />
+        <Logo />
         <div className="hidden items-center gap-9 text-sm text-muted md:flex">
           {navLinks.map((l) => <a key={l.href} href={l.href} className="transition hover:text-ink">{l.label}</a>)}
         </div>
@@ -204,20 +205,25 @@ export function ScanForm() {
       </div>
       <button type="submit" disabled={busy} className={`${btnPrimary} disabled:opacity-60`}>{busy ? 'Scanning...' : hero.primary}</button>
       <p id="url-error" role="status" className="min-h-5 text-sm sm:col-span-2">
-        {error ? <span className="text-danger">{error}</span> : busy ? <span className="text-muted">Reading your pages, checking SEO, AI search and security, writing the report. About 20 seconds.</span> : ''}
+        {error ? <span className="text-danger">{error}</span> : ''}
       </p>
+      {busy && (
+        <Working className="sm:col-span-2" state="searching" every={3200} title="Scanning your site, about 20 seconds"
+          steps={['Fetching your homepage', 'Reading titles, links and sitemaps', 'Checking what AI crawlers can read', 'Checking security headers', 'Writing the report']} />
+      )}
     </form>
   )
 }
 
 export function Closing({ title = 'Your next visitor is a stranger. Test like one.' }: { title?: string }) {
   return (
-    <section id="scan" className="scroll-mt-16 border-t border-line bg-surface">
+    <section id="scan" className="scroll-mt-16 overflow-x-clip border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-28 md:px-10 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="reveal">
           <Asset name="workspace.jpg" ratio="4 / 5" label="Someone working by a window" />
         </div>
-        <div>
+        <div className="relative isolate">
+          <div aria-hidden className="pointer-events-none absolute -top-40 -right-24 -z-10 opacity-30"><Orb size={440} state="searching" speed={0.5} className="max-md:scale-[0.6]" /></div>
           <h2 className={`${h2} reveal max-w-[18ch]`}>{title}</h2>
           <p className={`${lead} reveal`}>Start with a free Instant Scan. No install, about 20 seconds.</p>
           <div className="reveal mt-12">

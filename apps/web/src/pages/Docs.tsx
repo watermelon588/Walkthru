@@ -144,12 +144,13 @@ const sections: DocSection[] = [
       <>
         <p>Verifying proves you own a site. It unlocks the full security check (exposed files and backups, keys leaked into JavaScript, public source maps and subdomain takeover) and lets approved send actions run during tests.</p>
         <ol>
-          <li>Open <Link to="/app/settings#verify">Settings</Link> and copy your verification tag.</li>
-          <li>Add it to the <code>&lt;head&gt;</code> of your homepage, put the token alone in a file at <code>/.well-known/walkthru.txt</code>, or add a DNS TXT record named <code>_walkthru</code> with the value <code>walkthru-verification=your-token</code>. The DNS record suits sites you cannot edit, like a Lovable or Framer build.</li>
-          <li>Run a new scan or test. Verification is checked each time.</li>
+          <li>Open <Link to="/app/settings#verify">Settings</Link> and enter your website address.</li>
+          <li>Recommended for live sites: add the displayed TXT record at your DNS provider. No source changes or redeploy needed. For example.com the record is <code>_walkthru.example.com</code>; for app.example.com it is <code>_walkthru.app.example.com</code>. Some providers append the domain automatically, so check the final name.</li>
+          <li>Press Check verification. If DNS has not updated yet, wait for your provider to publish it and try again. Ownership is checked again when a run starts.</li>
         </ol>
         <pre><code>{'<meta name="walkthru-verification" content="your-token">'}</code></pre>
-        <p>The token is tied to your account, so one tag verifies every site you add it to.</p>
+        <p>If you cannot manage DNS, open Other ways to verify for the homepage tag above or a file at <code>/.well-known/walkthru.txt</code>. A hosted subdomain may need its administrator to publish proof. A confirmation checkbox alone does not prove ownership.</p>
+        <p>Public competitor comparisons do not need verification. Use <Link to="/app/compare">Compare</Link> for public metrics, or browse signed out with a visitor goal in the extension.</p>
       </>
     ),
   },
@@ -178,11 +179,12 @@ const sections: DocSection[] = [
       <>
         <p>On paid plans, <Link to="/app/visibility">AI answers</Link> asks AI the questions your buyers ask, then checks in code whether the answer names your brand, cites your pages, and which competitors it names instead. Start with your site and up to five competitors; prompts are suggested from your homepage and you can change every one.</p>
         <ul>
-          <li><strong>AI with web search</strong> (gpt-oss-120b) searches the web once per prompt and answers from what it found, so it shows real citations with their sources.</li>
+          <li><strong>Groq with web search</strong> searches once per prompt. Citations count only when an answer reference matches a returned source. Retrieved pages alone are not citations.</li>
           <li><strong>Gemini, from memory</strong> (Plus) answers from what the model already knows. It shows whether AI knows your brand at all, so it counts mentions only.</li>
-          <li>ChatGPT and Perplexity are not measured yet.</li>
+          <li>Google AI Overviews, Google AI Mode, ChatGPT, Perplexity and Claude are not measured. API samples can differ from consumer apps.</li>
         </ul>
-        <p>Share of voice is how often each brand is named across the answers. Launch Pack checks once, Pro every week, Plus every week on both engines. Answers arrive over a few minutes because free AI quotas are paced, and you get a notification when a set is done. It reports what the AI said on the day; nobody can promise a citation.</p>
+        <p>Share of mentions is your share among the tracked brands named in completed answers. Citation rates exclude memory-only, incomplete and older measurements. Expand an answer to inspect its source links and attribution evidence; filter by engine or prompts that name your brand.</p>
+        <p>Launch Pack checks once, Pro schedules weekly, Plus schedules weekly on both engines. The page shows shared quota and queued work. Answers may take several days; retries use quota too. You get a notification when a set is done. Each sample reports what the AI said on that day; nobody can promise a citation.</p>
       </>
     ),
   },
@@ -203,8 +205,8 @@ const sections: DocSection[] = [
     title: 'Competitor side by side',
     body: (
       <>
-        <p>On paid plans, <Link to="/app/compare">Compare</Link> runs your site and up to three competitors through the same checks and puts the results in one table: Launch Ready score, AI search readiness, SEO, security hygiene, speed and accessibility, findings and the first impression. The best value in each row is highlighted, and each site links to its full report.</p>
-        <p>Competitors get public, passive checks only, the same way a search engine reads a page. Exposed-file and leaked-key checks never run on a site you have not verified. Each site counts toward your daily scan limit.</p>
+        <p>On paid plans, <Link to="/app/compare">Compare</Link> checks your site and up to three competitors. Switch between score bars and findings by severity, select a metric, inspect measured gaps and open the supporting report. The detailed table retains every measurement and first impression.</p>
+        <p>No extension or ownership verification is needed. Every site, including yours, gets the same public-only scope. No signed-in browsing, form submissions or owner-only security checks. Page counts describe coverage and are not ranked. Missing measurements are not zero. Each site counts toward your daily scan limit; blocked or opted-out sites remain unavailable.</p>
       </>
     ),
   },
@@ -213,13 +215,16 @@ const sections: DocSection[] = [
     title: 'Connect your editor (MCP)',
     body: (
       <>
-        <p>On the Plus plan, Claude Code, Cursor and other MCP clients can use Walkthru directly: scan a site, read a report, pull the fix prompt into the codebase they are editing, and rerun after the fixes.</p>
+        <p>On the Plus plan, Claude Code, Cursor and other MCP clients can use Walkthru directly: scan a site, read a report, pull the fix prompt into the codebase they are editing, prove the site is yours, open fix pull requests, track AI answers and watch the site after each deploy.</p>
         <ol>
           <li>Open the <Link to="/app/mcp">MCP page</Link> and create an API key. Copy it right away: it is shown once.</li>
           <li>Add the server to your editor with the command or file that page shows you, for example in Claude Code:</li>
         </ol>
         <pre><code>{`claude mcp add --transport http walkthru ${MCP_URL} --header "Authorization: Bearer wt_..."`}</code></pre>
-        <p>Tools: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>get_finding</code>, <code>verify_finding</code>, <code>rerun</code> and <code>list_runs</code>. After fixing one finding, <code>verify_finding</code> re-checks just that finding on its pages, which is faster than a full rerun. They follow the same limits and honesty rules as the website, and each key can reach only your own runs. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
+        <p>Reports: <code>scan_site</code>, <code>get_report</code>, <code>get_fix_prompt</code>, <code>get_finding</code>, <code>verify_finding</code>, <code>rerun</code>, <code>list_runs</code>, <code>compare_sites</code>, <code>accept_finding</code>, <code>reopen_finding</code> and <code>share_report</code> (the public link and the Launch Ready badge). After fixing one finding, <code>verify_finding</code> re-checks just that finding on its pages, which is faster than a full rerun.</p>
+        <p>Ownership and GitHub: <code>get_site_verification</code> gives the meta tag your agent adds to the site's <code>&lt;head&gt;</code>, with where it goes in Next.js, Vite, Astro and other frameworks; after you deploy, the same tool confirms it. <code>list_github_repos</code> and <code>open_fix_pull_request</code> preview, then open, a pull request with the config fixes (connect GitHub once in Settings first).</p>
+        <p>AI answers: <code>track_ai_answers</code>, <code>get_ai_answers</code>, <code>set_ai_prompts</code> and <code>check_ai_answers_now</code>. Weekly watch: <code>watch_site</code>, <code>list_watched_sites</code>, <code>check_watched_site_now</code> and <code>create_deploy_hook</code> (a URL for your CI to call after each deploy). <code>get_plan</code> shows what your plan includes.</p>
+        <p>Every tool follows the same plan rules, limits and honesty rules as the website, and each key can reach only your own runs and sites. Deleting sites, prompts or connections stays in the dashboard. Journeys still run from the Chrome extension; <code>rerun</code> repeats the server-side checks.</p>
         <p>Revoke a key in Settings the moment you stop using it or think it leaked.</p>
       </>
     ),

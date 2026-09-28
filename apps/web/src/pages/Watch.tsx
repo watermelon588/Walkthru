@@ -4,6 +4,7 @@ import { AppShell } from '../components/AppShell'
 import { Snippet } from '../components/DomainVerification'
 import { Locked, PageHeader } from '../components/PageHeader'
 import { checkSiteNow, createDeployHook, getWatch, unwatchSite, watchSite, type WatchedSite } from '../lib/runs'
+import { SkeletonRows } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; sites: WatchedSite[]; plus: boolean; limit: number; email: boolean } | { kind: 'error'; message: string }
 
@@ -52,7 +53,7 @@ export default function Watch() {
         Walkthru rechecks your sites every week and after each deploy, and tells you only when something changed: a blocked AI crawler, lost structured data, a new security gap or a fix that landed.
       </PageHeader>
 
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading watched sites" className="mt-14 h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {state.kind === 'loading' && <SkeletonRows label="Loading watched sites" className="mt-14" />}
       {state.kind === 'error' && (
         <div role="alert" className="mt-14 rounded-2xl border border-line px-5 py-5">
           <p className="text-sm text-danger">Could not load your watched sites: {state.message}</p>

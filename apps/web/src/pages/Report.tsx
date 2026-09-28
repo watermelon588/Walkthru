@@ -8,6 +8,7 @@ import { ShareToTeam } from '../components/ShareToTeam'
 import { btnGhost } from '../components/Shared'
 import { copyText } from '../lib/clipboard'
 import { deleteRun, emailRun, findingsCsv, getBranding, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Brand, type Run } from '../lib/runs'
+import { SkeletonReport } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -56,7 +57,7 @@ export default function Report() {
         <ArrowLeftIcon className="size-4" /> All runs
       </Link>
 
-      {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading run" className="mt-8 h-24 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {state.kind === 'loading' && <SkeletonReport label="Loading run" className="mt-8" />}
       {state.kind === 'missing' && <p role="status" className="mt-8 text-muted">This run does not exist or belongs to another account.</p>}
       {state.kind === 'error' && <p role="alert" className="mt-8 text-sm text-danger">Could not load the run: {state.message}</p>}
 

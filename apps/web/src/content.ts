@@ -21,6 +21,13 @@ export const hero = {
   secondary: 'See a sample report',
 }
 
+// Checks the scanners really run (apps/api/app/scans). Keep in step with them: nothing here may be aspirational.
+export const checks = [
+  'robots.txt and AI crawlers', 'llms.txt', 'Structured data', 'Sitemap.xml', 'Canonical links', 'Open Graph tags', 'Titles and descriptions',
+  'Content that needs JavaScript', 'Core Web Vitals', 'Image alt text', 'Heading order', 'Content-Security-Policy', 'HSTS', 'Mixed content',
+  'CORS with cookies', 'Source maps', 'Keys in JavaScript bundles', 'Supabase row access', 'Subdomain takeover', 'Vulnerable libraries', 'SPF and DMARC',
+]
+
 export const steps = [
   { icon: PlusIcon, title: 'Scan your site', body: 'Paste your address for a free Instant Scan: SEO, AI search readiness and security in about 20 seconds.' },
   { icon: UserPlusIcon, title: 'Give a test user a goal', body: 'Open your site, click the bird and pick who tests it. Walkthru turns your goal into a checklist first.' },
@@ -65,18 +72,53 @@ export const plans = [
   { name: 'Plus', price: '$49', per: 'per month, waitlist', cta: 'Join the waitlist', href: '/app/billing', features: ['150 test runs a month', 'Everything in Pro', '5 sites', 'Weekly watch and deploy alerts', 'MCP server for your coding agent', 'Opens after launch'] },
 ]
 
+// The /pricing comparison. Numbers mirror apps/api/app/plans.py and billing.PRICES; change them there first.
+// true = included, false = not included, string = included with this limit.
+export const planMatrix: { group: string; rows: [string, ...(boolean | string)[]][] }[] = [
+  { group: 'Testing', rows: [
+    ['AI test runs', '3 a month', '20 in 30 days', '40 a month', '150 a month'],
+    ['Steps per run', '12', '30', '30', '30'],
+    ['Test users', 'First-time visitor', 'All 4', 'All 4', 'All 4, plus your own'],
+    ['Sites', '1', '1', '2', '5'],
+    ['Logged-in pages', false, true, true, true],
+  ] },
+  { group: 'Report', rows: [
+    ['Instant Scan, no install', true, true, true, true],
+    ['SEO, AI search and security', true, true, true, true],
+    ['Fix prompt for your coding agent', false, true, true, true],
+    ['Rerun and see what changed', false, false, true, true],
+    ['Ignore findings with a reason', false, false, true, true],
+    ['Branded PDF', false, false, false, true],
+  ] },
+  { group: 'Growth', rows: [
+    ['Compare with 3 competitors', false, true, true, true],
+    ['AI answer tracking', false, 'One check', 'Weekly', 'Weekly, 2 engines'],
+    ['Weekly watch and deploy alerts', false, false, false, true],
+    ['MCP server for your coding agent', false, false, false, true],
+    ['Team workspace', false, false, false, true],
+  ] },
+]
+
+export const billingFaqs = [
+  { q: 'When can I pay online?', a: 'Checkout opens at launch, once our payment provider is live on our own domain. Until then, request a plan and we reply with a private offer. Nothing is charged before you pay that offer yourself.' },
+  { q: 'Does a plan renew on its own?', a: 'No. Every paid plan is a one-time pass for 30 days. When it ends you drop back to Free and keep every report.' },
+  { q: 'What is the founding price?', a: 'The first 50 paying customers get Pro at $15 and Plus at $39, instead of $19 and $49.' },
+  { q: 'Do I need a credit card?', a: 'No card is needed for Free. Paid passes will take the payment methods our provider supports in your country when checkout opens.' },
+  { q: 'What counts as a test run?', a: 'One AI test user trying one goal on your site, from the first click to the report. Instant Scans do not use test runs.' },
+]
+
 // Absolute (/#...) so they work from docs and legal pages too.
 export const navLinks = [
   { label: 'How it works', href: '/#how' },
   { label: 'Report', href: '/#report' },
-  { label: 'Pricing', href: '/#pricing' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'FAQ', href: '/#faq' },
   { label: 'Docs', href: '/docs' },
 ]
 
 export const footer = {
   columns: [
-    { title: 'Product', links: [{ label: 'How it works', href: '/#how' }, { label: 'Sample report', href: '/#report' }, { label: 'Pricing', href: '/#pricing' }, { label: 'FAQ', href: '/#faq' }] },
+    { title: 'Product', links: [{ label: 'How it works', href: '/#how' }, { label: 'Sample report', href: '/#report' }, { label: 'Pricing', href: '/pricing' }, { label: 'FAQ', href: '/#faq' }] },
     { title: 'Get started', links: [{ label: 'Scan my site', href: '/#scan' }, { label: 'Documentation', href: '/docs' }, { label: 'Install the extension', href: '/docs#install' }, { label: 'Sign in', href: '/login' }] },
     { title: 'Legal', links: [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Security', href: '/security' }, { label: 'Walkthru bot', href: '/bot' }] },
   ],

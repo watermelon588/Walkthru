@@ -20,7 +20,7 @@ export type StepEvidence = {
 };
 
 export type RunReply =
-  | { run_id: string; status: "running"; action: Step & { url: string }; verified?: boolean; plan?: GoalPlan }
+  | { run_id: string; status: "running"; action: Step & { url: string }; action_id?: string; verified?: boolean; plan?: GoalPlan }
   | {
       run_id: string;
       status: "done" | "gave_up" | "budget" | "stuck" | "captcha" | "bot_wall" | "stopped" | "safe_stop" | "looping" | "agent_lost";
@@ -91,25 +91,63 @@ async function token(): Promise<string | null> {
   return fresh.access_token;
 }
 
-/** POST when a body is given, GET otherwise. */
-async function call<T>(path: string, body?: unknown): Promise<T> {
+let runRetriesSupported = false;
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** POST when a body is given. A key is created by the intent caller, never by this retry loop. */
+async function call<T>(path: string, body?: unknown, requestKey?: string): Promise<T> {
   const t = await token();
   if (!t) throw new Error(`Not signed in. Open ${WEB_URL}/app and click "Connect extension".`);
-  const res = await fetch(API_URL + path, body === undefined
-    ? { headers: { Authorization: `Bearer ${t}` } }
-    : { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify(body) });
+  const attempts = requestKey && runRetriesSupported ? 3 : 1;
+  const headers: Record<string, string> = { Authorization: `Bearer ${t}` };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (requestKey) headers["Idempotency-Key"] = requestKey;
+  // Capture the body once: a retry must not take another snapshot or repeat a browser action.
+  const serialized = body === undefined ? undefined : JSON.stringify(body);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(API_URL + path, { headers, ...(body === undefined ? {} : { method: "POST", body: serialized }),
+        ...(requestKey ? { signal: AbortSignal.timeout(90_000) } : {}) });
+    } catch (error) {
+      if (attempt + 1 === attempts) throw error;
+      await wait(250 * (attempt + 1));
+      continue;
+    }
+    const code = res.ok ? null : res.headers.get("X-Walkthru-Code");
+    const retryable = code !== "request_outcome_unknown" && ([408, 502, 503, 504].includes(res.status)
+      || (res.status === 409 && code === "request_in_progress"));
+    if (retryable && attempt + 1 < attempts) {
+      const seconds = Number(res.headers.get("Retry-After"));
+      await res.body?.cancel();
+      await wait(Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000, 5000) : 250 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok) return fail(res);
+    try {
+      return await res.json() as T;
+    } catch (error) {
+      if (attempt + 1 === attempts) throw error; // Response body may have been cut off after headers arrived.
+      await wait(250 * (attempt + 1));
+    }
+  }
+  throw new Error("The server response could not be confirmed. Check your dashboard.");
+}
+
+async function fail(res: Response): Promise<never> {
   if (res.status === 401) {
     await chrome.storage.local.remove("session");
-    throw new Error(`Session expired. Open ${WEB_URL}/app and click "Connect extension" again.`);
+    throw new Error(withReference(`Session expired. Open ${WEB_URL}/app and click "Connect extension" again.`, res));
   }
-  if (!res.ok) {
-    const text = await res.text();
-    let detail: unknown;
-    try { detail = JSON.parse(text).detail; } catch { /* not JSON */ }
-    // Plan limits and other API refusals carry a plain-language `detail`; show it as is.
-    throw new Error(typeof detail === "string" ? detail : `API ${res.status}: ${text.slice(0, 200)}`);
-  }
-  return res.json();
+  const text = await res.text();
+  let detail: unknown;
+  try { detail = JSON.parse(text).detail; } catch { /* not JSON */ }
+  throw new Error(withReference(typeof detail === "string" ? detail : `API request failed (${res.status}).`, res));
+}
+
+function withReference(message: string, response: Response): string {
+  const id = response.headers.get("X-Request-Id");
+  return /^[a-f0-9]{32}$/.test(id ?? "") ? `${message} Reference: ${id}.` : message;
 }
 
 export async function uploadEvidenceImage(path: string, dataUrl: string): Promise<void> {
@@ -131,8 +169,13 @@ export async function uploadEvidenceImage(path: string, dataUrl: string): Promis
 export const getPlan = () => call<PlanSummary>("/me/plan");
 export const getTestUsers = () => call<TestUser[]>("/me/test-users");
 /** Are test runs on for this account right now (kill switches, automatic suspension)? The API enforces it anyway. */
-export const getRunPolicy = () => call<{ journeys: boolean; message: string }>("/runs/policy");
-export const startRun = (body: StartBody) => call<RunReply>("/runs", body);
-export const observe = (runId: string, observation: Observation, evidence?: StepEvidence) =>
-  call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}) });
-export const stopRun = (runId: string, reason?: string) => call<StopReply>(`/runs/${runId}/stop`, reason ? { reason } : {});
+export async function getRunPolicy() {
+  runRetriesSupported = false;
+  const policy = await call<{ journeys: boolean; message: string; idempotency?: string }>("/runs/policy");
+  runRetriesSupported = policy.idempotency === "v1";
+  return policy;
+}
+export const startRun = (body: StartBody, requestKey = crypto.randomUUID()) => call<RunReply>("/runs", body, requestKey);
+export const observe = (runId: string, observation: Observation, evidence?: StepEvidence, actionId?: string, requestKey = crypto.randomUUID()) =>
+  call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}), ...(actionId ? { action_id: actionId } : {}) }, requestKey);
+export const stopRun = (runId: string, reason?: string, requestKey = crypto.randomUUID()) => call<StopReply>(`/runs/${runId}/stop`, reason ? { reason } : {}, requestKey);

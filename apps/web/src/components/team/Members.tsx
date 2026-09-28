@@ -4,6 +4,7 @@ import { changeRole, createLink, getMembers, inviteByEmail, removeMember, revoke
 import { AccountAvatar } from '../AccountAvatar'
 import { Snippet } from '../DomainVerification'
 import { btnPrimary } from '../Shared'
+import { SkeletonRows } from '../Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; data: Data } | { kind: 'error'; message: string }
 
@@ -34,7 +35,7 @@ export function Members({ teamId, me, signal }: { teamId: string; me: string; si
     }
   }
 
-  if (state.kind === 'loading') return <div aria-busy="true" aria-label="Loading members" className="h-48 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />
+  if (state.kind === 'loading') return <SkeletonRows label="Loading members" />
   if (state.kind === 'error') {
     return (
       <div role="alert" className="rounded-2xl border border-line px-5 py-5">

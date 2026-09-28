@@ -6,6 +6,10 @@ import { btnPrimary } from '../components/Shared'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { checkCitationsNow, editCitationSite, getCitations, getCitationSite, trackCitations, untrackCitations, type CitationLimit, type CitationSite, type CitationView } from '../lib/runs'
 import { toast } from '../lib/toast'
+import { SkeletonPanel } from '../components/Loading'
+import { citationLabel } from '../lib/citationMetrics'
+import { fileStamp, slug, type Cell } from '../lib/export'
+import { ExportBar, PrintHeader } from '../components/ExportBar'
 
 type List = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; sites: CitationSite[]; limit: CitationLimit | null }
 const input = 'w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm text-ink placeholder:text-muted focus:border-ink focus:outline-none'
@@ -30,7 +34,7 @@ export default function Visibility() {
         Ask AI the questions your buyers ask, and see whether it names your site, cites your pages, and how often it picks your competitors instead. It reports what the AI said on the day; nobody can promise a citation.
       </PageHeader>
 
-      {list.kind === 'loading' && <div aria-busy="true" aria-label="Loading tracked sites" className="mt-14 h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+      {list.kind === 'loading' && <SkeletonPanel label="Loading tracked sites" className="mt-14" />}
       {list.kind === 'error' && (
         <div role="alert" className="mt-14 rounded-2xl border border-line px-5 py-5">
           <p className="text-sm text-danger">Could not load your tracked sites: {list.message}</p>
@@ -87,7 +91,7 @@ function AddSite({ limit, onAdded }: { limit: CitationLimit; onAdded: (id: strin
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-5">
       <p className="text-sm leading-relaxed text-muted">
-        Up to {limit.prompts} prompts per site, {limit.weekly ? 'checked every week' : 'checked once'}. We suggest prompts from your homepage; you can change every one.
+        Up to {limit.prompts} prompts per site, {limit.weekly ? 'scheduled weekly' : 'one batch'}. Answers use shared free-provider capacity and can take several days. We suggest prompts from your homepage; you can change every one.
       </p>
       <label htmlFor="cite-site" className="grid gap-2 text-sm text-muted">
         Your site
@@ -110,7 +114,7 @@ function SiteView({ id, onRemoved }: { id: string; onRemoved: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
 
-  const load = useCallback(() => getCitationSite(id).then(setView).catch((e: Error) => setError(e.message)), [id])
+  const load = useCallback(() => getCitationSite(id).then((v) => { setView(v); setError(null) }).catch((e: Error) => setError(e.message)), [id])
   useEffect(() => { load() }, [load])
   // Answers arrive one at a time; refresh while some are waiting, and when the "done" notification lands.
   const queued = view?.status.queued ?? 0
@@ -135,11 +139,12 @@ function SiteView({ id, onRemoved }: { id: string; onRemoved: () => void }) {
     }
   }
 
-  if (error) return <p role="alert" className="text-sm text-danger">Could not load this site: {error}</p>
-  if (!view) return <div aria-busy="true" aria-label="Loading answers" className="h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />
+  if (error && !view) return <p role="alert" className="text-sm text-danger">Could not load this site: {error} <button onClick={load} className="underline">Try again</button></p>
+  if (!view) return <SkeletonPanel label="Loading answers" />
 
   return (
     <section aria-labelledby="site-heading">
+      <PrintHeader title={`AI answers: ${view.site.brand}`} detail={view.site.site} />
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
           <h2 id="site-heading" className="text-2xl font-extralight tracking-tight">{view.site.brand}</h2>
@@ -147,8 +152,9 @@ function SiteView({ id, onRemoved }: { id: string; onRemoved: () => void }) {
             {view.prompts.length} prompts{view.site.competitors.length ? ` against ${view.site.competitors.map((c) => c.name).join(', ')}` : ', no competitors yet'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <button type="button" onClick={() => act(async () => { const r = await checkCitationsNow(id); return r }, 'Checking now. Answers arrive over the next minutes.')} disabled={queued > 0}
+        <div className="no-print flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <ExportBar filename={`walkthru-ai-answers-${slug(view.site.site)}-${fileStamp()}`} csv={() => answersCsv(view)} />
+          <button type="button" onClick={() => act(async () => { const r = await checkCitationsNow(id); return r }, 'Batch queued. Answers run as provider capacity becomes available.')} disabled={queued > 0}
             className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink disabled:text-muted disabled:no-underline">Check now</button>
           <button type="button" onClick={() => setEditing((v) => !v)} aria-expanded={editing} className="text-muted underline decoration-line underline-offset-4 hover:text-ink">
             {editing ? 'Close setup' : 'Prompts and competitors'}
@@ -158,9 +164,21 @@ function SiteView({ id, onRemoved }: { id: string; onRemoved: () => void }) {
         </div>
       </div>
       {editing && <Setup view={view} onSaved={(v) => { setView(v); setEditing(false) }} />}
+      {error && <p role="alert" className="mt-4 text-sm text-danger">Could not refresh: {error} <button onClick={load} className="underline">Try again</button></p>}
       <CitationResults view={view} />
     </section>
   )
+}
+
+function answersCsv(view: CitationView): Cell[][] {
+  return [
+    ['Prompt', 'Engine', 'Status', 'Named you', 'Cited you', 'Brands named', 'Model', 'Checked at', 'Answer', 'Sources'],
+    ...view.answers.map((a) => {
+      const you = a.result?.brands?.find((b) => b.you)
+      return [a.prompt, citationLabel(a), a.status, a.status === 'done' ? (you?.mentioned ? 'yes' : 'no') : '', you?.cited == null ? 'not measured' : you.cited ? 'yes' : 'no',
+        (a.result?.brands ?? []).filter((b) => b.mentioned).map((b) => b.name).join('; '), a.model, a.checked_at, a.result?.raw_answer || a.answer, (a.sources ?? []).map((s) => s.url).join(' ')]
+    }),
+  ]
 }
 
 function Setup({ view, onSaved }: { view: CitationView; onSaved: (v: CitationView) => void }) {

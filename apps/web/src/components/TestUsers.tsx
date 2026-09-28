@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { createTestUser, deleteTestUser, getPlan, listTestUsers, type TestUser } from '../lib/runs'
 import { btnPrimary } from './Shared'
+import { SkeletonRows } from './Loading'
 
 type State = { kind: 'loading' } | { kind: 'locked' } | { kind: 'ready'; users: TestUser[] } | { kind: 'error'; message: string }
 
@@ -63,7 +64,7 @@ export function TestUsers() {
         </div>
 
         <div aria-live="polite" className="min-w-0">
-          {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading your test users" className="h-40 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+          {state.kind === 'loading' && <SkeletonRows label="Loading your test users" />}
           {state.kind === 'error' && (
             <div role="alert" className="rounded-2xl border border-line px-5 py-5">
               <p className="text-sm text-danger">Could not load your test users: {state.message}</p>
@@ -73,7 +74,7 @@ export function TestUsers() {
           {state.kind === 'locked' && (
             <div className="rounded-2xl border border-line px-5 py-5">
               <p className="text-sm text-ink">Custom test users are part of the Plus plan.</p>
-              <p className="mt-1 text-sm text-muted">Every paid plan has the four built-in test users. <Link to="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
+              <p className="mt-1 text-sm text-muted">Every paid plan has the four built-in test users. <Link to="/pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
             </div>
           )}
           {state.kind === 'ready' && (

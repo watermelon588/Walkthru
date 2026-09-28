@@ -11,8 +11,8 @@ export function ReadinessPipeline({ runs }: { runs: Run[] }) {
   const values = [
     runs.filter((run) => run.kind === 'test').length,
     runs.reduce((sum, run) => sum + run.steps.filter((step) => step.evidence).length, 0),
-    runs.reduce((sum, run) => sum + (run.report?.findings.filter((finding) => finding.kind !== 'ux').length ?? 0), 0),
-    runs.filter((run) => run.report).length,
+    runs.reduce((sum, run) => sum + (Array.isArray(run.report?.findings) ? run.report.findings.filter((finding) => finding.kind !== 'ux').length : 0), 0),
+    runs.filter((run) => Array.isArray(run.report?.findings)).length,
   ]
 
   return (

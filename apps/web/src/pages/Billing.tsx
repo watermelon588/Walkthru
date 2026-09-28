@@ -5,6 +5,7 @@ import { btnPrimary } from '../components/Shared'
 import { plans as tiers } from '../content'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { getBilling, requestAccess, startCheckout, type BillingOffer, type BillingStatus } from '../lib/runs'
+import { SkeletonPanel } from '../components/Loading'
 
 const PLAN_NAME: Record<BillingOffer['plan'], string> = { launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
 // What each plan adds, from the pricing cards (content.ts), minus the run count shown above it.
@@ -54,7 +55,7 @@ export default function Billing() {
       </header>
 
       <div aria-live="polite" className="mt-10">
-        {load.kind === 'loading' && <div aria-busy="true" aria-label="Loading your plan" className="h-48 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+        {load.kind === 'loading' && <SkeletonPanel label="Loading your plan" />}
         {load.kind === 'error' && (
           <div role="alert" className="rounded-2xl border border-line px-5 py-5">
             <p className="text-sm text-danger">Could not load your plan: {load.message}</p>

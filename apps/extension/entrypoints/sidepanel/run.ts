@@ -108,6 +108,7 @@ export async function openStart(url: string, signal: AbortSignal) {
 
 export async function runTest(opts: RunOptions, onProgress: (p: Progress) => void) {
   const steps: Step[] = [];
+  const acted = new Set<string>();
   let capturedCount = 0;
   let evidenceWarning: string | undefined;
   const emit = (p: Partial<Progress>) => onProgress({ phase: "running", steps: [...steps], evidenceWarning, ...p });
@@ -152,6 +153,10 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         return;
       }
       const step = reply.action;
+      if (reply.action_id) {
+        if (acted.has(reply.action_id)) throw new Error("Walkthru returned an earlier action. The test stopped to avoid repeating it.");
+        acted.add(reply.action_id);
+      }
       steps.push(step);
       emit({ message: step.thought });
 
@@ -192,7 +197,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
           await setEvidenceCapture(tabId, false);
         }
       }
-      reply = await observe(reply.run_id, obs, evidence);
+      reply = await observe(reply.run_id, obs, evidence, reply.action_id);
     }
     const finished = reply.status === "done" || reply.status === "safe_stop";
     await setAgentStatus(tabId, finished ? "complete" : "stopped", reply.status === "safe_stop" ? "Stopped before sending" : finished ? "Goal reached" : "Test finished");

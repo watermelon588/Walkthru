@@ -30,7 +30,7 @@ const STATUS_COPY: Record<string, string> = {
 
 export function App() {
   const [site, setSite] = useState<string>("");
-  const [goal, setGoal] = useState("Sign up for an account");
+  const [goal, setGoal] = useState("Explore the public pages and find what this product does and its pricing");
   const [persona, setPersona] = useState<(typeof PERSONAS)[number][0]>("first_timer");
   const [chosen, setChosen] = useState<string[]>(["first_timer"]); // Plus: several test users, run one after another
   const [custom, setCustom] = useState<TestUser[]>([]);
@@ -46,13 +46,17 @@ export function App() {
 
   useEffect(() => {
     if (typeof chrome === "undefined" || !chrome.tabs) return; // previewing outside the extension
-    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => setSite(tab?.url ?? ""));
+    const refreshSite = () => chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => setSite(tab?.url ?? ""));
+    void refreshSite();
+    chrome.tabs.onActivated.addListener(refreshSite);
+    const updated = (_id: number, change: { url?: string }, tab: chrome.tabs.Tab) => { if (tab.active && change.url) void refreshSite(); };
+    chrome.tabs.onUpdated.addListener(updated);
     getSession().then((s) => setSignedIn(!!s));
     const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
       if ("session" in changes) setSignedIn(!!changes.session.newValue);
     };
     chrome.storage.onChanged.addListener(onChange);
-    return () => chrome.storage.onChanged.removeListener(onChange);
+    return () => { chrome.storage.onChanged.removeListener(onChange); chrome.tabs.onActivated.removeListener(refreshSite); chrome.tabs.onUpdated.removeListener(updated); };
   }, []);
 
   // The server decides the plan; refresh it when the account connects and after every run.
@@ -170,6 +174,12 @@ export function App() {
         </p>
       )}
 
+      {!running && <section className="summary" aria-label="Public competitor scans">
+        <h2>Researching a competitor?</h2>
+        <p>Compare public pages without verifying ownership or running a browser journey. No sign-in or form submission on the target site.</p>
+        <p><a href={`${WEB_URL}/app/compare?competitor=${encodeURIComponent(site)}`} target="_blank" rel="noreferrer">Compare this site</a> (paid plans)</p>
+        <p>For a journey, browse while signed out and use a visitor goal. Forms and signed-in pages need ownership proof. <a href={`${WEB_URL}/app/settings#verify`} target="_blank" rel="noreferrer">Verify with DNS, no code changes</a>.</p>
+      </section>}
       <form onSubmit={start} aria-busy={running}>
         <label>
           Site under test
@@ -239,7 +249,7 @@ export function App() {
         </section>
       )}
 
-      {progress.phase === "error" && <p className="error">{progress.message}</p>}
+      {progress.phase === "error" && <div role="alert"><p className="error">{progress.message}</p><p className="hint">For public competitor metrics, <a href={`${WEB_URL}/app/compare?competitor=${encodeURIComponent(site)}`} target="_blank" rel="noreferrer">open Compare</a>. To test your own forms, <a href={`${WEB_URL}/app/settings#verify`} target="_blank" rel="noreferrer">verify with DNS</a>.</p></div>}
       {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}
 
       {results.length > 1 && !running && (

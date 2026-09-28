@@ -69,7 +69,7 @@ export function FixPrompt({ runId, paid, count }: { runId: string; paid: boolean
         </div>
       ) : null}
       {!paid ? (
-        <p className="mt-4 text-sm"><a href="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See Pro</a></p>
+        <p className="mt-4 text-sm"><a href="/pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See Pro</a></p>
       ) : null}
       {status && <p role="status" className="mt-3 text-xs text-muted">{status}</p>}
     </section>

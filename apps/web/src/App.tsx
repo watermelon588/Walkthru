@@ -43,6 +43,7 @@ const TeamReport = page(() => import('./pages/TeamReport'))
 const Join = page(() => import('./pages/Join'))
 const CompareResult = page(() => import('./pages/Compare').then((m) => ({ default: m.CompareResult })))
 const Docs = page(() => import('./pages/Docs'))
+const Pricing = page(() => import('./pages/Pricing'))
 const Privacy = page(() => import('./pages/Privacy'))
 const Terms = page(() => import('./pages/Terms'))
 const Security = page(() => import('./pages/Security'))
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/agent-lab" element={<AgentLab />} />
             <Route path="/login" element={<Login />} />
             <Route path="/docs" element={<Docs />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/bot" element={<Bot />} />

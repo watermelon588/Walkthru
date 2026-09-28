@@ -3,6 +3,7 @@ import { EVIDENCE_RETENTION_DAYS, ignoredKey, KIND_LABEL, PERSONA_LABEL, STATUS_
 import { BrandClosing, BrandCover } from './BrandCover'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
+import { SkeletonReport, Working } from './Loading'
 import { LaunchChecks } from './LaunchChecks'
 import { LaunchReady } from './LaunchReady'
 import { FixPrompt } from './FixPrompt'
@@ -11,6 +12,11 @@ import { GeoReadiness } from './GeoReadiness'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
 import { TestUsersCompared } from './TestUsersCompared'
+
+// What the server does while the report is pending, in its real order. Paced on a timer, not tied to server progress.
+const RUNNING_STEPS = ['Reading the page like a stranger', 'Choosing the next click', 'Noting what feels confusing', 'Saving a screenshot of each important screen']
+const REPORT_STEPS = ['Reading every step the test user took', 'Matching screenshots to moments of confusion', 'Checking SEO and AI search basics', 'Checking security headers', 'Ranking the fixes', 'Writing the summary']
+const SCAN_STEPS = ['Fetching your homepage', 'Reading titles, links and sitemaps', 'Checking what AI crawlers can read', 'Checking security headers', 'Scoring Launch Ready', 'Writing the report']
 
 /** Owner-only controls for accepting ("won't fix") findings. The public share page passes none. */
 export type IgnoreControls = {
@@ -143,9 +149,10 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
         </>
       ) : (
         <>
-          <p role="status" className="mt-8 text-muted">
-            {run.status === 'running' ? 'The test user is still working through the site.' : 'Writing the report. This takes about half a minute.'}
-          </p>
+          {run.status === 'running'
+            ? <Working className="mt-8" state="searching" every={6000} title="The test user is still working through the site" steps={RUNNING_STEPS} />
+            : <Working className="mt-8" state="composing" title="Writing the report" steps={isScan ? SCAN_STEPS : REPORT_STEPS} />}
+          {run.status !== 'running' && <SkeletonReport label="" className="mt-10 opacity-60" />}
           {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} />}
         </>
       )}

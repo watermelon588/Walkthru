@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { connectGitHub, disconnectGitHub, getGitHub, type GitHubStatus } from '../lib/runs'
 import { btnPrimary } from './Shared'
+import { SkeletonPanel } from './Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; status: GitHubStatus } | { kind: 'error'; message: string }
 
@@ -49,12 +50,12 @@ export function GitHubConnect() {
           </p>
         </div>
         <div aria-live="polite" className="grid min-w-0 content-start gap-4">
-          {state.kind === 'loading' && <div aria-busy="true" aria-label="Loading GitHub" className="h-24 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />}
+          {state.kind === 'loading' && <SkeletonPanel label="Loading GitHub" />}
           {state.kind === 'error' && <p role="alert" className="text-sm text-danger">Could not load GitHub: {state.message}</p>}
           {state.kind === 'ready' && !state.status.plus && (
             <div className="rounded-2xl border border-line px-5 py-5">
               <p className="text-sm text-ink">Fix pull requests are part of the Plus plan.</p>
-              <p className="mt-1 text-sm text-muted"><Link to="/#pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
+              <p className="mt-1 text-sm text-muted"><Link to="/pricing" className="text-ink underline decoration-line underline-offset-4 hover:decoration-ink">See the plans</Link></p>
             </div>
           )}
           {state.kind === 'ready' && state.status.plus && !state.status.configured && (

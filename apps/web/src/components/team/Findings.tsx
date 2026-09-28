@@ -3,6 +3,9 @@ import { Link } from 'react-router'
 import { KIND_LABEL } from '../../lib/runs'
 import { getBoard, STATUS_TEXT, triage, type Board, type BoardItem, type Member, type Status } from '../../lib/teams'
 import { Chat } from './Chat'
+import { SkeletonRows } from '../Loading'
+import { fileStamp } from '../../lib/export'
+import { ExportBar } from '../ExportBar'
 
 type State = { kind: 'loading' } | { kind: 'ready'; board: Board } | { kind: 'error'; message: string }
 type Filter = 'active' | 'all' | Status
@@ -43,7 +46,7 @@ export function Findings({ teamId, me, members, live, signal, chatSignal, canCha
     }
   }
 
-  if (state.kind === 'loading') return <div aria-busy="true" aria-label="Loading findings" className="h-64 animate-pulse rounded-2xl bg-surface motion-reduce:animate-none" />
+  if (state.kind === 'loading') return <SkeletonRows label="Loading findings" />
   if (state.kind === 'error') {
     return (
       <div role="alert" className="rounded-2xl border border-line px-5 py-5">
@@ -61,7 +64,13 @@ export function Findings({ teamId, me, members, live, signal, chatSignal, canCha
           <h2 id="board-heading" className="text-xl font-light">Findings board</h2>
           <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted">One row per problem and site, across every report in this workspace. Give each one a status and an owner.</p>
         </div>
-        <p className="font-mono text-xs text-muted">{shown.length} of {findings.length}</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <p className="font-mono text-xs text-muted">{shown.length} of {findings.length}</p>
+          {findings.length > 0 && <ExportBar filename={`walkthru-team-findings-${fileStamp()}`} csv={() => [
+            ['Severity', 'Kind', 'Site', 'Title', 'Status', 'Owner', 'Reports', 'First seen', 'Last seen', 'Found again', 'Fix', 'Evidence'],
+            ...shown.map((f) => [f.severity, KIND_LABEL[f.kind], f.site, f.title, STATUS_TEXT[f.status], f.assignee_name ?? '', f.reports, f.first_seen, f.last_seen, f.seen_again ? 'yes' : 'no', f.fix || f.detail, f.evidence]),
+          ]} />}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
