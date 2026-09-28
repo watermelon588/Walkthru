@@ -11,7 +11,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -21,14 +21,33 @@ from psycopg_pool import PoolTimeout
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from starlette.routing import Route
 
-from app import abuse, auth, billing, citations, db, deliver, github, mcp_server, notify, plans, plus, retention, teams, watch
+from app import (
+    abuse,
+    auth,
+    billing,
+    citations,
+    db,
+    deliver,
+    github,
+    idempotency,
+    jobs,
+    limits,
+    mcp_server,
+    notify,
+    plans,
+    plus,
+    retention,
+    teams,
+    watch,
+)
 from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
 from app.auth import require_user
+from app.observability import RequestLog, configure_logging, request_context, support_headers
 from app.scans import fetch, security
 
-logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s")  # libraries stay at WARNING
+configure_logging()
 log = logging.getLogger("walkthru")
 log.setLevel(logging.INFO)  # Walkthru's own INFO lines (step timings, retention) reach the console
 _background = ThreadPoolExecutor(max_workers=8, thread_name_prefix="start-run")  # short side tasks of a request
@@ -43,8 +62,12 @@ if _web.hostname in {"localhost", "127.0.0.1"}:
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    async with mcp_server.server.session_manager.run():  # the MCP transport needs its task group running
-        yield
+    await run_in_threadpool(runtime.initialize_checkpointer)
+    try:
+        async with mcp_server.server.session_manager.run():  # the MCP transport needs its task group running
+            yield
+    finally:
+        await run_in_threadpool(runtime.close_checkpointer)
 
 
 MAX_BODY = 1_000_000  # SD-2.2: the biggest real request (a branding logo) is about 270 kB
@@ -69,20 +92,21 @@ class BodyLimit:
         return await self.inner(scope, receive, send)
 
 
-app = FastAPI(title="Walkthru API", lifespan=_lifespan)
+app = FastAPI(title="Walkthru API", lifespan=_lifespan, dependencies=[Depends(limits.by_address)])  # SD-2.1, app/limits.py
 app.add_middleware(BodyLimit)  # added first, so CORS wraps it and the browser can read the 413
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(WEB_ORIGINS),
     allow_origin_regex=r"chrome-extension://.*",
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["X-Walkthru-Code"],  # the stop-reason code on a refused run (app/agent/policy.py)
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+    expose_headers=["Retry-After", "X-Walkthru-Code", "X-Request-Id", "Idempotency-Replayed"],
 )
+app.add_middleware(RequestLog)  # wraps CORS and BodyLimit, including their early responses
 
 
 def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
-    log.warning("database temporarily unavailable: %s", error)
+    log.warning("", exc_info=error, extra={"event": "database_unavailable", "request_context": request_context(request.scope)})
     return JSONResponse(status_code=503, content={"detail": "Walkthru could not reach its database just now. Please try again in a few seconds."})
 
 
@@ -102,8 +126,7 @@ if os.environ.get("WARMUP", "1") == "1":
     threading.Thread(target=_warm, name="warmup", daemon=True).start()
 
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
-    retention.start_background()
-    watch.start_background()  # same switch: background jobs off in tests and one-off scripts
+    jobs.start_background()  # same switch: background jobs off in tests and one-off scripts (JOB_WORKERS=0 when a worker process runs them)
     citations.start_background()
 
 app.add_exception_handler(OperationalError, _database_unavailable)
@@ -114,12 +137,21 @@ app.add_exception_handler(db.DatabaseUnavailable, _database_unavailable)
 def _server_error(request: Request, error: Exception) -> JSONResponse:
     """Any unhandled error: a generic answer for the caller, one line in the founder's admin panel."""
     route = getattr(request.scope.get("route"), "path", "?")  # the route template, never the query string
-    log.error("unhandled error on %s %s", request.method, route, exc_info=error)
+    context = request_context(request.scope)
+    log.error("", exc_info=error, extra={"event": "server_error", "request_context": context})
     try:
-        db.app_event("server_error", None, {"method": request.method, "route": route, "error": type(error).__name__, "message": str(error)[:300]})
+        db.app_event("server_error", context.get("user_id"), {"method": request.method, "route": route,
+                     "error": type(error).__name__, "request_id": context.get("request_id")})
     except Exception:  # recording must never hide the original error
         log.warning("could not record the server error", exc_info=True)
-    return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+    response = JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again.",
+                             "request_id": context.get("request_id")}, headers=support_headers(request.scope))
+    # This handler runs outside CORSMiddleware, so without these headers the browser drops the answer and the page
+    # shows "Failed to fetch". Same origins as the middleware below.
+    origin = request.headers.get("origin", "")
+    if origin in WEB_ORIGINS or origin.startswith("chrome-extension://"):
+        response.headers.update({"Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Expose-Headers": "X-Request-Id"})
+    return response
 
 
 app.add_exception_handler(Exception, _server_error)
@@ -148,21 +180,24 @@ class StartRun(BaseModel):
 class Observe(BaseModel):
     observation: Observation
     evidence: StepEvidence | None = None
+    action_id: uuid.UUID | None = None  # pending checkpoint returned with the previous action; optional for legacy clients
 
 
 def _cfg(run_id: str) -> dict:
     return {"configurable": {"thread_id": run_id}}
 
 
-def _reply(run_id: str, tier: str, result: dict, background: BackgroundTasks) -> dict:
-    values = runtime.get_state(tier, _cfg(run_id)).values
+def _reply(run_id: str, tier: str, result: dict) -> dict:
+    live = runtime.get_state(tier, _cfg(run_id))
+    values = live.values
     running = "__interrupt__" in result
     status = "running" if running else values["status"]
     db.update_run(run_id, status, values.get("steps", []), values.get("tokens", 0))
     if running:
         return {"run_id": run_id, "status": "running", "action": result["__interrupt__"][0].value, "verified": bool(values.get("verified")),
+                "action_id": live.config["configurable"]["checkpoint_id"],
                 "mode": policy.mode(bool(values.get("verified")))}
-    background.add_task(finish_run, run_id, values)
+    _finish_later(run_id, values)
     reply = {"run_id": run_id, "status": status, "steps": values["steps"]}
     code = (values["steps"][-1].get("code") if values.get("steps") else None) or (status if status in policy.STOP_REASONS else None)
     abuse.record_end(run_id, values.get("steps", []), status, code)
@@ -182,7 +217,11 @@ def my_plan(user: dict = Depends(require_user)) -> dict:
 
 
 @app.post("/runs")
-def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def start_run(body: StartRun, request: Request, user: dict = Depends(require_user)) -> dict:
+    return idempotency.run(request, user["id"], "start", body.model_dump(mode="json"), lambda run_id: _start_run(body, user, run_id))
+
+
+def _start_run(body: StartRun, user: dict, run_id: str) -> dict:
     marks = [("start", time.monotonic())]
     # Domain verification is a passive fetch of the owner's site that needs nothing else, so it runs while the
     # plan check and the goal planner work instead of after them (measured: 4 to 6 s saved on the first step).
@@ -211,7 +250,6 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
     marks.append(("goal_planner", time.monotonic()))
     if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
         raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
-    run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, body.goal, persona, tier, body.logged_in, group_id=group_id)
     _background.submit(teams.auto_share, user["id"], run_id, body.site, "test")  # Plus workspaces with auto-share on
     marks.append(("insert_run", time.monotonic()))
@@ -223,7 +261,7 @@ def start_run(body: StartRun, background: BackgroundTasks, user: dict = Depends(
                                             "first_text": body.observation.text[:6000], "verified": verified, "mode": policy.mode(verified), "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
     marks.append(("first_step", time.monotonic()))
-    reply = _reply(run_id, tier, result, background)
+    reply = _reply(run_id, tier, result)
     marks.append(("save_step", time.monotonic()))
     log.info("start_run %s %s", run_id, " ".join(f"{name}={later - earlier:.1f}s" for (_, earlier), (name, later) in pairwise(marks)))
     # The side panel shows how Walkthru understood the goal.
@@ -262,7 +300,14 @@ def _group(body: StartRun, usage: dict, user_id: str) -> str | None:
 
 
 @app.post("/runs/{run_id}/observe")
-def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def observe(run_id: str, body: Observe, request: Request, user: dict = Depends(require_user)) -> dict:
+    _owned(run_id, user)  # Check ownership/deletion even on a cached response.
+    if request.headers.get("Idempotency-Key") and body.action_id is None:
+        raise HTTPException(422, "Include the pending action ID with this observation.")
+    return idempotency.run(request, user["id"], "observe", body.model_dump(mode="json"), lambda rid: _observe(rid, body, user), run_id)
+
+
+def _observe(run_id: str, body: Observe, user: dict) -> dict:
     row = _owned(run_id, user)
     if row["status"] != "running":
         raise HTTPException(409, "run already finished")
@@ -272,23 +317,25 @@ def observe(run_id: str, body: Observe, background: BackgroundTasks, user: dict 
     if not live.next:
         # The live agent state is gone (API restarted with the in-memory checkpointer). Close the run
         # truthfully with its saved steps instead of failing; the extension shows "Ended early".
-        return stop_run(run_id, background, StopRequest(reason="the Walkthru server restarted and lost the live test"), user=user)
+        return _stop_run(run_id, StopRequest(reason="the Walkthru server restarted and lost the live test"), user=user)
+    if body.action_id and str(body.action_id) != live.config["configurable"]["checkpoint_id"]:
+        raise HTTPException(409, "This observation belongs to an earlier action. Check the current run before continuing.")
     if abuse.paused(user["id"], policy.host(row["site"])):  # a kill switch turned on mid-run
         reason = "Walkthru paused test runs for this account or site, so the test stopped here."
-        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("journeys_paused")
+        return _stop_run(run_id, StopRequest(reason=reason), user=user) | policy.stop_reason("journeys_paused")
     # The tested tab reached a blocked host (a link out to Instagram, a bank's payment page): stop there, truthfully.
     cat = policy.left_for(body.observation.url, row["site"], bool(live.values.get("verified")))
     if cat:
         reason = f"The test reached {policy.host(body.observation.url)[:120]}, a {cat} site Walkthru does not run on, so it stopped there."
-        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("blocked_site")
+        return _stop_run(run_id, StopRequest(reason=reason), user=user) | policy.stop_reason("blocked_site")
     if policy.signed_in_unverified(body.observation.model_dump(), lambda: bool(live.values.get("verified"))):
         reason = f"The page showed a signed-in account, and {policy.host(row['site'])[:120]} is not verified, so Walkthru stopped (visitor mode)."
-        return stop_run(run_id, background, StopRequest(reason=reason), user=user) | policy.stop_reason("signed_in_unverified")
+        return _stop_run(run_id, StopRequest(reason=reason), user=user) | policy.stop_reason("signed_in_unverified")
     resume ={"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
         resume["evidence"] = body.evidence.model_dump(mode="json")
     result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))
-    return _reply(run_id, row["tier"], result, background)
+    return _reply(run_id, row["tier"], result)
 
 
 # ---------- in-app notifications (sidebar counts and toasts; app/notify.py) ----------
@@ -323,7 +370,7 @@ def read_notifications(body: ReadNotifications, user: dict = Depends(require_use
 @app.get("/runs/policy")
 def run_policy(user: dict = Depends(require_user)) -> dict:
     """Asked by the extension before a test: are journeys on for this account? POST /runs enforces it regardless."""
-    return abuse.journeys_for(user["id"])
+    return abuse.journeys_for(user["id"]) | {"idempotency": "v1"}
 
 
 @app.get("/runs/{run_id}")
@@ -377,10 +424,19 @@ class StopRequest(BaseModel):
 
 
 @app.post("/runs/{run_id}/stop")
-def stop_run(run_id: str, background: BackgroundTasks, body: StopRequest | None = None, user: dict = Depends(require_user)) -> dict:
+def stop_run(run_id: str, request: Request, body: StopRequest | None = None, user: dict = Depends(require_user)) -> dict:
+    _owned(run_id, user)
+    body = body or StopRequest()
+    return idempotency.run(request, user["id"], "stop", body.model_dump(mode="json"), lambda rid: _stop_run(rid, body, user), run_id)
+
+
+def _stop_run(run_id: str, body: StopRequest | None, user: dict) -> dict:
     """End an interrupted browser session and generate a truthful partial report."""
     row = _owned(run_id, user)
     if row["status"] == "stopped":
+        if not row.get("report"):
+            _finish_later(run_id, row)
+        abuse.record_end(run_id, row.get("steps", []), "stopped", None)
         return {
             "run_id": run_id,
             "status": "stopped",
@@ -406,6 +462,9 @@ def stop_run(run_id: str, background: BackgroundTasks, body: StopRequest | None 
         refreshed = _owned(run_id, user)
         if refreshed["status"] != "stopped":
             raise HTTPException(409, "run already finished")
+        if not refreshed.get("report"):
+            _finish_later(run_id, refreshed | {"first_text": first_text})
+        abuse.record_end(run_id, refreshed.get("steps", []), "stopped", None)
         return {
             "run_id": run_id,
             "status": "stopped",
@@ -414,9 +473,16 @@ def stop_run(run_id: str, background: BackgroundTasks, body: StopRequest | None 
         }
 
     values = {"status": "stopped", "steps": steps, "tokens": tokens, "first_text": first_text}
-    background.add_task(finish_run, run_id, values)
+    _finish_later(run_id, values)
     abuse.record_end(run_id, steps, "stopped", None)
     return {"run_id": run_id, "status": "stopped", "steps": steps, "report_status": "generating"}
+
+
+def _finish_later(run_id: str, values: dict) -> None:
+    """Queue the report (app/jobs.py). Only the state finish_run reads goes in the job; of the last page, only its controls."""
+    last = {"elements": (values.get("observation") or {}).get("elements", [])}
+    keep = {k: values[k] for k in ("status", "steps", "tokens", "first_text", "plan") if k in values}
+    jobs.enqueue("finish_run", {"run_id": run_id, "values": keep | {"observation": last}}, key=f"report:{run_id}")
 
 
 def finish_run(run_id: str, values: dict) -> None:
@@ -478,24 +544,14 @@ class ScanRequest(BaseModel):
     email: EmailStr | None = None
 
 
-_scan_hits: dict[str, list[float]] = {}  # ponytail: per-process; production runs one API process. The daily cap (plans.FREE_SCANS_PER_DAY) is in the database.
-SCAN_LIMIT, SCAN_WINDOW = 5, 3600
-
-
-def _rate_limit(ip: str) -> None:
-    if os.environ.get("ALLOW_LOCAL_SCANS") == "1" and ip in ("127.0.0.1", "::1"):
-        return  # dev only: the founder testing from this machine; production never sets ALLOW_LOCAL_SCANS
-    now = time.time()
-    hits = [t for t in _scan_hits.get(ip, []) if now - t < SCAN_WINDOW]
-    if len(hits) >= SCAN_LIMIT:
-        raise HTTPException(429, "Too many scans from this address. Try again in an hour or sign in.")
-    _scan_hits[ip] = hits + [now]
+SCAN_LIMIT, SCAN_WINDOW = 5, 3600  # per address, shared by every API process (app/limits.py). The daily cap is plans.FREE_SCANS_PER_DAY.
 
 
 @app.post("/scans")
 def instant_scan(body: ScanRequest, request: Request) -> dict:
     """Free homepage scan: first impression, SEO basics, security headers. Public report, no login."""
-    _rate_limit(request.client.host if request.client else "?")
+    if not limits.local_dev(request):  # counted only once the body is valid, so a typo does not use a scan
+        limits.hit(f"scan:{limits.address(request)}", SCAN_LIMIT, SCAN_WINDOW, "Too many scans from this address. Try again in an hour or sign in.")
     if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
         raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
     try:
@@ -507,6 +563,15 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep["report"]}
 
 
+TARGET_SCANS, TARGET_WINDOW = 30, 3600  # scans of one host per hour, all users and processes together (SD-2.3)
+
+
+def polite(site: str) -> None:
+    """Count one scan of this site's host. Raises 429 past TARGET_SCANS an hour, so Walkthru never hammers a site."""
+    limits.hit(f"target:{policy.host(site)}", TARGET_SCANS, TARGET_WINDOW,
+               "This site was scanned many times in the last hour. Try again later, or open its latest report.")
+
+
 def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tuple[str, dict]:
     """One server-side scan, stored as a run. Anonymous Instant Scans are public; an owner's scan (MCP) is private.
     Raises ValueError with a message for the caller when the site cannot be scanned."""
@@ -515,6 +580,7 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
         site = f"https://{site}"  # agents and people type "example.com"
     if policy.category(site) == "site owner opt-out" or abuse.paused(user_id or "", policy.host(site)):
         raise ValueError("The owner of this site asked Walkthru not to scan it.")  # the /bot page promise
+    polite(site)
     fetch.assert_public(site)
     with fetch.client() as c:
         resp = fetch.get(c, site)
@@ -526,7 +592,8 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
     if user_id and kind in ("scan", "watch"):
         _background.submit(teams.auto_share, user_id, run_id, str(resp.url), kind)
     # Exposed files and keys only on a host this owner verified, checked after redirects (same rule as journey runs).
-    verified = bool(user_id) and _verified(str(resp.url), user_id)
+    # Comparisons must use the same public scope even when the caller owns one of the sites.
+    verified = kind != "compare_part" and bool(user_id) and _verified(str(resp.url), user_id)
     rep = report.run_report(str(resp.url), fetch.page_text(resp.text), verified=verified)
     db.set_report(run_id, rep.model_dump(), status="done")
     return run_id, {"site": str(resp.url), "report": rep.model_dump()}
@@ -739,8 +806,7 @@ def edit_citation_site(site_id: uuid.UUID, body: CitationEdit, user: dict = Depe
 
 @app.post("/citations/{site_id}/check")
 def check_citations_now(site_id: uuid.UUID, user: dict = Depends(require_user)) -> dict:
-    """Queue every prompt on every engine the plan includes. Answers arrive over the next minutes (the free quotas are
-    paced), and a notification says when the set is done."""
+    """Reserve a bounded batch under the shared free-provider quotas."""
     site = _citation_site(site_id, user)
     lim = _citation_limit(user["id"])
     now = datetime.now(UTC)
@@ -753,7 +819,10 @@ def check_citations_now(site_id: uuid.UUID, user: dict = Depends(require_user)) 
     prompts = db.citation_prompts(site["id"])[: lim.prompts]
     if not prompts:
         raise HTTPException(409, "Add at least one prompt first.")
-    batch = citations.queue_batch(site, prompts, lim.engines)
+    try:
+        batch = citations.queue_batch(site, prompts, lim.engines, weekly=lim.weekly)
+    except citations.QueueFull as e:
+        raise HTTPException(429, str(e), headers={"Retry-After": "3600"}) from e
     return {"batch_id": batch, "queued": len(prompts) * len(lim.engines)}
 
 
@@ -772,7 +841,7 @@ def list_watched(user: dict = Depends(require_user)) -> dict:
 
 
 @app.post("/watch")
-def add_watched(body: WatchSite, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def add_watched(body: WatchSite, user: dict = Depends(require_user)) -> dict:
     plan = plans.current(user["id"])["plan"]
     if plan.name != "plus":
         raise HTTPException(402, "Weekly watch is part of the Plus plan.")
@@ -787,15 +856,8 @@ def add_watched(body: WatchSite, background: BackgroundTasks, user: dict = Depen
     if len(current) >= plan.sites:
         raise HTTPException(409, f"Your plan watches up to {plan.sites} sites. Remove one first.")
     row = db.add_site(user["id"], site)
-    background.add_task(_watch_check, row, "added")  # the baseline every later check compares with
+    jobs.enqueue("watch_check", {"site": row, "reason": "added"})  # the baseline every later check compares with
     return row
-
-
-def _watch_check(site: dict, reason: str) -> None:
-    try:
-        watch.check(site, reason)
-    except Exception:  # background work: the next weekly pass retries
-        log.warning("watch check failed for %s", site.get("site"), exc_info=True)
 
 
 @app.delete("/watch/{site_id}")
@@ -813,14 +875,14 @@ def _owned_site(site_id: str, user_id: str) -> dict:
 
 
 @app.post("/watch/{site_id}/check")
-def check_watched_now(site_id: str, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def check_watched_now(site_id: str, user: dict = Depends(require_user)) -> dict:
     """Check now, for example right after a deploy. Shares the deploy hook's 10-minute limit."""
     if _plan_name(user["id"]) != "plus":
         raise HTTPException(402, "Weekly watch is part of the Plus plan.")
     site = _owned_site(site_id, user["id"])
     if not db.claim_hook(site_id, (datetime.now(UTC) - watch.HOOK_COOLDOWN).isoformat()):
         raise HTTPException(429, "This site was checked in the last 10 minutes. Try again shortly.")
-    background.add_task(_watch_check, site, "manual")
+    jobs.enqueue("watch_check", {"site": site, "reason": "manual"})
     return {"queued": True}
 
 
@@ -836,7 +898,7 @@ def create_deploy_hook(site_id: str, request: Request, user: dict = Depends(requ
 
 
 @app.post("/hooks/deploy/{token}", status_code=202)
-def deploy_hook(token: str, background: BackgroundTasks) -> dict:
+def deploy_hook(token: str) -> dict:
     site = db.site_by_hook(watch.hook_hash(token)) if token.startswith("wh_") else None
     if site is None:
         raise HTTPException(404, "Unknown deploy hook.")
@@ -844,7 +906,7 @@ def deploy_hook(token: str, background: BackgroundTasks) -> dict:
         raise HTTPException(402, "Deploy hooks are part of the Plus plan.")
     if not db.claim_hook(site["id"], (datetime.now(UTC) - watch.HOOK_COOLDOWN).isoformat()):
         raise HTTPException(429, "Checked in the last 10 minutes; this deploy is covered by that check.")
-    background.add_task(_watch_check, site, "deploy")
+    jobs.enqueue("watch_check", {"site": site, "reason": "deploy"})
     return {"queued": True}
 
 
@@ -859,12 +921,14 @@ class CompareRequest(BaseModel):
 
 
 @app.post("/compare")
-def start_compare(body: CompareRequest, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def start_compare(body: CompareRequest, user: dict = Depends(require_user)) -> dict:
     """Your site and up to three competitors through the same passive checks, side by side. Deep security checks
     never run on sites you have not verified, so competitors only get public checks."""
     if _plan_name(user["id"]) == "free":
         raise HTTPException(402, "Competitor comparison is part of the paid plans.")
     urls = list(dict.fromkeys([body.site, *body.competitors]))
+    if len(urls) < 2:
+        raise HTTPException(422, "Enter at least one different competitor address.")
     for url in urls:
         if not re.match(r"^https?://", url):
             raise HTTPException(422, f"Use a full address beginning with http:// or https://: {url}")
@@ -876,7 +940,7 @@ def start_compare(body: CompareRequest, background: BackgroundTasks, user: dict 
         raise HTTPException(429, f"That would pass your {mcp_server.SCANS_PER_DAY} scans for today. Try again tomorrow.")
     run_id = uuid.uuid4().hex
     db.insert_run(run_id, user["id"], body.site, f"Compared with {len(urls) - 1} competitor{'s' if len(urls) > 2 else ''}", "stranger", "paid", False, kind="compare")
-    background.add_task(_compare, run_id, user["id"], urls)
+    jobs.enqueue("compare", {"run_id": run_id, "user_id": user["id"], "urls": urls})
     return {"run_id": run_id}
 
 
@@ -885,12 +949,14 @@ def _compare(run_id: str, user_id: str, urls: list[str]) -> None:
         try:
             part_id, fresh = run_scan(url, user_id=user_id, kind="compare_part")
         except Exception as e:  # noqa: BLE001 - one unreachable competitor must not sink the comparison
-            return {"site": url, "error": str(e) if isinstance(e, ValueError) else "The scan failed."}
+            return {"site": url, "error": str(e) if isinstance(e, ValueError) else e.detail if isinstance(e, HTTPException) else "The scan failed."}
         rep = fresh["report"]
         counts = {s: sum(f["severity"] == s for f in rep["findings"]) for s in ("high", "medium", "low")}
         return {"site": fresh["site"], "run_id": part_id, "score": (rep.get("launch_ready") or {}).get("score"),
                 "areas": (rep.get("launch_ready") or {}).get("areas", {}), "geo": (rep.get("geo") or {}).get("score"),
                 "findings": counts, "pages": (rep.get("site_audit") or {}).get("pages_scanned"),
+                "checks": rep.get("checks", {}), "scope": "public",
+                "truncated": (rep.get("site_audit") or {}).get("truncated"),
                 "impression": (rep.get("first_impression") or {}).get("what")}
 
     with ThreadPoolExecutor(max_workers=len(urls)) as pool:
@@ -931,15 +997,8 @@ class FixPullRequest(BaseModel):
         return value
 
 
-_github_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the other limits
-
-
 def _github_limit(key: str, count: int, window: int, message: str) -> None:
-    now = time.time()
-    hits = [t for t in _github_hits.get(key, []) if now - t < window]
-    if len(hits) >= count:
-        raise HTTPException(429, message)
-    _github_hits[key] = [*hits, now]
+    limits.hit(f"github:{key}", count, window, message)  # shared by every API process (app/limits.py)
 
 
 def _installation(user_id: str, installation_id: int) -> dict:
@@ -1114,17 +1173,12 @@ class AccessRequest(BaseModel):
     note: str = Field(default="", max_length=500)
 
 
-_billing_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the scan limit
 BILLING_LIMIT, BILLING_WINDOW = 10, 3600
 WEBHOOK_MAX_BYTES = 256_000
 
 
 def _billing_rate_limit(user_id: str) -> None:
-    now = time.time()
-    hits = [t for t in _billing_hits.get(user_id, []) if now - t < BILLING_WINDOW]
-    if len(hits) >= BILLING_LIMIT:
-        raise HTTPException(429, "Too many billing requests. Try again in an hour.")
-    _billing_hits[user_id] = hits + [now]
+    limits.hit(f"billing:{user_id}", BILLING_LIMIT, BILLING_WINDOW, "Too many billing requests. Try again in an hour.")
 
 
 class Feedback(BaseModel):
@@ -1133,18 +1187,13 @@ class Feedback(BaseModel):
     page: str = Field(default="", max_length=200)  # where they were, for context
 
 
-_feedback_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the other limits
 FEEDBACK_LIMIT, FEEDBACK_WINDOW = 5, 3600
 
 
 @app.post("/feedback")
 def send_feedback(body: Feedback, user: dict = Depends(require_user)) -> dict:
     """Signed-in users write to the founder. Stored for the admin panel only; never shown to other users."""
-    now = time.time()
-    hits = [t for t in _feedback_hits.get(user["id"], []) if now - t < FEEDBACK_WINDOW]
-    if len(hits) >= FEEDBACK_LIMIT:
-        raise HTTPException(429, "Thanks, we have your messages. You can send more in an hour.")
-    _feedback_hits[user["id"]] = hits + [now]
+    limits.hit(f"feedback:{user['id']}", FEEDBACK_LIMIT, FEEDBACK_WINDOW, "Thanks, we have your messages. You can send more in an hour.")
     db.app_event("feedback", user["id"], {"message": body.message.strip(), "page": body.page.strip()})
     return {"sent": True}
 
@@ -1165,7 +1214,7 @@ def billing_status(user: dict = Depends(require_user)) -> dict:
 
 
 @app.post("/billing/access-requests")
-def request_access(body: AccessRequest, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def request_access(body: AccessRequest, user: dict = Depends(require_user)) -> dict:
     _billing_rate_limit(user["id"])
     if any(billing.offer_open(o) for o in db.offers_for_user(user["id"], 10)):
         raise HTTPException(409, "You already have an approved offer waiting. Pay it from this page before it expires.")
@@ -1174,18 +1223,17 @@ def request_access(body: AccessRequest, background: BackgroundTasks, user: dict 
     except db.Conflict as e:
         raise HTTPException(409, "Your request is already waiting for review.") from e
     log.info("access request %s for %s", row.get("id"), body.plan)
-    if founder := os.environ.get("FOUNDER_EMAIL"):
-        background.add_task(_notify_founder, founder, user, body.plan, body.note.strip(), str(row.get("id")))
+    if os.environ.get("FOUNDER_EMAIL"):
+        jobs.enqueue("notify_founder", {"user_id": user["id"], "plan": body.plan, "note": body.note.strip(), "request_id": str(row.get("id"))})
     return {"id": row.get("id"), "plan": body.plan, "status": "pending"}
 
 
-def _notify_founder(to: str, user: dict, plan: str, note: str, request_id: str) -> None:
-    try:
-        email = user.get("email") or db.user_email(user["id"]) or user["id"]
-        if not deliver.send_access_request(to, email, plan, note, request_id):
-            log.warning("access request %s: founder email not sent (RESEND_API_KEY unset or refused)", request_id)
-    except Exception:  # the request is already saved; `scripts/billing.py list` still shows it
-        log.warning("access request %s: founder email failed", request_id, exc_info=True)
+def _notify_founder(user_id: str, plan: str, note: str, request_id: str) -> None:
+    """The `notify_founder` job: errors are retried by the queue. The request is already saved either way
+    (`scripts/billing.py list` shows it)."""
+    to = os.environ.get("FOUNDER_EMAIL")
+    if to and not deliver.send_access_request(to, db.user_email(user_id) or user_id, plan, note, request_id):
+        log.warning("access request %s: founder email not sent (RESEND_API_KEY unset or refused)", request_id)
 
 
 @app.post("/billing/offers/{offer_id}/checkout")
@@ -1237,8 +1285,22 @@ async def dodo_webhook(request: Request) -> JSONResponse:
 
 
 @app.get("/verification")
-def verification(user: dict = Depends(require_user)) -> dict:
+def verification(site: str | None = None, user: dict = Depends(require_user)) -> dict:
     """Token the site owner publishes to unlock the full security scan (exposed files, secrets in bundles)."""
     token = security.verification_token(user["id"])
-    return {"token": token, "meta": f'<meta name="walkthru-verification" content="{token}">', "file": "/.well-known/walkthru.txt",
-            "txt_name": "_walkthru", "txt_value": security.TXT_PREFIX + token}
+    result = {"token": token, "meta": f'<meta name="walkthru-verification" content="{token}">', "file": "/.well-known/walkthru.txt",
+              "txt_name": "_walkthru", "txt_value": security.TXT_PREFIX + token}
+    if site is not None:
+        site = site.strip()
+        if "://" not in site:
+            site = "https://" + site
+        try:
+            parsed = urlsplit(site)
+            if len(site) > 2000 or parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("Enter a public website address without credentials.")
+            fetch.assert_public(site)
+        except ValueError as e:
+            raise HTTPException(422, str(e)) from e
+        site = f"{parsed.scheme}://{parsed.netloc}/"
+        result.update({"site": site, "verified": _verified(site, user["id"]), "txt_name": security.txt_name(site)})
+    return result

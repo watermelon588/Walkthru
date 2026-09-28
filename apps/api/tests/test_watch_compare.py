@@ -135,3 +135,28 @@ def test_compare_is_paid_and_survives_an_unreachable_competitor(monkeypatch, pas
     assert fake_db[run_id]["status"] == "done" and [s.get("yours") for s in sites] == [True, None, None]
     assert [s.get("score") for s in sites] == [70, 90, None] and "did not respond" in sites[2]["error"]
     assert sites[1]["geo"] == 60 and sites[1]["findings"]["high"] == 1 and sites[1]["impression"] == "A notes app."
+    assert sites[0]["scope"] == sites[1]["scope"] == "public"
+
+
+def test_compare_requires_a_distinct_competitor(monkeypatch, passes):
+    grant(passes, "pro")
+    c = TestClient(app)
+    assert c.post("/compare", json={"site": "https://mine.test", "competitors": ["https://mine.test"]}).status_code == 422
+
+
+def test_verification_checks_current_user_proof_without_granting_from_confirmation(monkeypatch):
+    monkeypatch.setattr(main.fetch, "assert_public", lambda url: None)
+    seen = []
+    monkeypatch.setattr(main, "_verified", lambda url, uid: seen.append((url, uid)) or False)
+    c = TestClient(app)
+    result = c.get("/verification", params={"site": "app.example.com/pricing"}).json()
+    assert result["verified"] is False and result["txt_name"] == "_walkthru.app.example.com"
+    assert seen == [("https://app.example.com/", USER)]
+    monkeypatch.setattr(main, "_verified", lambda url, uid: True)
+    assert c.get("/verification", params={"site": "app.example.com"}).json()["verified"] is True
+    assert c.get("/verification", params={"site": "https://user:password@example.com"}).status_code == 422
+    assert c.get("/verification", params={"site": "file:///etc/passwd"}).status_code == 422
+    def private(url):
+        raise ValueError("Private addresses are not allowed")
+    monkeypatch.setattr(main.fetch, "assert_public", private)
+    assert c.get("/verification", params={"site": "https://127.0.0.1"}).status_code == 422

@@ -90,3 +90,37 @@ def test_cache_is_hashed_bounded_and_never_outlives_the_token(signed_in, monkeyp
     assert len(auth._cache) <= 3
     auth.forget(USER)
     assert auth._cache == {}
+
+
+def test_cache_evicts_least_recently_used_and_prunes_expired_below_capacity(monkeypatch):
+    import hashlib
+
+    app.dependency_overrides.clear()
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "pk")
+    monkeypatch.setattr(auth, "MAX_CACHED", 2)
+    now = [1_000_000.0]
+    monkeypatch.setattr(auth.time, "time", lambda: now[0])
+    calls = []
+    def validate(url, headers, timeout):
+        calls.append(headers["Authorization"])
+        return httpx.Response(200, json={"id": USER})
+    monkeypatch.setattr(auth.httpx, "get", validate)
+    auth._cache.clear()
+    client = TestClient(app)
+    def visit(token):
+        assert client.get("/runs/nope", headers={"Authorization": f"Bearer {token}"}).status_code == 404
+    def digest(token):
+        return hashlib.sha256(token.encode()).hexdigest()
+    try:
+        for token in ("a", "b", "a", "c"):
+            visit(token)
+        assert calls == ["Bearer a", "Bearer b", "Bearer c"]
+        assert set(auth._cache) == {digest("a"), digest("c")}
+        # Expiry pruning must happen even when there is plenty of unused capacity.
+        monkeypatch.setattr(auth, "MAX_CACHED", 20)
+        now[0] += auth.TTL + 1
+        visit("d")
+        assert set(auth._cache) == {digest("d")}
+    finally:
+        auth._cache.clear()

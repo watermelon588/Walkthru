@@ -5,7 +5,9 @@ it returns the parsed object plus the tokens used, so every run can log its cost
 """
 
 import atexit
+import logging
 import os
+import threading
 from functools import lru_cache
 from types import SimpleNamespace
 from typing import Any
@@ -204,33 +206,87 @@ def call(schema: type[BaseModel], messages: list, fast: bool = False, paid: bool
 def make_checkpointer():
     """In-memory by default: zero network per agent step. Set CHECKPOINTER=postgres on a server that sits
     next to the database (production) so runs survive restarts and the API can scale out."""
-    url = os.environ.get("DATABASE_URL")
-    if os.environ.get("CHECKPOINTER", "memory") != "postgres" or not url:
+    mode = os.environ.get("CHECKPOINTER", "memory").strip().lower()
+    if mode not in {"memory", "postgres"}:
+        raise RuntimeError("CHECKPOINTER must be memory or postgres")
+    if os.environ.get("APP_ENV") == "production" and mode != "postgres":
+        raise RuntimeError("Production requires CHECKPOINTER=postgres")
+    if mode == "memory":
         return MemorySaver()
+    url = os.environ.get("CHECKPOINT_DATABASE_URL") or os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("CHECKPOINTER=postgres requires CHECKPOINT_DATABASE_URL or DATABASE_URL")
     from langgraph.checkpoint.postgres import PostgresSaver
+    from psycopg.conninfo import conninfo_to_dict
     from psycopg.rows import dict_row
     from psycopg_pool import ConnectionPool
 
+    info = conninfo_to_dict(url)
+    if info.get("port") == "6543" and info.get("host", "").endswith((".supabase.com", ".supabase.co")):
+        raise RuntimeError("Checkpoints require a direct or session-pooler connection, not the Supabase transaction pooler")
     connections = ConnectionPool(
         url,
         min_size=0,
         max_size=4,
-        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        timeout=10,
+        kwargs={"autocommit": True, "prepare_threshold": None, "row_factory": dict_row, "connect_timeout": 5,
+                "options": "-c search_path=walkthru_checkpoints -c statement_timeout=15000 -c lock_timeout=10000",
+                "keepalives": 1, "keepalives_idle": 30, "keepalives_interval": 10, "keepalives_count": 3},
         check=ConnectionPool.check_connection,
         max_lifetime=300,
         max_idle=60,
         reconnect_timeout=10,
         open=True,
     )
+    try:
+        # Numbered migrations own DDL. Startup only checks the pinned library's schema and read access.
+        with connections.connection() as conn:
+            if not conn.execute("select to_regclass('walkthru_checkpoints.checkpoint_migrations') as installed").fetchone()["installed"]:
+                raise RuntimeError("Apply the numbered agent checkpoint migration before starting the API")
+            version = conn.execute("select max(v) as version from checkpoint_migrations").fetchone()["version"]
+            if version != len(PostgresSaver.MIGRATIONS) - 1:
+                raise RuntimeError("Checkpoint schema and library versions differ; a numbered migration is required")
+            PostgresSaver(conn).get_tuple({"configurable": {"thread_id": "__walkthru_readiness__"}})
+    except Exception:
+        connections.close()
+        raise
     atexit.register(connections.close)
     saver = PostgresSaver(connections)
-    saver.setup()
+    logging.getLogger("walkthru.checkpoints").info("", extra={"event": "checkpoint_ready"})
     return saver
 
 
+_checkpoint_lock = threading.Lock()
+
+
 @lru_cache(maxsize=1)
-def checkpointer():
+def _checkpointer():
     return make_checkpointer()
+
+
+def checkpointer():
+    with _checkpoint_lock:
+        return _checkpointer()
+
+
+def initialize_checkpointer() -> None:
+    """Fail startup before accepting requests if configured persistence is unavailable."""
+    try:
+        checkpointer()
+    except Exception:
+        logging.getLogger("walkthru.checkpoints").exception("", extra={"event": "checkpoint_unavailable"})
+        raise
+
+
+def close_checkpointer() -> None:
+    with _checkpoint_lock:
+        if _checkpointer.cache_info().currsize:
+            saver = _checkpointer()
+            if hasattr(saver, "conn"):
+                saver.conn.close()
+                atexit.unregister(saver.conn.close)
+        _checkpointer.cache_clear()
+        graph.cache_clear()
 
 
 @lru_cache(maxsize=2)
@@ -239,20 +295,12 @@ def graph(tier: str):
 
 
 def invoke(tier: str, value: Any, config: dict) -> dict:
-    """Retry one interrupted database-backed graph call on a fresh pooled connection."""
-    from psycopg import OperationalError
-
-    for attempt in range(2):
-        try:
-            return graph(tier).invoke(value, config)
-        except OperationalError:
-            if attempt:
-                raise
-    raise AssertionError("unreachable")
+    """Never replay a mutating graph invocation after losing its database acknowledgement."""
+    return graph(tier).invoke(value, config)
 
 
 def get_state(tier: str, config: dict):
-    """Read graph state with the same single reconnect allowance as writes."""
+    """Reading is safe to retry once on a fresh pooled connection."""
     from psycopg import OperationalError
 
     for attempt in range(2):

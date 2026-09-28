@@ -90,3 +90,18 @@ def test_delete_account_needs_exact_email_then_deletes_user(monkeypatch):
     assert calls == []
     assert c.post("/account/delete", json={"confirm": " Tester@Example.com "}).json() == {"deleted": True}
     assert calls == [("storage-delete", "a/1.jpg"), ("rows", "a"), ("auth-delete", USER)]  # files, rows, then user
+
+
+def test_request_response_purge_still_runs_when_screenshot_storage_is_down(monkeypatch):
+    from app import abuse, jobs
+
+    purged = []
+    def unavailable():
+        raise RuntimeError("storage unavailable")
+    monkeypatch.setattr(retention, "purge_expired", unavailable)
+    monkeypatch.setattr(abuse, "purge_old", lambda: None)
+    monkeypatch.setattr(jobs, "purge_finished", lambda: None)
+    monkeypatch.setattr(db, "purge_rate_limits", lambda before: None)
+    monkeypatch.setattr(db, "expire_run_requests", lambda: purged.append(True))
+    retention.run_pass()
+    assert purged == [True]

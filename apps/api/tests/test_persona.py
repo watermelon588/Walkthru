@@ -208,6 +208,19 @@ def test_owner_can_end_running_run_and_generate_partial_report_once(monkeypatch,
     assert len(finished) == 1
 
 
+def test_lost_stop_acknowledgement_still_queues_the_partial_report(monkeypatch, fake_db, inline_jobs):
+    use([PersonaStep(thought="Open guide", action="click", target_id=2, confusion=0)], monkeypatch)
+    client = TestClient(app)
+    run_id = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Guide"}]))["run_id"]
+    def lost_ack(rid, steps, tokens=0):
+        # The first PATCH committed; its transport retry sees status=stopped and returns no changed rows.
+        fake_db[rid].update(status="stopped", steps=steps, tokens=tokens)
+        return False
+    monkeypatch.setattr(db, "mark_run_stopped", lost_ack)
+    assert client.post(f"/runs/{run_id}/stop").status_code == 200
+    assert inline_jobs.count("finish_run") == 1
+
+
 def test_decision_provider_metadata_is_recorded(monkeypatch):
     g = build_graph(FakeDecisionModel(), MemorySaver())
     monkeypatch.setattr(runtime, "graph", lambda tier: g)

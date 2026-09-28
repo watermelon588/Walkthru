@@ -3,7 +3,7 @@ cites it, and how it stands against named competitors (mentions, citations, shar
 
 Engines, on free quotas only (ROADMAP build rule 2), measured on 2026-09-26:
 - web: Groq gpt-oss-120b with its built-in browser_search tool. One search per prompt, about 3 s.
-  The answer comes with the pages it searched, so citations are real. 1,600 to 7,600 tokens per answer.
+  Retrieved pages count as citations only when an answer reference can be matched to them.
 - memory: Gemini without web search (Google Search grounding needs a billed key; free keys get quota 0 for it).
   It shows whether the model knows the brand, so mentions and share of voice only, labelled as such.
   With GEMINI_GROUNDING=1 and a billed key it searches Google and returns sources too.
@@ -16,6 +16,7 @@ Data model adapted from ai-search-guru/getcito (MIT): prompts, answers, mentions
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 import threading
@@ -23,12 +24,12 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from urllib.parse import urlsplit
 
 import httpx
 from selectolax.parser import HTMLParser
 
 from app import db, notify, plans
+from app.citation_evidence import VERSION, analyze, clean, domain_of, first, gemini_sources, groq_sources, source
 
 log = logging.getLogger("walkthru.citations")
 
@@ -46,8 +47,8 @@ MAX_ATTEMPTS = 4
 EVERY = timedelta(days=7)
 MANUAL_EVERY = timedelta(hours=20)  # one "Check now" a day per site
 MAX_COMPETITORS = 5
-ENGINE_LABEL = {"web": "AI with web search (gpt-oss-120b)", "memory": "Gemini, from memory"}
-NOT_MEASURED = ["ChatGPT", "Perplexity"]
+ENGINE_LABEL = {"web": "Groq with web search", "memory": "Gemini, from memory"}
+NOT_MEASURED = ["Google AI Overviews", "Google AI Mode", "ChatGPT", "Perplexity", "Claude"]
 
 
 @dataclass(frozen=True)
@@ -83,12 +84,13 @@ def label(engine: str) -> str:
     return "Gemini with Google Search" if engine == "memory" and grounded() else ENGINE_LABEL[engine]
 
 
+def provenance(engine: str) -> dict:
+    return {"provider": "groq" if engine == "web" else "google", "label": label(engine),
+            "mode": "web_search" if engine == "web" else "google_search" if grounded() else "memory",
+            "locale": "unspecified", "prompt_version": 2, "measurement_version": VERSION}
+
+
 # ---------- names and domains ----------
-
-
-def domain_of(url: str) -> str:
-    host = (urlsplit(url if "://" in url else f"https://{url}").hostname or "").lower().rstrip(".")
-    return host.removeprefix("www.")
 
 
 _DOMAIN = re.compile(r"\b((?:[a-z0-9-]+\.)+[a-z]{2,})\b", re.IGNORECASE)
@@ -109,64 +111,16 @@ def parse_competitor(text: str) -> dict | None:
 
 # ---------- analysis, all in code ----------
 
-_MARKERS = re.compile(r"【[^】]*】|\[\d+\]")  # gpt-oss citation marks like 【1†L35-L43】
-
-
-def clean(answer: str) -> str:
-    return re.sub(r"[ \t]+\n", "\n", _MARKERS.sub("", answer or "")).strip()
-
-
-def _first(text: str, name: str, domain: str) -> int | None:
-    """Where the answer first names this brand (its name as a word, or its domain), or None."""
-    spots = []
-    if name:
-        m = re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text, re.IGNORECASE)
-        if m:
-            spots.append(m.start())
-    if domain:
-        i = text.lower().find(domain)
-        if i >= 0:
-            spots.append(i)
-    return min(spots) if spots else None
-
-
-def _source_rank(sources: list[dict], domain: str) -> int | None:
-    if not domain:
-        return None
-    seen: list[str] = []
-    for s in sources:
-        d = s.get("domain") or ""
-        if d and d not in seen:
-            seen.append(d)
-    for i, d in enumerate(seen, start=1):
-        if d == domain or d.endswith("." + domain):
-            return i
-    return None
-
-
-def analyze(answer: str, sources: list[dict], brand: str, domain: str, competitors: list[dict]) -> dict:
-    """Mention, citation and rank for the site and each competitor, from the answer text and the sources."""
-    text = clean(answer)
-    rows = [{"name": brand, "domain": domain, "you": True}] + [{"name": c["name"], "domain": c.get("domain", ""), "you": False} for c in competitors]
-    first = {r["name"]: _first(text, r["name"], r["domain"]) for r in rows}
-    order = sorted((pos, name) for name, pos in first.items() if pos is not None)
-    out = []
-    for r in rows:
-        rank = _source_rank(sources, r["domain"])
-        out.append({"name": r["name"], "domain": r["domain"], "you": r["you"], "mentioned": first[r["name"]] is not None,
-                    "mention_rank": next((i for i, (_, n) in enumerate(order, start=1) if n == r["name"]), None),
-                    "cited": rank is not None, "source_rank": rank})
-    return {"brands": out, "sources": len({s.get("domain") for s in sources if s.get("domain")})}
-
-
 def share_of_voice(checks: list[dict]) -> list[dict]:
     """Per brand: share of all brand mentions across these answers, and how many answers named or cited it."""
-    tally: dict[str, dict] = {}
+    tally: dict[tuple, dict] = {}
     for c in checks:
         for b in (c.get("result") or {}).get("brands", []):
-            t = tally.setdefault(b["name"], {"name": b["name"], "domain": b["domain"], "you": b["you"], "mentions": 0, "citations": 0})
+            t = tally.setdefault((b["name"], b["domain"], b["you"]), {"name": b["name"], "domain": b["domain"], "you": b["you"], "mentions": 0, "citations": 0, "citation_answers": 0})
             t["mentions"] += 1 if b["mentioned"] else 0
-            t["citations"] += 1 if b["cited"] else 0
+            eligible = (c.get("result") or {}).get("citation_eligible") is True and b.get("cited") is not None
+            t["citations"] += 1 if eligible and b["cited"] else 0
+            t["citation_answers"] += int(eligible)
     total = sum(t["mentions"] for t in tally.values())
     for t in tally.values():
         t["share"] = round(100 * t["mentions"] / total) if total else 0
@@ -222,7 +176,8 @@ class Busy(Exception):
 
 
 WEB_SYSTEM = ("Answer the person's question the way an AI search assistant would. Search the web once with browser_search, then answer "
-              "from the results only. Do not open pages. Recommend specific products or companies by name. Keep it under 150 words.")
+              "from the results only. Do not open pages. Cite each source you use with its full URL in a markdown link. "
+              "Recommend specific products or companies by name. Keep it under 150 words.")
 MEMORY_SYSTEM = ("Answer the person's question the way an AI assistant would, from what you know. Recommend specific products or "
                  "companies by name. Keep it under 150 words.")
 
@@ -239,24 +194,25 @@ def ask_web(prompt: str) -> dict:
     r.raise_for_status()
     body = r.json()
     msg = body["choices"][0]["message"]
-    sources, seen = [], set()
-    for tool in msg.get("executed_tools") or []:
-        for res in ((tool.get("search_results") or {}).get("results") or []):
-            url = res.get("url") or ""
-            if url.startswith("http") and url not in seen:
-                seen.add(url)
-                sources.append({"url": url[:500], "title": (res.get("title") or "")[:200], "domain": domain_of(url)})
-    return {"answer": (msg.get("content") or "")[:6000], "sources": sources[:20], "tokens": (body.get("usage") or {}).get("total_tokens", 0), "model": WEB_MODEL}
+    if not (msg.get("content") or "").strip():
+        raise RuntimeError("empty Groq answer")
+    sources, status = groq_sources(msg)
+    return {"answer": msg["content"], "sources": sources, "citation_status": status, "provenance": provenance("web"),
+            "tokens": (body.get("usage") or {}).get("total_tokens", 0), "model": WEB_MODEL}
 
 
-def ask_memory(prompt: str) -> dict:
+def ask_memory(prompt: str, *, mode: str | None = None) -> dict:
     key = gemini_key()
     if not key:
         raise RuntimeError("no Gemini key")
+    use_search = mode == "google_search" if mode is not None else grounded()
+    observation = provenance("memory") | {"mode": "google_search" if use_search else "memory",
+                                           "label": "Gemini with Google Search" if use_search else "Gemini, from memory"}
     body = {"systemInstruction": {"parts": [{"text": MEMORY_SYSTEM}]}, "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 700}} | ({"tools": [{"google_search": {}}]} if grounded() else {})
+            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 700}} | ({"tools": [{"google_search": {}}]} if use_search else {})
     busy = False
-    for model in GEMINI_MODELS:
+    # One provider request per reserved quota slot, including failures.
+    for model in GEMINI_MODELS[:1]:
         r = httpx.post(f"{GEMINI_URL}/models/{model}:generateContent", headers={"x-goog-api-key": key}, json=body, timeout=httpx.Timeout(45, connect=5))
         if r.status_code == 429:
             busy = True
@@ -269,9 +225,8 @@ def ask_memory(prompt: str) -> dict:
         answer = "".join(str(p.get("text") or "") for p in ((cand.get("content") or {}).get("parts") or []) if not p.get("thought")).strip()
         if not answer:
             continue
-        sources = [{"url": (ch.get("web") or {}).get("uri", "")[:500], "title": (ch.get("web") or {}).get("title", "")[:200],
-                    "domain": domain_of((ch.get("web") or {}).get("title", ""))} for ch in (cand.get("groundingMetadata") or {}).get("groundingChunks", [])]
-        return {"answer": answer[:6000], "sources": [s for s in sources if s["domain"]][:20],
+        sources, status = gemini_sources(cand, use_search)
+        return {"answer": answer, "sources": sources, "citation_status": status, "provenance": observation,
                 "tokens": (data.get("usageMetadata") or {}).get("totalTokenCount", 0), "model": model}
     if busy:
         raise Busy("gemini quota")
@@ -284,11 +239,24 @@ ENGINES = {"web": ask_web, "memory": ask_memory}
 # ---------- batches, the queue and the schedule ----------
 
 
-def queue_batch(site: dict, prompts: list[dict], engines: tuple[str, ...]) -> str:
+class QueueFull(Exception):
+    pass
+
+
+def queue_batch(site: dict, prompts: list[dict], engines: tuple[str, ...], *, weekly: bool = False) -> str:
     batch = str(uuid.uuid4())
-    db.add_citation_checks([{"site_id": site["id"], "batch_id": batch, "prompt_id": p["id"], "prompt": p["prompt"], "engine": e}
-                            for p in prompts for e in engines])
-    db.update_citation_site(site["id"], {"last_batch_at": datetime.now(UTC).isoformat()})
+    context = {"brand": site["brand"], "domain": domain_of(site["site"]), "competitors": site.get("competitors") or []}
+    rows = [{"prompt_id": p["id"], "prompt": p["prompt"], "engine": e,
+             "result": {"provenance": provenance(e), "context": context,
+                        "prompt_group": "branded" if first(p["prompt"], context["brand"], context["domain"]) is not None else "unbranded"}}
+            for p in prompts for e in engines]
+    outcome = db.queue_citation_batch(site["id"], batch, rows, DAILY, weekly)
+    if outcome != "ok":
+        messages = {"pending": "This site already has answers waiting. Let that batch finish first.",
+                    "recent": "These prompts were queued in the last day. Try again tomorrow.",
+                    "capacity": "The shared free-provider queue is full for the next seven daily quota windows. Try again after capacity clears.",
+                    "missing": "This tracked site is no longer available."}
+        raise QueueFull(messages.get(outcome, "Could not reserve space in the answer queue."))
     return batch
 
 
@@ -299,37 +267,53 @@ def _day_start() -> str:
 def process(max_checks: int = 30, sleep=time.sleep) -> int:
     """Run queued checks in order, within each engine's daily cap. Returns how many finished."""
     done = 0
-    used = {e: db.citation_checks_done_since(e, _day_start()) for e in ENGINES}
+    started = 0
     busy: set[str] = set()
-    last_web = 0.0
-    for check in db.queued_citation_checks(limit=max_checks * 2):
+    for check in db.queued_citation_checks(limit=5000):
         engine = check["engine"]
-        if done >= max_checks or engine in busy or used[engine] >= DAILY[engine]:
+        if started >= max_checks:
+            break
+        if engine in busy or engine not in ENGINES:
             continue  # stays queued: tomorrow's quota, or the next pass
-        if not db.claim_citation_check(check["id"], check["attempts"]):
+        token = str(uuid.uuid4())
+        if not db.claim_citation_check(check["id"], check["attempts"], engine, DAILY[engine], WEB_GAP_S if engine == "web" else 1, token):
+            busy.add(engine)  # Avoid one RPC per queued row when quota or spacing is exhausted.
             continue
+        started += 1
         site = db.citation_site(check["site_id"])
         if site is None:
             continue
-        if engine == "web" and last_web:
-            sleep(max(0.0, WEB_GAP_S - (time.monotonic() - last_web)))
+        saved = check.get("result") or {}
         try:
-            got = ENGINES[engine](check["prompt"])
-            if engine == "web":
-                last_web = time.monotonic()
-            result = analyze(got["answer"], got["sources"], site["brand"], domain_of(site["site"]), site.get("competitors") or [])
-            db.finish_citation_check(check["id"], {"status": "done", "answer": clean(got["answer"]), "sources": got["sources"], "result": result,
-                                                   "tokens": got["tokens"], "model": got["model"]})
-            used[engine] += 1
-            done += 1
+            lim = limit_for(site["user_id"])
+            if not lim or engine not in lim.engines:
+                db.finish_citation_check(check["id"], {"status": "failed", "answer": "This engine is no longer included in the current plan."}, token)
+                _maybe_announce(check)
+                continue
+            mode = (saved.get("provenance") or {}).get("mode", "memory")
+            # Do not silently upgrade an already queued memory request to web search.
+            got = ask_memory(check["prompt"], mode=mode) if ENGINES[engine] is ask_memory else ENGINES[engine](check["prompt"])
+            context = saved.get("context") or {"brand": site["brand"], "domain": domain_of(site["site"]), "competitors": site.get("competitors") or []}
+            result = analyze(got["answer"], got["sources"], **context, citation_status=got.get("citation_status", "unresolved"))
+            result.update(provenance=got.get("provenance") or saved.get("provenance") or provenance(engine), context=context,
+                          prompt_group=saved.get("prompt_group", "unknown"))
+            finished = db.finish_citation_check(check["id"], {"status": "done", "answer": clean(got["answer"]), "sources": got["sources"],
+                                                   "tokens": got["tokens"], "model": got["model"], "last_error": None,
+                                                   "result": result | {"raw_answer": got["answer"]}}, token)
+            done += int(finished)
         except Busy:
-            busy.add(engine)  # keep it queued; this engine rests until the next pass
-            if check["attempts"] + 1 >= MAX_ATTEMPTS:
-                db.finish_citation_check(check["id"], {"status": "failed", "answer": "The engine's free quota was busy every time we tried."})
+            busy.add(engine)
+            db.defer_citation_engine(engine, (datetime.now(UTC) + timedelta(hours=1)).isoformat())
+            db.finish_citation_check(check["id"], {"next_attempt_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+                                                  "last_error": "Provider quota is busy; retry scheduled in one hour."}, token)
         except Exception:  # one broken answer must not stop the queue
             log.warning("citation check %s failed", check["id"], exc_info=True)
-            if check["attempts"] + 1 >= MAX_ATTEMPTS:
-                db.finish_citation_check(check["id"], {"status": "failed", "answer": "The engine did not answer."})
+            failures = saved.get("failures", 0) + 1
+            values = {"result": saved | {"failures": failures}, "last_error": "Provider did not answer; retry scheduled.",
+                      "next_attempt_at": (datetime.now(UTC) + timedelta(minutes=min(60, 2 ** failures))).isoformat()}
+            if failures >= MAX_ATTEMPTS:
+                values.update(status="failed", answer="The engine did not return an answer after repeated attempts.")
+            db.finish_citation_check(check["id"], values, token)
         _maybe_announce(check)
     return done
 
@@ -360,9 +344,11 @@ def run_due() -> int:
                 continue
             prompts = db.citation_prompts(site["id"])[: lim.prompts]
             if prompts:
-                queue_batch(site, prompts, lim.engines)
+                queue_batch(site, prompts, lim.engines, weekly=True)
                 queued += 1
             db.update_citation_site(site["id"], {"next_check_at": (now + EVERY).isoformat()})
+        except QueueFull:
+            db.update_citation_site(site["id"], {"next_check_at": (now + timedelta(hours=6)).isoformat()})
         except Exception:
             log.warning("citation schedule failed for %s", site.get("site"), exc_info=True)
     return queued
@@ -387,8 +373,42 @@ def start_background() -> None:
 # ---------- what the page shows ----------
 
 
+def capacity() -> list[dict]:
+    state = db.citation_capacity()
+    today = datetime.now(UTC).date().isoformat()
+    out = []
+    for engine, cap in DAILY.items():
+        quota = next((q for q in state["quotas"] if q["engine"] == engine), {})
+        used = quota.get("used", 0) if quota.get("day") == today else 0
+        pending = state["queued"].get(engine, 0)
+        remaining = max(0, cap - used)
+        windows = 1 + math.ceil(max(0, pending - remaining) / cap) if cap > 0 and pending else 0 if not pending else None
+        out.append({"engine": engine, "label": label(engine), "daily_limit": cap, "used": used, "remaining": remaining,
+                    "queued": pending, "quota_windows": windows, "next_attempt_at": quota.get("next_at"),
+                    "configured": bool(os.environ.get("GROQ_API_KEY") if engine == "web" else gemini_key())})
+    return out
+
+
+def observed(check: dict) -> dict:
+    """Do not relabel old answers or reuse the old, incorrect citation verdicts."""
+    result = check.get("result") or {}
+    if result.get("measurement_version") == VERSION:
+        return check
+    brands = result.get("brands") or []
+    own = next((b for b in brands if b.get("you")), None)
+    if own:
+        result = analyze(check.get("answer") or "", [], own["name"], own["domain"],
+                         [{"name": b["name"], "domain": b["domain"]} for b in brands if not b.get("you")], citation_status="legacy")
+    else:
+        result = {"brands": [], "citation_eligible": False, "citation_status": "legacy"}
+    result["provenance"] = {"label": "Groq web search (legacy)" if check["engine"] == "web" else "Gemini (historical mode unknown)", "mode": "unknown"}
+    # Existing records had their answer markers removed. A new check is required.
+    sources = [item for s in check.get("sources") or [] if (item := source(s.get("url", ""), s.get("title", "")))]
+    return check | {"result": result, "sources": sources}
+
+
 def summary(site: dict) -> dict:
-    checks = db.citation_checks_for(site["id"], since=(datetime.now(UTC) - timedelta(days=120)).isoformat())
+    checks = [observed(c) if c["status"] == "done" else c for c in db.citation_checks_for(site["id"], since=(datetime.now(UTC) - timedelta(days=120)).isoformat(), limit=5000)]
     batches: dict[str, list[dict]] = {}
     for c in checks:
         batches.setdefault(c["batch_id"], []).append(c)
@@ -401,14 +421,18 @@ def summary(site: dict) -> dict:
         if not ok:
             continue
         you = [next((x for x in (c.get("result") or {}).get("brands", []) if x["you"]), None) for c in ok]
+        eligible = [c for c in ok if (c.get("result") or {}).get("citation_eligible") is True]
         trend.append({"at": min(c["created_at"] for c in b), "answers": len(ok),
-                      "mentioned": sum(1 for y in you if y and y["mentioned"]), "cited": sum(1 for y in you if y and y["cited"])})
+                      "mentioned": sum(1 for y in you if y and y["mentioned"]), "citation_answers": len(eligible),
+                      "cited": sum(1 for c in eligible if any(y.get("you") and y.get("cited") for y in c["result"]["brands"]))})
     return {
         "site": {k: site.get(k) for k in ("id", "site", "brand", "competitors", "next_check_at", "last_batch_at")},
         "engines": [{"engine": e, "label": label(e), "cites": e == "web" or grounded()} for e in ENGINES],
         "not_measured": NOT_MEASURED,
+        "capacity": capacity(),
+        "history_limited": len(checks) >= 5000,
         "status": {"queued": sum(1 for c in latest if c["status"] == "queued"), "done": len(done), "failed": sum(1 for c in latest if c["status"] == "failed")},
         "share_of_voice": share_of_voice(done),
-        "answers": [{k: c.get(k) for k in ("id", "prompt", "engine", "status", "model", "answer", "sources", "result", "checked_at")} for c in latest],
+        "answers": [{k: c.get(k) for k in ("id", "prompt", "engine", "status", "model", "answer", "sources", "result", "checked_at", "next_attempt_at", "last_error")} for c in latest],
         "trend": trend,
     }

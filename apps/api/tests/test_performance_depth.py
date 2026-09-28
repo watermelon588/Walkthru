@@ -8,7 +8,7 @@ from app.scans import performance
 
 def test_paid_pagespeed_checks_at_most_five_pages_and_real_user_vitals(monkeypatch):
     monkeypatch.setenv("PAGESPEED_API_KEY", "test-key")
-    monkeypatch.setattr(performance.get.__globals__["socket"], "getaddrinfo", lambda host, port: [(None, None, None, None, ("8.8.8.8", 0))])
+    monkeypatch.setattr(performance.get.__globals__["socket"], "getaddrinfo", lambda host, port, *a, **k: [(None, None, None, None, ("8.8.8.8", 0))])
     requested = []
 
     def handle(request):
@@ -33,7 +33,7 @@ def test_paid_pagespeed_checks_at_most_five_pages_and_real_user_vitals(monkeypat
 
 def test_pagespeed_preserves_lab_only_and_unavailable_states(monkeypatch):
     monkeypatch.setenv("PAGESPEED_API_KEY", "test-key")
-    monkeypatch.setattr(performance.get.__globals__["socket"], "getaddrinfo", lambda host, port: [(None, None, None, None, ("8.8.8.8", 0))])
+    monkeypatch.setattr(performance.get.__globals__["socket"], "getaddrinfo", lambda host, port, *a, **k: [(None, None, None, None, ("8.8.8.8", 0))])
 
     def handle(request):
         if request.url.params["url"].endswith("/missing"):

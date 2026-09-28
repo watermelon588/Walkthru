@@ -64,7 +64,7 @@ def dodo(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def billing_db(monkeypatch, passes):
-    """In-memory billing tables with the same uniqueness rules as schema.sql."""
+    """In-memory billing tables with the same uniqueness rules as the migrations."""
     t = {"requests": {}, "offers": {}, "events": {}, "audit": []}
 
     def create_access_request(user_id, plan, note):
@@ -433,7 +433,6 @@ def test_founder_hears_about_each_access_request(monkeypatch, billing_db):
     from app import deliver, main
 
     sent = []
-    monkeypatch.setattr(main, "_billing_hits", {})  # earlier tests used up this user's hourly requests
     monkeypatch.setenv("FOUNDER_EMAIL", "founder@example.com")
     monkeypatch.setattr(deliver, "send_access_request", lambda *a: sent.append(a) or True)
     with TestClient(main.app) as c:

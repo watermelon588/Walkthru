@@ -18,16 +18,15 @@ import logging
 import os
 import re
 import secrets
-import time
 import uuid
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, EmailStr, Field
 
-from app import db, deliver, notify, scout
+from app import db, deliver, jobs, limits, notify, scout
 from app.agent import compare
 from app.auth import require_user
 
@@ -70,18 +69,8 @@ def _ts(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
 
 
-_hits: dict[str, list[float]] = {}  # ponytail: per-process, like the scan and billing limits
-
-
 def _limit(key: str, count: int, window: int, message: str) -> None:
-    now = time.time()
-    hits = [t for t in _hits.get(key, []) if now - t < window]
-    if len(hits) >= count:
-        raise HTTPException(429, message)
-    _hits[key] = [*hits, now]
-    if len(_hits) > 20_000:
-        for k in [k for k, v in _hits.items() if now - v[-1] > 86_400]:
-            del _hits[k]
+    limits.hit(f"teams:{key}", count, window, message)  # shared by every API process (app/limits.py)
 
 
 def _name(user: dict) -> str:
@@ -871,7 +860,7 @@ def list_messages(team_id: uuid.UUID, thread: str = Query("general", max_length=
 
 
 @router.post("/teams/{team_id}/messages")
-def post_message(team_id: uuid.UUID, body: NewMessage, background: BackgroundTasks, user: dict = Depends(require_user)) -> dict:
+def post_message(team_id: uuid.UUID, body: NewMessage, user: dict = Depends(require_user)) -> dict:
     """Send a message. One that mentions @Scout also gets an answer from Scout in the same thread (app/scout.py)."""
     me = _member(team_id, user, write=True)
     tid, thread = str(team_id), _thread(body.thread)
@@ -889,7 +878,7 @@ def post_message(team_id: uuid.UUID, body: NewMessage, background: BackgroundTas
     if not stored or stored.get("author_id") != user["id"]:
         raise HTTPException(409, "That message id is already taken. Send it again.")
     if asks_scout and stored.get("new"):  # a retried send is answered once
-        background.add_task(scout.reply, tid, thread, text, user)
+        jobs.enqueue("scout_reply", {"team_id": tid, "thread": thread, "question": text, "asker_id": user["id"]})
     if stored.get("new", True):
         for member_id in mentions:  # a toast and a badge for each person named, live
             notify.send(member_id, "team", "team.mention", f"{_name(user)} mentioned you in {me['team']['name']}"[:200], text[:300],

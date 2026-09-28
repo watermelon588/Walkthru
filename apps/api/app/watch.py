@@ -8,7 +8,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
-import threading
 from datetime import UTC, datetime, timedelta
 
 from app import db, deliver, plans
@@ -54,30 +53,24 @@ def check(site: dict, reason: str = "weekly") -> dict:
 
 
 def run_due() -> int:
-    """Check every watched site whose week is up. Failures are logged and retried on the next pass."""
-    done = 0
+    """Queue a check for every watched site whose week is up. The key holds one job per site and due time, so a
+    pass that runs again before the check does never doubles it. Returns how many sites were queued."""
+    from app import jobs
+
+    queued = 0
     for site in db.due_sites(datetime.now(UTC).isoformat()):
-        try:
-            if plans.current(str(site["user_id"]))["plan"].name != "plus":  # lapsed pass: keep the site, stop checking
-                db.update_site(site["id"], {"next_check_at": (datetime.now(UTC) + EVERY).isoformat()})
-                continue
-            check(site)
-            done += 1
-        except Exception:  # one broken site must not stop the others
-            log.warning("watch check failed for %s", site.get("site"), exc_info=True)
-            db.update_site(site["id"], {"next_check_at": (datetime.now(UTC) + timedelta(hours=6)).isoformat()})
-    return done
+        if plans.current(str(site["user_id"]))["plan"].name != "plus":  # lapsed pass: keep the site, stop checking
+            db.update_site(site["id"], {"next_check_at": (datetime.now(UTC) + EVERY).isoformat()})
+            continue
+        jobs.enqueue("watch_site", {"site": site}, key=f"watch:{site['id']}:{site['next_check_at']}")
+        queued += 1
+    return queued
 
 
-def start_background() -> None:
-    """Look for due sites every 30 minutes. ponytail: one thread per API process, like retention; a cron job with more instances."""
-    def loop() -> None:
-        stop = threading.Event()
-        while not stop.wait(1800):
-            try:
-                if done := run_due():
-                    log.info("watch: checked %s sites", done)
-            except Exception:  # the loop must survive a database outage
-                log.warning("watch pass failed", exc_info=True)
-
-    threading.Thread(target=loop, name="weekly-watch", daemon=True).start()
+def check_due(site: dict) -> None:
+    """The weekly check of one site (a `watch_site` job). A failure is retried in 6 hours with a new job."""
+    try:
+        check(site)
+    except Exception:  # logged, and the new due time queues the retry
+        log.warning("watch check failed for %s", site.get("site"), exc_info=True)
+        db.update_site(site["id"], {"next_check_at": (datetime.now(UTC) + timedelta(hours=6)).isoformat()})

@@ -1,5 +1,12 @@
 # Third-party notices
 
+## LangGraph PostgreSQL checkpoints
+
+`migrations/0002_agent_checkpoints.sql` adapts the table definitions from the already installed
+`langgraph-checkpoint-postgres` 3.1.2 (LangChain, MIT). Changes: a private schema, transactional indexes,
+legacy table relocation, and removal of browser-role grants. Copyright (c) 2024 LangChain, Inc.
+The full MIT permission notice and disclaimer reproduced below apply to these definitions too.
+
 ## geo-optimizer-skill
 
 The GEO signal taxonomy in `app/scans/geo.py` and `app/scans/geo_depth.py` is adapted from [geo-optimizer-skill](https://github.com/Auriti-Labs/geo-optimizer-skill). No code package is installed from that project. Its license is MIT.

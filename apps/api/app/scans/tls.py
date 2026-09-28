@@ -5,7 +5,6 @@ only TLS 1.0 and 1.1 tells whether the server still accepts them. CAA is read ov
 httpx client. Local and IP-only sites are skipped: they have no public certificate or DNS to judge.
 """
 
-import ipaddress
 import os
 import socket
 import ssl
@@ -17,7 +16,7 @@ import httpx
 
 from app.agent.schema import Finding
 from app.scans.email import RESOLVER, domain_of
-from app.scans.fetch import is_local_site
+from app.scans.fetch import is_local_site, public_addresses
 
 EXPIRY_DAYS = 21
 TIMEOUT = 4.0
@@ -28,14 +27,11 @@ def _f(severity: str, title: str, detail: str, fix: str, evidence: str) -> Findi
 
 
 def _address(host: str, port: int) -> str:
-    """Resolve once and connect to that address, so a public name cannot point the handshake at a private one."""
-    address = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)[0][4][0]
+    """Resolve once and connect to that address, so a public name cannot point the handshake at a private one. The
+    same rule as every scan request (fetch.public_addresses)."""
     if host == "localhost" and os.environ.get("ALLOW_LOCAL_SCANS") == "1":
-        # Windows resolves localhost to ::1 first; the local fixture listens on IPv4.
-        address = "127.0.0.1"
-    if os.environ.get("ALLOW_LOCAL_SCANS") != "1" and not ipaddress.ip_address(address).is_global:
-        raise ValueError("site resolves to a private address")
-    return address
+        return "127.0.0.1"  # Windows resolves localhost to ::1 first; the local fixture listens on IPv4
+    return public_addresses(host, port)[0]
 
 
 def _handshake(host: str, address: str, port: int, context: ssl.SSLContext) -> tuple[dict, str | None]:

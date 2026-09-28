@@ -1,7 +1,9 @@
 """Supabase session check. Asks Supabase Auth to validate the bearer token; no JWT library needed.
 
 A validated token is trusted for up to TTL seconds, never past its own expiry. The cache is keyed by the token's
-SHA-256, so raw tokens are not kept in memory, and it is bounded.
+SHA-256, so raw tokens are not kept in the cache. The per-process LRU holds at most MAX_CACHED entries.
+Cache hits do not extend the validation window: sign-out/revocation may take up to five minutes to be noticed
+by this cache (or less when the token expires). `forget` clears local entries on account deletion.
 """
 
 import base64
@@ -9,13 +11,19 @@ import hashlib
 import json
 import os
 import time
+from collections import OrderedDict
+from threading import Lock
 
 import httpx
 from fastapi import HTTPException, Request
 
+from app import limits
+from app.observability import bind_user
+
 TTL = 300  # seconds a validated token is trusted before re-checking
 MAX_CACHED = 2000
-_cache: dict[str, tuple[dict, float]] = {}
+_cache: OrderedDict[str, tuple[dict, float]] = OrderedDict()
+_cache_lock = Lock()  # FastAPI runs synchronous dependencies in multiple threads; never hold this over HTTP.
 
 
 def _expiry(token: str) -> float:
@@ -55,9 +63,17 @@ def require_user(request: Request) -> dict:
     token = auth[7:].strip()
     key = hashlib.sha256(token.encode()).hexdigest()
     now = time.time()
-    hit = _cache.get(key)
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and hit[1] > now:
+            _cache.move_to_end(key)
+        elif hit:
+            _cache.pop(key)
     if hit and hit[1] > now:
+        bind_user(request.scope, hit[0]["id"])
+        limits.for_user(request, hit[0]["id"])
         return hit[0]
+    limits.apply("auth", limits.address(request))  # each check reaches Supabase: a spray of made-up tokens stops here
     try:
         r = httpx.get(
             f"{os.environ['SUPABASE_URL']}/auth/v1/user",
@@ -70,17 +86,21 @@ def require_user(request: Request) -> dict:
         raise HTTPException(401, "invalid or expired session")
     user = profile(r.json())
     until = min(now + TTL, _expiry(token) or now + TTL)
-    if len(_cache) >= MAX_CACHED:
+    with _cache_lock:
         for k in [k for k, v in _cache.items() if v[1] <= now]:
             del _cache[k]
-        while len(_cache) >= MAX_CACHED:  # still full: drop the oldest entries (dicts keep insertion order)
-            del _cache[next(iter(_cache))]
-    if until > now:
-        _cache[key] = (user, until)
+        if until > now:
+            _cache[key] = (user, until)
+            _cache.move_to_end(key)
+        while len(_cache) > MAX_CACHED:
+            _cache.popitem(last=False)
+    bind_user(request.scope, user["id"])
+    limits.for_user(request, user["id"])  # every signed-in route has a limit (app/limits.py, SD-2.1)
     return user
 
 
 def forget(user_id: str) -> None:
     """Drop every cached session of a user (account deleted), so their tokens are checked again at once."""
-    for key in [k for k, (u, _) in _cache.items() if u["id"] == user_id]:
-        _cache.pop(key, None)
+    with _cache_lock:
+        for key in [k for k, (u, _) in _cache.items() if u["id"] == user_id]:
+            _cache.pop(key, None)

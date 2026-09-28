@@ -121,7 +121,6 @@ def test_feedback_is_stored_for_the_founder_and_rate_limited(monkeypatch):
 
     stored = []
     monkeypatch.setattr(db, "app_event", lambda kind, user_id, detail: stored.append((kind, user_id, detail)))
-    monkeypatch.setattr(main, "_feedback_hits", {})
     c = TestClient(main.app)
     assert c.post("/feedback", json={"message": "hi"}).status_code == 422  # too short
     assert c.post("/feedback", json={"message": "Love the report", "page": "/app", "user_id": "x"}).status_code == 422  # no extra fields
@@ -139,7 +138,8 @@ def test_unhandled_errors_answer_generically_and_reach_the_panel(monkeypatch):
     monkeypatch.setattr(plans, "current", lambda user_id: (_ for _ in ()).throw(RuntimeError("secret internals")))
     r = TestClient(main.app, raise_server_exceptions=False).get("/me/plan")
     assert r.status_code == 500 and "secret internals" not in r.text
-    assert stored == [("server_error", {"method": "GET", "route": "/me/plan", "error": "RuntimeError", "message": "secret internals"})]
+    assert stored == [("server_error", {"method": "GET", "route": "/me/plan", "error": "RuntimeError",
+                                        "request_id": r.headers["x-request-id"]})]
 
 
 def test_pausing_test_runs_needs_a_code_and_takes_a_clean_host(panel, fake_db):

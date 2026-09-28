@@ -43,10 +43,10 @@ class Resp:
 
 
 def test_analysis_names_cites_and_ranks_in_code():
-    got = [{"url": u, "domain": citations.domain_of(u)} for u in ("https://www.pcmag.com/x", "https://acmenotes.app/teams", "https://www.notion.so/p")]
+    got = [{"url": u, "domain": citations.domain_of(u), "cited": True} for u in ("https://www.pcmag.com/x", "https://acmenotes.app/teams", "https://www.notion.so/p")]
     answer = citations.clean(GROQ["choices"][0]["message"]["content"])
     assert "【" not in answer
-    result = citations.analyze(answer, got, "Acme Notes", "acmenotes.app", [{"name": "Notion", "domain": "notion.so"}, {"name": "Coda", "domain": "coda.io"}])
+    result = citations.analyze(answer, got, "Acme Notes", "acmenotes.app", [{"name": "Notion", "domain": "notion.so"}, {"name": "Coda", "domain": "coda.io"}], citation_status="measured")
     you, notion, coda = result["brands"]
     assert you == {"name": "Acme Notes", "domain": "acmenotes.app", "you": True, "mentioned": True, "mention_rank": 2, "cited": True, "source_rank": 2}
     assert notion["mentioned"] and notion["mention_rank"] == 1 and notion["cited"] and notion["source_rank"] == 3
@@ -80,6 +80,7 @@ def test_web_engine_reads_groq_sources_and_rests_on_429(monkeypatch):
     got = citations.ask_web("best notes app")
     assert [s["domain"] for s in got["sources"]] == ["pcmag.com", "acmenotes.app", "notion.so"]  # duplicates dropped
     assert got["tokens"] == 1580 and got["model"] == citations.WEB_MODEL
+    assert got["citation_status"] == "unresolved" and not any(s["cited"] for s in got["sources"])
     monkeypatch.setattr(citations.httpx, "post", lambda url, **k: Resp(429, {}))
     with pytest.raises(citations.Busy):
         citations.ask_web("best notes app")
@@ -92,9 +93,11 @@ def test_memory_engine_has_sources_only_when_grounded(monkeypatch):
     monkeypatch.delenv("GEMINI_GROUNDING", raising=False)
     got = citations.ask_memory("best notes app")
     assert "tools" not in seen[-1] and got["answer"].startswith("Try Notion") and citations.label("memory") == "Gemini, from memory"
+    assert got["sources"] == [] and got["citation_status"] == "not_applicable"
     monkeypatch.setenv("GEMINI_GROUNDING", "1")
     got = citations.ask_memory("best notes app")
-    assert seen[-1]["tools"] == [{"google_search": {}}] and got["sources"][0]["domain"] == "acmenotes.app"
+    assert seen[-1]["tools"] == [{"google_search": {}}] and got["sources"][0]["domain"] == ""
+    assert got["citation_status"] == "unresolved"
     assert citations.label("memory") == "Gemini with Google Search"
 
 
@@ -104,6 +107,7 @@ def test_memory_engine_has_sources_only_when_grounded(monkeypatch):
 @pytest.fixture
 def store(monkeypatch):
     sites, prompts, checks = {}, {}, []
+    used = {"web": 0, "memory": 0}
 
     def add_site(row):
         row = row | {"id": str(uuid.uuid4()), "created_at": datetime.now(UTC).isoformat(), "last_batch_at": None}
@@ -116,18 +120,36 @@ def store(monkeypatch):
 
     def add_checks(rows):
         for r in rows:
-            checks.append(r | {"id": len(checks) + 1, "status": "queued", "attempts": 0, "answer": "", "sources": [], "result": {},
+            checks.append(r | {"id": len(checks) + 1, "status": "queued", "attempts": 0, "answer": "", "sources": [], "result": r.get("result", {}),
                                "created_at": datetime.now(UTC).isoformat(), "checked_at": None, "model": "", "tokens": 0})
 
-    def claim(check_id, attempts):
+    def claim(check_id, attempts, engine, daily, gap, token):
         c = next(c for c in checks if c["id"] == check_id)
-        if c["status"] != "queued" or c["attempts"] != attempts:
+        if c["status"] != "queued" or c["attempts"] != attempts or c.get("lease_token") or used[engine] >= daily:
             return False
         c["attempts"] += 1
+        c["lease_token"] = token
+        used[engine] += 1
         return True
 
-    def finish(check_id, values):
-        next(c for c in checks if c["id"] == check_id).update(values | {"checked_at": datetime.now(UTC).isoformat()})
+    def finish(check_id, values, token):
+        c = next(c for c in checks if c["id"] == check_id)
+        if c.get("lease_token") != token:
+            return False
+        c.update(values | {"lease_token": None})
+        if c["status"] != "queued":
+            c["checked_at"] = datetime.now(UTC).isoformat()
+        return True
+
+    def queue(site_id, batch, rows, caps, weekly):
+        if any(c["site_id"] == site_id and c["status"] == "queued" for c in checks):
+            return "pending"
+        for e in caps:
+            if sum(c["engine"] == e and c["status"] == "queued" for c in checks) + sum(r["engine"] == e for r in rows) > caps[e] * 7:
+                return "capacity"
+        add_checks([r | {"site_id": site_id, "batch_id": batch} for r in rows])
+        sites[site_id]["last_batch_at"] = datetime.now(UTC).isoformat()
+        return "ok"
 
     monkeypatch.setattr(db, "citation_sites", lambda uid: [s for s in sites.values() if s["user_id"] == uid])
     monkeypatch.setattr(db, "citation_site", lambda sid: sites.get(sid))
@@ -137,6 +159,9 @@ def store(monkeypatch):
     monkeypatch.setattr(db, "citation_prompts", lambda sid: prompts.get(sid, []))
     monkeypatch.setattr(db, "replace_citation_prompts", replace)
     monkeypatch.setattr(db, "add_citation_checks", add_checks)
+    monkeypatch.setattr(db, "queue_citation_batch", queue)
+    monkeypatch.setattr(db, "citation_capacity", lambda: {"quotas": [{"engine": e, "day": datetime.now(UTC).date().isoformat(), "used": n} for e, n in used.items()], "queued": {e: sum(c["engine"] == e and c["status"] == "queued" for c in checks) for e in used}})
+    monkeypatch.setattr(db, "defer_citation_engine", lambda *args: None)
     monkeypatch.setattr(db, "queued_citation_checks", lambda limit=20: [dict(c) for c in checks if c["status"] == "queued"][:limit])
     monkeypatch.setattr(db, "claim_citation_check", claim)
     monkeypatch.setattr(db, "finish_citation_check", finish)
@@ -160,7 +185,7 @@ def test_free_accounts_see_the_upgrade_and_plus_starts_with_suggested_prompts(st
     assert body["site"]["site"] == "https://acmenotes.app" and body["site"]["brand"] == "Acme Notes"
     assert [x["domain"] for x in body["site"]["competitors"]] == ["notion.so", "coda.io"]  # its own domain is not a competitor
     assert 5 <= len(body["prompts"]) <= 25 and body["limit"]["engines"] == ["web", "memory"]
-    assert body["not_measured"] == ["ChatGPT", "Perplexity"]
+    assert body["not_measured"] == ["Google AI Overviews", "Google AI Mode", "ChatGPT", "Perplexity", "Claude"]
     assert c.post("/citations", json={"site": "https://acmenotes.app"}).status_code == 409
 
 
@@ -198,7 +223,7 @@ def test_the_queue_runs_within_caps_keeps_busy_checks_and_announces_the_finished
     def busy(prompt):
         raise citations.Busy("quota")
 
-    web = {"answer": "Acme Notes and Notion.", "sources": [{"url": "https://acmenotes.app", "domain": "acmenotes.app"}], "tokens": 10, "model": "m"}
+    web = {"answer": "Acme Notes and Notion.", "sources": [{"url": "https://acmenotes.app", "domain": "acmenotes.app", "cited": True}], "citation_status": "measured", "tokens": 10, "model": "m"}
     monkeypatch.setattr(citations, "ENGINES", {"web": lambda p: web, "memory": busy})
     assert citations.process(sleep=lambda s: None) == 2
     assert all(x["status"] == "done" and x["result"]["brands"][0]["cited"] for x in checks if x["engine"] == "web")
@@ -209,7 +234,7 @@ def test_the_queue_runs_within_caps_keeps_busy_checks_and_announces_the_finished
     assert citations.process(sleep=lambda s: None) == 0 and all(x["status"] == "queued" for x in checks if x["engine"] == "memory")
 
     monkeypatch.setitem(citations.DAILY, "memory", 300)
-    monkeypatch.setitem(citations.ENGINES, "memory", lambda p: {"answer": "Notion.", "sources": [], "tokens": 5, "model": "g"})
+    monkeypatch.setitem(citations.ENGINES, "memory", lambda p: {"answer": "Notion.", "sources": [], "tokens": 5, "model": "g", "citation_status": "not_applicable"})
     assert citations.process(sleep=lambda s: None) == 2
     note = fake_db.notes[-1]
     assert note["section"] == "visibility" and note["body"] == "Named in 2 of 4 answers." and note["link"] == "/app/visibility"
@@ -227,3 +252,71 @@ def test_weekly_schedule_queues_due_sites_and_stops_when_the_plan_lapses(store, 
     assert citations.run_due() == 1 and len(checks) == 2 * len(prompts[site["id"]])
     passes.clear()  # the pass ended
     assert citations.run_due() == 0 and sites[site["id"]]["next_check_at"] is None
+
+
+def test_queued_context_survives_edits_and_quota_retries_do_not_become_terminal_failures(store, passes, monkeypatch):
+    sites, _, checks = store
+    plan(passes, "pro")
+    c = TestClient(app)
+    site = c.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    c.post(f"/citations/{site['id']}", json={"prompts": ["what is Acme Notes"]})
+    c.post(f"/citations/{site['id']}/check")
+    sites[site["id"]]["brand"] = "New name"
+    def busy(prompt):
+        raise citations.Busy("quota")
+    monkeypatch.setitem(citations.ENGINES, "web", busy)
+    for _ in range(5):
+        assert citations.process() == 0
+    assert checks[0]["status"] == "queued" and checks[0]["attempts"] == 5
+    assert citations.capacity()[0]["used"] == 5
+    monkeypatch.setitem(citations.ENGINES, "web", lambda p: {"answer": "Acme Notes", "sources": [], "tokens": 3, "model": "fixture", "citation_status": "measured"})
+    assert citations.process() == 1
+    assert checks[0]["result"]["brands"][0]["name"] == "Acme Notes"
+    assert checks[0]["result"]["brands"][0]["mentioned"] is True
+    assert checks[0]["result"]["prompt_group"] == "branded"
+
+
+def test_unavailable_provider_fails_after_bounded_retries(store, passes, monkeypatch):
+    plan(passes, "pro")
+    c = TestClient(app)
+    site = c.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    c.post(f"/citations/{site['id']}", json={"prompts": ["best notes app"]})
+    c.post(f"/citations/{site['id']}/check")
+    def broken(prompt):
+        raise RuntimeError("fixture provider unavailable")
+    monkeypatch.setitem(citations.ENGINES, "web", broken)
+    for _ in range(citations.MAX_ATTEMPTS):
+        citations.process()
+    assert store[2][0]["status"] == "failed"
+    assert store[2][0]["result"]["failures"] == citations.MAX_ATTEMPTS
+
+
+def test_queue_admission_failure_returns_actionable_response(store, passes, monkeypatch):
+    plan(passes, "pro")
+    c = TestClient(app)
+    site = c.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    monkeypatch.setattr(db, "queue_citation_batch", lambda *args: "capacity")
+    result = c.post(f"/citations/{site['id']}/check")
+    assert result.status_code == 429 and "queue is full" in result.json()["detail"]
+    assert store[2] == []
+
+
+def test_queued_memory_answer_is_not_silently_upgraded_to_search(store, passes, monkeypatch):
+    monkeypatch.delenv("GEMINI_GROUNDING", raising=False)
+    plan(passes, "plus")
+    c = TestClient(app)
+    site = c.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    c.post(f"/citations/{site['id']}", json={"prompts": ["best notes app"]})
+    c.post(f"/citations/{site['id']}/check")
+    modes = []
+    def memory(prompt, *, mode):
+        modes.append(mode)
+        return {"answer": "Acme Notes", "sources": [], "tokens": 3, "model": "fixture", "citation_status": "not_applicable"}
+    monkeypatch.setattr(citations, "ask_memory", memory)
+    monkeypatch.setattr(citations, "ENGINES", {"memory": memory})
+    monkeypatch.setenv("GEMINI_GROUNDING", "1")
+    assert citations.process() == 1
+    assert modes == ["memory"]
+    answer = next(c for c in store[2] if c["engine"] == "memory")
+    assert answer["result"]["provenance"]["mode"] == "memory"
+    assert answer["result"]["citation_eligible"] is False

@@ -3,9 +3,11 @@
 import ipaddress
 import os
 import socket
+import threading
 import time
 from urllib.parse import urljoin, urlsplit
 
+import httpcore
 import httpx
 from selectolax.parser import HTMLParser
 
@@ -16,26 +18,121 @@ MAX_TEXT = 300_000
 MAX_REDIRECTS = 5
 
 
+# Cloud metadata endpoints (AWS, ECS, AWS IPv6, Alibaba). None is a public address anyway; listed so that stays true.
+METADATA = {ipaddress.ip_address(a) for a in ("169.254.169.254", "169.254.170.2", "fd00:ec2::254", "100.100.100.200")}
+NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def is_public_ip(address: str) -> bool:
+    """True only for a globally routable unicast address. IPv6 forms that carry an IPv4 address inside (mapped,
+    6to4, Teredo, NAT64) must carry a public one, or ::ffff:127.0.0.1 would reach this machine."""
+    ip = ipaddress.ip_address(address.split("%", 1)[0])  # drop an IPv6 zone id such as fe80::1%eth0
+    if ip in METADATA or ip.is_multicast:
+        return False
+    if ip.version == 6:
+        inner = ip.ipv4_mapped or ip.sixtofour or (ip.teredo[1] if ip.teredo else None)
+        if ip in NAT64:
+            inner = ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF)
+        if inner is not None and not is_public_ip(str(inner)):
+            return False
+    return ip.is_global
+
+
+def public_addresses(host: str, port: int) -> list[str]:
+    """Resolve once. Every address must be public, and the caller connects only to these (DNS rebinding, SD-4.5).
+    ALLOW_LOCAL_SCANS=1 (fixtures) returns the name unresolved."""
+    if os.environ.get("ALLOW_LOCAL_SCANS") == "1":
+        return [host]
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except (socket.gaierror, UnicodeError) as e:
+        raise ValueError("site does not resolve") from e
+    addresses = list(dict.fromkeys(info[4][0] for info in infos))
+    if not addresses or not all(is_public_ip(a) for a in addresses):
+        raise ValueError("site resolves to a private address")
+    return addresses
+
+
 def assert_public(url: str) -> None:
-    """Refuse hosts that resolve to private, loopback or link-local addresses. ALLOW_LOCAL_SCANS=1 for fixtures."""
+    """Refuse hosts that resolve to private, loopback or link-local addresses: the early, friendly check. The pinned
+    connection below is what enforces it. ALLOW_LOCAL_SCANS=1 for fixtures."""
     parsed = urlsplit(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise ValueError("site must use http or https")
-    if os.environ.get("ALLOW_LOCAL_SCANS") == "1":
-        return
-    host = parsed.hostname
-    try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror as e:
-        raise ValueError("site does not resolve") from e
-    for info in infos:
-        if not ipaddress.ip_address(info[4][0]).is_global:
-            raise ValueError("site resolves to a private address")
+    public_addresses(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+
+
+class _PublicOnly(httpcore.SyncBackend):
+    """Opens every connection of a scan client: resolves the host once, refuses any non-public address, and connects to
+    the checked address itself, so a second DNS answer (rebinding) can never be used. TLS SNI and the Host header still
+    carry the name, because httpcore takes them from the request, not from this socket."""
+
+    def connect_tcp(self, host, port, timeout=None, local_address=None, socket_options=None):
+        try:
+            addresses = public_addresses(host, port)
+        except ValueError as e:
+            raise httpcore.ConnectError(str(e)) from e
+        error: Exception | None = None
+        for address in addresses:  # like socket.create_connection: an unreachable IPv6 answer falls back to IPv4
+            try:
+                return super().connect_tcp(address, port, timeout, local_address, socket_options)
+            except (httpcore.ConnectError, httpcore.ConnectTimeout) as e:
+                error = e
+        raise error or httpcore.ConnectError("no address to connect to")
+
+
+PER_HOST = 2  # simultaneous requests to one host from this process, whoever asked (SD-2.3)
+_slots: dict[str, threading.BoundedSemaphore] = {}
+_slots_lock = threading.Lock()
+
+
+def _slot(host: str) -> threading.BoundedSemaphore:
+    with _slots_lock:  # ponytail: one small semaphore per host ever seen; a few thousand hosts is a few hundred kB
+        return _slots.setdefault(host, threading.BoundedSemaphore(PER_HOST))
+
+
+class _Release(httpx.SyncByteStream):
+    """The response body, giving the host's slot back when it is closed (after a normal read, or a streamed one)."""
+
+    def __init__(self, inner, slot: threading.BoundedSemaphore):
+        self._inner, self._slot, self._held = inner, slot, True
+
+    def __iter__(self):
+        yield from self._inner
+
+    def close(self) -> None:
+        try:
+            self._inner.close()
+        finally:
+            if self._held:
+                self._held = False
+                self._slot.release()
+
+
+class _Polite(httpx.HTTPTransport):
+    """At most PER_HOST requests in flight to one host, so many users scanning one site at once never hammer it."""
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        slot = _slot(request.url.host.lower())
+        wait = (request.extensions.get("timeout") or {}).get("pool") or 15
+        if not slot.acquire(timeout=wait):
+            raise httpx.PoolTimeout("too many requests to this site at once; try again shortly", request=request)
+        try:
+            response = super().handle_request(request)
+        except BaseException:
+            slot.release()
+            raise
+        response.stream = _Release(response.stream, slot)
+        return response
 
 
 def client(timeout: float = 15) -> httpx.Client:
+    """The client for every request to a user's site. trust_env=False: an environment proxy would resolve the name again."""
+    transport = _Polite()
+    # ponytail: httpx has no public hook for the network backend; tests/test_fetch_pinning.py fails if this attribute moves.
+    transport._pool._network_backend = _PublicOnly()
     # Ask for HTML like a browser: some hosts (Vercel "markdown for agents") serve Markdown to clients that do not.
-    return httpx.Client(follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
+    return httpx.Client(transport=transport, trust_env=False, follow_redirects=False, timeout=timeout, headers={"User-Agent": UA, "Accept": ACCEPT})
 
 
 def get(c: httpx.Client, url: str, *, same_origin: str | None = None, headers: dict | None = None,

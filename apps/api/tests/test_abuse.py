@@ -24,7 +24,7 @@ def step(action="click", target=1, text=None):
 def test_a_global_kill_switch_stops_new_journeys_and_the_policy_endpoint_says_so(fake_db, monkeypatch):
     use([step()], monkeypatch)
     c = TestClient(app)
-    assert c.get("/runs/policy").json() == {"journeys": True, "message": ""}
+    assert c.get("/runs/policy").json() == {"journeys": True, "message": "", "idempotency": "v1"}
     fake_db.blocks.append({"id": 1, "scope": "global", "value": "", "reason": "incident"})
     abuse.forget_blocks()
     r = begin(c)

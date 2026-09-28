@@ -22,7 +22,7 @@ import httpx
 
 SECRET = "walkthru-local-test-secret-at-least-32-chars"
 
-# The pieces of a Supabase project that schema.sql relies on: roles, auth.users, auth.uid(), storage tables,
+# The pieces of a Supabase project that the migrations rely on: roles, auth.users, auth.uid(), storage tables,
 # default grants to the API roles, and the realtime publication.
 SUPABASE_STUB = """
 create role anon nologin noinherit;

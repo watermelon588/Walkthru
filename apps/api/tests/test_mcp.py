@@ -87,7 +87,10 @@ def test_mcp_endpoint_checks_the_key_and_plan_then_serves_tools(monkeypatch, pas
         init = _rpc(c, key, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "1"}})
         assert init.status_code == 200, init.text
         tools = {t["name"] for t in _rpc(c, key, "tools/list", id_=2).json()["result"]["tools"]}
-        assert tools == {"scan_site", "get_report", "get_fix_prompt", "rerun", "list_runs", "get_finding", "verify_finding"}
+        assert tools == {"scan_site", "get_report", "get_fix_prompt", "rerun", "list_runs", "get_finding", "verify_finding", "get_plan",
+                         "get_site_verification", "list_github_repos", "open_fix_pull_request", "accept_finding", "reopen_finding",
+                         "compare_sites", "share_report", "list_ai_answer_sites", "track_ai_answers", "get_ai_answers", "set_ai_prompts",
+                         "check_ai_answers_now", "list_watched_sites", "watch_site", "check_watched_site_now", "create_deploy_hook"}
 
         got = _rpc(c, key, "tools/call", {"name": "get_report", "arguments": {"run_id": mine}}, id_=3).json()["result"]
         text = got["content"][0]["text"]
@@ -256,4 +259,6 @@ def test_owner_scans_add_https_and_run_owner_checks_on_verified_hosts(monkeypatc
     main.run_scan(site.url, user_id=USER)
     assert seen["verified"] is True
     main.run_scan(site.url)  # anonymous Instant Scans never run owner-only checks
+    assert seen["verified"] is False
+    main.run_scan(site.url, user_id=USER, kind="compare_part")  # even a verified owner gets the same public scope as rivals
     assert seen["verified"] is False

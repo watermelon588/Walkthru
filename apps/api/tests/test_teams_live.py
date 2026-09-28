@@ -46,7 +46,6 @@ def live(stack, monkeypatch):
                           headers={"apikey": stack["service_key"], "Authorization": f"Bearer {stack['service_key']}"})
     monkeypatch.setattr(db, "client", lambda: client)
     monkeypatch.setattr(teams, "SEATS", 3)
-    teams._hits.clear()
 
     def user_from(request: Request) -> dict:
         token = request.headers.get("authorization", "")[7:]

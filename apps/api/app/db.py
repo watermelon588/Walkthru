@@ -14,7 +14,7 @@ from typing import Any
 
 import httpx
 
-SCHEMA = os.path.join(os.path.dirname(__file__), "..", "schema.sql")
+SCHEMA = os.path.join(os.path.dirname(__file__), "..", "migrations", "0001_initial.sql")  # the baseline migration (was schema.sql)
 BUCKET = "run-evidence"
 
 
@@ -283,7 +283,7 @@ def purge_run_audit(before: str) -> None:
 # ---------- AI citation tracking (P3.2, app/citations.py) ----------
 
 _CITE_SITE = "id,user_id,site,brand,competitors,next_check_at,last_batch_at,created_at"
-_CITE_CHECK = "id,site_id,batch_id,prompt_id,prompt,engine,status,model,answer,sources,result,tokens,attempts,created_at,checked_at"
+_CITE_CHECK = "id,site_id,batch_id,prompt_id,prompt,engine,status,model,answer,sources,result,tokens,attempts,created_at,checked_at,next_attempt_at,last_error,lease_until"
 
 
 def citation_sites(user_id: str) -> list[dict]:
@@ -328,25 +328,55 @@ def add_citation_checks(rows: list[dict]) -> None:
         _request("POST", "/rest/v1/citation_checks", json_body=rows, prefer="return=minimal")
 
 
+def _citation_rows(params: dict, limit: int) -> list[dict]:
+    """Page bounded reads rather than silently accepting PostgREST's row cap."""
+    rows = []
+    while len(rows) < limit:
+        page = _select("citation_checks", params | {"offset": str(len(rows)), "limit": str(min(500, limit - len(rows)))})
+        if not page:
+            break
+        rows.extend(page)
+    return rows
+
+
 def queued_citation_checks(limit: int = 20) -> list[dict]:
-    return _select("citation_checks", {"status": "eq.queued", "select": _CITE_CHECK, "order": "created_at.asc", "limit": str(limit)})
+    now = _now()
+    return _citation_rows({"status": "eq.queued", "next_attempt_at": f"lte.{now}",
+                                      "or": f"(lease_until.is.null,lease_until.lt.{now})", "select": _CITE_CHECK,
+                                      "order": "created_at.asc,id.asc"}, limit)
 
 
-def claim_citation_check(check_id: int, attempts: int) -> bool:
-    """Take a queued check once, even with several workers: the attempts count moves only from the value we read."""
-    rows = _update("citation_checks", {"id": f"eq.{check_id}", "status": "eq.queued", "attempts": f"eq.{attempts}"}, {"attempts": attempts + 1})
-    return bool(rows)
+def claim_citation_check(check_id: int, attempts: int, engine: str, daily: int, gap: float, token: str) -> bool:
+    return bool(_request("POST", "/rest/v1/rpc/claim_citation_job", json_body={"p_id": check_id, "p_attempts": attempts,
+                "p_engine": engine, "p_limit": daily, "p_gap": gap, "p_token": token}))
 
 
-def finish_citation_check(check_id: int, values: dict) -> None:
-    _update("citation_checks", {"id": f"eq.{check_id}"}, values | {"checked_at": _now()})
+def finish_citation_check(check_id: int, values: dict, token: str) -> bool:
+    terminal = values.get("status") in ("done", "failed")
+    return bool(_update("citation_checks", {"id": f"eq.{check_id}", "lease_token": f"eq.{token}", "lease_until": f"gt.{_now()}"},
+                        values | {"lease_token": None, "lease_until": None} | ({"checked_at": _now()} if terminal else {})))
+
+
+def queue_citation_batch(site_id: str, batch: str, rows: list[dict], caps: dict, weekly: bool) -> str:
+    return _request("POST", "/rest/v1/rpc/queue_citation_batch", json_body={"p_site": site_id, "p_batch": batch,
+                    "p_rows": rows, "p_caps": caps, "p_weekly": weekly})
+
+
+def citation_capacity() -> dict:
+    quotas = _select("citation_quota", {"select": "engine,day,used,next_at"})
+    queued = _citation_rows({"status": "eq.queued", "select": "engine", "order": "id.asc"}, 5000)
+    return {"quotas": quotas, "queued": {e: sum(1 for c in queued if c["engine"] == e) for e in ("web", "memory")}}
+
+
+def defer_citation_engine(engine: str, until: str) -> None:
+    _update("citation_quota", {"engine": f"eq.{engine}", "next_at": f"lt.{until}"}, {"next_at": until})
 
 
 def citation_checks_for(site_id: str, since: str | None = None, limit: int = 500) -> list[dict]:
-    params = {"site_id": f"eq.{site_id}", "select": _CITE_CHECK, "order": "created_at.desc", "limit": str(limit)}
+    params = {"site_id": f"eq.{site_id}", "select": _CITE_CHECK, "order": "created_at.desc,id.desc"}
     if since:
         params["created_at"] = f"gte.{since}"
-    return _select("citation_checks", params)
+    return _citation_rows(params, limit)
 
 
 def citation_checks_done_since(engine: str, since: str) -> int:
@@ -448,16 +478,15 @@ def delete_runs(run_ids: list[str]) -> None:
 
 
 def setup() -> None:
-    """Apply schema.sql over a direct SQL connection (admin task, retried by hand if the network drops)."""
-    import psycopg
+    """Apply every pending migration (app/migrate.py). Kept so `python -m app.db` still works."""
+    from app import migrate
 
-    with open(SCHEMA, encoding="utf-8") as f, psycopg.connect(os.environ["DATABASE_URL"], autocommit=True, connect_timeout=15) as conn:
-        for stmt in statements(f.read()):
-            conn.execute(stmt)
+    with migrate.connect() as conn:
+        migrate.up(conn)
 
 
 def statements(sql: str) -> list[str]:
-    """schema.sql as single statements: `--` comment lines dropped, split on semicolons outside $$ bodies, so a
+    """SQL as single statements (tests apply blocks of a migration this way): `--` comment lines dropped, split on semicolons outside $$ bodies, so a
     function or DO block keeps its inner semicolons."""
     sql = "\n".join(line for line in sql.splitlines() if not line.lstrip().startswith("--"))
     found, current = [], ""
@@ -810,3 +839,54 @@ def add_github_installation(user_id: str, installation_id: int, account: str) ->
 def remove_github_installation(user_id: str, installation_id: int) -> bool:
     return bool(_request("DELETE", "/rest/v1/github_installations", params={"user_id": f"eq.{user_id}", "installation_id": f"eq.{installation_id}",
                                                                              "select": "installation_id"}, prefer="return=representation"))
+
+
+# ---------- durable job queue (SD-6.1; app/jobs.py, migrations/0001_initial.sql `jobs`) ----------
+
+
+def enqueue_job(kind: str, payload: dict, *, max_attempts: int, dedupe_key: str) -> None:
+    """Insert a job unless one with this dedupe key exists, so the transport retry in _request never doubles it."""
+    _request("POST", "/rest/v1/jobs", params={"on_conflict": "dedupe_key"}, prefer="resolution=ignore-duplicates,return=minimal",
+             json_body={"kind": kind, "payload": payload, "max_attempts": max_attempts, "dedupe_key": dedupe_key})
+
+
+def claim_job(lease_seconds: int) -> dict | None:
+    # ponytail: a transport retry after a lost reply claims a second job; the first waits out its lease and runs later.
+    return _one(rpc("claim_job", {"p_lease_seconds": lease_seconds}) or [])
+
+
+def finish_job(job_id: int, lease: str, values: dict) -> None:
+    """Record the outcome, only while this worker still holds the lease (a reclaimed job belongs to its new worker)."""
+    _request("PATCH", "/rest/v1/jobs", params={"id": f"eq.{job_id}", "lease": f"eq.{lease}"}, json_body=values | {"updated_at": _now()},
+             prefer="return=minimal")
+
+
+def purge_jobs(before: str) -> None:
+    _request("DELETE", "/rest/v1/jobs", params={"status": "in.(done,failed)", "updated_at": f"lt.{before}"}, prefer="return=minimal")
+
+
+# ---------- shared rate limits (SD-2.1; app/limits.py, migrations/0001_initial.sql `rate_limits`) ----------
+
+
+def hit_rate_limit(key: str, limit: int, seconds: int) -> int:
+    """Count one request. 0 when it is allowed, else the seconds until the window ends."""
+    # ponytail: the transport retry in _request can count one request twice after a lost reply; a limit, not a bill.
+    return int(rpc("hit_rate_limit", {"p_key": key, "p_limit": limit, "p_seconds": seconds}) or 0)
+
+
+def purge_rate_limits(before: str) -> None:
+    _request("DELETE", "/rest/v1/rate_limits", params={"window_start": f"lt.{before}"}, prefer="return=minimal")
+
+
+def claim_run_request(user_id: str, key: str, operation: str, request_hash: str, owner: str, run_id: str) -> dict:
+    return rpc("claim_run_request", {"p_user": user_id, "p_key": key, "p_operation": operation,
+                                    "p_hash": request_hash, "p_owner": owner, "p_run": run_id})
+
+
+def finish_run_request(user_id: str, key: str, owner: str, state: str, status: int, response: dict | None, headers: dict | None) -> bool:
+    return bool(rpc("finish_run_request", {"p_user": user_id, "p_key": key, "p_owner": owner, "p_state": state,
+                                         "p_status": status, "p_response": response, "p_headers": headers}))
+
+
+def expire_run_requests() -> None:
+    rpc("expire_run_requests", {})

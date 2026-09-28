@@ -87,9 +87,6 @@ class FakeGitHub:
 @pytest.fixture
 def gh(monkeypatch, signed_in, passes):
     fake = FakeGitHub()
-    from app import main
-
-    main._github_hits.clear()
     for k, v in {"GITHUB_APP_ID": "123", "GITHUB_APP_SLUG": "walkthru-test", "GITHUB_APP_PRIVATE_KEY": PEM.replace("\n", "\\n"),
                  "GITHUB_APP_CLIENT_ID": "Iv1.client", "GITHUB_APP_CLIENT_SECRET": "client-secret"}.items():
         monkeypatch.setenv(k, v)

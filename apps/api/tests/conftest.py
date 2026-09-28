@@ -1,5 +1,6 @@
 """Shared fakes: in-memory runs table and a fixed signed-in user. Tests never touch Supabase."""
 
+import json
 import os
 from datetime import UTC, datetime
 
@@ -132,6 +133,39 @@ def passes(monkeypatch):
     monkeypatch.setattr(db, "access_requests_for_user", lambda user_id, limit=20: [])  # test_billing.py fakes the billing tables
     monkeypatch.setattr(db, "offers_for_user", lambda user_id, limit=20: [])
     return table
+
+
+@pytest.fixture(autouse=True)
+def rate_limits(monkeypatch):
+    """The shared rate limit counter (app/limits.py) in memory, empty for each test. Returns the counts by key."""
+    counts: dict[str, int] = {}
+
+    def hit(key, limit, seconds):
+        counts[key] = counts.get(key, 0) + 1
+        return seconds if counts[key] > limit else 0
+
+    monkeypatch.setattr(db, "hit_rate_limit", hit)
+    return counts
+
+
+@pytest.fixture(autouse=True)
+def inline_jobs(monkeypatch):
+    """Queued jobs (app/jobs.py) run at once, as FastAPI background tasks did. The JSON round trip is what the jobs
+    table does to a payload. Returns the kinds queued, for asserts."""
+    from app import jobs
+
+    queued: list[str] = []
+    seen: set[str] = set()
+
+    def enqueue_job(kind, payload, *, max_attempts, dedupe_key):
+        if dedupe_key in seen:
+            return
+        seen.add(dedupe_key)
+        queued.append(kind)
+        jobs.handle(kind, json.loads(json.dumps(payload)))
+
+    monkeypatch.setattr(db, "enqueue_job", enqueue_job)
+    return queued
 
 
 @pytest.fixture(autouse=True)

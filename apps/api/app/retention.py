@@ -9,7 +9,6 @@ Order matters: objects go first, rows last, so a failed storage call never leave
 
 import logging
 import os
-import threading
 
 import httpx
 
@@ -18,7 +17,6 @@ from app import db
 log = logging.getLogger("walkthru.retention")
 BUCKET = "run-evidence"
 RETENTION_DAYS = int(os.environ.get("EVIDENCE_RETENTION_DAYS", "30"))
-INTERVAL_S = 6 * 3600
 
 
 def _admin_headers() -> dict[str, str]:
@@ -65,28 +63,23 @@ def delete_account(user_id: str) -> None:
         r.raise_for_status()
 
 
-def start_background() -> None:
-    """Purge once at startup, then every six hours. ponytail: one thread per API process; move to cron with more instances."""
+def run_pass() -> None:
+    """The six-hourly `retention` job (app/jobs.py): expired screenshots, run audit rows past 90 days
+    (docs/agent-safety-plan.md section 6), finished jobs and expired request responses.
+    Each part runs even when another fails; the next window retries."""
+    from app import abuse, jobs
 
-    def loop() -> None:
-        stop = threading.Event()
-        stop.wait(60)  # let the API finish booting before the first pass
-        while True:
-            try:
-                result = purge_expired()
-                if result["runs"]:
-                    log.info("evidence purge: %s", result)
-            except Exception:  # a failed pass retries next interval
-                log.exception("evidence purge failed")
-            try:
-                from app import abuse
+    def old_limits() -> None:  # rate limit windows that ended a day ago (app/limits.py)
+        db.purge_rate_limits(abuse._ago(days=1))
 
-                abuse.purge_old()  # the run audit log keeps 90 days (docs/agent-safety-plan.md section 6)
-            except Exception:
-                log.exception("run audit purge failed")
-            stop.wait(INTERVAL_S)
-
-    threading.Thread(target=loop, name="evidence-retention", daemon=True).start()
+    for name, part in (("evidence purge", purge_expired), ("run audit purge", abuse.purge_old), ("job purge", jobs.purge_finished),
+                       ("rate limit purge", old_limits), ("request response purge", db.expire_run_requests)):
+        try:
+            result = part()
+            if name == "evidence purge" and result["runs"]:
+                log.info("evidence purge: %s", result)
+        except Exception:
+            log.exception("%s failed", name)
 
 
 if __name__ == "__main__":

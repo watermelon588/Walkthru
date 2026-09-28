@@ -129,11 +129,11 @@ def test_make_model_rejects_jev_without_key(monkeypatch):
         runtime.make_model("free")
 
 
-def test_graph_call_retries_one_interrupted_database_connection(monkeypatch):
+def test_graph_read_retries_one_interrupted_database_connection(monkeypatch):
     class FlakyGraph:
         calls = 0
 
-        def invoke(self, value, config):
+        def get_state(self, config):
             self.calls += 1
             if self.calls == 1:
                 raise OperationalError("connection closed")
@@ -142,7 +142,7 @@ def test_graph_call_retries_one_interrupted_database_connection(monkeypatch):
     graph = FlakyGraph()
     monkeypatch.setattr(runtime, "graph", lambda tier: graph)
 
-    assert runtime.invoke("free", {}, {"configurable": {"thread_id": "r1"}}) == {"ok": True}
+    assert runtime.get_state("free", {"configurable": {"thread_id": "r1"}}) == {"ok": True}
     assert graph.calls == 2
 
 
