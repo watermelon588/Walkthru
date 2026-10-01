@@ -128,6 +128,10 @@ if os.environ.get("WARMUP", "1") == "1":
 if os.environ.get("RETENTION_JOB", "1") == "1" and os.environ.get("SUPABASE_SECRET_KEY"):
     jobs.start_background()  # same switch: background jobs off in tests and one-off scripts (JOB_WORKERS=0 when a worker process runs them)
     citations.start_background()
+elif os.environ.get("SUPABASE_SECRET_KEY"):
+    # A test switch leaking into a real launch (2026-10-01) left reports queued for good with nothing in the logs.
+    log.warning("Background jobs are OFF in this API process (RETENTION_JOB=%s): reports, comparisons and watch checks stay queued "
+                "until `python -m app.jobs` runs. Unset RETENTION_JOB to run them here.", os.environ.get("RETENTION_JOB"))
 
 app.add_exception_handler(OperationalError, _database_unavailable)
 app.add_exception_handler(PoolTimeout, _database_unavailable)
@@ -157,8 +161,20 @@ def _server_error(request: Request, error: Exception) -> JSONResponse:
 app.add_exception_handler(Exception, _server_error)
 
 
-@app.get("/health")
-def health() -> dict[str, str]:
+JOBS_STALLED_S = 120  # a report normally starts within seconds; two minutes waiting means no worker is draining the queue
+
+
+@app.get("/health", response_model=None)
+def health() -> dict[str, str] | JSONResponse:
+    """Up, and the job queue is moving. Without a worker (RETENTION_JOB=0 or JOB_WORKERS=0 on this process and no
+    `python -m app.jobs` running) runs still finish but their reports never get written, so say so here."""
+    try:
+        late = db.oldest_waiting_job(JOBS_STALLED_S)
+    except Exception:  # noqa: BLE001 - a database outage has its own 503s; this check is only about the queue
+        late = None
+    if late:
+        return JSONResponse(status_code=503, content={"status": "degraded",
+                                                      "detail": f"No job worker is running: a {late['kind']} job has waited since {late['run_after']}."})
     return {"status": "ok"}
 
 
@@ -525,6 +541,7 @@ def finish_run(run_id: str, values: dict) -> None:
             deliver.send_report(to, f"{WEB_URL}/app/runs/{run_id}", row["site"], rep.model_dump())
     except Exception:
         log.exception("report failed for run %s", run_id)
+        raise  # the job is retried with backoff (app/jobs.py); swallowing it marked the job done with no report
 
 
 def _verified(site: str, user_id: str) -> bool:
@@ -552,11 +569,20 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
     """Free homepage scan: first impression, SEO basics, security headers. Public report, no login."""
     if not limits.local_dev(request):  # counted only once the body is valid, so a typo does not use a scan
         limits.hit(f"scan:{limits.address(request)}", SCAN_LIMIT, SCAN_WINDOW, "Too many scans from this address. Try again in an hour or sign in.")
-    if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
-        raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
     try:
-        run_id, rep = run_scan(body.site)
-    except ValueError as e:
+        parsed = httpx.URL(body.site)
+        site = str(parsed.copy_with(raw_path=parsed.raw_path))  # include the implicit root slash; preserve encoded paths/queries
+        if policy.category(site) == "site owner opt-out" or abuse.paused("", policy.host(site)):
+            raise ValueError("The owner of this site asked Walkthru not to scan it.")
+        fetch.assert_public(site)
+        cached = db.recent_public_scan(site)
+        if cached:
+            run_id, rep = cached["id"], cached
+        else:
+            if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
+                raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
+            run_id, rep = run_scan(site)
+    except (ValueError, httpx.InvalidURL) as e:
         raise HTTPException(422, str(e)) from e
     if body.email:
         deliver.send_report(body.email, f"{WEB_URL}/r/{run_id}", rep["site"], rep["report"])
@@ -1193,6 +1219,8 @@ FEEDBACK_LIMIT, FEEDBACK_WINDOW = 5, 3600
 @app.post("/feedback")
 def send_feedback(body: Feedback, user: dict = Depends(require_user)) -> dict:
     """Signed-in users write to the founder. Stored for the admin panel only; never shown to other users."""
+    if len(body.message.strip()) < 3:
+        raise HTTPException(422, "Write at least three characters of feedback.")
     limits.hit(f"feedback:{user['id']}", FEEDBACK_LIMIT, FEEDBACK_WINDOW, "Thanks, we have your messages. You can send more in an hour.")
     db.app_event("feedback", user["id"], {"message": body.message.strip(), "page": body.page.strip()})
     return {"sent": True}
@@ -1224,7 +1252,10 @@ def request_access(body: AccessRequest, user: dict = Depends(require_user)) -> d
         raise HTTPException(409, "Your request is already waiting for review.") from e
     log.info("access request %s for %s", row.get("id"), body.plan)
     if os.environ.get("FOUNDER_EMAIL"):
-        jobs.enqueue("notify_founder", {"user_id": user["id"], "plan": body.plan, "note": body.note.strip(), "request_id": str(row.get("id"))})
+        try:
+            jobs.enqueue("notify_founder", {"user_id": user["id"], "plan": body.plan, "note": body.note.strip(), "request_id": str(row.get("id"))})
+        except (db.DatabaseUnavailable, httpx.HTTPError):
+            log.warning("access request %s saved; founder notification could not be queued", row.get("id"))
     return {"id": row.get("id"), "plan": body.plan, "status": "pending"}
 
 

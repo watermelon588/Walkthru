@@ -3,6 +3,7 @@
 import httpx
 import pytest
 
+from app import providers
 from app.agent.schema import PersonaStep
 from app.agent.typesafe import JevDecisionClient, JevFallback, build_request
 
@@ -71,6 +72,26 @@ def client_with(body):
         return httpx.Response(200, json=body)
 
     return JevDecisionClient("secret-key", client=httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_provider_outage_opens_circuit():
+    calls = []
+    def unavailable(request):
+        calls.append(request)
+        return httpx.Response(503)
+    adapter = JevDecisionClient("test", client=httpx.Client(transport=httpx.MockTransport(unavailable)))
+    for _ in range(4):
+        with pytest.raises(JevFallback):
+            adapter.decide(state())
+    assert len(calls) == 3 and not providers.available("typesafe")
+
+
+def test_low_confidence_is_not_a_provider_outage():
+    adapter = client_with(response(operation_confidence=0.1))
+    for _ in range(4):
+        with pytest.raises(JevFallback, match="confidence"):
+            adapter.decide(state())
+    assert providers.available("typesafe")
 
 
 def test_build_request_uses_structured_state_and_compatible_targets():

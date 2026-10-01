@@ -103,7 +103,8 @@ def test_daily_rollover_preserves_cooldown_and_anonymous_cannot_call_rpc(sql, si
     enqueue(sql, site, count=2)
     ids = [r[0] for r in sql("select id from citation_checks")]
     assert claim(sql, ids[0], gap=60)
-    sql("update citation_quota set day = current_date - 1")
+    # Production quota days use UTC, even when the local Postgres timezone is ahead of it.
+    sql("update citation_quota set day = (now() at time zone 'UTC')::date - 1")
     assert not claim(sql, ids[1])  # reset is not a bypass for provider spacing
     sql("update citation_quota set next_at = now() - interval '1 second'")
     assert claim(sql, ids[1])

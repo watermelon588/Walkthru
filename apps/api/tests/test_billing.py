@@ -21,6 +21,8 @@ OTHER_USER = "00000000-0000-0000-0000-000000000002"
 
 @pytest.fixture(autouse=True)
 def dodo_env(monkeypatch):
+    monkeypatch.delenv("FOUNDER_EMAIL", raising=False)  # local .env must not send real founder mail during tests
+    monkeypatch.setattr(db, "user_email", lambda user_id: "buyer@example.com")
     monkeypatch.setenv("DODO_PAYMENTS_API_KEY", "test-key")
     monkeypatch.setenv("DODO_PAYMENTS_WEBHOOK_KEY", SECRET)
     monkeypatch.setenv("DODO_PAYMENTS_BUSINESS_ID", BUSINESS)
@@ -185,6 +187,20 @@ def test_access_request_takes_only_plan_and_note(billing_db):
     r = c.post("/billing/access-requests", json={"plan": "pro", "note": "testing my SaaS signup"})
     assert r.status_code == 200 and r.json()["status"] == "pending"
     assert c.post("/billing/access-requests", json={"plan": "plus"}).status_code == 409  # one pending at a time
+
+
+def test_saved_access_request_survives_notification_queue_failure(billing_db, monkeypatch):
+    from app import jobs
+
+    monkeypatch.setenv("FOUNDER_EMAIL", "founder@example.com")
+    monkeypatch.setattr(jobs, "enqueue", lambda *a, **kw: (_ for _ in ()).throw(db.DatabaseUnavailable("offline")))
+    client = TestClient(app)
+    sent = client.post("/billing/access-requests", json={"plan": "pro", "note": "Test signup"})
+    assert sent.status_code == 200
+    saved = client.get("/billing").json()["requests"]
+    assert saved[0]["id"] == sent.json()["id"]
+    assert len(billing_db["requests"]) == 1
+    assert client.post("/billing/access-requests", json={"plan": "pro"}).status_code == 409
 
 
 def test_billing_status_hides_product_ids(billing_db):

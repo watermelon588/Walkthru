@@ -78,6 +78,22 @@ def get_run(run_id: str) -> dict | None:
     return rows[0] if rows else None
 
 
+def recent_public_scan(site: str) -> dict | None:
+    """Reuse only completed anonymous scans, for ten minutes from creation.
+
+    Exact URL matching preserves paths and queries. No process cache: deletion or
+    unsharing takes effect on the next lookup, and every API process sees the same rows.
+    """
+    since = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    rows = _rows({
+        "site": f"eq.{site}", "kind": "eq.scan", "tier": "eq.free",
+        "user_id": "is.null", "public": "eq.true", "status": "eq.done",
+        "report": "not.is.null", "created_at": f"gt.{since}",
+        "order": "created_at.desc", "limit": "1", "select": "id,site,report",
+    })
+    return rows[0] if rows else None
+
+
 def update_run(run_id: str, status: str, steps: list[dict], tokens: int = 0) -> None:
     _patch({"id": f"eq.{run_id}"}, {"status": status, "steps": steps, "tokens": tokens, "updated_at": _now()})
 
@@ -859,6 +875,13 @@ def finish_job(job_id: int, lease: str, values: dict) -> None:
     """Record the outcome, only while this worker still holds the lease (a reclaimed job belongs to its new worker)."""
     _request("PATCH", "/rest/v1/jobs", params={"id": f"eq.{job_id}", "lease": f"eq.{lease}"}, json_body=values | {"updated_at": _now()},
              prefer="return=minimal")
+
+
+def oldest_waiting_job(seconds: int) -> dict | None:
+    """The oldest queued job that has been due for over `seconds`. None means the workers are keeping up."""
+    before = (datetime.now(UTC) - timedelta(seconds=seconds)).isoformat()
+    return _one(_request("GET", "/rest/v1/jobs", params={"status": "eq.queued", "run_after": f"lt.{before}", "select": "id,kind,run_after",
+                                                        "order": "run_after.asc", "limit": "1"}) or [])
 
 
 def purge_jobs(before: str) -> None:

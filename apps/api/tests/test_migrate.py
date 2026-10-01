@@ -1,6 +1,7 @@
 """Versioned migrations (app/migrate.py, SD-5.1) against a throwaway local Postgres with Supabase's roles and auth stubs.
 Skips when the Postgres server binaries (initdb, pg_ctl) are missing."""
 
+import json
 import shutil
 import socket
 import subprocess
@@ -66,6 +67,43 @@ def test_a_new_database_gets_every_migration_once(conn):
     assert {"runs", "jobs", "rate_limits", "team_messages", "schema_migrations"} <= tables(conn)
     assert migrate.up(conn) == []  # nothing twice
     assert conn.execute("select version, checksum from public.schema_migrations where version = '0001'").fetchone()[1] == migrate.checksum(migrate.DIRECTORY / "0001_initial.sql")
+
+
+def test_report_and_evidence_rls_follow_membership_removal_without_postgrest(conn):
+    """Real baseline policies; no remote accounts, credentials or workspace access grants."""
+    import psycopg
+
+    migrate.up(conn)
+    owner, viewer, team = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    conn.execute("insert into auth.users(id) values (%s), (%s)", (owner, viewer))
+    for run, public in (("private", False), ("shared", False), ("public", True)):
+        conn.execute("insert into runs(id,user_id,site,goal,persona,public) values (%s,%s,'https://fixture.test','Read','first_timer',%s)", (run, owner, public))
+        conn.execute("insert into storage.objects(bucket_id,name) values ('run-evidence',%s)", (run + '/step-01.jpg',))
+    conn.execute("insert into teams(id,name,owner_id) values (%s,'Local QA',%s)", (team, owner))
+    conn.execute("insert into team_members(team_id,user_id,role) values (%s,%s,'viewer')", (team, viewer))
+    conn.execute("insert into team_runs(team_id,run_id,shared_by) values (%s,'shared',%s)", (team, owner))
+
+    def visible(role, user=None):
+        # Values are local constants. Claims mimic the auth.uid() input used by PostgREST.
+        conn.execute("reset role")
+        conn.execute("select set_config('request.jwt.claims', %s, false)", (json.dumps({'sub': str(user)} if user else {}),))
+        conn.execute(f"set role {role}")
+        reports = {row[0] for row in conn.execute("select id from runs")}
+        evidence = {row[0].split('/')[0] for row in conn.execute("select name from storage.objects")}
+        assert reports == evidence
+        return reports
+
+    assert visible('anon') == {'public'}
+    assert visible('authenticated', owner) == {'private', 'shared', 'public'}
+    assert visible('authenticated', viewer) == {'shared', 'public'}
+    assert conn.execute("select count(*) from teams").fetchone()[0] == 1
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        conn.execute("update team_members set role='owner' where user_id=%s", (viewer,))
+    conn.execute("reset role")
+    conn.execute("delete from team_members where team_id=%s and user_id=%s", (team, viewer))
+    assert visible('authenticated', viewer) == {'public'}
+    assert conn.execute("select count(*) from teams").fetchone()[0] == 0
+    conn.execute("reset role")
 
 
 def test_a_database_set_up_by_hand_takes_0001_as_its_baseline(conn):

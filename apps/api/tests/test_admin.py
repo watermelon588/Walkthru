@@ -123,11 +123,49 @@ def test_feedback_is_stored_for_the_founder_and_rate_limited(monkeypatch):
     monkeypatch.setattr(db, "app_event", lambda kind, user_id, detail: stored.append((kind, user_id, detail)))
     c = TestClient(main.app)
     assert c.post("/feedback", json={"message": "hi"}).status_code == 422  # too short
+    assert c.post("/feedback", json={"message": "   "}).status_code == 422
     assert c.post("/feedback", json={"message": "Love the report", "page": "/app", "user_id": "x"}).status_code == 422  # no extra fields
     for _ in range(main.FEEDBACK_LIMIT):
         assert c.post("/feedback", json={"message": "Love the report", "page": "/app"}).status_code == 200
     assert c.post("/feedback", json={"message": "one more"}).status_code == 429
     assert stored[0][0] == "feedback" and stored[0][2] == {"message": "Love the report", "page": "/app"}
+
+
+def test_admin_read_and_write_failures_show_recovery_without_private_errors(panel, monkeypatch):
+    client, _ = panel
+    sign_in(client)
+    csrf = csrf_of(client)
+    monkeypatch.setattr(admin_app, "_passes", lambda: (_ for _ in ()).throw(db.DatabaseUnavailable("private database URL")))
+    page = client.get("/")
+    assert page.status_code == 503 and "panel could not load" in page.text
+    assert "private database URL" not in page.text
+    monkeypatch.setattr(db, "grant_entitlement", lambda *a: (_ for _ in ()).throw(db.DatabaseUnavailable("private database URL")))
+    failed = client.post("/grant", data={"csrf": csrf, "code": code(), "email": BUYER["email"], "plan": "pro", "days": "30"}, headers=ORIGIN)
+    assert failed.status_code == 503 and "Some changes may already have been saved" in failed.text
+    assert "private database URL" not in failed.text
+    assert failed.headers["cache-control"] == "no-store" and failed.headers["x-frame-options"] == "DENY"
+
+
+def test_grant_cannot_approve_a_request_for_another_recipient(panel, monkeypatch):
+    client, calls = panel
+    sign_in(client)
+    csrf = csrf_of(client)
+    request_id = "00000000-0000-0000-0000-000000000099"
+    monkeypatch.setattr(db, "get_access_request", lambda _: {"id": request_id, "user_id": "00000000-0000-0000-0000-0000000000a1", "status": "pending"})
+    result = client.post("/grant", data={"csrf": csrf, "code": code(), "email": BUYER["email"], "plan": "pro", "days": "30", "request_id": request_id}, headers=ORIGIN)
+    assert result.headers["location"] == "/?m=bad-input" and calls["grants"] == []
+
+
+def test_a_saved_grant_with_a_changed_request_reports_partial_success(panel, monkeypatch):
+    client, calls = panel
+    sign_in(client)
+    csrf = csrf_of(client)
+    request_id = "00000000-0000-0000-0000-000000000099"
+    monkeypatch.setattr(db, "get_access_request", lambda _: {"id": request_id, "user_id": BUYER["id"], "status": "pending"})
+    monkeypatch.setattr(db, "decide_access_request", lambda *a: False)
+    result = client.post("/grant", data={"csrf": csrf, "code": code(), "email": BUYER["email"], "plan": "pro", "days": "30", "request_id": request_id}, headers=ORIGIN)
+    assert result.headers["location"] == "/?m=grant-review"
+    assert len(calls["grants"]) == 1
 
 
 def test_unhandled_errors_answer_generically_and_reach_the_panel(monkeypatch):

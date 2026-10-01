@@ -16,6 +16,12 @@ from app.main import app
 USER = "00000000-0000-0000-0000-000000000001"
 
 
+@pytest.fixture(autouse=True)
+def provider_health(monkeypatch):
+    from app import providers
+    monkeypatch.setattr(providers, "_states", {})
+
+
 class _Rows(dict):
     """Runs by id, plus the fake agent-safety tables (audit, blocks, events) as attributes."""
 
@@ -48,6 +54,17 @@ def fake_db(monkeypatch):
 
     monkeypatch.setattr(db, "insert_run", insert_run)
     monkeypatch.setattr(db, "get_run", rows.get)
+    def recent_public_scan(site):
+        from datetime import timedelta
+
+        since = datetime.now(UTC) - timedelta(minutes=10)
+        found = [r for r in rows.values() if r.get("site") == site and r.get("kind") == "scan"
+                 and r.get("tier") == "free" and r.get("user_id") is None and r.get("public")
+                 and r.get("status") == "done" and r.get("report") is not None
+                 and datetime.fromisoformat(r["created_at"]) > since]
+        return max(found, key=lambda r: r["created_at"], default=None)
+
+    monkeypatch.setattr(db, "recent_public_scan", recent_public_scan)
     monkeypatch.setattr(db, "update_run", update_run)
     monkeypatch.setattr(db, "mark_run_stopped", mark_run_stopped)
     monkeypatch.setattr(db, "set_report", set_report)

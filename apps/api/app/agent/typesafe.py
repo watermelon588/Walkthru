@@ -13,6 +13,7 @@ from typing import Any
 
 import httpx
 
+from app import providers
 from app.agent.schema import PersonaStep
 
 API_URL = "https://api.typesafe.ai/v1/systemone"
@@ -174,14 +175,15 @@ class JevDecisionClient:
 
     def decide(self, state: dict, messages: list | None = None) -> JevDecision:
         try:
-            response = self.client.post(
-                API_URL,
-                headers={"Authorization": f"Bearer {self._api_key}"},
-                json=build_request(state, model=self.model),
-            )
-            response.raise_for_status()
-            body = response.json()
-        except (httpx.HTTPError, ValueError, KeyError) as error:
+            with providers.guard("typesafe"):
+                response = self.client.post(
+                    API_URL,
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                    json=build_request(state, model=self.model),
+                )
+                response.raise_for_status()
+                body = response.json()
+        except (httpx.HTTPError, ValueError, KeyError, providers.CircuitOpen) as error:
             raise JevFallback(f"provider error: {type(error).__name__}") from error
 
         try:

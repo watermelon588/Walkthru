@@ -2,8 +2,9 @@
 
 A validated token is trusted for up to TTL seconds, never past its own expiry. The cache is keyed by the token's
 SHA-256, so raw tokens are not kept in the cache. The per-process LRU holds at most MAX_CACHED entries.
-Cache hits do not extend the validation window: sign-out/revocation may take up to five minutes to be noticed
-by this cache (or less when the token expires). `forget` clears local entries on account deletion.
+Cache hits do not extend the validation window. A rejection by Auth may take up to five minutes to reach a warm
+cache, never past token expiry. This is not a sign-out revocation deadline: Supabase access JWTs can remain valid
+until expiry after sign-out. `forget` clears local entries on account deletion.
 """
 
 import base64
@@ -63,6 +64,11 @@ def require_user(request: Request) -> dict:
     token = auth[7:].strip()
     key = hashlib.sha256(token.encode()).hexdigest()
     now = time.time()
+    expiry = _expiry(token)
+    if expiry and expiry <= now:
+        with _cache_lock:
+            _cache.pop(key, None)
+        raise HTTPException(401, "invalid or expired session")
     with _cache_lock:
         hit = _cache.get(key)
         if hit and hit[1] > now:
@@ -85,7 +91,7 @@ def require_user(request: Request) -> dict:
     if r.status_code != 200:
         raise HTTPException(401, "invalid or expired session")
     user = profile(r.json())
-    until = min(now + TTL, _expiry(token) or now + TTL)
+    until = min(now + TTL, expiry or now + TTL)
     with _cache_lock:
         for k in [k for k, v in _cache.items() if v[1] <= now]:
             del _cache[k]

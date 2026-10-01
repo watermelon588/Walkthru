@@ -99,9 +99,10 @@ def test_request_response_purge_still_runs_when_screenshot_storage_is_down(monke
     def unavailable():
         raise RuntimeError("storage unavailable")
     monkeypatch.setattr(retention, "purge_expired", unavailable)
-    monkeypatch.setattr(abuse, "purge_old", lambda: None)
-    monkeypatch.setattr(jobs, "purge_finished", lambda: None)
-    monkeypatch.setattr(db, "purge_rate_limits", lambda before: None)
-    monkeypatch.setattr(db, "expire_run_requests", lambda: purged.append(True))
+    monkeypatch.setattr(abuse, "purge_old", lambda: purged.append("audit"))
+    monkeypatch.setattr(jobs, "purge_finished", lambda: purged.append("jobs"))
+    monkeypatch.setattr(db, "purge_rate_limits", lambda before: purged.append("limits"))
+    monkeypatch.setattr(db, "expire_run_requests", lambda: purged.append("requests"))
     retention.run_pass()
-    assert purged == [True]
+    assert set(purged) == {"audit", "jobs", "limits", "requests"}
+    assert len(purged) == 4

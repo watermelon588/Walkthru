@@ -173,6 +173,38 @@ def store(monkeypatch):
     return sites, prompts, checks
 
 
+def test_open_provider_circuit_preserves_queue_without_spending_quota(store, passes, monkeypatch):
+    from app import providers
+    from tests.test_providers import trip
+
+    plan(passes, "pro")
+    client = TestClient(app)
+    site = client.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    client.post(f"/citations/{site['id']}/check")
+    trip("groq")
+    monkeypatch.setitem(citations.ENGINES, "web", lambda prompt: pytest.fail("provider should be skipped"))
+    assert citations.process() == 0
+    assert providers.available("groq") is False
+    assert all(c["status"] == "queued" and c["attempts"] == 0 for c in store[2])
+
+
+def test_circuit_opened_after_reservation_requeues_without_terminal_failure(store, passes, monkeypatch):
+    from app import providers
+
+    plan(passes, "pro")
+    client = TestClient(app)
+    site = client.post("/citations", json={"site": "https://acmenotes.app"}).json()["site"]
+    client.post(f"/citations/{site['id']}/check")
+    def unavailable(prompt):
+        raise providers.CircuitOpen("another request opened the circuit")
+    monkeypatch.setitem(citations.ENGINES, "web", unavailable)
+    assert citations.process() == 0
+    attempted = [c for c in store[2] if c["attempts"]]
+    assert len(attempted) == 1
+    assert attempted[0]["status"] == "queued" and not attempted[0].get("lease_token")
+    assert "failures" not in attempted[0]["result"]
+
+
 def plan(passes, name):
     passes.append({"user_id": USER, "plan": name, "starts_at": "2000-01-01T00:00:00+00:00", "expires_at": "2999-01-01T00:00:00+00:00", "runs_granted": 150})
 

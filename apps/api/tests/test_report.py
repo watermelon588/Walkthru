@@ -84,7 +84,8 @@ def test_instant_scans_stop_at_the_daily_free_cap(fake_db, monkeypatch):
     c = TestClient(app)
     monkeypatch.setattr(plans, "FREE_SCANS_PER_DAY", 1)
     assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200
-    r = c.post("/scans", json={"site": HARD + "/"})
+    assert c.post("/scans", json={"site": HARD + "/"}).status_code == 200  # reuse costs no scan capacity
+    r = c.post("/scans", json={"site": HARD + "/different"})
     assert r.status_code == 429 and "capacity" in r.json()["detail"]
 
 

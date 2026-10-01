@@ -12,6 +12,12 @@ from app.agent.schema import PersonaStep
 from app.agent.typesafe import JevFallback
 
 
+@pytest.fixture(autouse=True)
+def plain_models(monkeypatch):
+    # These tests inspect configuration/order. Real guarded fallback execution is in test_providers.py.
+    monkeypatch.setattr(runtime, "guarded", lambda provider, model: model)
+
+
 class FakeRunnable:
     def with_fallbacks(self, fallbacks):
         return self
@@ -75,6 +81,19 @@ def test_free_pool_skips_openrouter_without_a_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
 
     assert runtime.free_pool(PersonaStep, writer=True) == ["groq-a", "gem"]
+
+
+def test_existing_direct_anthropic_path_has_a_timeout_no_retries_and_free_fallback(monkeypatch):
+    options = []
+    def model(**kwargs):
+        options.append(kwargs)
+        return Tagged("anthropic")
+    monkeypatch.setitem(sys.modules, "langchain_anthropic", SimpleNamespace(ChatAnthropic=model))
+    monkeypatch.delenv("CLAUDE_VERTEX_PROJECT", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-only")
+    monkeypatch.setattr(runtime, "free_pool", lambda schema: Tagged("free"))
+    assert runtime._llm_model("paid") == ["anthropic", "free"]
+    assert options[0]["timeout"] == 30 and options[0]["max_retries"] == 0
 
 
 class FakeFallback:

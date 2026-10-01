@@ -75,7 +75,10 @@ def local_dev(request: Request) -> bool:
 
 
 def for_user(request: Request, user_id: str) -> None:
-    """Called by auth.require_user once it knows who is asking."""
+    """Called by auth.require_user once it knows who is asking. Skipped for the founder on this machine, like by_address:
+    each count is a Supabase round trip (about 450 ms from India to the Sydney project) on every agent step and poll."""
+    if local_dev(request):
+        return
     name = _rule(request) or "account"
     apply(name, request.path_params.get("run_id", user_id) if name == "observe" else user_id)
 

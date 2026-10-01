@@ -124,3 +124,40 @@ def test_cache_evicts_least_recently_used_and_prunes_expired_below_capacity(monk
         assert set(auth._cache) == {digest("d")}
     finally:
         auth._cache.clear()
+
+
+def test_warm_rejected_session_is_rechecked_after_fixed_window_and_cold_rejection_is_immediate(monkeypatch):
+    app.dependency_overrides.clear()
+    auth._cache.clear()
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_PUBLISHABLE_KEY", "pk")
+    now, accepted, calls = [1_000_000.0], [True], []
+    monkeypatch.setattr(auth.time, "time", lambda: now[0])
+    def validate(url, headers, timeout):
+        calls.append(headers["Authorization"])
+        return httpx.Response(200 if accepted[0] else 401, json={"id": USER})
+    monkeypatch.setattr(auth.httpx, "get", validate)
+    token = _token(now[0] + 3600)
+    client = TestClient(app)
+    try:
+        assert client.get("/runs/nope", headers={"Authorization": f"Bearer {token}"}).status_code == 404
+        accepted[0] = False
+        now[0] += auth.TTL - 1
+        assert client.get("/runs/nope", headers={"Authorization": f"Bearer {token}"}).status_code == 404
+        assert len(calls) == 1
+        assert client.get("/runs/nope", headers={"Authorization": "Bearer cold"}).status_code == 401
+        now[0] += 1
+        assert client.get("/runs/nope", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+        assert len(calls) == 3
+    finally:
+        auth._cache.clear()
+
+
+def test_expired_token_cannot_be_accepted_even_if_upstream_says_valid(monkeypatch):
+    app.dependency_overrides.clear()
+    auth._cache.clear()
+    monkeypatch.setattr(auth.time, "time", lambda: 1_000_000)
+    validate = []
+    monkeypatch.setattr(auth.httpx, "get", lambda *a, **k: validate.append(True))
+    assert TestClient(app).get("/runs/nope", headers={"Authorization": f"Bearer {_token(999_999)}"}).status_code == 401
+    assert validate == [] and not auth._cache

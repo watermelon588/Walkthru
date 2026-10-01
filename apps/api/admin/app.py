@@ -8,10 +8,12 @@ Server-rendered HTML with no JavaScript, a CSP that allows none, and every value
 """
 
 import html
+import logging
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
@@ -26,6 +28,7 @@ PLAN_NAME = {"free": "Free", "launch": "Launch Pack", "pro": "Pro", "plus": "Plu
 
 guard = Guard()
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+log = logging.getLogger("walkthru.admin")
 
 
 def _admin_email() -> str:
@@ -57,6 +60,20 @@ async def walls(request: Request, call_next) -> Response:
         return PlainTextResponse("Forbidden", status_code=403)
     response = await call_next(request)
     response.headers.update(HEADERS)
+    return response
+
+
+@app.exception_handler(db.DatabaseUnavailable)
+@app.exception_handler(httpx.HTTPError)
+@app.exception_handler(Exception)
+async def admin_error(request: Request, error: Exception) -> Response:
+    log.error("admin %s %s failed: %s", request.method, request.url.path, type(error).__name__)
+    changing = request.method == "POST"
+    message = ("The action could not be confirmed. Some changes may already have been saved. Check the user's current plan and request status before repeating it."
+               if changing else "The panel could not load its data. Check your connection and reload this page.")
+    response = _page("Admin unavailable", f'<section class="narrow"><h1>Could not confirm this request</h1><p role="alert">{e(message)}</p><p><a href="/">Return to admin</a></p></section>')
+    response.status_code = 503 if isinstance(error, (db.DatabaseUnavailable, httpx.HTTPError)) else 500
+    response.headers.update(HEADERS)  # generic handlers run outside the middleware stack
     return response
 
 
@@ -119,10 +136,16 @@ def _grant(email: str, plan: str, days: int, request_id: str | None, actor: str)
     user = next((u for u in _users() if u["email"] == email.strip().lower()), None)
     if user is None:
         return "no-user"
+    if request_id:
+        req = db.get_access_request(request_id) if _uuid(request_id) else None
+        if not req or req["status"] != "pending":
+            return "no-request"
+        if str(req["user_id"]) != user["id"]:
+            return "bad-input"
     db.grant_entitlement(user["id"], plan, days, plans.PLANS[plan].runs, "founder")
     notify.pass_granted(user["id"], plan, days)  # their sidebar and a toast say so, live
-    if request_id:
-        db.decide_access_request(request_id, "approved")
+    if request_id and not db.decide_access_request(request_id, "approved"):
+        return "grant-review"
     db.audit(actor, "pass.grant", user["id"], {"email": user["email"], "plan": plan, "days": days, "request_id": request_id})
     return "granted"
 
@@ -145,6 +168,7 @@ MESSAGES = {
     "granted": "Pass granted.", "ended": "Pass ended.", "rejected": "Request declined.", "offered": "Payment offer sent. It shows on their Plan & billing page for 24 hours.",
     "bad-code": "That authenticator code did not work. Nothing changed.", "no-user": "No account with that email. They need to sign in once first.",
     "bad-input": "Check the plan and the number of days.", "no-request": "That request was already decided.", "offer-failed": "Could not create the payment offer. Check the Dodo settings.",
+    "grant-review": "Pass granted, but the request status changed. Check the current plan and request before repeating the grant.",
 }
 
 

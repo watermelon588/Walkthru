@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel
 
+from app import providers
 from app.agent.persona import build_graph
 from app.agent.schema import PersonaStep
 from app.agent.typesafe import DEFAULT_MODEL as DEFAULT_JEV_MODEL
@@ -128,6 +129,19 @@ def claude(schema: type[BaseModel], timeout: float = 30):
     return RunnableLambda(run, name=f"claude:{CLAUDE_MODEL}")
 
 
+def guarded(provider: str, model):
+    """Keep LangChain's fallback/config propagation while sharing health across models and schemas."""
+    from langchain_core.runnables import RunnableConfig, RunnableLambda
+
+    def run(messages, config: RunnableConfig):
+        with providers.guard(provider):
+            result = model.invoke(messages, config=config)
+            unwrap(result)  # include_raw may return a parsing error instead of raising; allow fallback in that case.
+            return result
+
+    return RunnableLambda(run, name=f"guarded:{provider}")
+
+
 def free_pool(schema: type[BaseModel], writer: bool = False, paid: bool = False):
     """Try each free model in order and move on instantly when one is rate-limited, overloaded or slow.
 
@@ -144,12 +158,12 @@ def free_pool(schema: type[BaseModel], writer: bool = False, paid: bool = False)
     for name in GROQ_MODELS:
         gpt_oss = name.startswith("openai/gpt-oss")
         llm = ChatGroq(model=name, temperature=0, max_tokens=2048, timeout=8, max_retries=0, **({"reasoning_effort": "low"} if gpt_oss else {}))
-        groq.append(llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {})))
-    gemini = [ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True) for name in GEMINI_MODELS]
-    slow = [openrouter(schema, name) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
+        groq.append(guarded("groq", llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {}))))
+    gemini = [guarded("gemini", ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True)) for name in GEMINI_MODELS]
+    slow = [guarded("openrouter", openrouter(schema, name)) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
     chain = groq[:1] + slow + groq[1:] + gemini
     if paid and claude_enabled():
-        chain = [claude(schema)] + chain  # Pro and Plus: Claude first, the free chain behind it
+        chain = [guarded("claude_vertex", claude(schema))] + chain  # Pro and Plus: Claude first, the free chain behind it
     return chain[0].with_fallbacks(chain[1:])
 
 
@@ -174,7 +188,8 @@ def _llm_model(tier: str):
     if tier == "paid" and os.environ.get("ANTHROPIC_API_KEY"):
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=PAID_MODEL, max_tokens=1024, temperature=0).with_structured_output(PersonaStep, include_raw=True)
+        model = ChatAnthropic(model=PAID_MODEL, max_tokens=1024, temperature=0, timeout=30, max_retries=0).with_structured_output(PersonaStep, include_raw=True)
+        return guarded("anthropic", model).with_fallbacks([free_pool(PersonaStep)])
     return free_pool(PersonaStep)  # ponytail: paid tier rides the free pool until an Anthropic key exists
 
 

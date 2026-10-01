@@ -28,7 +28,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from selectolax.parser import HTMLParser
 
-from app import db, notify, plans
+from app import db, notify, plans, providers
 from app.citation_evidence import VERSION, analyze, clean, domain_of, first, gemini_sources, groq_sources, source
 
 log = logging.getLogger("walkthru.citations")
@@ -182,6 +182,7 @@ MEMORY_SYSTEM = ("Answer the person's question the way an AI assistant would, fr
                  "companies by name. Keep it under 150 words.")
 
 
+@providers.guard("groq")
 def ask_web(prompt: str) -> dict:
     key = os.environ.get("GROQ_API_KEY")
     if not key:
@@ -201,6 +202,7 @@ def ask_web(prompt: str) -> dict:
             "tokens": (body.get("usage") or {}).get("total_tokens", 0), "model": WEB_MODEL}
 
 
+@providers.guard("gemini")
 def ask_memory(prompt: str, *, mode: str | None = None) -> dict:
     key = gemini_key()
     if not key:
@@ -275,6 +277,9 @@ def process(max_checks: int = 30, sleep=time.sleep) -> int:
             break
         if engine in busy or engine not in ENGINES:
             continue  # stays queued: tomorrow's quota, or the next pass
+        if not providers.available("groq" if engine == "web" else "gemini"):
+            busy.add(engine)  # Skip before reserving quota while the provider circuit is already open.
+            continue
         token = str(uuid.uuid4())
         if not db.claim_citation_check(check["id"], check["attempts"], engine, DAILY[engine], WEB_GAP_S if engine == "web" else 1, token):
             busy.add(engine)  # Avoid one RPC per queued row when quota or spacing is exhausted.
@@ -301,6 +306,11 @@ def process(max_checks: int = 30, sleep=time.sleep) -> int:
                                                    "tokens": got["tokens"], "model": got["model"], "last_error": None,
                                                    "result": result | {"raw_answer": got["answer"]}}, token)
             done += int(finished)
+        except providers.CircuitOpen:
+            busy.add(engine)
+            # Another thread may open the circuit after our precheck/reservation; preserve this queued check.
+            db.finish_citation_check(check["id"], {"next_attempt_at": (datetime.now(UTC) + timedelta(seconds=providers.COOLDOWN)).isoformat(),
+                                                  "last_error": "Provider temporarily unavailable; retry scheduled."}, token)
         except Busy:
             busy.add(engine)
             db.defer_citation_engine(engine, (datetime.now(UTC) + timedelta(hours=1)).isoformat())

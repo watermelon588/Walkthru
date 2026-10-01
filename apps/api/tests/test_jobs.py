@@ -7,6 +7,8 @@ import pytest
 
 from app import db, jobs, main, plans, watch
 
+REAL_FINISH_RUN = main.finish_run  # conftest swaps it for a recorder in every test
+
 
 @pytest.fixture
 def queue(monkeypatch):
@@ -101,3 +103,19 @@ def test_a_failed_weekly_check_comes_back_in_six_hours(monkeypatch):
     monkeypatch.setattr(db, "update_site", lambda site_id, values: updates.append(values["next_check_at"]))
     watch.check_due({"id": "s1", "site": "https://site.test/"})
     assert updates and updates[0] > datetime.now(UTC).isoformat()
+
+
+def test_a_failed_report_is_retried_not_marked_done(queue, monkeypatch):
+    """finish_run used to swallow its error, so the job was 'done', the run had no report and the page waited forever."""
+    monkeypatch.setattr(db, "get_run", lambda run_id: {"id": run_id, "site": "https://example.com", "goal": "Sign up", "persona": "first_timer",
+                                                       "status": "done", "user_id": None, "tier": "free", "report": None})
+
+    def down(*a, **k):
+        raise RuntimeError("every model failed")
+
+    monkeypatch.setattr(main.report, "run_report", down)
+    monkeypatch.setattr(main, "finish_run", REAL_FINISH_RUN)
+    queue["due"].append(job(kind="finish_run", attempts=1, payload={"run_id": "r1", "values": {"status": "done", "steps": []}}))
+    jobs.run_one()
+    outcome = queue["finished"][0][2]
+    assert outcome["status"] == "queued" and outcome["last_error"] == "RuntimeError: every model failed"
