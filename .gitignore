@@ -18,3 +18,16 @@ graphify-out/
 evals/.walkthru-token
 evals/results/
 build/
+
+# Design media kept out of the public repo (large, regenerable, or third-party)
+apps/web/design/video/references/reference*.mp4
+apps/web/design/video/InShot_*.mp4
+apps/web/design/launch-videos/*/assets/
+apps/web/design/launch-videos/*/snapshots/
+apps/web/design/launch-videos/shared/*
+!apps/web/design/launch-videos/shared/kit/
+apps/web/design/launch-videos/*.log
+apps/web/design/launch-video-30s/frames/
+apps/web/design/launch-video-30s/review/
+apps/web/design/launch-video-30s/assets/
+apps/web/design/doodle-posters/walkthru-poster-pack.zip
