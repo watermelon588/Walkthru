@@ -1,6 +1,122 @@
 # Current State
 
-_Last updated: 2026-09-28_
+_Last updated: 2026-10-02_
+
+## Handoff for the next agent (2026-10-02, Claude Code local, written before pushing)
+
+Read this block first. It replaces the 2026-09-26 handoff.
+
+### Local state at this push
+- Local `main` equals `origin/main` after this push. This push includes every agent's uncommitted work (Claude Code, Codex and the front-end agent) at the founder's request.
+- Supabase: migrations baseline applied (`schema_migrations`, 0001 to 0003), plus the citation v2, `jobs` and `rate_limits` blocks. Schema changes now go only through a new numbered file in `apps/api/migrations/` and `python -m app.migrate`.
+- The founder's network has no IPv6: reach Postgres through the IPv4 session pooler (`aws-0-ap-southeast-2.pooler.supabase.com:5432`, user `postgres.<ref>`).
+- Local git-ignored state: `apps/api/.env` has `WEB_URL=http://localhost:5174` (Codex's YapChat session), which makes `tests/test_persona.py::test_local_web_origins_pass_cors_preflight` fail locally. It passes with `WEB_URL=http://localhost:5173`; not a code bug.
+- Large media is git-ignored (see the "Design media" block in `.gitignore`): third-party reference ads, raw InShot recordings, the launch films' copied `assets/`, `snapshots/` and `shared/` media, render logs, the 30-second film's frames, review and assets, and the poster zip. The final MP4s, posters, kits, tools and sources are committed. The ignored files stay on the founder's disk.
+
+### Done and tested before this push
+- System design (docs/system-design.md): SD-2.1, 2.2, 2.3, 3.1, 4.5, 4.7, 5.1, 6.1, 9.2 by Claude Code. Codex holds SD-6.2 and SD-8.1.
+- MCP: 23 tools (site verification, GitHub repos and fix pull requests, accept and reopen findings, compare, share, AI answers, watch, deploy hooks).
+- README rewritten: product, screens, design work, system breakdown, local setup.
+- Checks: API pytest 711 passed (2 env-only CORS failures above), ruff clean; web build and oxlint clean; extension vitest 90 passed and 1 skipped, tsc and lint clean.
+
+### Open, in order
+1. Founder's order stands: polish and harden, Dodo payments, then deploy (docs/deploy.md).
+2. Film A has a louder music bed in source (`data-volume` 0.8) but was not re-rendered; run `npx hyperframes render` in `apps/web/design/launch-videos/a-ship-friday` if wanted.
+3. Before posting any film: confirm the music licence (ende.app tracks from the brag skill) and image rights.
+
+### Do not change without the founder
+- Pricing, paid models or APIs, production database (each change needs explicit approval), the single accent colour, and any applied migration file.
+
+## 30-second doodle launch film (2026-10-01, Codex)
+
+- Created `apps/web/design/launch-video-30s/walkthru-launch-30s.mp4`: **30.000 seconds, 900 frames, 1920×1080, 30fps, H.264 with stereo AAC**. Eight scenes connect fresh perspectives, real browser journeys, evidence, search/accessibility/passive hygiene, coding-agent fixes and the Scout brand finale. Exact Geist and Geist Mono fonts, original logo, existing Scout walk strip, fourteen source artworks, three cutout subjects and real supplied recordings. The founder corrected the media root to Walkthru's `apps/web/design`; no TripVerse campaign branding was used, although TripVerse appears as the site being tested in the real demo.
+- Music and transition cues synthesized locally for this film, without downloaded music, samples, paid services or new dependencies. Audio loudness measured **-16.18 LUFS** after AAC encode. Browser account detail masked in derived frames; originals preserved. Source composition, asset provenance, original score, renderer, local player, filmstrip and QA are in the same folder. [Production notes](apps/web/design/launch-video-30s/README.md).
+- HyperFrames CLI was unavailable in the accessible npm cache; used the existing GSAP, bundled Playwright, Edge and FFmpeg for deterministic frame seeking and direct export. Sixteen key frames pass asset/font/text-bound checks, all eight scenes show motion, repeated seeks preserve DOM poses (32 pixels differ in browser rasterization out of 2,073,600), player fits 1440/375/320px, and final MP4 fully decodes. FFprobe confirms exact duration, frame count, dimensions, fps and audio. Final encoded scene filmstrip visually inspected. Web build and zero-warning lint pass, with existing build warnings. No production app, dependency, pricing, schema or deployment change.
+
+## Launch films, three 60-second variants (2026-10-01, Claude Code local, committed 2026-10-02)
+
+- `apps/web/design/launch-videos/`: `walkthru-launch-A-ship-friday.mp4` (after reference1, product-led), `walkthru-launch-B-every-stranger.mp4` (after reference2, shape language), `walkthru-launch-C-not-a-scanner.mp4` (after reference3, editorial manifesto). 1920x1080, 30 fps, 60 s, music and SFX. Built with the brag skill's Hyperframes workflow; each passes `npx hyperframes check`. README there explains the projects, tools and re-render.
+- Uses the founder's assets in `apps/web/design` (doodles, illustrations, photos, posters, demo recordings) and Scout's walk cycle from `brand.mp4` (`tools/build_scout.py`). Geist only.
+- Before posting: confirm the ende.app music licence (undocumented in the brag skill) and image rights. Only the final MP4s, posters, sources, kit and tools are committed; copied assets are git-ignored and rebuilt by the scripts in `tools/` (needs the local demo recordings).
+
+## YapChat extension connection fix (2026-10-01, Codex)
+
+- Founder reported “Could not establish connection. Receiving end does not exist.” before the first step on owner-authorized `https://yap-chat-five.vercel.app/`. Reproduced two injection failures: a legacy `true` marker and a removed runtime listener both prevented reinjection on an existing document. Injection now checks live listener registration, replaces the stale overlay and the sidepanel verifies main-frame ping after injecting. Missing-receiver errors show recovery instructions; no automatic retry of a dispatched click/form action. The error screen no longer suggests unrelated DNS verification or claims to keep waiting after an error.
+- Full extension suite **89 passed, 1 opt-in skipped**; TypeScript, zero-warning lint, production build and changed-file whitespace checks passed. The two regression cases failed before the fix. Browser read-only checks rendered YapChat homepage/login; no target form was submitted. Browser automation exposes only the in-app browser, which cannot host the installed Chrome extension. Native Chrome reload/retest is still required; no successful live YapChat journey is claimed.
+- The package is rebuilt in `apps/extension/.output/chrome-mv3`; ignored `apps/extension/.env.local` pins local web **5174** and API **8010**. Previous built manifest pointed to 5173. Restarted the missing web server on 5174 with a hidden process. API health succeeded but the 5174-origin response had no CORS allow header because its local `WEB_URL` remained 5173. Verified the 8010 process and Walkthru routes, preserved secrets, changed only local `WEB_URL` and restarted the API for 5174 in development memory mode. Final web/API health returned **200** and the API's CORS allow origin is **http://localhost:5174**. TripBurst ports and other dirty changes are preserved. No dependency, manifest permission, schema, pricing, paid call, issue, commit, push or deployment. Ignored read-only page screenshot and server logs: `evals/results/yapchat-extension-2026-10-01/`.
+
+## Doodle campaign posters (2026-10-01, Codex)
+
+- Created **10 finished visual posters in ten distinct aspect ratios**, from square and portrait to wide and panoramic. Doodles lead the narrative of fresh perspectives, journeys, observation and the next move; original illustration, visual, info and MCP artwork support it. Short headlines, exact website Geist Variable and Geist Mono typography, and the existing Scout mark preserve a consistent identity across colorful compositions.
+- Saved full-resolution PNGs, responsive gallery, overview, editable artboard source and artwork provenance in `apps/web/design/doodle-posters/`. [README](apps/web/design/doodle-posters/README.md) records all ten names, ratios and dimensions. Uses 33 supplied original images, with 78 image placements including the brand mark, plus transparent cutout placements. Built-in ImageGen extracted two alpha-preserving cutout sheets; prompt specifications and input paths are saved. Original source files remain untouched.
+- All ten posters visually inspected after correcting grid sizing, a collage position and headline overlap. Browser checks confirm real brand fonts, headline weight 200, exact artboard dimensions, decoded images and text bounds. Gallery passes at 1600/1024/375/320px with ten full-resolution links, all images loaded, no overflow or page errors. Web production build and zero-warning lint pass; existing bundle-size and ineffective dynamic-import warnings remain. No production UI, dependency, pricing, schema, scan or deployment change.
+
+## Doodle brand exploration (2026-10-01, Codex)
+
+- Founder authorized a doodle-first narrative, original supplied artwork and colorful mockup studies. Created **13 distinct interactive mockups** across acquisition, onboarding, dashboard, evidence, search readiness, fixes, MCP, comparison, team and completion. **Doodles are the primary brand priority**, with illustration, visual and MCP artwork supporting the story. Existing Scout logo preserved; no photography used.
+- Sources, provenance and direction are in [DIRECTION.md](apps/web/design/doodle-exploration/DIRECTION.md). Embedded preview uses 18 original artworks plus the logo; supplied source images remain untouched. Recommended coherent direction: Paper Playground, Fieldwork, Journey Room and MCP Workshop.
+- Typography follow-up: all 13 concepts now match the website's Geist Variable and Geist Mono, extra-light headlines, light supporting headings, regular controls and tighter tracking. Removed the serif/handwritten interface fonts and embedded the existing local font files with their licenses. Updated the inline/standalone previews, all 13 screenshots and overview; browser QA confirms both real fonts loaded, headline weight 200, all four responsive widths fit, and local interactions still pass. Web build and zero-warning lint passed with the existing build warnings.
+- Browser QA: all 13 screens at 1024/736/375/320px, all artwork loaded, no page errors or horizontal overflow; seven primary local interactions passed. Screenshots and QA evidence are in the same exploration directory. Web production build and zero-warning lint passed; existing bundle-size/dynamic-import build warnings remain. Mock findings are explicitly illustrative. This is a design exploration; no production UI, pricing, dependency, service, credential, invitation, scan, watch or deployment was changed.
+
+## V0 Session 4 engineering completed; live account acceptance pending (2026-10-01, Codex)
+
+- Safe sign-in callback errors, usable recovery after network exceptions, truthful magic-link copy, invited-user return and malformed-fragment handling are implemented. Access-request response loss reads saved requests once, fences account changes and never automatically repeats the write. Notification queue failures no longer turn a saved access request into a failure; server-side feedback rejects whitespace-only messages.
+- Founder admin errors show safe recovery guidance, including potentially saved changes. Request grants check that the requested account matches the recipient; a grant saved before a request-status race is reported as partial success. Local password/TOTP, CSRF, grant/revoke, persistence and failure behavior passed in existing fixtures. No live entitlement changed.
+- **Validation:** 57 focused API tests, 19 web tests, API Ruff, web TypeScript/zero-warning lint/production build and diff whitespace checks passed. Existing web bundle-size/dynamic-import warnings remain. Browser expired callback showed the correct error, stripped callback data and restored controls. Google/GitHub reached real provider sign-in pages; Google back-navigation restored login. Both providers enabled. One magic-link request accepted for an authorized existing account; inbox delivery and callback success remain unverified.
+- **Remaining S4 gates:** founder completes inbox/provider authentication and password/fresh-TOTP admin checks directly; real invitation return, notification, free grant/revoke and domain/inbox acceptance remain open in [tasks/todo.md](tasks/todo.md). Resend app email is unconfigured, so founder must use admin/copied invitations until delivery is configured and verified. Supabase auth mail is separate. Evidence contains no passwords, TOTP or session tokens and is ignored under `evals/results/v0-session-4/`.
+- Real malformed invitation QA also exposed an uncaught decode in the global scroll handler; fixed and verified the rendered recovery page. Anonymous Team navigation redirects to login. Final web tests/type/lint/build passed after this fix.
+- Local Walkthru web **5174**, API **8010** (development memory mode, background workers disabled) and founder admin **8020** respond with HTTP 200; TripBurst **5173/8000** untouched. Browser attachment initially failed, then recovered. No dependency, schema, pricing, paid service, issue, commit, push or deployment. S2 hosting remains deferred; S4 is not marked fully complete.
+
+## V0 Session 3 engineering completed; hosting deferred (2026-10-01, Codex)
+
+- Founder explicitly skipped S2 hosting and requested other fixes. Implemented S3 auth/privacy engineering in the existing session plan. S2 remains pending; no deployment target was chosen or changed.
+- Website sign-out now disconnects the named extension with a bounded acknowledgment and handles missing extension/error honestly. Qualified account/session identity, challenge-bound handoff, serialized background writes and refresh/401 compare-and-set prevent stale sessions crossing accounts. Sidepanel clears old private state, aborts its batch and checks the pinned connection before new browser actions, retries and evidence sends. Already-dispatched work may finish; server run recovery stays in the original account's dashboard.
+- API cache remains 300 seconds, never beyond token expiry; expired tokens are refused before an upstream call. Privacy/Security/Settings describe sharing exceptions, email processing, retry retention and cache/logout behavior accurately. Supabase JWT expiry can outlast logout, so no universal five-minute server-revocation deadline is claimed. [Contract](docs/auth-sessions.md).
+- Validation: full API **706 passed, 19 existing PostgREST skips**; new real PostgreSQL RLS regression **1 passed**; focused auth/retention/citation SQL **19 passed**. Extension **83 passed, 1 opt-in skipped**; web **13 passed**. Web/extension TypeScript, zero-warning lint and builds passed; API Ruff passed. Fixed a UTC/local-date mismatch in the citation test only. Existing frontend bundle-size/dynamic-import build warnings remain for release work.
+- Live isolated website QA verified sign-in, honest absent-extension failure, sign-out and protected Settings redirect. Owner/anonymous private/public Supabase reads passed. Tester logout showed warm validation 200, cold validation 401 and revoked refresh 400. Local real-schema RLS verified viewer/private/public report and screenshot access, denied membership writes and immediate removal. Automatic approval review rejected a fresh live account/membership grant to the existing QA workspace; no rejected action executed. Prior live viewer/removal evidence is retained, with fresh repeat pending specific approval. Installed Chrome repetition remains S5; founder legal review remains open.
+- Temporary QA bridge/origin stopped and login fixture removed from source and build. Walkthru API restarted on **8010** with changed auth code in development memory mode, background workers disabled for this QA runtime; web remains **5174**. TripBurst **5173/8000** untouched. No new dependency, migration, pricing change, paid call, issue, commit, push or deployment. Existing dirty work preserved. Next non-hosting session: **S4 sign-in and founder operations**; details and gates in [tasks/todo.md](tasks/todo.md).
+
+## V0 Session 1 completed: current run contract activated (2026-09-30, Codex)
+
+- Founder requested Session 1 end to end. **V0-S1 is checked in `tasks/todo.md`.** Stopped the local API/worker, backed up legacy checkpoints, then applied existing migrations **0002 and 0003** through the unchanged runner to the connected development database. All three applied checksums match; reapplication is a no-op. Preserved 10 checkpoint migration rows, 224 checkpoints, 221 blobs and 877 writes. Private checkpoint and service-only RPC permissions verified. No applied migration was edited; no pricing change, new dependency, commit, push or deployment.
+- Maintained `evals/e2e_extension.py` now uses the current keyed mutation/action-ID contract and optional exact replay/quota/stop assertions. Read-only TripBurst/TripVerse sign-in discovery **`814100f3ecf0463c8b5f078dd677784f`** completed with two actions and three exact replays. Pending-action stop **`2e7fc3a801114f31955c88e814324a02`** completed with zero actions and two exact replays; pending step marked interrupted. Each consumed one quota unit and saved one run/one completed report job with one attempt. No missing-RPC 500; no target form submission. A separate planning attempt gave up after a click and is not counted as a successful goal.
+- Live guarded synthetic expiry erased its payload/headers and retained a `gone` tombstone that cannot execute again. Automatic approval review rejected a broad shared-data retention purge; used safe synthetic expiry and isolated retention tests instead. Strengthened the existing regression to verify audit/job/rate-limit/request cleanup all continue after screenshot cleanup fails.
+- **Validation:** focused API selection **72 passed**, then strengthened retention selection **6 passed**; one existing upstream AnyIO deprecation. Extension **64 passed, 1 opt-in skipped**; extension type/lint/build and API/eval Ruff passed. Evidence and private backup are ignored under `evals/results/v0-session-1/`; [durable contract, live results and production order](docs/run-idempotency.md#session-1-local-activation-2026-09-30). Preexisting uncommitted work preserved.
+- **Confirmed report defect recorded in S5:** the zero-action custom-stop report falsely claimed Explore navigation trouble. The stop transport/report job passed; that finding is not accepted as truthful. Native Chrome sidepanel/permission/session-handoff remains S5. The local API remains **memory** mode; production checkpoint/readiness/restart acceptance remains S2. Some early Windows maintenance processes exited `0xC0000374` after SQL committed; final migration/privilege/expiry and live-run checks exited 0. Selected psycopg libpq/client lifecycle needs rechecking in S2; no root-cause fix claimed.
+- Servers remain separated: Walkthru web **5174**, API **8010**, founder admin **8020** loopback; TripBurst retains **5173/8000**. Next is **V0-S2**, once the deployment target/private runtime configuration is confirmed. No launch authorization is inferred from Session 1.
+
+## V0 launch sessions recorded, pricing excluded (2026-09-30, Codex)
+
+- Founder requested an estimate and session-wise fixes in **existing `tasks/todo.md`**, excluding pricing-related changes. Added the V0-S1 to V0-S7 sequence there: current extension/schema activation; production durability/readiness; auth/privacy contract; sign-in/founder operations; native Chrome/report/export acceptance; reproducible release/rollback; authorized deployment and production canary.
+- **Estimate: seven focused sessions, eight to nine if native/deployed checks reveal additional defects.** External domain/provider/inbox/Chrome distribution setup can add calendar waiting. Each session includes dependencies, verification and exit criteria, with checkpoints after S2/S5/S7. Cross-references existing roadmap work rather than removing its unfinished tasks. Pricing remains separately unresolved, not silently marked done.
+- Planning/documentation only: no application fix, migration, deployment, paid API, new dependency or issue creation. `tasks/plan.md` unchanged per the latest explicit target; preexisting working-tree changes preserved. Next work is **V0-S1** when implementation is requested.
+
+## V0 prelaunch QA against local TripBurst (2026-09-30, Codex)
+
+- **Deployment held.** Founder requested a complete prelaunch audit and detailed assessment first, with issues added to the existing `tasks/plan.md` only after their green light. No app fixes, migration, deployment, payment or new issue was performed; plan unchanged. Existing uncommitted changes preserved.
+- Walkthru started separately on web **5174**, API **8010**, local admin **8020**; TripBurst/TripVerse retained **5173/8000**. Two read-only real-model journeys completed through the existing extension integration harness; it mocks Chrome messaging and omits current idempotency, so this does not clear installed-sidepanel acceptance.
+- **Critical live failure:** connected Supabase has only migration `0001` applied; `run_requests` and its RPCs are missing. Current extension negotiates idempotency v1, and a valid keyed `POST /runs` returns 500 (reference `7461d8be3f994e1791d6d7026fb2b000`). Request-response retention expiry also fails. Existing migrations `0002`/`0003` and durable production checkpoint/deployment configuration need reconciliation before launch. `/health` still returns 200 despite this failure.
+- V0 is intended to be **free access granted by the founder**. Live request, grant and revocation worked with checkout disabled, but landing/pricing/billing still describe paid offers and Plus waitlist. Resend notifications are unconfigured. Privacy sign-out/access/retention descriptions have inconsistencies; warm auth-cache revocation window is 300 seconds. Final production domain, extension distribution/native-browser safety pass, mailbox/OAuth callbacks and actual CSV/PDF artifacts remain acceptance gates.
+- **Validation:** API **704 passed, 19 skipped** (local PostgREST team binary unavailable), one upstream deprecation warning; extension **64 passed, 1 skipped**; web **8 passed**; API Ruff and web/extension TypeScript, lint and builds passed. Web main chunk warning: 650.22 kB, 200.62 kB gzip. Both npm audits found zero known vulnerabilities. Live Supabase viewer/RLS/removal checks supplemented team skips. Instant Scan/cache, reports/replay, comparison, ten AI-answer jobs, feedback, team chat/triage/Scout, watch/deploy-hook, MCP reads/key revocation, custom personas, branding and account export were exercised.
+- Local detailed assessment and evidence: [launch-assessment.md](evals/results/qa-2026-09-30/launch-assessment.md) (ignored QA artifacts, not committed). QA key revoked, temporary login bridge stopped, recurring QA monitors removed, branding restored, disposable viewer membership/grant revoked, tester signed out and viewport restored. Labeled reports/workspace remain for review. Main servers remain running locally. Next: founder reviews assessment and gives green light to record prioritized work in **existing `tasks/plan.md`**.
+
+## Provider resilience, SD-6.3 (2026-09-28, Codex)
+
+- **Completed and marked.** Per-provider, process-local circuits skip further calls for 60 seconds after three consecutive failures. One recovery probe is allowed, older in-flight responses cannot close a newer circuit, and other providers remain available. Structured parse failures now reach the fallback chain. TypeSafe transport failures trigger normal LLM fallback; low-confidence abstentions do not count as outages.
+- Citation checks stay queued without reserving quota when the circuit is already open. A race after reservation releases the lease and schedules a retry without increasing terminal failures; the reserved attempt remains counted conservatively. Existing quota cooldowns and durable job exponential backoff/jitter are preserved. Existing direct Anthropic configuration now has a 30-second timeout, zero retries and free fallback; no paid provider was enabled or called.
+- **116 affected tests passed**, including an HTTP start/observe journey through the real graph/fallback chain with scripted models, concurrent recovery, stale-result fencing, citation preservation, TypeSafe, reports and jobs. API Ruff and diff whitespace checks passed. No live provider calls, dependency, schema change, commit, push or deployment. This focused run resolves the provider-test failure observed by the parallel scan-cache task; it does not re-run that task's PostgreSQL setup failures or claim a full-suite pass. Parallel scan-cache and extension work preserved. [Contract and limits](docs/provider-resilience.md).
+
+## Instant Scan cache, SD-7.2 (2026-09-28, Codex)
+
+- **Completed.** Anonymous `POST /scans` reuses the newest matching completed public, ownerless, free scan for ten minutes from its creation. Reads existing database rows, so all API processes share the cache and deleted/unshared rows cannot hit later lookups. Reuse creates no run, performs no crawl/model call, and remains available after the daily free capacity is spent. Address limits, current opt-out/pause checks and public-address validation still apply; optional email uses the saved report.
+- Host normalization and an explicit root slash avoid common URL misses; paths and query strings stay distinct. Only exact stored destination URLs match redirected scans; redirect aliases are not retained. Concurrent cold misses can still scan independently. Owner/MCP/watch/comparison scans remain fresh. No migration, dependency, paid API or deployment.
+- Validation: **36 focused tests passed**, including 20 new cache cases; changed-file Ruff and whitespace checks passed. Full suite after repairing two billing test isolation gaps: **659 passed, 19 skipped, 35 PostgreSQL setup errors, 1 failure in the concurrently edited provider circuit-breaker tests**. Default pytest temp-directory permissions were bypassed with a fresh workspace temp directory, but local `initdb` still exits 1. The full suite is not claimed green. The billing fixture now stubs user-email lookup and removes inherited founder-email configuration so it does not reach live Supabase or send real email.
+- Other agents' extension/runtime/provider changes were preserved. This task's changes are local and uncommitted.
+
+## Extension sender validation (2026-09-28, Codex)
+
+- **SD-3.3 completed and marked.** External session messages require both Chrome-reported origin and URL origin to match `VITE_WEB_URL`; missing/opaque/mismatched senders and other extensions are refused. Token strings are bounded and checked, optional expiry must be finite and positive, and only credential fields are stored. Failed storage returns `{ok:false}` instead of leaving the connection unanswered.
+- 16 new tests invoke the actual registered background listener with mocked Chrome storage; 13 failed before the fix. Full extension suite **64 passed, 1 skipped** (opt-in live provider journey); TypeScript, lint, production build and diff whitespace checks passed. No dependency, paid API or manifest permission changes. Reload the rebuilt unpacked extension to activate locally; this batch is not committed or pushed. Next small task: SD-4.2 API security headers.
 
 ## GitHub publication handoff (2026-09-28, Codex)
 
@@ -38,6 +154,19 @@ _Last updated: 2026-09-28_
 - The dedicated citation queue uses atomic bounded admission, persisted daily attempt counters, global spacing/cooldowns, ten-minute recoverable leases and stale-worker fencing. Retries count against quota. Quota responses defer work rather than permanently failing it; other failures stop after four attempts. Pagination prevents silently truncated queue/history reads. This is separate from the SD-6.1 generic jobs queue.
 - Validation: full backend suite **618 passed, 19 skipped**, then two additional regressions passed (frozen memory mode and editor measurement summary), with six editor-tool integration tests also passing. Four real PostgreSQL concurrency/recovery tests passed and are included in the full run. Seven web tests, production build, web lint, API Ruff and diff whitespace checks passed. Browser fixtures verified source disclosure, engine/prompt filtering, empty state, and 375px layout without horizontal overflow or console errors. Temporary browser fixtures and dev server were removed. Existing main-bundle size/dynamic-import warnings and upstream AnyIO deprecation remain.
 - The parallel local agent applied the citation schema with founder approval earlier today, as recorded below; this session did not reapply it. **Still open:** the showcase prompt set checked twice on live providers and sustained weekly coverage. No live provider calls were made by this session. Unsupported engines still require a separately approved integration; missing keys and incomplete provider evidence are now clearly represented.
+
+## Agent stalls and latency (2026-10-01, Claude Code local, later)
+
+- Run 0dabc099 stalled mid-run: two steps reached the API by 11:50:23, then nothing for 4 minutes until Stop. Its report was written 23 s after Stop, so reports work. The side panel's messages to the page (`chrome.tabs.sendMessage`) had no time limit, and the 4-minute deadline is only checked between steps, so a page that never answered froze the run silently. Fixed: 5 s ping and 30 s page-message limits in `entrypoints/sidepanel/run.ts` (`withTimeout`, `PageTimeoutError`); a stuck page now ends the run with a partial report. Test in `tests/run-retries.test.ts`. Not proven that this was the exact stall point: the extension console was not available.
+- Latency: since 071a9d7 (shared rate limits), every signed-in request also calls `hit_rate_limit` in Supabase, about 450 ms from this network to the Sydney project, on every agent step and poll. `limits.for_user` now skips it for local development (`ALLOW_LOCAL_SCANS=1` from 127.0.0.1), as `by_address` already did. Measured: `/me/plan` 1.35 s to 0.9 s. Still slow locally: `/me/notifications` about 2.2 s (several sequential Supabase calls), start run about 10 s. Production next to the database will not pay this.
+
+## Reports stuck on "writing the report" (2026-10-01, Claude Code local)
+
+- Cause: the API on :8010 had been started (`uvicorn --env-file .env`, not `.\dev`) with `RETENTION_JOB=0` in its environment, the test-only switch, so it ran no job workers. Runs ended normally, `finish_run` jobs were queued, and nothing ever claimed them (jobs 715 and 716 sat at 0 attempts; py-spy showed no `job-*` threads). Not a quota problem: Groq had 999 of 1,000 requests left on all three models and both Gemini models answered.
+- Fixed: the two stuck reports were written by a one-off `python -m app.jobs` worker (about 80 s); the API was restarted with workers (four `job-*` threads, scheduler and citations confirmed).
+- Hardening: the API logs a warning at startup when background jobs are off; `/health` returns 503 `degraded` when a queued job has waited over two minutes (`db.oldest_waiting_job`), so `.\dev` and uptime checks see it; `finish_run` re-raises after logging, so a failed report is retried with backoff instead of being marked done with no report. Tests: `tests/test_health.py`, `tests/test_jobs.py`.
+- Verified end to end: a run on the easy fixture, started and stopped through the API, got its report from the API's own workers 51 s after stopping, first attempt.
+- Still open: after the last retry fails, the run has no report and the page keeps waiting; a "report could not be written, retry" state needs a small schema or report-field decision.
 
 ## Hero fix (2026-09-27, Claude Code local, last of the day)
 
@@ -136,150 +265,6 @@ _Last updated: 2026-09-28_
 - Citation correctness needs attention before expansion: Groq search results are counted as citations without answer-reference matching; Gemini source domains derive from titles; memory-only answers dilute the citation denominator; substring host matching produces false mentions; historical labels depend on the current grounding flag. Google AI Overviews/AI Mode and Claude lack adapters and explicit unmeasured labels; Perplexity is explicitly unmeasured. The 20/day global web cap cannot support the advertised allocations at scale.
 - Verified 46 citation/billing tests pass (two warnings: upstream anyio deprecation and local pytest cache permissions). Small in-memory fixtures reproduced citation/mention false positives. No live provider/payment or authenticated browser verification this session.
 - Launch documents contain stale entries: bounded auth cache, local admin, safety controls and billing core have been built; remaining operational verification, configuration and reconciliation are listed in the report. Launch dates and hosting choices still disagree across older/newer documents.
-
-## Handoff for the next agent (2026-09-26, Claude Code local, written before pushing)
-
-Read this block first.
-
-> **Agent safety ([docs/agent-safety-plan.md](docs/agent-safety-plan.md)):** items 1 to 8 are built and tested (item 1 by the cloud agent, 2 to 8 by the local agent on 2026-09-26; status and two deliberate deviations are at the end of that file). What still blocks launch there is the founder's: a lawyer's review of Terms and Privacy, the contact domain on the legal pages (still walkthru.dev), publishing the extension Unlisted, and one real-browser red-team pass with the extension on the hard fixture (`/feed.html`, `/challenge.html`, `/account.html`, a bulk goal, an Instagram goal).
-
-### Local state at this push
-- Local `main` equals `origin/main` after this push. Nothing local is left uncommitted except git-ignored files.
-- Supabase schema is applied, including the four billing tables (`access_requests`, `admin_audit_log`, `billing_events`, `billing_offers`), verified over REST.
-- The direct database host (`db.<ref>.supabase.co`) resolves to IPv6 only and the founder's network has no IPv6, so `python -m app.db` times out there. The IPv4 session pooler works: host `aws-0-ap-southeast-2.pooler.supabase.com`, port 5432, user `postgres.<project-ref>`, same password. Use it by overriding `DATABASE_URL` for the one command; `.env` still holds the direct URL.
-- The founder's account has a development Plus pass until 2026-10-25 (`scripts/grant_plan.py`, no payment).
-- Local git-ignored changes: `apps/api/.env` gained `FOUNDER_EMAIL`; `evals/.walkthru-token` now holds the founder account's verification token, so the hard fixture (:8102) counts as their verified domain. Restart `.\dev` to load the new env value.
-- The dev stack runs with `.\dev` (API :8010, web :5173, fixtures :8101/:8102). The rebuilt extension in `apps/extension/.output/chrome-mv3` needs a Reload in `chrome://extensions` to show the new icon.
-
-### Fixed in this session (tested)
-- MCP: every finding id is unique within a report (a repeated rule becomes `rule#2`); `get_finding` and `verify_finding` reach both cookie findings on the hard fixture.
-- MCP: tools answer in text only (`structured_output=False`), so agents read each answer once instead of twice.
-- `run_scan` (MCP `scan_site` and `rerun`, watch and compare parts): adds `https://` when the address has no scheme, and runs the owner-only checks (exposed files, bundle secrets, source maps, takeover) when the scanning user verified that host after redirects. Anonymous Instant Scans never do.
-- Plan requests email the founder (`FOUNDER_EMAIL` plus `RESEND_API_KEY`), with the approve and reject commands; `scripts/billing.py list` prints emails instead of user ids.
-- Pricing copy: the Launch Pack card lists competitor compare; the Plus card says Everything in Pro and lists the MCP server; the billing request form shows what each plan includes (read from `content.ts`). Docs show the real MCP address (`MCP_URL`) instead of a placeholder.
-- Extension icons: Scout on a light rounded tile, `apps/extension/public/icon/{16,32,48,128}.png`, picked up by WXT into the manifest.
-- End-to-end MCP test as an outside agent: handshake, all 7 tools, clear errors for bad ids, bad keys and `file://`, and another account's run id refused by every run tool.
-
-### Still broken or open
-- Report fingerprints (`kind:rule`) collide when one rule fires twice (the `session` and `__Host-csrf` cookies both give `security:sec.cookie.flags_missing`). Ignoring one ignores both, and per-page lists merge. MCP works around it with `#2`; the root fix belongs in the scanners (a rule id per cookie or per target).
-- Some generated rule ids are awkward (`sec.jquery_n_n_has_known_vulnerabilities`, `seo.more_than_one_hn_heading`); missing image alt text is reported twice (accessibility and SEO).
-- Billing: Dodo products are not configured, so `scripts/billing.py approve` stops with "set DODO_PRODUCT_...". Until then the only way to give access is `grant_plan.py` (free).
-- Resend's test sender only reaches the Resend account's own email, so the founder email works only if `FOUNDER_EMAIL` is that address. Real customer email needs the domain (not bought).
-- The web app was not re-tested in a browser this session (dashboard, report actions, compare, watch): the founder did not sign in to the in-app browser. The API and MCP paths were tested live.
-- A test MCP key was pasted in chat; the founder should revoke it on the MCP page.
-- None of the system-design tasks in docs/system-design.md are started. Founder-only items there: rotate the Supabase secret key and DB password, rotate test-account passwords, domain, OAuth, Dodo.
-
-### Added 2026-09-25 by Claude Code (cloud): Plus custom test users, several test users per report, branded PDF
-- **Founder action first:** apply the schema once (adds `test_users`, `report_brands`, `runs.group_id`): `.venv/Scripts/python -m app.db` with the pooler `DATABASE_URL` override above. Until then the new Settings sections and group runs return a database error; everything else works. Then rebuild the extension and press Reload.
-- **Custom test users (P4.2):** Settings > Your test users (Plus, up to 10, name and description). The side panel offers them as `custom:<id>`; the run stores the name in `runs.persona`, so dashboards and reports show it with no other change. The persona prompt reads "You are <name>, <description>". Safety rules are unchanged.
-- **Several test users per report (P4.2):** on Plus the side panel shows checkboxes instead of the select. Ticked test users run one after another from the same start page, sharing a client-made `group_id` (the API accepts it only on Plus, only if every run already in the group is the caller's, and at most 6 runs). Each report of the set shows a "Several test users" table and the problems more than one test user hit, grouped in code with the compare rule (`TestUsersCompared.tsx`, no model call). Each test user uses one run.
-- **Branded PDF (P4.3):** Settings > Branded PDF reports (Plus): name, logo (PNG, JPEG or WebP, checked by file signature, at most 200 kB), color (must reach 3:1 on white), footer line, with a live cover preview. On the owner's report page, Save branded PDF prints a full cover page, the brand color in place of the accent, a closing block and a plain page title; no Walkthru or Scout text remains (checked by extracting the PDF text). The screen view is unchanged. Print paper is now white for every PDF (the app shell's grey used to print).
-- Verified: 321 API tests (25 new in `tests/test_plus.py`), 30 extension tests, all builds and lints; schema applied twice to a local Postgres 16 (constraints, revoked browser access, owner reads `group_id`); branded and plain PDFs rendered in Chromium and inspected page by page; Settings at 1280 and 375 px; the side panel driven through a 3-user set against a stub API (one group id, same start page, custom test user included). A security review of the commit found nothing. Not tested live: a real 3-user journey in Chrome and the schema on Supabase (needs the founder's machine).
-
-### Added 2026-09-25 by Claude Code (cloud): Plus team workspaces (team collaboration)
-- **Founder actions first:**
-  1. Apply the schema (seven `team_*` tables, RLS, two SQL functions, Realtime publication, members-read policies on `runs` and `run-evidence`): `.venv/Scripts/python -m app.db` with the pooler `DATABASE_URL` override. `db.setup()` now splits statements outside `$$` bodies.
-  2. In Supabase Auth, keep **Confirm email** on. Email invitations trust `email_confirmed_at`.
-  3. For invitation emails, set `RESEND_API_KEY`. Without it, the page shows the link to send yourself.
-- **What it does:**
-  - Plus owners create up to 3 workspaces (Team in the sidebar) and invite by email or by invite link with a typeable join code (optional email domain, uses, expiry). Invited people need no plan.
-  - Roles are owner, admin, member and viewer.
-  - Workspaces hold shared reports (Share to workspace on the report page, or auto-share), a findings board with status, owner and "Found again after a fix", persistent chat and comment threads with mentions and unread counts, an activity log and presence.
-  - While the owner is not on Plus, a workspace is read-only.
-  - `TEAM_SEATS` defaults to 3, from the pricing doc, and counts open email invitations.
-- **Auth:** `require_user` returns `email_verified`, a display name and an avatar. The token cache is keyed by SHA-256, bounded, and never outlives the token's `exp`.
-- **Privacy fix found on the way:** the Runs list read every public report through RLS (other users' shared reports and all Instant Scans). `listRuns` now filters to the signed-in owner.
-- **Verified:**
-  - 346 API tests, including 19 against a real Postgres 16 + PostgREST 12 with Supabase's roles (`tests/test_teams_live.py`): RLS, grants, and the 6-way race for the last seat.
-  - Web build and oxlint at 0 warnings.
-  - A two-browser end-to-end run: owner, member and client viewer on the production build, the real API and PostgREST, with no console errors and no overflow at 390 px.
-  - The signed-out invitee flow.
-- **Not tested:** Supabase Realtime itself. The pages fell back to polling in the sandbox, as designed.
-- **Reference and the UI brief for the local agent:** [docs/team-collaboration.md](docs/team-collaboration.md).
-
-### Added 2026-09-25 by Claude Code (cloud): Scout in team chat
-- `@Scout <question>` in any workspace thread gets an answer from this workspace's findings board, shared reports and recent messages (`app/scout.py`, docs/team-collaboration.md section 11).
-- **Provider:** Gemini free tier over REST (`gemini-3.1-flash-lite`, then `gemini-3.5-flash`).
-- **Look:** Scout messages are styled as a bot (bird avatar, tinted card, Bot tag).
-- **Limits:** 50 answers per workspace per day, 10 questions per person per 10 minutes.
-- **Founder:**
-  1. Apply the schema (adds `team_messages.bot`).
-  2. Set `SCOUT_GEMINI_API_KEY` in `apps/api/.env`, from its own Google Cloud project so its free quota is separate.
-- **Verified:**
-  - API tests with a fake Gemini: fallback, thought parts skipped, workspace-only context, daily cap, no-key message, rate limit, retries answered once.
-  - A browser run against a fake Gemini.
-- **Not verified:** the real Gemini API, which this sandbox cannot reach.
-
-### Added 2026-09-25 by Claude Code (cloud): P1.3, P1.7, P4.4
-- **P1.3 fix plan v2:** every new report stores its detected stack (`report.stack`). The fix prompt is a batched plan with per-stack recipes from `app/agent/recipes.json`, stop-and-verify checks, manual steps and chat parts of at most 4,000 characters. MCP `get_finding` returns the same recipe.
-- **P1.7 agent readiness:** `report.agent_ready`, shown after the GEO block.
-- **P4.4 fix pull requests:** Walkthru GitHub App (Settings > GitHub, then Open a fix pull request on a report). Config-only changes, never merged by Walkthru. New table `github_installations` and dependency `PyJWT[crypto]`.
-- **Founder:**
-  1. Apply the schema.
-  2. Create the GitHub App: permissions Contents read and write, Pull requests read and write, Metadata read. Turn on "Request user authorization (OAuth) during installation". Set the callback and setup URL to `<WEB_URL>/app/settings`.
-  3. Set `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET`.
-- **Verified:** 345 API tests (fake GitHub with real RS256 signing), web build and lint.
-- **Not verified:** against real GitHub.
-- **P4.1 (active staging scan) was not built.**
-
-### Added 2026-09-25 by Claude Code (cloud): launch gates SD-2.2 and SD-3.1
-- **SD-2.2:** browser snapshots are bounded on the server:
-  - page text 8,000 characters;
-  - 150 elements, each with 300-character text;
-  - 20 errors and 20 notices of up to 300 characters each;
-  - a 300-character note;
-  - titles trimmed to 500 characters.
-
-  The extension's own caps sit below these. Request bodies over 1 MB get 413, and chunked bodies get 411, before parsing.
-- **SD-3.1:** `tests/test_ownership.py` lists every route (72) and fails on a new unlisted one. Every route taking a run, key, site, test user, offer, installation, workspace or invitation id refuses another user (403 or 404).
-- **Tests:** 397 API tests pass.
-
-### Added 2026-09-26 by Claude Code (local): founder admin panel
-- `apps/api/admin` (`python -m admin setup` once, then `python -m admin`, http://127.0.0.1:8020). Local only by design (docs/decisions.md 2026-09-26): never mount it in the public API or deploy it.
-- Plan requests (grant free, send a Dodo payment offer when billing is configured, decline), grant or end a pass by email, "Your access" (always ADMIN_EMAIL, whatever the form says), users with plan and dates only, and an activity feed (new users, feedback, server errors, payment events, admin actions).
-- Sign-in: scrypt password hash plus TOTP; a code works once; 5 misses lock it for 15 minutes; every change needs a current code and a CSRF token; Host and Origin allow-lists; no JavaScript, CSP allows none; everything audited in `admin_audit_log`.
-- New `app_events` table (applied on Supabase, browsers refused) fed by `POST /feedback` (signed-in, 5 an hour, new Send feedback page in the sidebar) and by a catch-all handler that records unhandled server errors (route template and error type only) and answers a generic 500.
-- Founder still to do: run `python -m admin setup` in a terminal (choose the password, add the key to an authenticator app). The panel refuses to start until then.
-- Tests: `tests/test_admin.py` (7) including host and origin refusal, lockout, code replay, CSRF, escaping; API 404 pass.
-
-### Added 2026-09-26 by Claude Code (local): agent safety items 2 to 8
-- Visitor mode is enforced at every step on the server (`persona._enforce`) and mirrored in the extension (`execute.ts`): search-box typing only, no social or commerce buttons (or add-to-cart links), no non-search submits, and a page that shows a signed-in account stops the run. Stops end the run on purpose with code `visitor_mode_limit` or `signed_in_unverified`.
-- DNS TXT verification (`_walkthru.<host>` = `walkthru-verification=<token>`), shown in Settings and the docs.
-- Snapshot: icon-button labels, visible-first ordering, smooth scroll and a wait for the page to settle. Bot walls and CAPTCHAs pause for a human take-over; new statuses `bot_wall` and `agent_lost`; one table of stop reasons (`policy.STOP_REASONS`) whose message the side panel shows as sent.
-- `run_audit` (90 days, never typed values) and `run_blocks` (kill switches) tables, applied on Supabase and refused to browsers. Limits on unverified hosts: 20 journeys an hour per host, 12 per user per host. Five refused goals in a day pause the account and alert the admin panel, which can also pause everything or one site. `GET /runs/policy` for the extension.
-- Privacy, Terms and Security updated, `/bot` page, docs section "Why can't Walkthru test Instagram?", `docs/chrome-web-store.md`, and an extension test that fails on cookie, storage, history or request APIs.
-
-### Added 2026-09-26 by Claude Code (local): notifications, toasts, sign-in fix
-- `notifications` table (applied on Supabase; a browser reads only its own rows; in the realtime publication). `app/notify.py` writes them for: a pass granted (admin panel, `grant_plan.py`, Dodo payment), an offer ready, a request declined, a journey report ready, a watch check that changed, a comparison ready, a workspace mention and a finding assigned to you.
-- `GET /me/notifications` (counts per sidebar section plus recent items; Team also counts unread chat and pending invitations) and `POST /me/notifications/read`.
-- Web: `NotificationsProvider` (Supabase Realtime, focus refresh and a slow poll) puts counts on the sidebar items and a dot on the phone menu button, marks a section read when its page opens, and shows a toast for each new notification. `lib/toast.ts` plus `<Toaster />` (call `toast()` anywhere); Send feedback uses it. Dashboard and Plan & billing refresh themselves when their notification arrives.
-- Sign-in: Back from Google or GitHub no longer leaves the buttons frozen on "Opening Google..." (bfcache restore resets the page), a provider that never opens frees the buttons after 10 s with a message, and the email button no longer says "Sending link..." during an OAuth redirect.
-- Not tested live: a notification arriving over Realtime in a signed-in browser (the in-app browser had no session). API tests cover the rows and counts; the toaster was checked in a browser.
-
-### Added 2026-09-26 by Claude Code (local): AI citation tracking (P3.2)
-- `app/citations.py`, tables `citation_sites`, `citation_prompts`, `citation_checks` (applied on Supabase, browsers refused), `/citations` routes, web page `/app/visibility` ("AI answers" in the sidebar, with its own notification count).
-- Engines, measured on the founder's keys on 2026-09-26: Gemini's Google Search grounding answers quota 0 on free keys and Groq Compound does not exist on this account, so the plan's two engines were replaced. "AI with web search" is Groq `openai/gpt-oss-120b` with `browser_search` (one search, 1,600 to 7,600 tokens, real sources). "Gemini, from memory" (mentions only). `GEMINI_GROUNDING=1` with a billed Gemini key turns Google Search on. ChatGPT and Perplexity: not measured.
-- Mention, citation, ranks and share of voice are computed in code. Prompts are suggested from the homepage. Limits (proposed, founder to confirm): Launch one check of 10 prompts, Pro 10 prompts weekly on the web engine, Plus 25 prompts per site weekly on both. Queue with daily caps (`CITATION_WEB_PER_DAY` 20, `CITATION_MEMORY_PER_DAY` 300) and a minute between web checks, because journeys share Groq's 8,000 tokens a minute. A notification when a set finishes.
-- Founder decisions: the caps above; and SPEC.md's rule "Plus is a waitlist until watch, citation tracking and branded PDFs ship" is now met, so the Plus pricing card can leave the waitlist when you choose.
-
-### Next steps, in order
-1. Founder: sign in and watch a grant from the admin panel arrive as a toast and a Plan & billing badge; run `python -m admin setup` if not done; the safety red-team pass above.
-2. Fix the fingerprint collision at the scanner level (keeps ignore, pages and MCP ids consistent), with a test on the hard fixture.
-3. Launch-gate agent tasks from docs/system-design.md: SD-9.2 (Python lockfile), SD-9.1 (CI), SD-2.1 (shared rate limits for the other routes; journeys are limited in Postgres since 2026-09-26). SD-2.2 and SD-3.1 are done.
-4. Founder with an agent: Dodo test mode (docs/billing.md), then one test payment and refund.
-5. API key hardening before launch: expiry, read-only scope, register the `wt_` prefix for GitHub secret scanning; OAuth for MCP after launch.
-
-### Do not alter without asking the founder
-- Server-side plan decisions (`apps/api/app/plans.py`): the client never says which plan it is on. Paid checks are "not free"; Plus-only checks are watch, MCP and API keys, custom test users, report groups, branding and creating team workspaces (a workspace stays active only while its owner is on Plus).
-- Owner-only security checks run only on hosts the user verified, re-checked after redirects. Never send attack payloads, fuzz or write to a site's backend.
-- API keys: stored as SHA-256 hashes, shown once, revocable. Never log or store a raw key.
-- Billing: a pass turns on only from Dodo's signed webhook; `AccessRequest` forbids extra fields; prices come only from `billing.PRICES` (confirmed 2026-09-24).
-- Plus stays a waitlist in the pricing copy until citation tracking and branded PDFs ship (SPEC.md).
-- The fixed extension `key` in `apps/extension/wxt.config.ts` (id `cilngbcfpoojecjoiklimnjnomjglcdo`) stays until the Chrome Web Store upload.
-- MCP finding ids, including the `#n` suffix, are now what agents pass back; change them only together with `_ids` and its test.
-- UI: the founder reverted two redesign passes. Keep UI changes small and match existing patterns; design tokens only; no em dashes in user-facing copy.
-- Never commit `.env` or `evals/.walkthru-token`; never set `ALLOW_LOCAL_SCANS` in production.
-
 
 ## Done
 - Product defined: Walkthru. [SPEC.md](SPEC.md), [tasks/plan.md](tasks/plan.md), [tasks/todo.md](tasks/todo.md).

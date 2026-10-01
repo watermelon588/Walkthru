@@ -2,13 +2,18 @@
 
 Loads the BUILT extension page script (apps/extension/.output/chrome-mv3/inject.js) into headless Chrome,
 then drives the same loop as the side panel: snapshot -> POST /runs -> act -> screenshot -> observe,
-using the real API, model, Supabase Storage and a real signed-in test account. Only the side panel UI
-itself is not exercised.
+using the real API, model, Supabase Storage and a real signed-in test account. Chrome messaging is
+stubbed; installed sidepanel UI, permission prompts and session handoff are not exercised.
+Run mutations carry idempotency keys and observations carry the returned pending action ID.
 
     apps/api/.venv/Scripts/python evals/e2e_extension.py https://your-site.vercel.app "Find the projects and a way to get in touch"
 
 Needs the dev stack running (.\\dev) and apps/api/.env. Uses TEST_USER_EMAIL / TEST_USER_PASSWORD
 (defaults to the local throwaway account created by apps/api/scripts/test_user.py).
+REQUIRE_IDEMPOTENCY=1 requires the current API policy contract. VERIFY_REPLAYS=1 sends each
+successful mutation again with the same frozen body/key and checks the exact cached response.
+STOP_AFTER_STEPS=N exercises a keyed stop after N completed actions instead of the whole goal.
+Use zero to stop immediately with the first action still pending.
 """
 
 import base64
@@ -21,6 +26,7 @@ import sys
 import tempfile
 import time
 import urllib.request
+import uuid
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
@@ -154,6 +160,35 @@ def main() -> int:
     api = httpx.Client(
         base_url=API, headers={"Authorization": f"Bearer {token}"}, timeout=90
     )
+    policy = api.get("/runs/policy")
+    policy.raise_for_status()
+    idempotency = policy.json().get("idempotency") == "v1"
+    verify_replays = os.environ.get("VERIFY_REPLAYS") == "1"
+    if (verify_replays or os.environ.get("REQUIRE_IDEMPOTENCY") == "1") and not idempotency:
+        raise RuntimeError("This acceptance run requires the API's idempotency v1 contract")
+    stop_after = int(os.environ["STOP_AFTER_STEPS"]) if "STOP_AFTER_STEPS" in os.environ else None
+    if stop_after is not None and stop_after < 0:
+        raise ValueError("STOP_AFTER_STEPS must be zero or greater")
+    plan_before = api.get("/me/plan")
+    plan_before.raise_for_status()
+    replayed = 0
+
+    def mutation(path: str, body: dict) -> dict:
+        nonlocal replayed
+        headers = {"Content-Type": "application/json", "Idempotency-Key": str(uuid.uuid4())}
+        serialized = json.dumps(body)
+        response = api.post(path, content=serialized, headers=headers)
+        response.raise_for_status()
+        result = response.json()
+        if verify_replays:
+            again = api.post(path, content=serialized, headers=headers)
+            if (again.status_code != response.status_code or again.json() != result
+                    or again.headers.get("Idempotency-Replayed") != "true"):
+                raise RuntimeError("A repeated run intent did not replay its saved response: " + path)
+            replayed += 1
+            print(f"  replay confirmed: {path}", flush=True)
+        return result
+
     profile = tempfile.mkdtemp(prefix="walkthru-e2e-")
     chrome = subprocess.Popen(
         [
@@ -196,9 +231,9 @@ def main() -> int:
         obs = tab.message({"type": "snapshot"})
         timing = {"snapshot": time.time() - t}
         t = time.time()
-        reply = api.post(
+        reply = mutation(
             "/runs",
-            json={
+            {
                 "site": site,
                 "goal": goal,
                 "persona": persona,
@@ -207,16 +242,23 @@ def main() -> int:
                 "observation": obs,
             },
         )
-        reply.raise_for_status()
-        reply = reply.json()
         timing["api"] = time.time() - t
         run_id, steps, captured = reply["run_id"], [], 0
         verified = bool(reply.get("verified"))
         auto_confirm = os.environ.get("AUTO_CONFIRM") == "1"  # stands in for the owner's confirm dialog
         sent_once = False
+        acted: set[str] = set()
+        print(f"{clock()} idempotency v1: {idempotency}; verify replays: {verify_replays}")
         print(f"{clock()} domain verified: {verified}; owner approves sends: {auto_confirm}")
+        if stop_after == 0 and reply["status"] == "running":
+            reply = mutation(f"/runs/{run_id}/stop", {"reason": "QA stopped before executing the pending action"})
         while reply["status"] == "running":
             step = reply["action"]
+            if idempotency:
+                action_id = reply.get("action_id")
+                if not action_id or action_id in acted:
+                    raise RuntimeError("Missing or repeated pending action ID; refusing to act twice")
+                acted.add(action_id)
             steps.append(step)
             print(
                 f"{clock()} step {len(steps)} {step['action']}{' #' + str(step['target_id']) if step.get('target_id') is not None else ''} (confusion {step['confusion']}) [snapshot {timing['snapshot']:.1f}s, api {timing['api']:.1f}s]: {step['thought'][:100]}"
@@ -244,7 +286,7 @@ def main() -> int:
             url = tab.js("location.href")
             if not url.startswith(origin):
                 print(f"{clock()} left the site ({url}); closing run")
-                api.post(f"/runs/{run_id}/stop", json={"reason": f"the last click led away from the site, to {url}"}).raise_for_status()
+                reply = mutation(f"/runs/{run_id}/stop", {"reason": f"the last click led away from the site, to {url}"})
                 break
             t = time.time()
             obs = tab.message({"type": "snapshot"})
@@ -252,6 +294,8 @@ def main() -> int:
             if note:
                 obs["note"] = f"{obs['note']}; {note}" if obs.get("note") else note
             body = {"observation": obs}
+            if idempotency:
+                body["action_id"] = reply["action_id"]
             index = len(steps) - 1
             if should_capture(step, obs, index, captured):
                 shot = tab.send("Page.captureScreenshot", format="jpeg", quality=60)
@@ -268,10 +312,11 @@ def main() -> int:
                 }
                 captured += 1
             t = time.time()
-            r = api.post(f"/runs/{run_id}/observe", json=body)
-            r.raise_for_status()
-            reply = r.json()
+            reply = mutation(f"/runs/{run_id}/observe", body)
             timing["api"] = time.time() - t
+            if stop_after is not None and len(steps) >= stop_after and reply["status"] == "running":
+                reply = mutation(f"/runs/{run_id}/stop", {"reason": "the QA stop checkpoint ended this test"})
+                break
         print(
             f"{clock()} run ended: {reply['status']} after {len(steps)} steps, {captured} screenshots"
         )
@@ -290,8 +335,16 @@ def main() -> int:
                 # Saved for the trap scorer: apps/api/.venv/Scripts/python evals/runner.py evals/results/e2e-*.json
                 out = os.path.join(ROOT, "evals", "results", f"e2e-{run_id}.json")
                 os.makedirs(os.path.dirname(out), exist_ok=True)
+                plan_after = api.get("/me/plan")
+                plan_after.raise_for_status()
+                quota_used = plan_before.json()["runs_left"] - plan_after.json()["runs_left"]
+                if verify_replays and quota_used != 1:
+                    raise RuntimeError(f"Replayed intents consumed {quota_used} runs instead of one")
                 with open(out, "w", encoding="utf-8") as f:
-                    json.dump({"model": f"{persona}:{goal[:40]}", "report": rep, "steps": row["steps"], "usage": {"tokens": rep.get("tokens", 0)}}, f, indent=1)
+                    json.dump({"model": f"{persona}:{goal[:40]}", "report": rep, "steps": row["steps"], "usage": {"tokens": rep.get("tokens", 0)},
+                               "acceptance": {"idempotency_v1": idempotency, "replayed_requests": replayed,
+                                              "unique_actions": len(acted), "status": row["status"],
+                                              "quota_used": quota_used}}, f, indent=1)
                 print(f"  saved: {out}")
                 return 0
             time.sleep(3)

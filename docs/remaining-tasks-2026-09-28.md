@@ -11,7 +11,6 @@ Snapshot after SD-8.1, the local SD-6.2 implementation and the SD-6.5 run retry 
 | 1/5 | SD-1.2 | CAA record and certificate monitoring | Needs setup/approval |
 | 1/5 | SD-1.5 | `security.txt` | Code work; check task prerequisites |
 | 1/5 | SD-2.5 | Kill switches | Code work; check task prerequisites |
-| 1/5 | SD-3.3 | Check the sender in the extension | Code work; check task prerequisites |
 | 1/5 | SD-4.1 | XSS stays impossible by construction | Code work; check task prerequisites |
 | 1/5 | SD-4.2 | Security headers on the API too | Code work; check task prerequisites |
 | 1/5 | SD-4.4 | CSRF: document why it does not apply | Code work; check task prerequisites |
@@ -34,11 +33,9 @@ Snapshot after SD-8.1, the local SD-6.2 implementation and the SD-6.5 run retry 
 | 2/5 | SD-5.4 | RLS regression tests | Code work; check task prerequisites |
 | 2/5 | SD-5.5 | Personal data inventory | Code work; check task prerequisites |
 | 2/5 | SD-6.2 (partial) | Postgres checkpointer on the VM | Needs setup/approval |
-| 2/5 | SD-6.3 | Timeouts, retries and circuit breakers everywhere | Code work; check task prerequisites |
 | 2/5 | SD-6.4 | Graceful shutdown | Code work; check task prerequisites |
 | 2/5 | SD-6.6 | Process supervision on the VM | Needs setup/approval |
 | 2/5 | SD-7.1 | Set latency budgets and measure them | Code work; check task prerequisites |
-| 2/5 | SD-7.2 | Cache Instant Scans per URL for 10 minutes | Code work; check task prerequisites |
 | 2/5 | SD-7.5 | Load test before launch | Code work; check task prerequisites |
 | 2/5 | SD-8.2 | Error tracking and metrics | Needs setup/approval |
 | 2/5 | SD-8.5 | Runbooks | Code work; check task prerequisites |
@@ -77,4 +74,4 @@ These items are separate from system hardening and include later-phase expansion
 
 Also open: the live citation showcase checked twice, security false-positive checks on verified sites, fixture recall and evidence/PDF close-out, final copy/onboarding, beta-user validation, store submission, and the complete production stranger journey. Payment work includes Dodo test-mode verification, credit reservation/refund rules, live verification, and the deferred offer notice/coupons; it remains outside this batch.
 
-SD-3.2 is now complete: thread-safe bounded LRU auth cache, tested locally. Next choices, ascending difficulty: **SD-3.3 + SD-4.2** (extension sender checks and API security headers), **SD-6.3** (provider circuit breakers and outbound resilience), or **SD-8.4** (owner-visible security audit log). These can proceed without payment or deployment work. Read current task claims again before starting to avoid overlap with another agent. The founder chooses the next batch.
+SD-3.2 (bounded LRU auth cache), SD-3.3 (extension sender/session validation), SD-6.3 (provider resilience) and SD-7.2 (public scan caching, parallel task) are complete locally. Next choices, ascending difficulty: **SD-4.2** (API security headers), **SD-5.5** (personal-data inventory and deletion coverage), **SD-6.4** (graceful shutdown), or **SD-8.4** (owner-visible security audit log). Read current task claims again before starting to avoid overlap with another agent. The founder chooses the next batch. Production activation and the full-suite environment limitations remain recorded in CURRENT_STATE.md.

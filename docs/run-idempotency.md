@@ -85,3 +85,72 @@ acknowledgement; `test_jobs.py` checks the stable report job key. No live model 
 Extension tests exercise the real step loop and API client with a mocked browser and HTTP transport, including lost
 observation replies, one browser click, repeat-action rejection, bounded retries and terminal errors. These are
 automated local integration tests, not a deployed browser/VM acceptance run. Final suite results are in CURRENT_STATE.md.
+
+## Session 1 local activation (2026-09-30)
+
+The founder authorized V0-S1 implementation. The connected development database previously had only migration 0001.
+With the local API and its worker paused, existing 0002 and 0003 were applied through `app.migrate`, without editing
+migrations or application admission logic. The legacy checkpoint backup is a private, ignored custom-format dump in
+`evals/results/v0-session-1/`; it contains user state and must never be committed or published. Backup metadata records
+its checksum. All legacy counts were preserved in the private schema: 10 checkpoint migration rows, 224 checkpoints,
+221 blobs and 877 writes. PostgREST schema reload was requested. All three applied checksums match; applying again
+does nothing. Browser roles and the REST service role cannot read private checkpoints; only the service role may call
+the run-request RPCs.
+
+Live current-contract acceptance used the built extension snapshot/execution code in headless Chrome with stubbed
+Chrome messaging, a dedicated test account, free models and the real API/database/storage. No TripBurst form was sent.
+
+| Journey | Saved run | Actions / exact request replays | Outcome |
+| --- | --- | --- | --- |
+| Discover the sign-in page, homepage to signup to login | `814100f3ecf0463c8b5f078dd677784f` | 2 / 3 | done, report ready |
+| Stop with the first action pending | `2e7fc3a801114f31955c88e814324a02` | 0 / 2 | stopped, pending step marked interrupted, partial report ready |
+
+Each run consumed exactly one quota unit, has one saved run, one completed ledger entry per unique mutation and one
+completed report job with one attempt. Replays returned the exact original JSON/status and `Idempotency-Replayed: true`.
+A guarded synthetic request was aged past 24 hours: expiry erased its payload/headers, preserved `gone`, and a new
+claim could not execute it. The guard locked the table and required that only that synthetic intent was eligible.
+A broad live retention purge was rejected by automatic approval review; isolated tests verified the remaining cleanup
+parts without deleting shared evidence. The strengthened retention regression confirms audit/job/rate-limit/request
+cleanup still runs after screenshot cleanup fails.
+
+Focused API migration/checkpoint/idempotency/persona/jobs/retention tests: 72 passed; after strengthening the retention
+assertions its six tests passed again. Extension tests: 64 passed, one opt-in live-provider test skipped. API/eval Ruff
+and extension type check/lint/build passed. Logs, migration/backup metadata, privilege/expiry checks and live acceptance
+metadata are under `evals/results/v0-session-1/` (ignored local artifacts); reports are in `evals/results/e2e-<run_id>.json`.
+
+To repeat the successful read-only acceptance from the repository root with the development API running on 8010:
+
+```powershell
+$env:WEB_URL = 'http://localhost:5174'
+$env:WALKTHRU_API = 'http://127.0.0.1:8010'
+$env:REQUIRE_IDEMPOTENCY = '1'
+$env:VERIFY_REPLAYS = '1'
+$env:PERSONA = 'skeptic'
+Remove-Item Env:STOP_AFTER_STEPS -ErrorAction SilentlyContinue
+& apps/api/.venv/Scripts/python evals/e2e_extension.py http://127.0.0.1:5173/ 'Find the sign in page without submitting any forms'
+# Separate stop acceptance; creates another run and consumes another quota unit:
+$env:STOP_AFTER_STEPS = '0'
+$env:PERSONA = 'first_timer'
+& apps/api/.venv/Scripts/python evals/e2e_extension.py http://127.0.0.1:5173/ 'Read the explore page and then the guide'
+Remove-Item Env:STOP_AFTER_STEPS -ErrorAction SilentlyContinue
+```
+
+Use only an owned target/test account. Model-driven outcomes can vary: a separate planning attempt ended `gave_up`,
+so it is not counted as a successful goal. The stop report also falsely interpreted a custom stop reason as navigation
+trouble despite zero actions. That confirmed report-grounding defect is tracked under V0-S5; report generation here
+proves the operational path, not correctness of that finding. Native sidepanel/permission/session-handoff acceptance
+remains V0-S5. The local API still uses memory checkpoints; live durable restart/readiness remains V0-S2.
+
+For a separate production database in Session 7, use this order:
+
+1. Stop new run admission, resolve/drain active journeys, then stop **all** API/checkpoint writers and workers. Back up
+   the database/checkpoint state and confirm a recovery path; compare migration checksums before maintenance.
+2. Apply pending migrations through `python -m app.migrate` in numerical order, 0002 before 0003. Verify preserved
+   checkpoint rows and private role permissions; reload the PostgREST schema and verify service-only RPC availability.
+3. Start the API and worker with the Session 2-verified production configuration (`APP_ENV=production`,
+   `CHECKPOINTER=postgres`, private checkpoint connection). Pass readiness and the restart drill before admission.
+4. Deploy matching web/extension clients only after the API contract is usable; run keyed start/observe/stop/replay
+   acceptance and verify quota/report counts. Native and deployed checks must pass before widening access.
+
+Rollback must retain the ledger/tombstones and private checkpoint schema. Do not move checkpoints back to a public
+schema or delete uncertain requests to make retries succeed. No production deployment was performed in Session 1.
