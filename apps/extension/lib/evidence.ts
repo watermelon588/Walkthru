@@ -33,10 +33,11 @@ export async function captureStepEvidence(
   tab: chrome.tabs.Tab,
   resultUrl: string,
   note?: string,
+  connection?: string,
 ): Promise<StepEvidence> {
   const screenshotPath = evidencePath(runId, stepIndex);
   const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 72 });
-  await uploadEvidenceImage(screenshotPath, image);
+  await uploadEvidenceImage(screenshotPath, image, connection);
   return {
     screenshot_path: screenshotPath,
     captured_at: new Date().toISOString(),

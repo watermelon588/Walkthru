@@ -16,18 +16,23 @@ export type ContentRequest =
   | { type: "evidence_capture"; active: boolean }
   | { type: "ping" };
 
+type ContentListener = Parameters<typeof chrome.runtime.onMessage.addListener>[0];
 declare global {
-  interface Window { __walkthru?: true }
+  interface Window { __walkthru?: true | ContentListener }
 }
 
 export default defineUnlistedScript(() => {
-  if (window.__walkthru) return; // already injected on this page
-  window.__walkthru = true;
+  // A reload can invalidate Chrome's listener while leaving this document and our marker alive.
+  // Only a listener still registered in the current context proves that injection can be skipped.
+  if (typeof window.__walkthru === "function") {
+    try { if (chrome.runtime.onMessage.hasListener(window.__walkthru)) return; }
+    catch { /* the previous extension context was invalidated */ }
+  }
   const readWebVitals = observeWebVitals();
   // Injection can land mid-navigation, before the new page has a <body>. The listener registers now
   // (so pings succeed), but everything that touches the page waits for the body to exist.
   const ready = whenBody().then(() => mountAgent());
-  chrome.runtime.onMessage.addListener((msg: ContentRequest, _sender, reply) => {
+  const listener: ContentListener = (msg: ContentRequest, _sender, reply) => {
     if (msg.type === "ping") {
       reply({ ok: true });
       return true;
@@ -50,7 +55,9 @@ export default defineUnlistedScript(() => {
       }
     });
     return true;
-  });
+  };
+  chrome.runtime.onMessage.addListener(listener);
+  window.__walkthru = listener;
 });
 
 function whenBody(): Promise<void> {
@@ -69,6 +76,7 @@ function appendWhenReady(node: Node) {
 
 /** A closed shadow root keeps Scout visible to the site owner but absent from agent snapshots. */
 function mountAgent() {
+  document.querySelectorAll("walkthru-agent[role='status']").forEach((node) => node.remove());
   const host = document.createElement("walkthru-agent");
   host.setAttribute("role", "status");
   host.setAttribute("aria-live", "polite");

@@ -4,6 +4,7 @@ import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
 import { suggestGoals } from "../../lib/goals";
 import { openStart, runTest, snapshotActiveTab, type Progress, type RunOptions } from "./run";
+import { connectionId, SESSION_CHANGED, type Session } from "../../lib/session";
 
 const PERSONAS = [
   ["first_timer", "First-time visitor"],
@@ -43,6 +44,8 @@ export function App() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [understood, setUnderstood] = useState<GoalPlan | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const connection = useRef<string | undefined>(undefined);
+  const [sessionVersion, setSessionVersion] = useState<string | undefined>();
 
   useEffect(() => {
     if (typeof chrome === "undefined" || !chrome.tabs) return; // previewing outside the extension
@@ -51,9 +54,22 @@ export function App() {
     chrome.tabs.onActivated.addListener(refreshSite);
     const updated = (_id: number, change: { url?: string }, tab: chrome.tabs.Tab) => { if (tab.active && change.url) void refreshSite(); };
     chrome.tabs.onUpdated.addListener(updated);
-    getSession().then((s) => setSignedIn(!!s));
-    const onChange = (changes: Record<string, chrome.storage.StorageChange>) => {
-      if ("session" in changes) setSignedIn(!!changes.session.newValue);
+    let changed = false;
+    getSession().then((s) => { if (!changed) { connection.current = connectionId(s); setSessionVersion(connection.current); setSignedIn(!!s); } });
+    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area === "local" && "session" in changes) {
+        changed = true;
+        const next = connectionId((changes.session.newValue as Session | undefined) ?? null);
+        if (next !== connection.current) {
+          abort.current?.abort();
+          setProgress({ phase: "error", steps: [], message: SESSION_CHANGED });
+          setLoggedIn(false);
+          setResults([]); setUnderstood(null); setCurrent(null); setPlan(null); setCustom([]);
+        }
+        connection.current = next;
+        setSessionVersion(next);
+        setSignedIn(!!changes.session.newValue);
+      }
     };
     chrome.storage.onChanged.addListener(onChange);
     return () => { chrome.storage.onChanged.removeListener(onChange); chrome.tabs.onActivated.removeListener(refreshSite); chrome.tabs.onUpdated.removeListener(updated); };
@@ -62,15 +78,19 @@ export function App() {
   // The server decides the plan; refresh it when the account connects and after every run.
   const finished = progress.phase === "finished" || progress.phase === "error";
   useEffect(() => {
-    if (signedIn) getPlan().then(setPlan).catch(() => setPlan(null));
+    let active = true;
+    if (signedIn) getPlan().then((p) => { if (active) setPlan(p); }).catch(() => { if (active) setPlan(null); });
     else setPlan(null);
-  }, [signedIn, finished]);
+    return () => { active = false; };
+  }, [signedIn, finished, sessionVersion]);
   const canLogIn = plan?.logged_in ?? false;
   const isPlus = plan?.plan === "plus";
   useEffect(() => {
-    if (isPlus) getTestUsers().then(setCustom).catch(() => setCustom([]));
+    let active = true;
+    if (isPlus) getTestUsers().then((users) => { if (active) setCustom(users); }).catch(() => { if (active) setCustom([]); });
     else setCustom([]);
-  }, [isPlus, signedIn]);
+    return () => { active = false; };
+  }, [isPlus, signedIn, sessionVersion]);
   const options: [string, string][] = [...PERSONAS.map(([v, l]) => [v, l] as [string, string]), ...custom.map((t): [string, string] => [`custom:${t.id}`, t.name])];
   const labelOf = (value: string) => options.find(([v]) => v === value)?.[1] ?? value;
   const people = isPlus ? chosen.filter((c) => options.some(([v]) => v === c)) : [persona];
@@ -127,6 +147,8 @@ export function App() {
     if (!canStart) return;
     abort.current = new AbortController();
     const signal = abort.current.signal;
+    const pinned = connection.current;
+    if (!pinned) return;
     setUnderstood(null);
     setResults([]);
     const startUrl = site;
@@ -137,20 +159,24 @@ export function App() {
       for (const [index, who] of people.entries()) {
         if (signal.aborted) break;
         setCurrent({ index, total: people.length, label: labelOf(who) });
-        if (index > 0) await openStart(startUrl, signal);
+        if (index > 0) await openStart(startUrl, signal, pinned);
         let last: Progress = { phase: "idle", steps: [] };
-        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal };
+        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal, connection: pinned };
         await runTest(opts, (p) => {
           last = p;
+          if (connection.current !== pinned) return;
           if (p.plan) setUnderstood(p.plan);
           setProgress(p);
         });
+        if (connection.current !== pinned) break;
         done.push({ label: labelOf(who), status: last.status, runId: last.runId, error: last.phase === "error" ? last.message : undefined });
         setResults([...done]);
         if (last.phase === "error") break; // a plan limit or a broken session would fail the next test user too
       }
+    } catch {
+      if (connection.current === pinned) setProgress({ phase: "error", steps: [], message: SESSION_CHANGED });
     } finally {
-      setCurrent(null);
+      if (connection.current === pinned) setCurrent(null);
     }
   }
 
@@ -249,7 +275,7 @@ export function App() {
         </section>
       )}
 
-      {progress.phase === "error" && <div role="alert"><p className="error">{progress.message}</p><p className="hint">For public competitor metrics, <a href={`${WEB_URL}/app/compare?competitor=${encodeURIComponent(site)}`} target="_blank" rel="noreferrer">open Compare</a>. To test your own forms, <a href={`${WEB_URL}/app/settings#verify`} target="_blank" rel="noreferrer">verify with DNS</a>.</p></div>}
+      {progress.phase === "error" && <div role="alert"><p className="error">{progress.message}</p>{progress.code !== "browser_connection" && <p className="hint">For public competitor metrics, <a href={`${WEB_URL}/app/compare?competitor=${encodeURIComponent(site)}`} target="_blank" rel="noreferrer">open Compare</a>. To test your own forms, <a href={`${WEB_URL}/app/settings#verify`} target="_blank" rel="noreferrer">verify with DNS</a>.</p>}</div>}
       {progress.evidenceWarning && <p className="notice" role="status">{progress.evidenceWarning}</p>}
 
       {results.length > 1 && !running && (
@@ -286,7 +312,7 @@ export function App() {
 
       <section aria-label="Think-aloud log">
         {progress.steps.length === 0 ? (
-          <p className="empty">{progress.phase === "idle" ? "The test user's thoughts will appear here." : "Waiting for the first step…"}</p>
+          <p className="empty">{progress.phase === "idle" ? "The test user's thoughts will appear here." : progress.phase === "error" ? "The test stopped before the first step." : "Waiting for the first step…"}</p>
         ) : (
           <ol className="steps">
             {progress.steps.map((s, i) => (

@@ -6,8 +6,9 @@ import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } fr
 import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
+import { assertConnection, connectionId, getSession, SESSION_CHANGED } from "../../lib/session";
 
-export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean };
+export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean; connection?: string };
 export type Progress = {
   phase: "idle" | "starting" | "running" | "finished" | "error";
   steps: Step[];
@@ -20,6 +21,10 @@ export type Progress = {
 };
 
 const SETTLE_MS = 1200;
+const CONTENT_CONNECTION_MESSAGE = "Walkthru could not connect to this page. Reload the website tab and reopen the extension, then start again. If you just rebuilt Walkthru, reload it in chrome://extensions first.";
+class ContentConnectionError extends Error {
+  constructor() { super(CONTENT_CONNECTION_MESSAGE); }
+}
 const ACTION_ACTIVITY: Record<Step["action"], string> = {
   click: "Clicking the next step",
   type: "Filling in the form",
@@ -35,17 +40,42 @@ async function activeTab(): Promise<chrome.tabs.Tab> {
   return tab;
 }
 
-async function ensureContentScript(tabId: number) {
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: "ping" });
-  } catch {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["inject.js"] });
-  }
+// A page that never answers (navigation mid-message, a frozen tab) used to hang the run with no error and no report.
+// Snapshots and actions finish in a few seconds; past these limits the run ends truthfully with a partial report.
+const PING_MS = 5_000;
+const PAGE_MS = 30_000;
+export class PageTimeoutError extends Error {}
+
+export function withTimeout<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([work, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new PageTimeoutError(message)), ms); })])
+    .finally(() => clearTimeout(timer));
 }
 
-async function send<T>(tabId: number, msg: unknown): Promise<T> {
+const ping = (tabId: number) => withTimeout(chrome.tabs.sendMessage(tabId, { type: "ping" }, { frameId: 0 }), PING_MS, "The page did not answer.");
+
+async function ensureContentScript(tabId: number) {
+  try {
+    const reply = await ping(tabId);
+    if (reply?.ok === true) return;
+  } catch { /* no live receiver on this document */ }
+  // Reconnect only the transport. Never retry an action that may already have executed.
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["inject.js"] });
+    const reply = await ping(tabId);
+    if (reply?.ok !== true) throw new ContentConnectionError();
+  } catch { throw new ContentConnectionError(); }
+}
+
+async function send<T>(tabId: number, msg: unknown, guard?: RunOptions): Promise<T> {
   await ensureContentScript(tabId);
-  return chrome.tabs.sendMessage(tabId, msg);
+  if (guard?.connection) await assertConnection(guard.connection);
+  if (guard?.signal.aborted) throw new Error("The site owner pressed Stop.");
+  try { return await withTimeout(chrome.tabs.sendMessage(tabId, msg, { frameId: 0 }), PAGE_MS, "The page stopped responding for 30 seconds, so the test ended here."); }
+  catch (error) {
+    if (/receiving end does not exist|could not establish connection|extension context invalidated/i.test(error instanceof Error ? error.message : String(error))) throw new ContentConnectionError();
+    throw error;
+  }
 }
 
 /** The current tab's snapshot, for goal suggestions. Null when the page cannot be read yet (no permission, chrome:// pages). */
@@ -100,8 +130,10 @@ async function humanCheck(tabId: number, obs: Observation, signal: AbortSignal):
 }
 
 /** Back to where the first test user started, so every test user in a set begins on the same page. */
-export async function openStart(url: string, signal: AbortSignal) {
+export async function openStart(url: string, signal: AbortSignal, connection?: string) {
   const tab = await activeTab();
+  if (connection) await assertConnection(connection);
+  if (signal.aborted) return;
   await chrome.tabs.update(tab.id!, { url });
   await settled(tab.id!, signal);
 }
@@ -115,6 +147,10 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
   let tabId: number | undefined;
   let runId: string | undefined;
   try {
+    const connection = opts.connection ?? connectionId(await getSession());
+    if (!connection) throw new Error(SESSION_CHANGED);
+    opts = { ...opts, connection };
+    await assertConnection(connection);
     emit({ phase: "starting" });
     const origin = new URL(opts.site).origin;
     const allowed = await getRunPolicy();
@@ -131,7 +167,10 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
 
     await setAgentStatus(tabId, "observing", "Reading the page");
     let obs = await humanCheck(tabId, await send<Observation>(tabId, { type: "snapshot" }), opts.signal);
-    let reply = await startRun({ ...opts, observation: obs });
+    if (opts.signal.aborted) throw new Error("The site owner pressed Stop.");
+    let reply = await startRun({ site: opts.site, goal: opts.goal, persona: opts.persona,
+      ...(opts.group_id ? { group_id: opts.group_id } : {}), logged_in: opts.logged_in,
+      max_steps: opts.max_steps, observation: obs }, undefined, connection);
     runId = reply.run_id;
     if (reply.plan) emit({ plan: reply.plan });
     // Owner-verified domains may send real messages, but only after the owner approves each one.
@@ -140,14 +179,14 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     while (reply.status === "running") {
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop")) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop", connection)) {
           onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
       }
       if (Date.now() > deadline) {
         await setAgentStatus(tabId, "stopped", "Ran out of test time");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the 4-minute time limit ended the test")) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the 4-minute time limit ended the test", connection)) {
           onProgress({ phase: "error", steps, message: "The time limit ended, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -165,7 +204,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       await settled(tabId, opts.signal);
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop")) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop", connection)) {
           onProgress({ phase: "error", steps, message: "The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -173,7 +212,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       const current = await chrome.tabs.get(tabId);
       if (current.url && !sameOrigin(current.url, origin)) {
         await setAgentStatus(tabId, "stopped", "Left the site");
-        if (!await closeRun(runId, steps, onProgress, evidenceWarning, `the last click led away from the site, to ${current.url}`)) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, `the last click led away from the site, to ${current.url}`, connection)) {
           onProgress({ phase: "error", steps, message: "The test left the site, but Walkthru could not close the server run. End it from the dashboard.", evidenceWarning });
         }
         return;
@@ -187,7 +226,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         const latestTab = await chrome.tabs.get(tabId);
         await setEvidenceCapture(tabId, true);
         try {
-          evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note);
+          evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note, connection);
           capturedCount += 1;
         } catch (error) {
           // Evidence should enrich a journey, never stop it.
@@ -197,15 +236,16 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
           await setEvidenceCapture(tabId, false);
         }
       }
-      reply = await observe(reply.run_id, obs, evidence, reply.action_id);
+      reply = await observe(reply.run_id, obs, evidence, reply.action_id, undefined, connection);
     }
     const finished = reply.status === "done" || reply.status === "safe_stop";
     await setAgentStatus(tabId, finished ? "complete" : "stopped", reply.status === "safe_stop" ? "Stopped before sending" : finished ? "Goal reached" : "Test finished");
     finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
     if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
-    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning, `the browser run failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 280))) return;
-    onProgress({ phase: "error", steps, message: e instanceof Error ? e.message : String(e), evidenceWarning });
+    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning, `the browser run failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 280), opts.connection)) return;
+    onProgress({ phase: "error", steps, runId, message: e instanceof Error ? e.message : String(e), evidenceWarning,
+      ...(e instanceof ContentConnectionError ? { code: "browser_connection" } : {}) });
   }
 }
 
@@ -215,9 +255,10 @@ async function closeRun(
   onProgress: (p: Progress) => void,
   evidenceWarning?: string,
   reason?: string,
+  connection?: string,
 ): Promise<boolean> {
   try {
-    const stopped = await stopRun(runId, reason);
+    const stopped = await stopRun(runId, reason, undefined, connection);
     onProgress({ phase: "finished", steps: stopped.steps, status: "stopped", runId, evidenceWarning });
     return true;
   } catch {
@@ -231,13 +272,13 @@ async function act(tabId: number, step: Step, opts: RunOptions, origin: string):
   const base = { logged_in: opts.logged_in, verified: opts.verified };
   let confirmed = false;
   if (opts.sentOnce && step.action === "click") {
-    const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } });
+    const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } }, opts);
     if (probe.confirm === "send") return "a message was already sent in this run; Walkthru never sends twice";
   }
   if (step.action === "click" && (opts.logged_in || opts.verified)) {
     // Dry-run first. Ask the owner before a real message leaves a verified site, and before any
     // form submit on a logged-in page (SPEC safety rule).
-    const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } });
+    const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } }, opts);
     if (probe.note) return probe.note;
     if (probe.confirm === "send" || (opts.logged_in && probe.submits)) {
       const what = probe.confirm === "send" ? "send a real message from" : "submit a form on";
@@ -246,7 +287,7 @@ async function act(tabId: number, step: Step, opts: RunOptions, origin: string):
       if (probe.confirm === "send") opts.sentOnce = true;
     }
   }
-  const result = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, confirmed } });
+  const result = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, confirmed } }, opts);
   return result.note;
 }
 

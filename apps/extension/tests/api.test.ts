@@ -5,6 +5,7 @@ type FetchRequest = (url: string, options: { headers: Record<string, string>; bo
 
 beforeEach(async () => {
   vi.stubGlobal("chrome", {
+    runtime: { sendMessage: vi.fn().mockResolvedValue({ ok: true }) },
     storage: {
       local: {
         get: vi.fn().mockResolvedValue({
