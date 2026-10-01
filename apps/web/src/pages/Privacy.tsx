@@ -27,7 +27,7 @@ const sections: DocSection[] = [
         <p>The site address, the goal and test user you chose, and for each step: a text outline of the page (buttons, links, headings, visible errors and whether a form field is filled, never its value), the action taken, the test user's thoughts, and accessibility and page-speed measurements.</p>
         <p>Up to eight screenshots per run of the tab being tested. Form fields are visually masked and Scout is hidden before each capture.</p>
         <h3>Instant Scans</h3>
-        <p>The address you scan and the public pages we read from it. Your network address is used briefly to limit scans to five an hour and is not stored with the report. If you give an email address for the report, it is used once to send it and is not stored.</p>
+        <p>The address you scan and the public pages we read from it. Your network address is used briefly to limit scans and is not stored with the report. If you give an email address for the report, it is used to send it and is not stored in our report database. Our email provider processes delivery under its own retention rules.</p>
         <h3>Weekly watch and competitor comparisons (paid plans)</h3>
         <p>The sites you choose to watch, when each was last checked and what changed, and the report of every check. For a comparison, the addresses you enter and the public pages we read from each of them, the same way a search engine reads a public page. We only read public pages of sites you do not own.</p>
         <h3>Test run safety log</h3>
@@ -82,6 +82,8 @@ const sections: DocSection[] = [
           <dd>Sign-in, database and private screenshot storage.</dd>
           <dt>Groq and Google (Gemini)</dt>
           <dd>AI models for test users and report writing. Google Gemini also answers questions asked to Scout in a team workspace: it then receives the question and that workspace's shared findings, report summaries and recent messages.</dd>
+          <dt>OpenRouter</dt>
+          <dd>Routes report-writing requests to the configured model provider. Requests include masked page text, the goal, earlier steps and scan findings.</dd>
           <dt>Google PageSpeed Insights</dt>
           <dd>Mobile speed measurements for the public address being scanned.</dd>
           <dt>Resend</dt>
@@ -97,7 +99,8 @@ const sections: DocSection[] = [
     body: (
       <ul>
         <li>Screenshots: deleted automatically {EVIDENCE_RETENTION_DAYS} days after the run.</li>
-        <li>Emails entered for an Instant Scan report: not stored; used once to send the report.</li>
+        <li>Instant Scan report emails: not stored in our report database; our email provider processes delivery under its own retention rules.</li>
+        <li>Run request replies: available for retries for 24 hours, then their cached contents are erased by expiry checks or the six-hour cleanup pass. Minimal request fingerprints remain until account deletion to prevent old retries recreating a run.</li>
         <li>API keys, deploy hooks and watched sites: kept until you revoke or remove them, or delete your account.</li>
         <li>Runs, steps and reports: kept until you delete them.</li>
         <li>Test run safety log: 90 days, then deleted automatically.</li>
@@ -119,12 +122,12 @@ const sections: DocSection[] = [
   {
     id: 'storage',
     title: 'Cookies and local storage',
-    body: <p>We do not use advertising or analytics cookies. Your browser stores your sign-in session so you stay signed in, and the extension stores its connection to your account. Both are removed when you sign out.</p>,
+    body: <><p>We do not use advertising or analytics cookies. Your browser stores your sign-in session, and the extension stores its connection to your account. Website sign-out asks the installed extension in this browser to disconnect before signing out. If that cannot be confirmed, we show a warning to disable the extension in Chrome. A disconnected or changed account stops further browser actions; an action or request already sent may finish. An unfinished server run can be ended from its original account's dashboard.</p><p>Private API session validation is cached for up to five minutes, never beyond access-token expiry. Supabase access tokens can remain valid until they expire even after sign-out. Signing out does not delete reports or remove public links or team access. Other browsers and devices have their own stored connections.</p></>,
   },
   {
     id: 'security',
     title: 'Security',
-    body: <p>Data is encrypted in transit, every database table only returns rows to their owner, and screenshots sit in private storage behind short-lived links. Read more on our <Link to="/security">security page</Link>.</p>,
+    body: <p>Production traffic uses encryption. Private reports are restricted to their owner unless shared: public-link reports are readable by anyone with the link, and workspace reports by authorized members. Screenshots sit in private storage behind short-lived links. Read more on our <Link to="/security">security page</Link>.</p>,
   },
   {
     id: 'children',
@@ -143,7 +146,7 @@ export default function Privacy() {
     <DocLayout
       title="Privacy policy"
       lead={`What ${brand.name} collects when you scan or test a site, why, who processes it and how to take it with you or delete it.`}
-      updated="2026-09-26"
+      updated="2026-10-01"
       sections={sections}
     />
   )

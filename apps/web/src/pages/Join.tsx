@@ -5,6 +5,7 @@ import { btnGhost, btnPrimary, Footer, Nav } from '../components/Shared'
 import { useSession } from '../lib/auth'
 import { acceptInvite, clearPendingJoin, pendingJoin, previewInvite, ROLE_A, ROLE_HELP, savePendingJoin, type Preview } from '../lib/teams'
 import { SkeletonPanel } from '../components/Loading'
+import { inviteCode } from '../lib/loginErrors'
 
 type State = { kind: 'loading' } | { kind: 'ready'; preview: Preview } | { kind: 'error'; message: string } | { kind: 'none' }
 
@@ -13,7 +14,7 @@ type State = { kind: 'loading' } | { kind: 'ready'; preview: Preview } | { kind:
 export default function Join() {
   const { loading, session } = useSession()
   const navigate = useNavigate()
-  const [code] = useState(() => decodeURIComponent(window.location.hash.slice(1)).trim() || pendingJoin() || '')
+  const [code] = useState(() => inviteCode(window.location.hash) || pendingJoin() || '')
   const [state, setState] = useState<State>(code ? { kind: 'loading' } : { kind: 'none' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,9 +32,11 @@ export default function Join() {
 
   useEffect(() => {
     if (!code || loading || !session) return
+    let current = true
     previewInvite(code)
-      .then((preview) => setState({ kind: 'ready', preview }))
-      .catch((e: Error) => setState({ kind: 'error', message: e.message }))
+      .then((preview) => { if (current) setState({ kind: 'ready', preview }) })
+      .catch((e: Error) => { if (current) setState({ kind: 'error', message: e.message }) })
+    return () => { current = false }
   }, [code, loading, session])
 
   async function join() {

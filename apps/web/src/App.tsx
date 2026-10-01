@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
 import { Toaster } from './components/Toaster'
 import { NotificationsProvider } from './components/NotificationsProvider'
 import Landing from './pages/Landing'
+import { useExtensionDisconnect } from './lib/auth'
 
 // Landing is the LCP path, so it ships in the main bundle. Everything else loads on demand.
 
@@ -57,7 +58,9 @@ function ScrollManager() {
       window.scrollTo(0, 0)
       return
     }
-    const id = decodeURIComponent(hash.slice(1))
+    let id: string
+    try { id = decodeURIComponent(hash.slice(1)) }
+    catch { return } // malformed links must not crash the whole router
     let frame = 0
     let tries = 0
     const find = () => {
@@ -72,6 +75,7 @@ function ScrollManager() {
 }
 
 export default function App() {
+  useExtensionDisconnect()
   return (
     <BrowserRouter>
       <ScrollManager />

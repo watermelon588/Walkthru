@@ -1,12 +1,13 @@
 import { BookOpenTextIcon, ChatCircleTextIcon, ChatsCircleIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { brand } from '../brand'
 import { accountAvatar, accountProfile, signOut, useSession } from '../lib/auth'
 import { useNotificationCounts, type Section } from '../lib/notifications'
 import { pendingJoin } from '../lib/teams'
+import { toast } from '../lib/toast'
 import { AccountAvatar } from './AccountAvatar'
 import { PlanMini } from './PlanMeter'
 import { Logo, SkipLink } from './Shared'
@@ -105,6 +106,7 @@ function Count({ n }: { n: number }) {
 }
 
 function SidebarNav() {
+  const [leaving, setLeaving] = useState(false)
   const counts = useNotificationCounts()
   const { session } = useSession()
   const navigate = useNavigate()
@@ -145,7 +147,14 @@ function SidebarNav() {
           type="button"
           aria-label="Sign out"
           title="Sign out"
-          onClick={() => signOut().then(() => navigate('/login', { replace: true }))}
+          disabled={leaving}
+          onClick={async () => {
+            setLeaving(true)
+            try { await signOut(); navigate('/login', { replace: true }) }
+            catch (error) { toast({ title: 'Could not sign out', body: error instanceof Error && error.message.startsWith('Your account changed')
+              ? error.message : 'Check your connection and try again.', tone: 'danger' }) }
+            finally { setLeaving(false) }
+          }}
           className="grid size-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface hover:text-ink"
         >
           <SignOutIcon weight="light" className="size-4" />

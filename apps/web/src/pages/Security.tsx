@@ -73,7 +73,9 @@ const sections: DocSection[] = [
     body: (
       <ul>
         <li>Production web and API traffic uses HTTPS. Private API calls require your signed-in session; public scans and shared reports have separate access rules.</li>
-        <li>Database rows are protected by row-level security, so each account can only read its own runs.</li>
+        <li>Database rows use row-level security. Private runs are owner-only; public links and team workspace sharing grant separate, deliberate access. Removing a workspace member removes their workspace access.</li>
+        <li>Website sign-out requests extension disconnect in this browser and warns if it cannot be confirmed. Account changes stop further actions; an action or request already sent may finish. End an unfinished server run from its original account's dashboard.</li>
+        <li>Private API session checks are cached for up to five minutes, never past token expiry. Supabase access tokens may remain valid until expiry after sign-out; logout does not revoke public links or workspace access.</li>
         <li>Screenshots are stored privately and shown through links that expire after an hour. They are deleted after {EVIDENCE_RETENTION_DAYS} days.</li>
         <li>Deleting your account removes stored files first, then run history, then the account, so nothing is left behind unreachable.</li>
         <li>API keys for the MCP server and deploy-hook URLs are shown once and stored only as SHA-256 fingerprints. Each key can reach only its owner's runs, every call re-checks the plan, and a key can be revoked at once from the MCP page. Deploy hooks run at most one check every 10 minutes.</li>

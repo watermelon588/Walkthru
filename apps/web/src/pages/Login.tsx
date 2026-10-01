@@ -8,6 +8,8 @@ import { useSession } from '../lib/auth'
 import { useReveal } from '../lib/motion'
 import { supabase } from '../lib/supabase'
 import { Orb } from '../components/Loading'
+import { loginError } from '../lib/loginErrors'
+import { pendingJoin } from '../lib/teams'
 
 type Provider = 'google' | 'github'
 type Status =
@@ -24,13 +26,17 @@ const OAUTH_WAIT_MS = 10_000
 
 export default function Login() {
   const root = useRef<HTMLDivElement>(null)
-  const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const [status, setStatus] = useState<Status>(() => {
+    const message = loginError(location.search, location.hash)
+    return message ? { kind: 'error', message } : { kind: 'idle' }
+  })
   const waiting = useRef<number | undefined>(undefined)
   const { session } = useSession()
   useReveal(root)
   // Back from Google or GitHub without signing in: Chrome restores this page from its back-forward cache, frozen on
   // "Opening Google...". Start fresh instead, so every button works again.
   useEffect(() => {
+    if (loginError(location.search, location.hash)) window.history.replaceState(null, '', '/login')
     const restored = (e: PageTransitionEvent) => {
       if (!e.persisted) return
       window.clearTimeout(waiting.current)
@@ -42,20 +48,22 @@ export default function Login() {
       window.clearTimeout(waiting.current)
     }
   }, [])
-  if (session) return <Navigate to="/app" replace />
+  if (session && status.kind !== 'error') return <Navigate to={pendingJoin() ? '/join' : '/app'} replace />
 
   async function sendLink(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const email = String(new FormData(e.currentTarget).get('email')).trim()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setStatus({ kind: 'error', message: 'Enter a valid email address.' })
-    if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is not configured yet. Add the Supabase keys to apps/web/.env.' })
+    if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is temporarily unavailable. Please try again later.' })
     setStatus({ kind: 'sending' })
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
-    setStatus(error ? { kind: 'error', message: error.message } : { kind: 'sent', email })
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
+      setStatus(error ? { kind: 'error', message: error.message } : { kind: 'sent', email })
+    } catch { setStatus({ kind: 'error', message: 'Could not send a sign-in link. Check your connection and try again.' }) }
   }
 
   async function oauth(provider: Provider) {
-    if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is not configured yet. Add the Supabase keys to apps/web/.env.' })
+    if (!supabase) return setStatus({ kind: 'error', message: 'Sign-in is temporarily unavailable. Please try again later.' })
     setStatus({ kind: 'oauth', provider })
     window.clearTimeout(waiting.current)
     waiting.current = window.setTimeout(() => {
@@ -63,10 +71,15 @@ export default function Login() {
         setStatus({ kind: 'error', message: `${provider === 'google' ? 'Google' : 'GitHub'} did not open. Check your connection and try again.` })
       }
     }, OAUTH_WAIT_MS)
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
+      if (error) {
+        window.clearTimeout(waiting.current)
+        setStatus({ kind: 'error', message: error.message })
+      }
+    } catch {
       window.clearTimeout(waiting.current)
-      setStatus({ kind: 'error', message: error.message })
+      setStatus({ kind: 'error', message: 'Could not open sign-in. Check your connection and try again.' })
     }
   }
 
@@ -102,7 +115,7 @@ export default function Login() {
               <EnvelopeSimpleIcon weight="light" className="size-8 text-accent" />
               <h1 className="mt-6 text-4xl font-extralight tracking-tight">Check your inbox.</h1>
               <p className="mt-4 leading-relaxed text-muted">
-                We sent a sign-in link to <span className="text-ink">{status.email}</span>. It works once and expires in an hour.
+                We requested a sign-in link for <span className="text-ink">{status.email}</span>. Check your inbox and spam folder, and open the newest link. It works once.
               </p>
               <button type="button" onClick={() => setStatus({ kind: 'idle' })} className={`${btnGhost} mt-10`}>
                 Use a different email
@@ -114,6 +127,7 @@ export default function Login() {
                 <span className="inline-block overflow-hidden pb-[0.12em] align-bottom"><span className="word inline-block">Sign in</span></span>
               </h1>
               <p className="hero-fade mt-4 leading-relaxed text-muted">New to {brand.name}? The same steps create your account.</p>
+              {session && status.kind === 'error' && <button type="button" className={`${btnGhost} mt-4`} onClick={() => setStatus({ kind: 'idle' })}>Continue to workspace</button>}
 
               <div className="hero-fade mt-10 grid gap-3">
                 <button type="button" disabled={busy} onClick={() => oauth('google')} className={`${btnGhost} justify-center disabled:opacity-60`}>

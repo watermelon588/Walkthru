@@ -1,6 +1,7 @@
 import { toCsv } from './export'
 import { supabase } from './supabase'
 import { apiError } from './apiError'
+import { confirmedAccessRequest } from './accessRequest'
 
 export type Step = {
   thought: string
@@ -274,7 +275,13 @@ export type BillingStatus = {
   prices: { plan: BillingOffer['plan']; founding: boolean; price_cents: number; runs: number; days: number }[]
 }
 export const getBilling = () => api<BillingStatus>('/billing', undefined, true, 'GET')
-export const requestAccess = (plan: BillingOffer['plan'], note: string) => api<{ id: string; status: 'pending' }>('/billing/access-requests', { plan, note })
+export async function requestAccess(plan: BillingOffer['plan'], note: string) {
+  const userId = (await supabase?.auth.getSession())?.data.session?.user.id
+  if (!userId) throw new Error('Sign in first')
+  const trimmed = note.trim()
+  return confirmedAccessRequest(() => api<{ id: string; status: 'pending' }>('/billing/access-requests', { plan, note: trimmed }), getBilling,
+    async () => (await supabase?.auth.getSession())?.data.session?.user.id === userId, plan, trimmed)
+}
 /** Opens Dodo's hosted checkout. Only an https dodopayments.com address is followed. */
 export async function startCheckout(offerId: string): Promise<string> {
   const { checkout_url } = await api<{ checkout_url: string }>(`/billing/offers/${encodeURIComponent(offerId)}/checkout`)

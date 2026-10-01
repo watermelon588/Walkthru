@@ -8,13 +8,14 @@ import { StatusPill } from '../components/ReportView'
 import { Orb, Skeleton, SkeletonRows } from '../components/Loading'
 import { PlanMeter } from '../components/PlanMeter'
 import { btnGhost, ScanForm } from '../components/Shared'
+import { connectExtension } from '../lib/extension'
 import { useSession } from '../lib/auth'
+import { authSessionId } from '../lib/sessionHandoff'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { listRuns, PERSONA_LABEL, stopRun, timeAgo, type Run } from '../lib/runs'
 
 type Runs = { kind: 'loading' } | { kind: 'ready'; runs: Run[] } | { kind: 'error'; message: string }
 
-const extensionId = import.meta.env.VITE_EXTENSION_ID as string | undefined
 
 const firstRun = [
   { title: 'Install the extension', body: 'Add Walkthru to Chrome and pin the bird to your toolbar.', link: 'How to install', href: '/docs#install' },
@@ -200,22 +201,24 @@ export default function Dashboard() {
 /** Hands the current session to the extension so it can call the API as you. Only the extension we name receives it. */
 function ConnectExtension() {
   const { session } = useSession()
-  const [msg, setMsg] = useState<string | null>(null)
+  const identity = `${session?.user.id ?? ''}:${authSessionId(session?.access_token ?? '') ?? session?.access_token ?? ''}`
+  const [feedback, setFeedback] = useState<{ identity: string; message: string } | null>(null)
+  const msg = feedback?.identity === identity ? feedback.message : null
+  const [busy, setBusy] = useState(false)
 
-  function connect() {
-    const runtime = (window as unknown as { chrome?: { runtime?: { sendMessage: (id: string, msg: unknown, cb: (r: unknown) => void) => void; lastError?: { message: string } } } }).chrome?.runtime
-    if (!extensionId) return setMsg('Set VITE_EXTENSION_ID in apps/web/.env to the id shown on chrome://extensions.')
-    if (!runtime?.sendMessage || !session) return setMsg('Open this page in Chrome with the Walkthru extension installed.')
-    const { access_token, refresh_token, expires_at } = session
-    runtime.sendMessage(extensionId, { type: 'session', session: { access_token, refresh_token, expires_at } }, () => {
-      setMsg(runtime.lastError ? 'Extension not found. Is it installed and enabled?' : 'Extension connected. Open a site and click the bird.')
-    })
+  async function connect() {
+    setBusy(true)
+    try {
+      setFeedback({ identity, message: await connectExtension() ? 'Extension connected. Open a site and click the bird.'
+        : 'Could not connect. Open Chrome, reload the current Walkthru extension, then sign in and try again.' })
+    } catch { setFeedback({ identity, message: 'Could not connect. Sign in and try again.' }) }
+    finally { setBusy(false) }
   }
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <button type="button" onClick={connect} className={btnGhost}>
-        <PlugsConnectedIcon weight="light" className="size-4" /> Connect extension
+      <button type="button" onClick={connect} disabled={busy} className={btnGhost}>
+        <PlugsConnectedIcon weight="light" className="size-4" /> {busy ? 'Connecting' : 'Connect extension'}
       </button>
       {msg && <p role="status" className="max-w-[40ch] text-xs leading-relaxed text-muted">{msg}</p>}
     </div>

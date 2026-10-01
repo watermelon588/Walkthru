@@ -36,12 +36,15 @@ export function YourData({ email }: { email: string }) {
     if (!matches) return setError('Type your account email exactly to confirm.')
     setBusy('delete')
     setError(null)
+    let deleted = false
     try {
       await deleteAccount(confirm)
+      deleted = true
       await signOut()
       navigate('/', { replace: true })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Deletion failed. Nothing was removed from your account.')
+      setError(deleted ? 'Your account was deleted, but browser sign-out could not be confirmed. Close Walkthru and disable the extension before reconnecting.'
+        : e instanceof Error ? e.message : 'Deletion could not be confirmed. Try again or contact support.')
       setBusy(null)
     }
   }
@@ -55,7 +58,8 @@ export function YourData({ email }: { email: string }) {
           <ul className="mt-3 grid gap-2 text-sm leading-relaxed text-muted">
             <li>Journey screenshots are deleted automatically {EVIDENCE_RETENTION_DAYS} days after each run.</li>
             <li>Runs, steps and reports are kept until you delete them, one at a time from a report or all at once below.</li>
-            <li>Emails typed into Instant Scan are erased after {EVIDENCE_RETENTION_DAYS} days.</li>
+            <li>Instant Scan report emails are used to send the report and are not stored in our report database. Our email provider processes delivery.</li>
+            <li>Signing out disconnects this browser's extension when it acknowledges the request. Saved reports stay until deleted; shared links and team access have separate controls.</li>
           </ul>
           <button type="button" onClick={download} disabled={busy !== null} className={`${btnGhost} mt-6`}>
             <DownloadSimpleIcon weight="light" className="size-4" /> {busy === 'export' ? 'Preparing export' : 'Export my data'}
