@@ -63,6 +63,7 @@ apps/api/.venv/Scripts/python evals/serve.py   # easy :8101, hard :8102
 ```
 
 ## Rules
+- **Git attribution:** use the founder's configured Git identity for work performed with AI tools. Do not add Claude, Codex, OpenAI or other AI tools as commit authors, co-authors or PR attribution. Preserve credit for any actual human contributors.
 - **Always:** keep build and lint green; use design tokens (`bg-bg`, `text-ink`, `text-muted`, `border-line`, `bg-surface`, `text-accent`, `text-danger`), never raw hex in components; honor `prefers-reduced-motion` for every animation; label every input; handle loading, error and empty states.
 - **Always (v1.2 build rules, ROADMAP.md):** deterministic code before a model call; free-tier models and APIs only; reuse open source after checking its licence (docs/decisions.md 2026-09-25) and keep its notice in `apps/api/THIRD_PARTY.md`.
 - **Ask first:** adding dependencies not listed in ARCHITECTURE.md (permissive open source is approved in principle; still name it in the task), schema changes after launch, switching on any paid model or API, changing pricing.
