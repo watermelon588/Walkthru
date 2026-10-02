@@ -2,12 +2,26 @@
 
 _Last updated: 2026-10-02_
 
+## README rewrite, MIT licence and hand-drawn diagrams (2026-10-02, uncommitted)
+
+- `README.md` rewritten as a technical deep dive: product tour, features in depth, architecture, the LangGraph persona and report graphs, one-step sequence, MCP server (24 tools, auth gate), team collaboration, security hardening, privacy and retention, reliability, all 13 doodle mockups.
+- `LICENSE` added: MIT, copyright 2026 Rohit Maity (founder's request).
+- `docs/diagrams/`: seven Excalidraw-style diagrams generated from code (`diagrams.js` specs, `sketch.html` with rough.js + Virgil from unpkg, `render.cjs` via Playwright + Edge). Re-render with `node docs/diagrams/render.cjs`.
+- `docs/readme/`: 11 real captures of public web pages (headless Edge 1.5x, reduced motion). Supabase was unreachable from this network (DNS timeout), so no new signed-in or live-report captures; existing ones reused.
+- Not committed or pushed. `launch-video-15s/` and `launch-video-panic/` stay untracked and are not linked from the README.
+
+## GitHub contributor cleanup completed (2026-10-02)
+
+- Founder requested removing AI tools from GitHub contributor attribution. Prepared an isolated metadata-only history rewrite for `main`, `1` and `claude/practical-hopper-j64i4s`: 23 AI authors/committers replaced with the founder's existing Git identity and 80 AI co-author trailers removed across 111 local-history commits. All 111 historical trees, human identities, timestamps and merge parent structure verified unchanged; 29 invalidated signature headers removed from prepared objects. Original signatures and history preserved in a verified 137 MB Git bundle under ignored `evals/results/contributor-cleanup-2026-10-02/`.
+- Founder explicitly approved publication. Atomic, explicit-lease force-push succeeded on all three branches and their rewritten remote tips were verified. Five live local/remote-tracking refs synchronized without checkout/reset/clean. Before/after hashes prove staged entries, tracked changes and all 16 untracked files were preserved. Local branch `1` still holds its unpublished commit, now `e619b73`, one ahead of `origin/1`. Other active agent sessions/clones must synchronize before pushing old history. [Exact branch tips, backup and validation](docs/git-contributor-cleanup-2026-10-02.md); complete mapping and preservation checks in the ignored `review.json`.
+- Disabled automatic future Claude commit/PR credit in `.claude/settings.json` and added a Git attribution rule to `AGENTS.md`. Only these two files committed as the founder and pushed normally: `ef5a6e13ccb42e380ec0c3e2211e69f3f074f91f` (final `main` tip). GitHub's public contributors API now lists **only `watermelon588`**, 111 contributions; response saved in ignored `contributors-after.json`. Existing `.gitignore`, state-document edits and new launch films preserved. Settings JSON and changed-file whitespace checks pass; no application code or dependency changes.
+
 ## Handoff for the next agent (2026-10-02, Claude Code local, written before pushing)
 
 Read this block first. It replaces the 2026-09-26 handoff.
 
 ### Local state at this push
-- Local `main` equals `origin/main` after this push. This push includes every agent's uncommitted work (Claude Code, Codex and the front-end agent) at the founder's request.
+- Local `main` equals `origin/main` after the README push of 2026-10-02 (README, LICENSE, docs/diagrams, docs/readme, this file). Still uncommitted on the founder's disk, on purpose: `.gitignore` edits, `docs/git-contributor-cleanup-2026-10-02.md`, `apps/web/design/launch-video-15s/` and `launch-video-panic/`.
 - Supabase: migrations baseline applied (`schema_migrations`, 0001 to 0003), plus the citation v2, `jobs` and `rate_limits` blocks. Schema changes now go only through a new numbered file in `apps/api/migrations/` and `python -m app.migrate`.
 - The founder's network has no IPv6: reach Postgres through the IPv4 session pooler (`aws-0-ap-southeast-2.pooler.supabase.com:5432`, user `postgres.<ref>`).
 - Local git-ignored state: `apps/api/.env` has `WEB_URL=http://localhost:5174` (Codex's YapChat session), which makes `tests/test_persona.py::test_local_web_origins_pass_cors_preflight` fail locally. It passes with `WEB_URL=http://localhost:5173`; not a code bug.
@@ -15,8 +29,8 @@ Read this block first. It replaces the 2026-09-26 handoff.
 
 ### Done and tested before this push
 - System design (docs/system-design.md): SD-2.1, 2.2, 2.3, 3.1, 4.5, 4.7, 5.1, 6.1, 9.2 by Claude Code. Codex holds SD-6.2 and SD-8.1.
-- MCP: 23 tools (site verification, GitHub repos and fix pull requests, accept and reopen findings, compare, share, AI answers, watch, deploy hooks).
-- README rewritten: product, screens, design work, system breakdown, local setup.
+- MCP: 24 tools (get_plan, site verification, GitHub repos and fix pull requests, accept and reopen findings, compare, share, AI answers, watch, deploy hooks).
+- README rewritten again (2026-10-02) as a technical deep dive with seven hand-drawn diagrams generated from `docs/diagrams/diagrams.js` (`node docs/diagrams/render.cjs`) and real page captures in `docs/readme/`. MIT `LICENSE` added at the founder's request. Keep README facts in sync with code when changing the agent, MCP tools, limits or retention.
 - Checks: API pytest 711 passed (2 env-only CORS failures above), ruff clean; web build and oxlint clean; extension vitest 90 passed and 1 skipped, tsc and lint clean.
 
 ### Open, in order
@@ -26,6 +40,19 @@ Read this block first. It replaces the 2026-09-26 handoff.
 
 ### Do not change without the founder
 - Pricing, paid models or APIs, production database (each change needs explicit approval), the single accent colour, and any applied migration file.
+
+## 15-second motion film (2026-10-02, Claude Code local)
+
+- `apps/web/design/launch-video-15s/walkthru-launch-15s.mp4`: **15.000 s, 900 frames, 1920x1080, 60 fps, H.264 + stereo AAC, -15.6 LUFS**. Fast kinetic motion graphics, not a product demo: Built with AI / Shipped, a grayscale stranger strobe with tracking boxes ("Where do strangers get stuck?"), a Scout flock and a giant-bird wipe, Scout running a signup and hitting STUCK, the report (SEO, AI search, Security), fixes ranked with Launch Ready 62 to 91, then the Scout + Walkthru end card with "Scan my site". `filmstrip.jpg` beside it.
+- Every cut sits on a 128 BPM grid (32 beats = 15 s). The score is original, synthesised by `score.py` (numpy/scipy, no samples), so it has no music licence question. The portraits come from the founder's `source-images`; confirm image rights before posting, as for the other films.
+- `index.html` is one Hyperframes composition; one clock tween drives sprite strides, typing, counters and the HUD. `npx hyperframes check` passes. Re-render: `python score.py` (if the score changes), then `npx hyperframes render --quality delivery --fps 60 --output walkthru-launch-15s.mp4` in that folder (about 2 minutes). Copied `assets/`, snapshots and logs are git-ignored.
+- Film-only colours: a light tint of the accent (`#8fc6c7`) for glows on dark and a brighter danger red (`#e5484d`) for STUCK. Product UI tokens are unchanged.
+
+## Launch panic film (2026-10-02, Claude Code local)
+
+- `apps/web/design/launch-video-panic/walkthru-launch-panic.mp4`: **14.4 s, 864 frames, 1920x1080, 60 fps, H.264 + AAC, -13.2 LUFS, -1.2 dBTP, 55 MB**. A pure motion-graphics flex, no product message. 9.6 s of accelerating pre-launch panic (72 cuts, from 0.4 s apart down to 3 frames): worry words, error cascades, multiplying browsers, cursor swarms, mazes, dithered eyes and faces, Scout stampedes, scribbles that pile up, intrusive thoughts, a launch countdown, a racing ECG and an issue counter. It whites out, hard-cuts to black and silence, and one tangled scribble survives; it pulls straight into a line, Scout walks it, and Walkthru lands slowly. `filmstrip.jpg` beside it.
+- `build.py` makes the cut list once and derives everything from it: `assets/shots.js` (read by `index.html`), the original synthesised score, 1-bit dithered photos and a white Scout strip. `index.html` draws the panic on a canvas from a pure function of time. `npx hyperframes check` passes.
+- Re-render: `python build.py`, then `npx hyperframes render --quality delivery --fps 60 --output render-raw.mp4`, then re-mux the score, because the renderer lowers this score by about 10 dB for true peak although it only needs about 2: `ffmpeg -i render-raw.mp4 -i assets/score.wav -map 0:v -map 1:a -c:v copy -af "aresample=48000,alimiter=limit=0.79:attack=1:release=40:level=disabled" -c:a aac -b:a 256k -movflags +faststart walkthru-launch-panic.mp4`.
 
 ## 30-second doodle launch film (2026-10-01, Codex)
 

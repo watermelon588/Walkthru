@@ -1,0 +1,125 @@
+<!doctype html>
+<!-- Hand-drawn README diagrams. Open with ?d=<name> (see diagrams.js); render all with `node docs/diagrams/render.cjs`.
+     rough.js (MIT) and Excalidraw's Virgil font (OFL) load from unpkg at render time; nothing is vendored. -->
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Virgil; src: url(https://unpkg.com/@excalidraw/excalidraw@0.18.0/dist/prod/fonts/Virgil/Virgil-Regular.woff2) format('woff2'); }
+  html, body { margin: 0; background: #fff; }
+  svg { display: block; font-family: Virgil, 'Comic Sans MS', cursive; }
+</style>
+<svg id="d" xmlns="http://www.w3.org/2000/svg"></svg>
+<script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
+<script src="diagrams.js"></script>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const INK = '#1e1e1e', MUTED = '#495057';
+const FILL = { blue: '#a5d8ff', green: '#b2f2bb', yellow: '#ffec99', red: '#ffc9c9', violet: '#d0bfff', orange: '#ffd8a8', teal: '#96f2d7', gray: '#e9ecef', pink: '#fcc2d7', white: '#ffffff' };
+const svg = document.getElementById('d');
+let seed = 7;
+const opt = (o = {}) => ({ seed: seed++, roughness: 1.1, bowing: 1, stroke: INK, strokeWidth: 1.6, ...o });
+
+function el(tag, attrs, parent = svg) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+}
+
+function text(x, y, str, { size = 18, color = INK, anchor = 'middle', weight = 400 } = {}) {
+  const lines = String(str).split('\n');
+  const lh = size * 1.25;
+  const t = el('text', { x, y: y - ((lines.length - 1) * lh) / 2, 'font-size': size, fill: color, 'text-anchor': anchor, 'dominant-baseline': 'middle', 'font-weight': weight });
+  lines.forEach((line, i) => {
+    const s = el('tspan', { x, dy: i ? lh : 0 }, t);
+    s.textContent = line;
+  });
+  return t;
+}
+
+function box(n, rc) {
+  const fill = FILL[n.fill] || n.fill;
+  const o = opt({ fill, fillStyle: n.hatch ? 'hachure' : 'solid', hachureGap: 7, strokeLineDash: n.dashed ? [8, 7] : undefined });
+  const { x, y, w, h } = n;
+  if (n.shape === 'ellipse') svg.appendChild(rc.ellipse(x + w / 2, y + h / 2, w, h, o));
+  else if (n.shape === 'diamond') svg.appendChild(rc.polygon([[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]], o));
+  else if (n.shape === 'db') {
+    const ry = 16;
+    svg.appendChild(rc.path(`M${x} ${y + ry} L${x} ${y + h - ry} A${w / 2} ${ry} 0 0 0 ${x + w} ${y + h - ry} L${x + w} ${y + ry}`, o));
+    svg.appendChild(rc.ellipse(x + w / 2, y + ry, w, ry * 2, opt({ fill, fillStyle: 'solid' })));
+  } else svg.appendChild(rc.rectangle(x, y, w, h, o));
+  const top = n.shape === 'db' ? (n.items ? 30 : 16) : 0;
+  if (n.items) {
+    // Title line, then left-aligned bullet lines.
+    // Title line (optional), then left-aligned lines, split into `cols` columns.
+    if (n.label) text(x + w / 2, y + top + 24, n.label, { size: n.size || 21, weight: 700 });
+    const cols = n.cols || 1, per = Math.ceil(n.items.length / cols);
+    n.items.forEach((it, i) => text(x + 16 + Math.floor(i / per) * ((w - 32) / cols), y + top + (n.label ? 56 : 26) + (i % per) * (n.lh || 23), it, { size: n.itemSize || 15, color: MUTED, anchor: 'start' }));
+  } else {
+    const sub = n.sub ? n.sub.split('\n').length : 0;
+    const subSize = n.subSize || 14;
+    const shift = sub ? (sub * subSize * 1.25) / 2 : 0;
+    text(x + w / 2, y + top / 2 + h / 2 - shift, n.label, { size: n.size || 21, weight: 700 });
+    if (sub) text(x + w / 2, y + top / 2 + h / 2 + (n.size || 21) * 0.62 + 2, n.sub, { size: subSize, color: MUTED });
+  }
+}
+
+function side(n, s) {
+  const { x, y, w, h } = n;
+  const [k, f = 0.5] = s.split(':');
+  const t = Number(f);
+  return { t: [x + w * t, y], b: [x + w * t, y + h], l: [x, y + h * t], r: [x + w, y + h * t] }[k];
+}
+
+function edge(e, nodes, rc) {
+  const a = nodes[e.from], b = nodes[e.to];
+  const start = e.start || side(a, e.fs || 'r');
+  const end = e.end || side(b, e.ts || 'l');
+  const pts = [start, ...(e.via || []), end];
+  const o = opt({ strokeWidth: e.width || 1.6, stroke: e.color || INK, strokeLineDash: e.dashed ? [7, 6] : undefined, roughness: 0.9 });
+  svg.appendChild(e.curve ? rc.curve(pts, o) : rc.linearPath(pts, o));
+  const head = (p, q) => {
+    const ang = Math.atan2(p[1] - q[1], p[0] - q[0]);
+    for (const d of [0.45, -0.45]) svg.appendChild(rc.line(p[0], p[1], p[0] - 15 * Math.cos(ang + d), p[1] - 15 * Math.sin(ang + d), opt({ stroke: e.color || INK, strokeWidth: e.width || 1.6, roughness: 0.6 })));
+  };
+  head(pts[pts.length - 1], pts[pts.length - 2]);
+  if (e.both) head(pts[0], pts[1]);
+  if (e.label) {
+    const i = e.at ?? Math.floor((pts.length - 1) / 2);
+    const [p, q] = [pts[i], pts[i + 1]];
+    const [lx, ly] = e.lp || [(p[0] + q[0]) / 2 + (e.dx || 0), (p[1] + q[1]) / 2 + (e.dy || 0)];
+    const t = text(lx, ly, e.label, { size: e.size || 14, color: e.labelColor || '#1971c2', anchor: e.anchor || 'middle' });
+    const bb = t.getBBox();
+    const bg = el('rect', { x: bb.x - 5, y: bb.y - 2, width: bb.width + 10, height: bb.height + 4, fill: '#fff', opacity: 0.92 });
+    svg.insertBefore(bg, t);
+  }
+}
+
+function group(g, rc) {
+  svg.appendChild(rc.rectangle(g.x, g.y, g.w, g.h, opt({ stroke: g.color || '#868e96', strokeWidth: 1.3, strokeLineDash: [10, 8], roughness: 0.8, fill: FILL[g.fill], fillStyle: 'hachure', hachureGap: 14, fillWeight: 0.6 })));
+  const t = text(g.x + 16, g.y + 20, g.label, { size: g.size || 17, color: g.color || '#868e96', anchor: 'start', weight: 700 });
+  const bb = t.getBBox();
+  svg.insertBefore(el('rect', { x: bb.x - 6, y: bb.y - 2, width: bb.width + 12, height: bb.height + 4, fill: '#fff' }), t);
+}
+
+function draw(d) {
+  svg.setAttribute('width', d.w);
+  svg.setAttribute('height', d.h);
+  svg.setAttribute('viewBox', `0 0 ${d.w} ${d.h}`);
+  el('rect', { width: d.w, height: d.h, fill: '#fff' });
+  const rc = rough.svg(svg);
+  text(40, 42, d.title, { size: 34, anchor: 'start', weight: 700 });
+  if (d.subtitle) text(40, 84, d.subtitle, { size: 18, color: MUTED, anchor: 'start' });
+  (d.groups || []).forEach((g) => group(g, rc));
+  (d.lines || []).forEach((l) => svg.appendChild(rc.linearPath(l.pts, opt({ stroke: l.color || '#adb5bd', strokeLineDash: [6, 7], strokeWidth: 1.2, roughness: 0.5 }))));
+  const nodes = Object.fromEntries((d.nodes || []).map((n) => [n.id, n]));
+  (d.nodes || []).forEach((n) => box(n, rc));
+  (d.edges || []).forEach((e) => edge(e, nodes, rc));
+  (d.texts || []).forEach((t) => text(t.x, t.y, t.text, t));
+}
+
+const name = new URLSearchParams(location.search).get('d') || Object.keys(DIAGRAMS)[0];
+document.fonts.load('20px Virgil').then(() => {
+  draw(DIAGRAMS[name]);
+  document.body.dataset.ready = '1';
+});
+</script>
