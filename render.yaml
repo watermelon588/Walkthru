@@ -6,7 +6,8 @@ services:
     runtime: python
     plan: free
     rootDir: apps/api
-    buildCommand: pip install .
+    # Pinned, tested versions (SD-9.2), then the app itself without re-resolving.
+    buildCommand: pip install -r requirements.lock && pip install . --no-deps
     # --proxy-headers with FORWARDED_ALLOW_IPS below: behind Render's proxy the visitor's address comes from
     # X-Forwarded-For, so the per-address scan limit counts visitors, not the proxy.
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
@@ -16,6 +17,12 @@ services:
         value: 3.13.5
       - key: FORWARDED_ALLOW_IPS
         value: "*"
+      # Free plan, one instance, 512 MB: agent state in memory (a restart or sleep ends runs mid-way with a partial
+      # report) and two queue workers. Production on the VM uses CHECKPOINTER=postgres (docs/deploy.md).
+      - key: CHECKPOINTER
+        value: memory
+      - key: JOB_WORKERS
+        value: "2"
       # Set these in the Render dashboard (sync: false keeps them out of this file).
       - key: WEB_URL            # https://YOUR-SITE.vercel.app, no trailing slash (CORS and links in emails)
         sync: false
@@ -30,6 +37,27 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SCOUT_GEMINI_API_KEY   # optional: Scout in team chat; blank falls back to GOOGLE_API_KEY
+        sync: false
+      - key: TYPESAFE_API_KEY       # optional: experimental Jev provider
+        sync: false
+      - key: LANGSMITH_API_KEY      # optional: traces
+        sync: false
+      - key: LANGSMITH_TRACING
+        sync: false
+      - key: LANGSMITH_PROJECT
+        sync: false
+      # Optional: GitHub App for fix pull requests (MCP open_fix_pull_request)
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_SLUG
+        sync: false
+      - key: GITHUB_APP_CLIENT_ID
+        sync: false
+      - key: GITHUB_APP_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
         sync: false
       - key: PAGESPEED_API_KEY
         sync: false

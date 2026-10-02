@@ -16,7 +16,7 @@ Web on Vercel (free), API on Render (free), database and sign-in on Supabase (ex
 ## 1. API on Render
 
 1. render.com > New > **Blueprint** > connect the GitHub repo. It reads `render.yaml` (free plan, `apps/api`, health check `/health`).
-2. Fill the environment variables it asks for:
+2. Fill the environment variables it asks for. Shortcut: `apps/api/.env.render` (git-ignored, generated from `apps/api/.env` without dev-only values such as `ALLOW_LOCAL_SCANS`) can be pasted whole through **Environment > Add from .env**; `apps/web/.env.vercel` is the same for Vercel.
 
    | Variable | Value |
    |---|---|
