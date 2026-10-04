@@ -286,6 +286,8 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
             continue  # the executor refused this action; new page messages cannot establish its failure
         if s.get("action") not in {"click", "type", "scroll", "back"}:
             continue  # deciding to give up is not a browser outcome
+        if s.get("action") == "scroll" and (s.get("executor_result") or {}).get("status") in {"no_progress", "aborted"}:
+            continue  # an unmoved/refused observation cannot attribute existing errors to a scroll
         if s.get("errors_after"):
             out.add(i)  # preserve an actual page error even when the owner subsequently stops
             continue

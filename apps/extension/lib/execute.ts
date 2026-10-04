@@ -1,19 +1,24 @@
 /** Runs one PersonaStep inside the page. Returns a note for the agent when something went wrong. */
 
-import { resolveTarget } from "./snapshot";
+import { publicState, resolveScrollContainer, resolveTarget, scrollState, waitBaseline, type ExecutorResult } from "./snapshot";
 import { isBasket, isCommerce, isDestructive, isSearchField, isSearchForm, isSending, isSocial } from "./safety";
 
 export type Step = {
   thought: string;
-  action: "click" | "type" | "scroll" | "back" | "done" | "give_up";
+  action: "click" | "type" | "scroll" | "wait" | "back" | "done" | "give_up";
   target_id: number | null;
   text: string | null;
   confusion: number;
   observation_revision?: string | null;
+  scroll_container_id?: number | null;
+  scroll_direction?: 'up' | 'down' | 'left' | 'right';
+  scroll_distance?: number | null;
+  wait_condition?: 'settled' | 'url_changed' | 'text_changed';
+  wait_timeout_ms?: number;
 };
 
 /** confirm: "send" means the owner must approve in the side panel before this click runs for real. */
-export type ExecResult = { ok: boolean; note?: string; submits?: boolean; confirm?: "send" };
+export type ExecResult = { ok: boolean; note?: string; submits?: boolean; confirm?: "send"; executor_result?: ExecutorResult };
 
 /** True when the element would submit a form (needs user confirmation on logged-in pages). */
 export function submits(el: Element): boolean {
@@ -32,19 +37,16 @@ export function submits(el: Element): boolean {
 const APP_LINKS: Record<string, string> = { mailto: "an email app", tel: "a phone call", sms: "a text message" };
 
 /** verified: the owner proved control of this domain. confirmed: the owner approved this exact send. */
-export type ExecOptions = { logged_in?: boolean; dryRun?: boolean; verified?: boolean; confirmed?: boolean };
+export type ExecOptions = { logged_in?: boolean; dryRun?: boolean; verified?: boolean; confirmed?: boolean; deadline_ms?: number };
 
 /** dryRun reports what would happen (safe-mode block, form submit) without touching the page. */
 export function execute(step: Step, doc: Document = document, opts: ExecOptions = {}): ExecResult {
   const win = doc.defaultView!;
   switch (step.action) {
     case "scroll":
-      if (!opts.dryRun) {
-        // One screen down, the way a person scrolls; the next snapshot waits for lazy content to settle (snapshot.settle).
-        const reduce = win.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-        win.scrollBy({ top: win.innerHeight * 0.85, behavior: (reduce ? "instant" : "smooth") as ScrollBehavior });
-      }
-      return { ok: true };
+      return scroll(step, doc, opts);
+    case "wait":
+      return { ok: false, note: 'bounded wait requires the current asynchronous executor' };
     case "back":
       if (!opts.dryRun) win.history.back();
       return { ok: true };
@@ -91,6 +93,76 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
     }
     default:
       return { ok: true };
+  }
+}
+
+function scroll(step: Step, doc: Document, opts: ExecOptions): ExecResult {
+  const started = Date.now();
+  const elapsed = () => Math.min(600000, Math.max(0, Date.now() - started));
+  if (opts.deadline_ms !== undefined && Date.now() >= opts.deadline_ms) return { ok: false, executor_result: { action: 'scroll', status: 'aborted', container_id: step.scroll_container_id ?? 0, elapsed_ms: 0 } };
+  const id = step.scroll_container_id ?? ((step.scroll_direction != null && step.scroll_direction !== 'down') || step.scroll_distance != null ? 0 : undefined);
+  const resolved = resolveScrollContainer(doc, id, step.observation_revision);
+  if (!resolved.el) return { ok: false, note: resolved.note };
+  const el = resolved.el;
+  const win = doc.defaultView!;
+  const windowTarget = !!resolved.windowTarget;
+  const beforeState = scrollState(el, windowTarget, doc);
+  const before = { top: beforeState.top, left: beforeState.left };
+  const direction = step.scroll_direction ?? 'down';
+  const horizontal = direction === 'left' || direction === 'right';
+  const cs = getComputedStyle(el);
+  if (!windowTarget && !/^(auto|scroll)$/.test(horizontal ? cs.overflowX : cs.overflowY)) {
+    return { ok: true, executor_result: { action: 'scroll', status: 'no_progress', container_id: step.scroll_container_id ?? 0, before, after: before, elapsed_ms: elapsed() }, note: 'this pane does not expose scrolling on the requested axis' };
+  }
+  if ((horizontal && (cs.direction === 'rtl' || cs.flexDirection === 'row-reverse' || before.left < 0)) || (!horizontal && (cs.flexDirection === 'column-reverse' || before.top < 0))) {
+    return { ok: true, executor_result: { action: 'scroll', status: 'no_progress', container_id: step.scroll_container_id ?? 0, before, after: before, elapsed_ms: elapsed() }, note: 'this reversed scroll axis is not supported by the bounded executor' };
+  }
+  const viewport = horizontal ? beforeState.client_width : beforeState.client_height;
+  const distance = Math.min(1000, viewport * .85, Math.max(1, step.scroll_distance ?? viewport * .85));
+  if (opts.deadline_ms !== undefined && Date.now() >= opts.deadline_ms) return { ok: false, executor_result: { action: 'scroll', status: 'aborted', container_id: step.scroll_container_id ?? 0, elapsed_ms: elapsed() } };
+  if (!opts.dryRun) {
+    const amount = direction === 'up' || direction === 'left' ? -distance : distance;
+    const move = { top: horizontal ? 0 : amount, left: horizontal ? amount : 0, behavior: 'instant' as ScrollBehavior };
+    // MDN Element/scrollBy: instant movement lets feedback measure the actual offset, not intended distance.
+    // https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollBy
+    if (windowTarget) win.scrollBy(move);
+    else el.scrollBy(move);
+  }
+  const afterState = scrollState(el, windowTarget, doc);
+  const after = { top: afterState.top, left: afterState.left };
+  return { ok: true, executor_result: { action: 'scroll', status: Math.abs(after.top - before.top) > .5 || Math.abs(after.left - before.left) > .5 ? 'moved' : 'no_progress', container_id: step.scroll_container_id ?? 0, before, after, elapsed_ms: elapsed() } };
+}
+
+/** Only observation is retried while waiting. A dispatched click/type/back is never repeated. */
+export async function executeAsync(step: Step, doc: Document = document, opts: ExecOptions = {}, signal?: AbortSignal): Promise<ExecResult> {
+  const started = Date.now();
+  const aborted = () => signal?.aborted || (opts.deadline_ms !== undefined && Date.now() >= opts.deadline_ms);
+  const outcome = (status: ExecutorResult['status']): ExecResult => ({ ok: status !== 'aborted', executor_result: { action: step.action === 'scroll' ? 'scroll' : 'wait', status, ...(step.action === 'scroll' ? { container_id: step.scroll_container_id ?? 0 } : {}), elapsed_ms: Math.min(600000, Math.max(0, Date.now() - started)) } });
+  if (aborted()) return outcome('aborted');
+  if (step.action !== 'wait') return execute(step, doc, opts);
+  const baseline = waitBaseline(doc, step.observation_revision);
+  if (!baseline.state) return { ok: false, note: baseline.note };
+  if (opts.dryRun) return { ok: true };
+  const timeout = Math.min(5000, Math.max(100, step.wait_timeout_ms ?? 1000));
+  const end = Math.min(started + timeout, opts.deadline_ms ?? Infinity);
+  const condition = step.wait_condition ?? 'settled';
+  let previous = publicState(doc).signature;
+  let quietSince = Date.now();
+  while (true) {
+    if (aborted()) return outcome('aborted');
+    const current = publicState(doc);
+    // A throttled tab or slow read can overrun the requested bound. Never label a late change as timely.
+    if (aborted()) return outcome('aborted');
+    if (Date.now() >= end) return outcome('timeout');
+    if (condition === 'url_changed' && current.url !== baseline.state.url) return outcome('changed');
+    if (condition === 'text_changed' && current.text !== baseline.state.text) return outcome('changed');
+    if (current.signature !== previous) { previous = current.signature; quietSince = Date.now(); }
+    if (condition === 'settled' && !current.busy && Date.now() - quietSince >= 300) return outcome('settled');
+    await new Promise<void>(resolve => {
+      const timer = doc.defaultView!.setTimeout(done, Math.min(100, Math.max(1, end - Date.now())));
+      signal?.addEventListener('abort', done, { once: true });
+      function done() { doc.defaultView!.clearTimeout(timer); signal?.removeEventListener('abort', done); resolve(); }
+    });
   }
 }
 

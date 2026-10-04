@@ -5,7 +5,7 @@ import { confirmedAccessRequest } from './accessRequest'
 
 export type Step = {
   thought: string
-  action: 'click' | 'type' | 'scroll' | 'back' | 'done' | 'give_up'
+  action: 'click' | 'type' | 'scroll' | 'wait' | 'back' | 'done' | 'give_up'
   target_id: number | null
   text: string | null
   confusion: number
@@ -14,6 +14,14 @@ export type Step = {
   decision_confidence?: number
   fallback_reason?: string
   interrupted?: boolean
+  executor_result?: {
+    action: 'scroll' | 'wait'
+    status: 'moved' | 'no_progress' | 'settled' | 'changed' | 'timeout' | 'aborted'
+    elapsed_ms: number
+    container_id?: number | null
+    before?: { top: number; left: number } | null
+    after?: { top: number; left: number } | null
+  }
   evidence?: StepEvidence
   diagnostics?: BrowserDiagnostics
 }

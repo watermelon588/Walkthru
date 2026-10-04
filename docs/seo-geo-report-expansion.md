@@ -1,6 +1,6 @@
 # SEO, GEO, report structure and efficiency extension
 
-Date: 2026-10-04. Founder direction supplements [the product plan](../plan.md) and [session workflow](restructure-sessions.md). This document records an SEO/GEO/efficiency audit and proposed acceptance criteria, not newly shipped growth capabilities. R-S1 and R-S2 are complete; R-S3 controlled scrolling and bounded observation is next. The workflow has 24 planned slices, two complete; the four growth/report/cache/database suffix slices remain pending.
+Date: 2026-10-04. Founder direction supplements [the product plan](../plan.md) and [session workflow](restructure-sessions.md). This document records an SEO/GEO/efficiency audit and proposed acceptance criteria, not newly shipped growth capabilities. R-S1, R-S2 and R-S3 are complete; R-S4 task/persona separation and proven completion is next (status updated 2026-10-05). The workflow has 24 planned slices, three complete; the four growth/report/cache/database suffix slices remain pending.
 
 ## Product boundary and judgment
 
@@ -10,7 +10,7 @@ Keep the launch assessment finite. Do not turn it into an autonomous outreach, C
 
 ## Current implementation audit
 
-Source inspection, not a live database/deployment audit. R-S1/R-S2 application verification is recorded separately in the workflow; this planning audit does not imply paid inference, regenerated stored reports or completed SEO/GEO additions.
+Source inspection, not a live database/deployment audit. R-S1/R-S2/R-S3 application verification is recorded separately in the workflow; this planning audit does not imply paid inference, regenerated stored reports or completed SEO/GEO additions.
 
 | Area | Shipped behavior | Remaining work |
 | --- | --- | --- |
@@ -126,7 +126,7 @@ Reuse the saved evidence/report contract for web, print/export, fix prompts and 
 
 ## Implementation order and proof
 
-Preserve all twenty original session IDs and R-S1/R-S2 completion. Add four explicitly pending focused slices: **R-S5a** chaptered presentation and consumer parity, **R-S7a** safe cache reuse/measurement, **R-S14a** database query/index/pagination performance, and **R-S17a** earned-link opportunities and citation-aware recommendations. These are additional work, not a claim that the expanded scope fits twenty unchanged sessions. Detailed dependencies and verification are in [the workflow](restructure-sessions.md).
+Preserve all twenty original session IDs and R-S1/R-S2/R-S3 completion. Add four explicitly pending focused slices: **R-S5a** chaptered presentation and consumer parity, **R-S7a** safe cache reuse/measurement, **R-S14a** database query/index/pagination performance, and **R-S17a** earned-link opportunities and citation-aware recommendations. These are additional work, not a claim that the expanded scope fits twenty unchanged sessions. Detailed dependencies and verification are in [the workflow](restructure-sessions.md).
 
 R-S17 gains keyword/page/intent briefs and measured versus advisory modes. Jev is only a possible confidence-gated helper for ambiguous bounded classification after deterministic evidence extraction. Do not insert it into every scanner or treat confidence as proof. Benchmark end-to-end p50/p95 latency, fallback rate, correct classification and full cost against deterministic-only and the current synthesis route; a serial failed Jev call can add latency and cost.
 

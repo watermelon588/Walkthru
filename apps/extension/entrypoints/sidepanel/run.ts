@@ -29,6 +29,7 @@ const ACTION_ACTIVITY: Record<Step["action"], string> = {
   click: "Clicking the next step",
   type: "Filling in the form",
   scroll: "Looking further down",
+  wait: "Waiting for the page",
   back: "Going back",
   done: "Checking the result",
   give_up: "Could not continue",
@@ -192,9 +193,11 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         return;
       }
       const step = reply.action;
+      const navigation = step.action === 'wait' || (step.action === 'scroll' && (step.scroll_container_id != null || (step.scroll_direction != null && step.scroll_direction !== 'down') || step.scroll_distance != null));
       // Mixed versions must stop before even dry-run: an old injected listener ignores revision fields.
       if (step.action !== 'done' && step.action !== 'give_up' && (!obs.revision ||
-        ((step.action === 'click' || step.action === 'type') && step.observation_revision !== obs.revision))) {
+        ((step.action === 'click' || step.action === 'type' || navigation) && step.observation_revision !== obs.revision)
+        || (navigation && (obs.navigation_version ?? 0) < 3))) {
         throw new Error('stale target: this page or API does not support the current observation. Update Walkthru and the API, reload the website tab, and restart the test.');
       }
       if (reply.action_id) {
@@ -205,8 +208,13 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       emit({ message: step.thought });
 
       await setAgentStatus(tabId, step.action === "give_up" ? "stopped" : step.action === "done" ? "observing" : "acting", ACTION_ACTIVITY[step.action]);
-      const note = await act(tabId, step, opts, origin);
-      await settled(tabId, opts.signal);
+      const execution = await act(tabId, step, opts, origin, deadline);
+      const note = execution?.note;
+      if (execution?.executor_result?.status === 'aborted') {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, opts.signal.aborted ? 'the site owner pressed Stop' : 'the 4-minute time limit ended the test', connection)) emit({ phase: 'error', message: 'The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.' });
+        return;
+      }
+      if (step.action !== 'wait' && step.action !== 'scroll') await settled(tabId, opts.signal);
       if (opts.signal.aborted) {
         await setAgentStatus(tabId, "stopped", "Test stopped");
         if (!await closeRun(runId, steps, onProgress, evidenceWarning, "the site owner pressed Stop", connection)) {
@@ -224,7 +232,12 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       }
       await setAgentStatus(tabId, "observing", "Reading the updated page");
       obs = await humanCheck(tabId, await send<Observation>(tabId, { type: "snapshot" }), opts.signal);
+      if (execution?.executor_result) obs.executor_result = execution.executor_result;
       if (note) obs.note = note.startsWith('stale target:') ? note : obs.note ? `${obs.note}; ${note}` : note;
+      if (opts.signal.aborted || Date.now() >= deadline) {
+        if (!await closeRun(runId, steps, onProgress, evidenceWarning, opts.signal.aborted ? 'the site owner pressed Stop' : 'the 4-minute time limit ended the test', connection)) emit({ phase: 'error', message: 'The test stopped locally, but Walkthru could not close the server run. End it from the dashboard.' });
+        return;
+      }
       const stepIndex = steps.length - 1;
       let evidence: StepEvidence | undefined;
       if (shouldCaptureEvidence(step, obs, stepIndex, capturedCount)) {
@@ -275,28 +288,31 @@ async function closeRun(
 }
 
 /** Executes one step in the tab and returns a note for the agent, if any. */
-async function act(tabId: number, step: Step, opts: RunOptions, origin: string): Promise<string | undefined> {
+async function act(tabId: number, step: Step, opts: RunOptions, origin: string, deadline: number): Promise<ExecResult | undefined> {
   if (step.action === "done" || step.action === "give_up") return;
-  const base = { logged_in: opts.logged_in, verified: opts.verified };
+  const base = { logged_in: opts.logged_in, verified: opts.verified, deadline_ms: deadline };
   let confirmed = false;
   if (opts.sentOnce && step.action === "click") {
     const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } }, opts);
-    if (probe.confirm === "send") return "a message was already sent in this run; Walkthru never sends twice";
+    if (probe.confirm === "send") return { ok: false, note: "a message was already sent in this run; Walkthru never sends twice" };
   }
   if (step.action === "click" && (opts.logged_in || opts.verified)) {
     // Dry-run first. Ask the owner before a real message leaves a verified site, and before any
     // form submit on a logged-in page (SPEC safety rule).
     const probe = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, dryRun: true } }, opts);
-    if (probe.note) return probe.note;
+    if (probe.note) return probe;
     if (probe.confirm === "send" || (opts.logged_in && probe.submits)) {
       const what = probe.confirm === "send" ? "send a real message from" : "submit a form on";
-      if (!window.confirm(`The test user wants to ${what} ${origin}. Allow it?`)) return "the site owner declined this submit";
+      if (!window.confirm(`The test user wants to ${what} ${origin}. Allow it?`)) return { ok: false, note: "the site owner declined this submit" };
       confirmed = true;
       if (probe.confirm === "send") opts.sentOnce = true;
     }
   }
-  const result = await send<ExecResult>(tabId, { type: "act", step, opts: { ...base, confirmed } }, opts);
-  return result.note;
+  const operationId = crypto.randomUUID();
+  const cancel = () => { void chrome.tabs.sendMessage(tabId, { type: 'act_cancel', operation_id: operationId }, { frameId: 0 }).catch(() => {}); };
+  opts.signal.addEventListener('abort', cancel, { once: true });
+  try { return await send<ExecResult>(tabId, { type: "act", operation_id: operationId, step, opts: { ...base, confirmed } }, opts); }
+  finally { opts.signal.removeEventListener('abort', cancel); }
 }
 
 function finish(reply: RunReply, steps: Step[], onProgress: (p: Progress) => void, evidenceWarning?: string) {

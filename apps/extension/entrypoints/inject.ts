@@ -3,14 +3,15 @@
  *  access is requested per site when a test starts. */
 
 import { settle, snapshot } from "../lib/snapshot";
-import { execute, type ExecOptions, type Step } from "../lib/execute";
+import { executeAsync, type ExecOptions, type Step } from "../lib/execute";
 import { AGENT_BIRD, AGENT_TONE, type AgentState } from "../lib/agent-bird";
 import gsap from "gsap";
 import { collectBrowserDiagnostics, observeWebVitals } from "../lib/diagnostics";
 
 export type ContentRequest =
   | { type: "snapshot" }
-  | { type: "act"; step: Step; opts: ExecOptions }
+  | { type: "act"; step: Step; opts: ExecOptions; operation_id?: string }
+  | { type: "act_cancel"; operation_id: string }
   | { type: "agent_status"; state: AgentState; activity: string }
   | { type: "agent_visibility"; visible: boolean }
   | { type: "evidence_capture"; active: boolean }
@@ -32,7 +33,16 @@ export default defineUnlistedScript(() => {
   // Injection can land mid-navigation, before the new page has a <body>. The listener registers now
   // (so pings succeed), but everything that touches the page waits for the body to exist.
   const ready = whenBody().then(() => mountAgent());
+  const operations = new Map<string, AbortController>();
+  const cancelled = new Set<string>();
   const listener: ContentListener = (msg: ContentRequest, _sender, reply) => {
+    if (msg.type === 'act_cancel') {
+      cancelled.add(msg.operation_id);
+      if (cancelled.size > 32) cancelled.delete(cancelled.values().next().value!);
+      operations.get(msg.operation_id)?.abort();
+      reply({ ok: true });
+      return true;
+    }
     if (msg.type === "ping") {
       reply({ ok: true });
       return true;
@@ -42,7 +52,15 @@ export default defineUnlistedScript(() => {
         await settle(); // a scroll or click may still be loading content; read the page once it is still
         const observation = snapshot();
         reply({ ...observation, diagnostics: await collectBrowserDiagnostics(document, readWebVitals()) });
-      } else if (msg.type === "act") reply(execute(msg.step, document, msg.opts));
+      } else if (msg.type === "act") {
+        if (operations.size) { reply({ ok: false, note: 'stale target: another browser operation is still pending. Stop and restart the test' }); return; }
+        const operation = new AbortController();
+        const key = msg.operation_id ?? crypto.randomUUID();
+        if (cancelled.delete(key)) operation.abort();
+        operations.set(key, operation);
+        try { reply(await executeAsync(msg.step, document, msg.opts, operation.signal)); }
+        finally { operations.delete(key); }
+      }
       else if (msg.type === "agent_status") {
         agent.update(msg.state, msg.activity);
         reply({ ok: true });
@@ -53,7 +71,7 @@ export default defineUnlistedScript(() => {
         await agent.setCaptureMode(msg.active);
         reply({ ok: true });
       }
-    });
+    }).catch(() => reply({ ok: false, note: 'stale target: the browser operation could not complete. Stop and restart the test' }));
     return true;
   };
   chrome.runtime.onMessage.addListener(listener);

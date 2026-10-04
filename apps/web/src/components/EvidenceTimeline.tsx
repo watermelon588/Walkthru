@@ -9,14 +9,23 @@ const ACTION_LABEL: Record<Step['action'], string> = {
   click: 'Clicked',
   type: 'Filled field',
   scroll: 'Scrolled',
+  wait: 'Waited for page',
   back: 'Went back',
   done: 'Goal reached',
   give_up: 'Stopped',
 }
 
 function actionLabel(step: Step) {
+  if (step.executor_result?.action === step.action) {
+    const outcome = step.executor_result.status
+    if (outcome === 'aborted') return step.action === 'wait' ? 'Wait interrupted' : 'Scroll interrupted'
+    if (!step.interrupted) {
+      if (outcome === 'timeout') return 'Wait timed out'
+      if (outcome === 'no_progress') return 'Scroll did not move'
+    }
+  }
   if (!step.interrupted) return ACTION_LABEL[step.action]
-  return ({ click: 'Click not confirmed', type: 'Field entry not confirmed', scroll: 'Scroll not confirmed', back: 'Back navigation not confirmed', done: 'Completion not confirmed', give_up: 'Stop not confirmed' })[step.action]
+  return ({ click: 'Click not confirmed', type: 'Field entry not confirmed', scroll: 'Scroll not confirmed', wait: 'Wait not confirmed', back: 'Back navigation not confirmed', done: 'Completion not confirmed', give_up: 'Stop not confirmed' })[step.action]
 }
 
 export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; branded?: boolean }) {

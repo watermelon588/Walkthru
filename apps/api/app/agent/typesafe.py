@@ -9,6 +9,7 @@ API contract: https://docs.typesafe.ai/api
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any
 
 import httpx
@@ -55,12 +56,14 @@ def _element_description(element: dict) -> str:
     for key in ("region", "row"):
         if element.get(key):
             parts.append(f'{key} {element[key]!r}')
+    if element.get("scroll_container_id") is not None:
+        parts.append(f'scroll container {element["scroll_container_id"]}')
     return " ".join(parts)
 
 
 def _history(steps: list[dict]) -> list[dict]:
     """Keep navigation signal without resending generated text or narration."""
-    keys = ("action", "target_id", "url")
+    keys = ("action", "target_id", "url", "scroll_container_id", "scroll_direction", "wait_condition", "executor_result")
     return [{key: step[key] for key in keys if step.get(key) is not None} for step in steps[-12:]]
 
 
@@ -77,6 +80,11 @@ def build_request(state: dict, *, model: str = DEFAULT_MODEL) -> dict:
             click_targets[key] = description
         if _can_type(element):
             type_targets[key] = description
+    scroll_targets = {f'c{c["id"]}': f'{c["label"]!r}; available directions: ' + ", ".join(
+        d for d in ("up", "down", "left", "right") if c.get(f"can_{d}"))
+        for c in observation.get("scroll_containers", []) if c.get("in_view") is not False and not c.get("occluded")}
+    if observation.get("navigation_version") != 3:
+        scroll_targets = {"window": "Legacy window scrolling down."}
 
     return {
         "model": model,
@@ -98,7 +106,8 @@ def build_request(state: dict, *, model: str = DEFAULT_MODEL) -> dict:
                 "criteria": {
                     "click": "Activate a safe visible link, button, or clickable control.",
                     "type": "Enter a known safe test value in a visible form field.",
-                    "scroll": "Reveal content below the current viewport.",
+                    "scroll": "Move a current observed scroll container in an available direction.",
+                    "wait": "Observe bounded public state change without repeating any mutation (navigation_version 3 only).",
                     "back": "Return because the current path is wrong.",
                     "done": "The stated goal is already achieved on the current page.",
                     "give_up": "No reasonable safe path remains after honest attempts.",
@@ -120,6 +129,13 @@ def build_request(state: dict, *, model: str = DEFAULT_MODEL) -> dict:
                 ),
                 "criteria": type_targets,
             },
+            "scroll_target": {"type": "choice", "instructions": "For scroll, choose the observed pane or window. Otherwise none.",
+                              "criteria": {"none": "Not scrolling.", **scroll_targets}},
+            "scroll_direction": {"type": "choice", "instructions": "For scroll choose a direction available on that container. Otherwise down.",
+                                 "criteria": {d: f"Move {d}." for d in ("up", "down", "left", "right")}},
+            "wait_condition": {"type": "choice", "instructions": "For wait choose the public state condition relative to this snapshot, never repeat a click or send.",
+                               "criteria": {"settled": "Public state stable and not busy.", "url_changed": "URL differs from this snapshot.",
+                                            "text_changed": "Public text or control state differs from this snapshot."}},
             "goal_achieved": {
                 "type": "noul",
                 "instructions": "Has the stated goal already been achieved on the current page?",
@@ -233,12 +249,42 @@ class JevDecisionClient:
             if operation == "done"
             else f"I will use {label} because it looks like the clearest next step."
         )
+        navigation = {}
+        if operation in {"scroll", "wait"}:
+            request = build_request(state, model=self.model)
+            def choice(name: str) -> str:
+                try:
+                    answer = answers[name]
+                    value, confidence = answer["choice"], float(answer["confidence"])
+                except (KeyError, TypeError, ValueError) as error:
+                    raise JevFallback("provider error: malformed navigation choice") from error
+                if not isinstance(value, str) or value not in request["questions"][name]["criteria"] or not isfinite(confidence) or confidence < self.confidence_min:
+                    raise JevFallback("invalid or low-confidence navigation choice")
+                return value
+            if operation == "scroll":
+                target, direction = choice("scroll_target"), choice("scroll_direction")
+                if target == "none":
+                    raise JevFallback("invalid scroll target")
+                if target == "window":
+                    if direction != "down":
+                        raise JevFallback("legacy scroll only supports down")
+                    navigation = {"scroll_direction": direction}
+                else:
+                    container = next((c for c in state["observation"].get("scroll_containers", []) if f'c{c["id"]}' == target), None)
+                    if not container or not container.get(f"can_{direction}"):
+                        raise JevFallback("unavailable scroll direction")
+                    navigation = {"scroll_container_id": container["id"], "scroll_direction": direction}
+            else:
+                if state["observation"].get("navigation_version") != 3:
+                    raise JevFallback("wait requires current extension")
+                navigation = {"wait_condition": choice("wait_condition")}
         step = PersonaStep(
             thought=thought,
             action=operation,
             target_id=target_id,
             text=text,
             confusion=confusion,
+            **navigation,
         )
         usage = body.get("usage") or {}
         tokens = int(usage.get("input_tokens") or 0) + int(usage.get("output_tokens") or 0)

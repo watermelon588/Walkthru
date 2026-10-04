@@ -34,7 +34,7 @@ describe.skipIf(!live)("snapshot of the easy fixture drives the live persona API
     expect(res.status).toBe(200);
     const reply = await res.json();
     expect(reply.status).toBe("running");
-    expect(["click", "type", "scroll", "back"]).toContain(reply.action.action);
+    expect(["click", "type", "scroll", "wait", "back"]).toContain(reply.action.action);
     if (reply.action.target_id != null) {
       expect(obs.elements.map((e) => e.id)).toContain(reply.action.target_id);
     }

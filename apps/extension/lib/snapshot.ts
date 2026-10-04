@@ -4,7 +4,10 @@ import { redact } from "./redact";
 import type { BrowserDiagnostics } from "./diagnostics";
 
 export type FieldState = "filled" | "empty" | "checked" | "unchecked";
-export type Element = { id: number; tag: string; text: string; type?: string; state?: FieldState; region?: string; row?: string; in_view?: boolean; occluded?: boolean };
+export type Element = { id: number; tag: string; text: string; type?: string; state?: FieldState; region?: string; row?: string; in_view?: boolean; occluded?: boolean; scroll_container_id?: number };
+export type ScrollPosition = { top: number; left: number };
+export type ScrollContainer = ScrollPosition & { id: number; label: string; scroll_height: number; client_height: number; scroll_width: number; client_width: number; in_view?: boolean; occluded?: boolean; at_start: boolean; at_end: boolean; can_up: boolean; can_down: boolean; can_left: boolean; can_right: boolean };
+export type ExecutorResult = { action: 'scroll' | 'wait'; status: 'moved' | 'no_progress' | 'settled' | 'changed' | 'timeout' | 'aborted'; container_id?: number; before?: ScrollPosition; after?: ScrollPosition; elapsed_ms?: number };
 export type Observation = {
   url: string;
   title: string;
@@ -21,6 +24,10 @@ export type Observation = {
   candidate_limit_reached?: boolean;
   omitted_elements?: number; // lower bound when the candidate limit is reached
   context_truncated?: boolean;
+  navigation_version?: number;
+  scroll_containers?: ScrollContainer[];
+  scroll_containers_truncated?: boolean;
+  executor_result?: ExecutorResult;
 };
 
 export const ID_ATTR = "data-walkthru-id";
@@ -32,7 +39,8 @@ const MAX_TEXT = 6000;
 type Opts = { geometry?: boolean }; // geometry=false for jsdom, which has no layout
 
 type Captured = { el: globalThis.Element; ancestors: globalThis.Element[]; semantic: string; form: HTMLFormElement | null };
-type Registry = { revision: string; url: string; geometry: boolean; targets: Map<number, Captured> };
+type CapturedScroll = { el: globalThis.Element; ancestors: globalThis.Element[]; name: string; overflow: string };
+type Registry = { revision: string; url: string; geometry: boolean; targets: Map<number, Captured>; scrolls: Map<number, CapturedScroll>; state?: PublicState };
 // References and full raw semantics stay in this document's memory, never in an Observation.
 const registries = new WeakMap<Document, Registry>();
 const CONTEXT_LIMIT = 6000;
@@ -52,14 +60,20 @@ function ancestors(el: globalThis.Element): globalThis.Element[] {
 }
 
 /** Excludes editable values even when textContent (rather than innerText) is needed. */
-function safeText(el: globalThis.Element, memo?: WeakMap<globalThis.Element, boolean>): string {
+function safeText(el: globalThis.Element, memo?: WeakMap<globalThis.Element, boolean>, budget?: { chars: number; nodes: number }): string {
   if (!visible(el, false, memo)) return '';
   const parts: string[] = [];
   function read(node: globalThis.Element) {
+    if (budget && (budget.chars <= 0 || budget.nodes-- <= 0)) return;
     if (node.matches(PRIVATE_TEXT)) return;
     if (!shown(node, memo)) return;
     for (const child of node.childNodes) {
-      if (child.nodeType === 3) parts.push(child.textContent ?? '');
+      if (budget && (budget.chars <= 0 || budget.nodes <= 0)) break;
+      if (child.nodeType === 3) {
+        const text = (child.textContent ?? '').slice(0, budget?.chars);
+        parts.push(text);
+        if (budget) budget.chars -= text.length;
+      }
       else if (child.nodeType === 1) read(child as globalThis.Element);
     }
     if (node.matches('td,th,button,p,div,li,br')) parts.push(' ');
@@ -151,7 +165,10 @@ export function resolveTarget(doc: Document, id: number | null, revision?: strin
 
 /** Walks the document, including open shadow roots. */
 function* walk(root: ParentNode): Generator<globalThis.Element> {
-  for (const el of root.querySelectorAll("*")) {
+  const doc = root.nodeType === 9 ? root as Document : root.ownerDocument!;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const el = node as globalThis.Element;
     yield el;
     if (el.shadowRoot) yield* walk(el.shadowRoot);
   }
@@ -270,13 +287,15 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
   const geometry = opts.geometry ?? true;
   for (const el of walk(doc)) if (el.hasAttribute(ID_ATTR)) el.removeAttribute(ID_ATTR);
   const revision = crypto.randomUUID();
-  const registry: Registry = { revision, url: doc.location.href, geometry, targets: new Map() };
+  const registry: Registry = { revision, url: doc.location.href, geometry, targets: new Map(), scrolls: new Map() };
   registries.set(doc, registry);
   const active = geometry ? modal(doc) : null;
   const memo = new WeakMap<globalThis.Element, boolean>();
   const candidates = ordered(doc, geometry, active, memo);
   let budget = CONTEXT_LIMIT;
   let contextTruncated = false;
+  const panes = scrollCandidates(doc, geometry, active, memo);
+  const paneIds = new Map(panes.kept.map((el, index) => [el, index]).filter(([, index]) => index !== 0) as [globalThis.Element, number][]);
   const elements: Element[] = [];
   for (const el of candidates.slice(0, MAX_ELEMENTS)) {
     const id = elements.length + 1;
@@ -294,8 +313,19 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
       if (kept) extra[key] = kept;
     }
     registry.targets.set(id, { el, ancestors: ancestors(el), semantic: semantic(el, memo), form: formOwner(el) });
-    elements.push({ id, tag, text: redact(label(el, memo)).slice(0, MAX_LABEL), ...(type ? { type } : {}), ...(state ? { state } : {}), ...extra, ...(geometry ? geometryState(el, active) : {}) });
+    const pane = [el, ...ancestors(el)].find(node => paneIds.has(node));
+    elements.push({ id, tag, text: redact(label(el, memo)).slice(0, MAX_LABEL), ...(type ? { type } : {}), ...(state ? { state } : {}), ...extra, ...(pane ? { scroll_container_id: paneIds.get(pane) } : {}), ...(geometry ? geometryState(el, active) : {}) });
   }
+  const scrollContainers = panes.kept.map((el, id) => {
+    const name = id === 0 ? 'Page' : scrollName(el, memo);
+    const masked = redact(name);
+    const kept = masked.slice(0, Math.min(160, budget));
+    budget -= kept.length;
+    if (kept.length < masked.length) contextTruncated = true;
+    const cs = getComputedStyle(el);
+    registry.scrolls.set(id, { el, ancestors: ancestors(el), name, overflow: `${cs.overflowX}/${cs.overflowY}` });
+    return { id, label: kept, ...scrollState(el, id === 0, doc), ...(geometry ? (id === 0 ? { in_view: true, occluded: !!active } : geometryState(el, active)) : {}) };
+  });
   const body = doc.body as HTMLElement | null;
   const text = redact(body ? safeText(body, memo) : '').slice(0, MAX_TEXT);
   const obs: Observation = {
@@ -309,6 +339,9 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     candidate_limit_reached: candidates.length >= SCAN_LIMIT,
     omitted_elements: Math.max(0, candidates.length - elements.length),
     context_truncated: contextTruncated,
+    navigation_version: 3,
+    scroll_containers: scrollContainers,
+    scroll_containers_truncated: panes.truncated,
   };
   const win = doc.defaultView;
   if (geometry && win) {
@@ -320,7 +353,93 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
   if (confirmations.length) obs.notices = confirmations;
   if (botWall(doc)) obs.note = "bot wall detected";
   else if (captcha(doc)) obs.note = "captcha detected";
+  registry.state = publicState(doc);
   return obs;
+}
+
+function scrollName(el: globalThis.Element, memo?: WeakMap<globalThis.Element, boolean>): string {
+  const heading = el.querySelector('h1,h2,h3,h4,h5,h6');
+  return el.getAttribute('aria-label') || labelledBy(el, memo) || (heading ? safeText(heading, memo) : '') || `${el.getAttribute('role') || el.tagName.toLowerCase()} pane`;
+}
+
+function scrollCandidates(doc: Document, geometry: boolean, active: globalThis.Element | null, memo: WeakMap<globalThis.Element, boolean>) {
+  const root = doc.scrollingElement ?? doc.documentElement;
+  const panes: globalThis.Element[] = [];
+  let scanned = 0;
+  let capped = false;
+  for (const el of walk(doc)) {
+    if (++scanned > 2000) { capped = true; break; }
+    if (el === root || !visible(el, geometry, memo)) continue;
+    const cs = getComputedStyle(el);
+    if ((/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 4) || (/(auto|scroll)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 4)) panes.push(el);
+    if (panes.length >= 24) { capped = true; break; }
+  }
+  if (geometry) panes.sort((a, b) => Number(!!geometryState(a, active).occluded) - Number(!!geometryState(b, active).occluded) || Number(!geometryState(a, active).in_view) - Number(!geometryState(b, active).in_view));
+  return { kept: [root, ...panes.slice(0, 11)], truncated: capped || panes.length > 11 };
+}
+
+export function scrollState(el: globalThis.Element, windowTarget: boolean, doc: Document): Omit<ScrollContainer, 'id' | 'label' | 'in_view' | 'occluded'> {
+  const win = doc.defaultView!;
+  const top = windowTarget ? win.scrollY : el.scrollTop;
+  const left = windowTarget ? win.scrollX : el.scrollLeft;
+  const height = windowTarget ? win.innerHeight : el.clientHeight;
+  const width = windowTarget ? win.innerWidth : el.clientWidth;
+  const maxTop = Math.max(0, el.scrollHeight - height), maxLeft = Math.max(0, el.scrollWidth - width);
+  const cs = getComputedStyle(el);
+  // Negative RTL/reversed ranges vary by layout. Keep signed offsets but decline those axes.
+  const vertical = cs.flexDirection !== 'column-reverse' && top >= 0 && (windowTarget || /^(auto|scroll)$/.test(cs.overflowY));
+  const horizontal = cs.direction !== 'rtl' && cs.flexDirection !== 'row-reverse' && left >= 0 && (windowTarget || /^(auto|scroll)$/.test(cs.overflowX));
+  return { top, left, scroll_height: el.scrollHeight, client_height: height, scroll_width: el.scrollWidth, client_width: width, at_start: vertical && top <= 4, at_end: vertical && top >= maxTop - 4, can_up: vertical && top > 4, can_down: vertical && top < maxTop - 4, can_left: horizontal && left > 4, can_right: horizontal && left < maxLeft - 4 };
+}
+
+/** Container IDs are a separate registry; page attributes cannot impersonate a pane. */
+export function resolveScrollContainer(doc: Document, id: number | null | undefined, revision?: string | null): { el?: globalThis.Element; note?: string; windowTarget?: boolean } {
+  const registry = registries.get(doc);
+  const reject = (why: string) => ({ note: `stale target: ${why}. Read the page again or update Walkthru and restart the test` });
+  const legacy = id == null;
+  if (!legacy && (!registry || !revision || revision !== registry.revision)) return reject('the scroll observation revision is missing or changed');
+  const captured = registry?.scrolls.get(id ?? 0);
+  const el = legacy ? (doc.scrollingElement ?? doc.documentElement) : captured?.el;
+  if (!el || (!legacy && !captured)) return reject('the scroll container was not captured');
+  const windowTarget = (id ?? 0) === 0;
+  if (registry && registry.url !== doc.location.href) return reject('the page changed');
+  if (!windowTarget) {
+    const chain = ancestors(el);
+    const cs = getComputedStyle(el);
+    if (!el.isConnected || !visible(el, registry!.geometry) || chain.length !== captured!.ancestors.length || chain.some((node, i) => node !== captured!.ancestors[i]) || scrollName(el) !== captured!.name || `${cs.overflowX}/${cs.overflowY}` !== captured!.overflow) return reject('the scroll pane changed or is hidden');
+  }
+  const active = modal(doc);
+  if (active && (windowTarget || !within(el, active))) return reject('a dialog covers the scroll container');
+  if (!windowTarget && registry?.geometry) {
+    const geometry = geometryState(el, active);
+    if (!geometry.in_view || geometry.occluded !== false) return reject('the scroll pane is outside the viewport or covered');
+  }
+  return { el, windowTarget };
+}
+
+export type PublicState = { url: string; text: string; signature: string; busy: boolean };
+/** Bounded public state only: no field values, diagnostics, overlay animation or arbitrary mutation count. */
+export function publicState(doc: Document): PublicState {
+  const memo = new WeakMap<globalThis.Element, boolean>();
+  const controls: unknown[] = [];
+  let busy = doc.readyState !== 'complete';
+  let scanned = 0;
+  for (const el of walk(doc)) {
+    if (++scanned > 2000) break;
+    if (!visible(el, false, memo)) continue;
+    if (el.getAttribute('aria-busy') === 'true') busy = true;
+    if (controls.length < 120 && el.matches(INTERACTIVE)) controls.push([el.tagName, redact(el.getAttribute('aria-label') || safeText(el, memo, { chars: 160, nodes: 40 })).slice(0, 80), fieldState(el), el.getAttribute('aria-expanded'), el.getAttribute('aria-selected'), disabled(el)]);
+  }
+  const text = redact(doc.body ? safeText(doc.body, memo, { chars: MAX_TEXT, nodes: 2000 }) : '').slice(0, MAX_TEXT);
+  const publicText = JSON.stringify([doc.title, text, controls]);
+  const offsets = [...(registries.get(doc)?.scrolls ?? [])].slice(0, 12).map(([id, captured]) => [id, id === 0 ? doc.defaultView!.scrollY : captured.el.scrollTop, id === 0 ? doc.defaultView!.scrollX : captured.el.scrollLeft]);
+  return { url: doc.location.href, text: publicText, signature: JSON.stringify([doc.location.href, publicText, offsets, busy]), busy };
+}
+
+export function waitBaseline(doc: Document, revision?: string | null): { state?: PublicState; note?: string } {
+  const registry = registries.get(doc);
+  if (!revision || !registry || revision !== registry.revision) return { note: 'stale target: the wait observation revision is missing or changed. Read the page again and restart the test' };
+  return { state: registry.state };
 }
 
 const SCAN_LIMIT = 800; // candidates read before ordering; long feeds hold thousands of controls

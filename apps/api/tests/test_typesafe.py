@@ -110,7 +110,7 @@ def test_build_request_uses_structured_state_and_compatible_targets():
     )
 
     assert payload["model"] == "jev-1.13.0"
-    assert set(payload["questions"]) == {"operation", "click_target", "type_target", "goal_achieved", "confusion"}
+    assert set(payload["questions"]) == {"operation", "click_target", "type_target", "scroll_target", "scroll_direction", "wait_condition", "goal_achieved", "confusion"}
     assert set(payload["questions"]["click_target"]["criteria"]) == {"none", "e1", "e4"}
     assert set(payload["questions"]["type_target"]["criteria"]) == {"none", "e2", "e3"}
     assert payload["state"]["history"] == [

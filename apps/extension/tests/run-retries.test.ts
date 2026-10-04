@@ -189,3 +189,99 @@ test.each(['old page', 'old API', 'wrong revision'])('mixed versions (%s) stop b
   expect(progress.at(-1)).toMatchObject({ phase: 'finished', status: 'stopped', code: 'browser_version' });
   expect(progress.at(-1)?.message).toContain('reload the website tab');
 });
+
+test.each(['wait', 'scroll'] as const)('new %s directives refuse an R-S2 receiver before dispatch', async kind => {
+  const step = { ...action, action: kind, target_id: null, scroll_container_id: kind === 'scroll' ? 1 : undefined };
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/stop')) return response({ ...running, status: 'stopped', steps: [] });
+    return response({ ...running, action: step });
+  }));
+  const progress: Progress[] = [];
+  await runTest(options(), p => progress.push(p));
+  expect(actions).toBe(0);
+  expect(progress.at(-1)?.code).toBe('browser_version');
+});
+
+test('wait outcome reaches the next observation once with operation identity and bounded deadline', async () => {
+  const step = { ...action, action: 'wait', target_id: null, wait_condition: 'text_changed', wait_timeout_ms: 1000 };
+  const outcome = { action: 'wait', status: 'changed', elapsed_ms: 200 };
+  const original = vi.mocked(chrome.tabs.sendMessage).getMockImplementation()!;
+  vi.mocked(chrome.tabs.sendMessage).mockImplementation(async (...args: any[]) => {
+    if (args[1].type === 'snapshot') { snapshots++; return { ...observation, navigation_version: 3 }; }
+    if (args[1].type === 'act') {
+      actions++;
+      expect(args[1].operation_id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(args[1].opts.deadline_ms).toBeGreaterThan(Date.now());
+      return { ok: true, executor_result: outcome };
+    }
+    return Reflect.apply(original, chrome.tabs, args);
+  });
+  let observed: any;
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/observe')) { observed = JSON.parse(String(init?.body)); return response({ ...running, status: 'done', steps: [step] }); }
+    return response({ ...running, action: step });
+  }));
+  await runTest(options(), () => {});
+  expect(actions).toBe(1);
+  expect(observed.observation.executor_result).toEqual(outcome);
+});
+
+test('expired run budget after browser observation stops before another API decision', async () => {
+  const step = { ...action, action: 'wait', target_id: null };
+  let now = 1_000_000;
+  vi.spyOn(Date, 'now').mockImplementation(() => now);
+  const original = vi.mocked(chrome.tabs.sendMessage).getMockImplementation()!;
+  vi.mocked(chrome.tabs.sendMessage).mockImplementation(async (...args: any[]) => {
+    if (args[1].type === 'snapshot') {
+      snapshots++;
+      if (snapshots > 1) now += 240_001;
+      return { ...observation, navigation_version: 3 };
+    }
+    if (args[1].type === 'act') { actions++; return { ok: true, executor_result: { action: 'wait', status: 'timeout' } }; }
+    return Reflect.apply(original, chrome.tabs, args);
+  });
+  const endpoints: string[] = [];
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    endpoints.push(url);
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/stop')) return response({ ...running, status: 'stopped', steps: [step] });
+    return response({ ...running, action: step });
+  }));
+  try { await runTest(options(), () => {}); }
+  finally { vi.restoreAllMocks(); }
+  expect(actions).toBe(1);
+  expect(endpoints.some(url => url.endsWith('/observe'))).toBe(false);
+  expect(endpoints.some(url => url.endsWith('/stop'))).toBe(true);
+});
+
+test('owner Stop cancels the matching pending wait without a second action or observation', async () => {
+  const step = { ...action, action: 'wait', target_id: null };
+  const owner = new AbortController();
+  const original = vi.mocked(chrome.tabs.sendMessage).getMockImplementation()!;
+  let operationId: string | undefined;
+  let complete: ((value: unknown) => void) | undefined;
+  let cancelled: string | undefined;
+  vi.mocked(chrome.tabs.sendMessage).mockImplementation(async (...args: any[]) => {
+    if (args[1].type === 'snapshot') { snapshots++; return { ...observation, navigation_version: 3 }; }
+    if (args[1].type === 'act') {
+      actions++; operationId = args[1].operation_id;
+      return new Promise<unknown>(resolve => { complete = resolve; setTimeout(() => owner.abort(), 10); });
+    }
+    if (args[1].type === 'act_cancel') { cancelled = args[1].operation_id; complete!({ ok: false, executor_result: { action: 'wait', status: 'aborted' } }); return { ok: true }; }
+    return Reflect.apply(original, chrome.tabs, args);
+  });
+  const endpoints: string[] = [];
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    endpoints.push(url);
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/stop')) return response({ ...running, status: 'stopped', steps: [step] });
+    return response({ ...running, action: step });
+  }));
+  await runTest({ ...options(), signal: owner.signal }, () => {});
+  expect(cancelled).toBe(operationId);
+  expect(actions).toBe(1);
+  expect(snapshots).toBe(1);
+  expect(endpoints.some(url => url.endsWith('/observe'))).toBe(false);
+});

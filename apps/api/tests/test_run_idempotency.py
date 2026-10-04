@@ -69,6 +69,26 @@ def test_duplicate_observation_does_not_consume_the_next_action(monkeypatch, rev
     assert first.json()["action"]["observation_revision"] == revision
 
 
+def test_wait_start_and_observe_replies_replay_without_another_action(monkeypatch):
+    wait = PersonaStep(thought="Observe the pending page", action="wait", wait_condition="text_changed", confusion=0)
+    model = use([wait, wait, wait], monkeypatch)
+    client, headers = TestClient(main.app), key()
+    observation = HOME | {"revision": "navigation-3", "navigation_version": 3}
+    body = START | {"observation": observation}
+    first = client.post("/runs", json=body, headers=headers)
+    retry = client.post("/runs", json=body, headers=headers)
+    assert first.status_code == 200 and first.json() == retry.json() and model.calls == 1
+    assert first.json()["action"]["observation_revision"] == "navigation-3"
+    begun = first.json()
+    observed = {"observation": observation | {"executor_result": {"action": "wait", "status": "timeout", "elapsed_ms": 1000}},
+                "action_id": begun["action_id"]}
+    headers = key()
+    first = client.post(f"/runs/{begun['run_id']}/observe", json=observed, headers=headers)
+    retry = client.post(f"/runs/{begun['run_id']}/observe", json=observed, headers=headers)
+    assert first.status_code == 200 and first.json() == retry.json() and model.calls == 2
+    assert first.json()["action"]["action"] == "wait"
+
+
 def test_changed_payload_operation_or_user_never_replays_someone_elses_intent(monkeypatch, claims):
     model = use([CLICK, CLICK], monkeypatch)
     client, headers = TestClient(main.app), key()

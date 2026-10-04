@@ -6,7 +6,7 @@ Chrome extension (user's browser)               Walkthru API (FastAPI + LangGrap
 ────────────────────────────────                ───────────────────────────────────
 side panel: pick site, goal, test user ── POST /runs ──────▶ create run + LangGraph thread
 content script: snapshot + axe + vitals ── POST /runs/{id}/observe ─▶ persona agent decides
-  (URL, numbered buttons/links/inputs,  ◀── next action ──── click #12 | type #4 "..." | scroll | done | give_up
+  (URL, numbered buttons/links/inputs,  ◀── next action ──── click #12 | type #4 "..." | scroll | wait | done | give_up
    visible text, errors; PII masked)
 executes the action in the real tab
 masks fields + captures bounded JPEG    ── private Storage object + evidence metadata ─▶ exact run step
@@ -53,6 +53,14 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 15. **GEO is deterministic and reuses the site audit.** No new crawler, no LLM calls for the score. The SSRF-safe fetcher and the audited page set are shared by SEO, security and GEO. The fetcher (`app/scans/fetch.py`) resolves each host once, refuses any non-public address (metadata endpoints and IPv6 forms hiding a private IPv4 included) and connects to that checked address, so DNS rebinding cannot reach internal services (SD-4.5).
 16. **Over time means comparison, not more runs.** Reruns and weekly watch compare finding fingerprints against the previous result for the same site. Only changes are reported and emailed.
 17. **Team workspaces: the API decides, RLS backs it up, Realtime only nudges.** Membership and role are read from the database on every team request (non-members get 404). Browsers only read team rows through RLS (`is_team_member`), shared runs and their screenshots through `shared_with_me(run)`, and never see invitations. Seats and ownership change inside locked SQL functions. See [docs/team-collaboration.md](docs/team-collaboration.md).
+
+## Browser navigation contract (R-S3, 2026-10-05)
+
+Current snapshots advertise `navigation_version=3`, an opaque revision and up to twelve scroll containers (ID zero is the window). Controls name their nearest captured container; descriptors include signed pixel offsets, dimensions, available directions and viewport/occlusion/coverage flags. Pane labels share the existing 6,000-character region/row context budget. IDs resolve direct document-local references; changed ancestry, labels, visibility, clipping, modal/overlay coverage or scrollability cause a safe refusal.
+
+`scroll_container_id`, `scroll_direction` and optional `scroll_distance` request up/down/left/right movement capped to 85% of the axis viewport and 1,000 pixels. A null ID with default down/default distance retains legacy window behavior. Modern window instructions become explicit ID zero and require the current capability/revision; old receivers cannot silently ignore new instructions. Hidden/clip pane axes and unsupported RTL/reversed axes decline movement with `no_progress`; negative offsets remain signed. Actual before/after offsets are recorded because browser behavior, including scroll snap, can differ from the request. Primary browser references: [scrollBy](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollBy), [scrollTop](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollTop), [scrollLeft](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollLeft) and [overflow](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/overflow).
+
+Revision-bound `wait` uses `wait_condition=settled|url_changed|text_changed` and `wait_timeout_ms=100..5000` (default 1000). Settlement means 300 ms of stable bounded public text/control/scroll state without an observed busy signal; it does not mean network-idle or goal success. Polling preserves the snapshot registry, excludes editable values and diagnostics, and never repeats a dispatched mutation. Matching operation cancellation and run deadlines stop pending/queued work. Executor feedback is accepted only for the pending action/container and stores actual elapsed time even on browser-throttling overrun; request deadlines stay capped. Repeated no-progress/timeouts end as Walkthru's limit, not a site defect. Broader completion proof remains R-S4; installed-browser/deployed acceptance remains V0/R-S20. Verified behavior and limits: [session workflow](docs/restructure-sessions.md#r-s3-controlled-scrolling-and-observation).
 
 ## v1.1 capability map
 

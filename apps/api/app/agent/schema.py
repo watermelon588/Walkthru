@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
-Action = Literal["click", "type", "scroll", "back", "done", "give_up"]
+Action = Literal["click", "type", "scroll", "wait", "back", "done", "give_up"]
 
 
 # Snapshot limits (SD-2.2): the extension sends at most 120 elements, 80-character labels and 6,000 characters of
@@ -47,6 +47,7 @@ class Element(BaseModel):
     row: str | None = Field(default=None, max_length=160)
     in_view: bool | None = None
     occluded: bool | None = None
+    scroll_container_id: int | None = Field(default=None, ge=0, le=100_000)
 
     @field_validator("region", "row")
     @classmethod
@@ -81,6 +82,51 @@ class BrowserDiagnostics(BaseModel):
     web_vitals: WebVitals = Field(default_factory=WebVitals)
 
 
+class ScrollPosition(BaseModel):
+    top: float = Field(ge=-10_000_000, le=10_000_000, allow_inf_nan=False)
+    left: float = Field(ge=-10_000_000, le=10_000_000, allow_inf_nan=False)
+
+
+class ScrollContainer(ScrollPosition):
+    """An observed public scroll region, bound to the current observation revision."""
+
+    id: int = Field(ge=0, le=100_000)  # zero is the window; positive IDs are snapshot-local panes
+    label: str = Field(default="", max_length=160)
+    scroll_height: float = Field(ge=0, le=10_000_000, allow_inf_nan=False)
+    client_height: float = Field(ge=0, le=10_000_000, allow_inf_nan=False)
+    scroll_width: float = Field(ge=0, le=10_000_000, allow_inf_nan=False)
+    client_width: float = Field(ge=0, le=10_000_000, allow_inf_nan=False)
+    in_view: bool | None = None
+    occluded: bool | None = None
+    at_start: bool | None = None
+    at_end: bool | None = None
+    can_up: bool = False
+    can_down: bool = False
+    can_left: bool = False
+    can_right: bool = False
+
+    @field_validator("label")
+    @classmethod
+    def mask_label(cls, value: str) -> str:
+        return _context_text(value) or ""
+
+
+class ExecutorResult(BaseModel):
+    action: Literal["scroll", "wait"]
+    status: Literal["moved", "no_progress", "settled", "changed", "timeout", "aborted"]
+    container_id: int | None = Field(default=None, ge=0, le=100_000)
+    before: ScrollPosition | None = None
+    after: ScrollPosition | None = None
+    elapsed_ms: int = Field(default=0, ge=0, le=600_000)  # actual observation time, including a blocked event-loop overrun
+
+    @model_validator(mode="after")
+    def action_status(self) -> "ExecutorResult":
+        allowed = {"scroll": {"moved", "no_progress", "aborted"}, "wait": {"settled", "changed", "timeout", "aborted"}}
+        if self.status not in allowed[self.action] or (self.action == "wait" and self.container_id is not None):
+            raise ValueError("executor result does not match its action")
+        return self
+
+
 class Observation(BaseModel):
     """One page snapshot from the content script. PII is masked before upload."""
 
@@ -99,6 +145,10 @@ class Observation(BaseModel):
     candidate_limit_reached: bool | None = None
     omitted_elements: int | None = Field(default=None, ge=0, le=1_000_000)
     context_truncated: bool | None = None
+    navigation_version: int | None = Field(default=None, ge=0, le=3)
+    scroll_containers: list[ScrollContainer] = Field(default_factory=list, max_length=12)
+    scroll_containers_truncated: bool | None = None
+    executor_result: ExecutorResult | None = None
 
     @model_validator(mode="after")
     def bound_context(self) -> "Observation":
@@ -111,6 +161,14 @@ class Observation(BaseModel):
                         setattr(element, field, text[:remaining] or None)
                         self.context_truncated = True
                     remaining -= min(len(text), remaining)
+        ids = [container.id for container in self.scroll_containers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("scroll container IDs must be unique")
+        for container in self.scroll_containers:
+            if len(container.label) > remaining:
+                container.label = container.label[:remaining]
+                self.context_truncated = True
+            remaining -= min(len(container.label), remaining)
         return self
 
 
@@ -132,6 +190,11 @@ class PersonaStep(BaseModel):
     action: Action
     target_id: int | None = Field(default=None, description="Element id for click/type.")
     text: str | None = Field(default=None, description="Text to type, for type only.")
+    scroll_container_id: int | None = Field(default=None, ge=0, le=100_000, description="Current scroll container ID. Null means legacy window scrolling.")
+    scroll_direction: Literal["up", "down", "left", "right"] = "down"
+    scroll_distance: int | None = Field(default=None, ge=1, le=1000, description="Pixels, capped to the current viewport. Null uses 85 percent of it.")
+    wait_condition: Literal["settled", "url_changed", "text_changed"] = "settled"
+    wait_timeout_ms: int = Field(default=1000, ge=100, le=5000)
     confusion: int = Field(ge=0, le=3, description="0 clear, 1 hesitant, 2 confused, 3 stuck")
     progress: int = Field(default=0, ge=0, le=4, description="How many checklist items are complete, counting what your previous actions achieved.")
 
