@@ -30,4 +30,12 @@ apps/web/design/launch-videos/*.log
 apps/web/design/launch-video-30s/frames/
 apps/web/design/launch-video-30s/review/
 apps/web/design/launch-video-30s/assets/
+apps/web/design/launch-video-15s/assets/
+apps/web/design/launch-video-15s/snapshots/
+apps/web/design/launch-video-15s/renders/
+apps/web/design/launch-video-15s/*.log
+apps/web/design/launch-video-panic/assets/
+apps/web/design/launch-video-panic/snapshots/
+apps/web/design/launch-video-panic/renders/
+apps/web/design/launch-video-panic/*.log
 apps/web/design/doodle-posters/walkthru-poster-pack.zip
