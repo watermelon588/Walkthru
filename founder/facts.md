@@ -7,3 +7,6 @@
 - 2026-09-24 (pricing-strategy): Payments through Dodo; V1 paid access is founder-approved 30-day passes (payment.md, decided 2026-09-23).
 - 2026-09-24 (validate-idea): Founder says they have little experience in the industry.
 - 2026-09-24 (spec v1.1): Founder wants GEO in the free plan and every paid plan, and asked for a finalized plan to compete in the market.
+- 2026-10-04 (validate-idea): Founder is dissatisfied with report depth, feature value and actual findings, and requests an honest viability review and detailed product/architecture plan.
+- 2026-10-04 (pricing-strategy): Founder proposes subscription access plus pay-as-you-go usage instead of fixed subscription run/scan counts, with safeguards for connector-triggered costs; no new prices were selected in the request.
+- 2026-10-04 (mvp-scope): Founder wants deeper signup-to-dashboard journeys, complex navigation/forms, live-data checks, stronger model judgment and visual evidence, with possible video and more actionable SEO/GEO guidance.

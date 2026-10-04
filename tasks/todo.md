@@ -1,8 +1,41 @@
 # Walkthru Task List
 
-Definition of done: see ROADMAP.md. Immediate work is the V0 prelaunch session plan below (founder direction, 2026-09-30). The v1.2 flagship plan remains the broader roadmap, in phase order (ROADMAP.md "Phases" and "Session plan"). The v1.1 and v1 history below stays for reference. Sizes: S = 1-2 files, M = 3-5 files, L = 6+ files.
+Definition of done: see ROADMAP.md. Immediate work is the report-quality restructure workflow below (founder direction, 2026-10-04); existing V0 prelaunch sessions remain release prerequisites and preserve their completion history. The v1.2 flagship plan remains the broader roadmap, in phase order (ROADMAP.md "Phases" and "Session plan"). The v1.1 and v1 history below stays for reference. Sizes: S = 1-2 files, M = 3-5 files, L = 6+ files.
 
 Every task follows ROADMAP.md "Build rules": deterministic first, free tier only, reuse open source after a licence check (table in docs/decisions.md, 2026-09-25 "Premium depth"), name each new dependency, never attack a site. "Reuse" lines name the repo and licence to port from. Ported rules keep their notice in `apps/api/THIRD_PARTY.md` (created by the first task that ports code).
+
+## Report-quality restructure workflow (2026-10-04)
+
+Product direction: [root plan](../plan.md). Detailed objectives, likely files, acceptance tests, dependencies and handoffs: [session workflow](../docs/restructure-sessions.md). Sessions are slices of work in this project, not new chats. Later paid-provider evaluation, revised prices, recurring billing, wider staging side effects and deployment remain separately gated; no activation is implied by this checklist.
+
+Founder scope extension: [caching/database/SEO/GEO/report audit and contract](../docs/seo-geo-report-expansion.md). Preserve twenty original IDs plus four pending suffix slices: **24 planned slices, two complete**. R-S3 is next; database count discovery can proceed early before expensive-work admission.
+
+- [x] **R-S1:** bounded structured scanner evidence, safe interrupted/zero-action report grounding and inspectable evidence/diagnostics with legacy compatibility. Completed 2026-10-04: focused backend 61 passed, full API 736 passed/19 existing PostgREST skipped, all API Ruff; web 19 tests/build/lint and 16 real-browser fixture layouts passed. Exact scope, evidence and remaining limits are in the workflow. Mission/report-v2 schemas, assertion engine and general completion proof remain later work.
+- [x] **R-S2:** current masked/bounded region/row context, viewport/occlusion and omission coverage; revision-bound DOM targets with stale dispatch refusal and honest `agent_lost` feedback. Completed 2026-10-04: focused API 110 passed, full API 762 passed/19 existing PostgREST skipped and Ruff; extension 128 passed/1 opt-in live-contract skipped, TypeScript/build/zero-warning lint; 15 actual Edge geometry fixtures passed. Update API, reload rebuilt extension and website tab before restarting. Exact contract, artifacts and installed-browser/completion-proof limits are in the workflow.
+- [ ] **R-S3, next:** controlled nested scrolling and bounded observation/wait.
+- [ ] **R-S4:** task/persona separation and outcome-based completion.
+- [ ] **R-S5:** versioned detailed report and legacy consumers.
+- [ ] **R-S5a:** prominent chapter navigation, plain-language summaries and web/print/section-prompt/MCP parity, including separate SEO/keywords/backlinks/GEO/AI-citation sections.
+- [ ] **R-S6:** one owner-defined read-only/fixture assertion.
+- [ ] **R-S7:** durable provider usage and attempt records, without charging customers.
+- [ ] **R-S7a:** safe scoped cache reuse, freshness/version invalidation, concurrent-miss control and measured latency/cost savings; never reuse browser actions as fresh verification.
+- [ ] **R-S8:** atomic reservation/settlement and uncertain-spend recovery.
+- [ ] **R-S9:** common admission across web/extension/API/MCP/Scout/watch/citations.
+- [ ] **R-S10:** scope/quote/hard-cap and settlement UI.
+- [ ] **R-S11:** compatible stronger-model adapters, disabled by default.
+- [ ] **R-S12:** separately authorized capped model comparison, with measured failure/latency/cost results.
+- [ ] **R-S13:** targeted fix recheck and honest comparison.
+- [ ] **R-S14:** saved bounded suites and tested/not-tested coverage.
+- [ ] **R-S14a:** slim cursor-paged lists/MCP, authoritative counts past row caps, account-scoped client caches and query/index performance evidence. Count discovery gates R-S9; reviewed migrations only if justified.
+- [ ] **R-S15:** founder pilots and pricing adoption proposal; no automatic catalog activation.
+- [ ] **R-S16:** authorized read-only Search Console data.
+- [ ] **R-S17:** grounded keyword/page/intent/content opportunities, measured versus advisory data, current SEO guidance and only a benchmark-qualified narrow Jev fallback.
+- [ ] **R-S17a:** twelve contextual backlink tactics, useful assets/sourced opportunities, distinct GEO/citation guidance and matching prompts/MCP; no autonomous outreach, paid link network or ranking guarantee.
+- [ ] **R-S18:** performance resource/element attribution and measurement context.
+- [ ] **R-S19:** truthful evidence annotations/optional actual-frame highlights.
+- [ ] **R-S20:** adopted-scope installed-browser/durability/release checks, also clearing the relevant existing V0 gates.
+
+Checkpoints after R-S4, R-S10 and R-S15 distinguish implementation, measured model quality, funded admission and validated paid value. Optional growth/media work is not a requirement to validate the first scoped pilot. Preserve historical unchecked work below; reference it when a restructure slice also addresses the same defect.
 
 ## V0 prelaunch sessions, excluding pricing (2026-09-30)
 
@@ -63,7 +96,7 @@ Every task follows ROADMAP.md "Build rules": deterministic first, free tier only
 
 - [ ] **V0-S5** Install the intended beta extension in a clean ordinary Chrome profile. Verify its ID, web-origin connection, sidepanel sign-in, Visitor/Owner behavior, stop controls and a complete current-client journey. Use owned TripBurst/fixtures only. Clear the existing hard-fixture safety gate: blocked/bulk goals, injected page instructions, bot wall, signed-in owner form flow, masked snapshots/screenshots and permission prompts. Do not submit target production forms or bypass CAPTCHA. Use authorized fixture data for form sends.
 - [ ] Inspect actual CSV downloads and PDF output for report, comparison, workspace and branded exports: values, Unicode/escaping, formula protection, page breaks and complete evidence. Recheck mobile navigation/replay/chat and missing/error states. Fix report scope wording so a browsing-only goal is not presented as a verified signup conversion; keep progress honest during model/report waits.
-- [ ] Fix the **confirmed S1 stop-report grounding defect**: run `2e7fc3a801114f31955c88e814324a02` stopped before the first action, yet its summary claimed users struggled to find Explore and emitted a medium UX finding citing confusion 0/3. A custom reason (`QA stopped before executing the pending action`) was treated as site-problem evidence by `problem_steps`; it currently recognizes selected phrases rather than a structured stop cause. Separate an unexecuted/unconfirmed action from observed site failure, preserve genuinely observed errors in partial reports, and test default/custom owner stop plus runtime/safety stops and summary grounding. No target navigation defect was proven by this stop.
+- [x] Fix the **confirmed S1 stop-report grounding defect**: historical run `2e7fc3a801114f31955c88e814324a02` stopped before the first action, yet claimed Explore trouble and a medium UX finding citing confusion 0/3. **Fixed for newly generated reports in R-S1 (2026-10-04):** unconfirmed actions, custom stop reasons, confusion and termination alone no longer establish a site defect; unfinished journeys without observed failure use a deterministic summary without a writer call. Genuine earlier errors remain eligible, with regression coverage. No target navigation defect was proven by the old stop; its saved report was not regenerated. This does not clear the remaining native-browser S5 gates.
 - [ ] **Done when:** installed-extension acceptance and the existing safety-plan native-browser gate pass with saved evidence; exported files are inspected; confirmed rendering/usability defects are fixed. Investigate the one-off landing scan-anchor displacement before declaring it a bug. Recheck AI-answer engine/source coverage, Scout grounding and comparison “Not measured” behavior; do not relabel API answers as measurements of consumer AI products.
 
 **Verification:** ordinary Chrome end-to-end checks, saved sanitized screenshots/export artifacts, affected API/web/extension tests and builds. **Dependencies:** S1-S4. **Likely files:** sidepanel/inject/safety only for reproduced defects, report/export/scope components, small navigation/progress fixes. **Existing work:** agent-safety-plan native pass, V7 evidence/PDF, P3.2 live evidence. The legacy harness cannot satisfy this session's exit criteria.

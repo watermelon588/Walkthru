@@ -1,5 +1,11 @@
 # Deploying the v0.5 friends beta
 
+**2026-10-03 update:** the founder's domain is `trywalkthru.com`. Follow the
+[domain, email and deployment walkthrough](trywalkthru-domain-and-deployment.md)
+for the current sequence. Vercel Hobby excludes commercial use; the free-web recommendation below
+is historical. The Render blueprint's memory checkpoint default is also historical beta configuration,
+not the durable production setup. Hosting choice and deployed acceptance remain pending.
+
 For the production VM, durable agent state is a separate launch gate: follow the
 [checkpoint migration, restart drill and request-log guide](checkpoints-and-request-logs.md).
 Updated run clients also require migration 0003 and the API deployment order in [run idempotency](run-idempotency.md).
