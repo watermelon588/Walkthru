@@ -41,27 +41,32 @@ def key():
     return {"Idempotency-Key": str(uuid.uuid4())}
 
 
-def test_duplicate_start_returns_the_original_run_without_spending_twice(monkeypatch, fake_db):
+@pytest.mark.parametrize("revision", [None, "snapshot-1"])
+def test_duplicate_start_returns_the_original_run_without_spending_twice(monkeypatch, fake_db, revision):
     model = use([CLICK, CLICK], monkeypatch)
     client, headers = TestClient(main.app), key()
-    first = client.post("/runs", json=START, headers=headers)
-    retry = client.post("/runs", json=START, headers=headers)
+    body = START | {"observation": HOME | {"revision": revision}}
+    first = client.post("/runs", json=body, headers=headers)
+    retry = client.post("/runs", json=body, headers=headers)
     assert first.status_code == retry.status_code == 200
     assert first.json() == retry.json()
     assert len(fake_db) == 1 and model.calls == 1
+    assert first.json()["action"]["observation_revision"] == revision
 
 
-def test_duplicate_observation_does_not_consume_the_next_action(monkeypatch):
+@pytest.mark.parametrize("revision", [None, "snapshot-2"])
+def test_duplicate_observation_does_not_consume_the_next_action(monkeypatch, revision):
     model = use([CLICK, CLICK, CLICK], monkeypatch)
     client = TestClient(main.app)
     started = client.post("/runs", json=START).json()
     run_id = started["run_id"]
     headers = key()
-    body = {"observation": HOME, "action_id": started["action_id"]}
+    body = {"observation": HOME | {"revision": revision}, "action_id": started["action_id"]}
     first = client.post(f"/runs/{run_id}/observe", json=body, headers=headers)
     retry = client.post(f"/runs/{run_id}/observe", json=body, headers=headers)
     assert first.status_code == retry.status_code == 200
     assert first.json() == retry.json() and model.calls == 2
+    assert first.json()["action"]["observation_revision"] == revision
 
 
 def test_changed_payload_operation_or_user_never_replays_someone_elses_intent(monkeypatch, claims):

@@ -1,9 +1,12 @@
 import { findById, ID_ATTR, settle, snapshot } from "../lib/snapshot";
 import { execute, submits } from "../lib/execute";
 
+let currentRevision: string | undefined;
 function page(html: string) {
   document.body.innerHTML = html;
-  return snapshot(document, { geometry: false });
+  const observation = snapshot(document, { geometry: false });
+  currentRevision = observation.revision;
+  return observation;
 }
 
 test("numbers visible interactive elements with labels", () => {
@@ -16,7 +19,7 @@ test("numbers visible interactive elements with labels", () => {
       <button disabled>Nope</button>
     </form>
     <div role="button" aria-label="Open menu"></div>`);
-  expect(obs.elements).toEqual([
+  expect(obs.elements.map(({ row: _row, region: _region, ...control }) => control)).toEqual([
     { id: 1, tag: "a", text: "Pricing" },
     { id: 2, tag: "input", text: "Email address", type: "email", state: "filled" },
     { id: 3, tag: "button", text: "Create account" },
@@ -42,7 +45,7 @@ test("reaches into open shadow roots", () => {
   const host = document.querySelector("x-app")!;
   host.attachShadow({ mode: "open" }).innerHTML = `<button>Inside shadow</button>`;
   const obs = snapshot(document, { geometry: false });
-  expect(obs.elements).toEqual([{ id: 1, tag: "button", text: "Inside shadow" }]);
+  expect(obs.elements.map(({ row: _row, region: _region, ...control }) => control)).toEqual([{ id: 1, tag: "button", text: "Inside shadow" }]);
   expect(findById(document, 1)?.textContent).toBe("Inside shadow");
 });
 
@@ -51,31 +54,33 @@ test("does not inspect a closed agent-overlay shadow root", () => {
   const host = document.querySelector("walkthru-agent")!;
   host.attachShadow({ mode: "closed" }).innerHTML = `<button>Scout status</button>`;
   const obs = snapshot(document, { geometry: false });
-  expect(obs.elements).toEqual([{ id: 1, tag: "button", text: "Site action" }]);
+  expect(obs.elements.map(({ row: _row, region: _region, ...control }) => control)).toEqual([{ id: 1, tag: "button", text: "Site action" }]);
   expect(obs.text).not.toContain("Scout status");
 });
 
 test("execute: types into inputs, clicks, blocks dangerous clicks in safe mode", () => {
   page(`<form><input id="e" type="email"><button type="submit">Delete account</button></form><a href="#" id="a">Go</a>`);
   const owner = { verified: true }; // typing and submitting forms need a verified domain (visitor mode, below)
-  expect(execute({ thought: "", action: "type", target_id: 1, text: "a@b.co", confusion: 0 }, document, owner)).toEqual({ ok: true });
+  expect(execute({ thought: "", action: "type", target_id: 1, text: "a@b.co", confusion: 0, observation_revision: currentRevision }, document, owner)).toEqual({ ok: true });
   expect((document.getElementById("e") as HTMLInputElement).value).toBe("a@b.co");
-  const click2 = { thought: "", action: "click" as const, target_id: 2, text: null, confusion: 0 };
+  const click2 = { thought: "", action: "click" as const, target_id: 2, text: null, confusion: 0, observation_revision: currentRevision };
   expect(execute(click2, document, { logged_in: true }).note).toMatch(/safe mode/);
   expect(execute(click2, document).note).toMatch(/safe mode/); // public page: a destructive button never fires either
   document.querySelector("button")!.textContent = "Create account";
+  currentRevision = snapshot(document, { geometry: false }).revision;
+  click2.observation_revision = currentRevision;
   let clicked = 0;
   document.querySelector("button")!.addEventListener("click", (e) => { clicked++; e.preventDefault(); });
   expect(execute(click2, document, { ...owner, dryRun: true })).toEqual({ ok: true, submits: true });
   expect(clicked).toBe(0); // dry run never touches the page
   expect(execute(click2, document, owner)).toEqual({ ok: true, submits: true });
   expect(clicked).toBe(1);
-  expect(execute({ ...click2, target_id: 9 }, document).note).toBe("element #9 not found");
+  expect(execute({ ...click2, target_id: 9 }, document).note).toMatch(/^stale target: element #9 was not captured/);
 });
 
 test("execute: public pages block send buttons (including input values) but allow plain links", () => {
   page(`<form><input type="submit" value="Send message"></form><a href="#pricing">Buy now</a>`);
-  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0, observation_revision: currentRevision });
   expect(execute(click(1), document).note).toMatch(/not sent: "Send message" only fires on a domain the owner has verified/);
   expect(execute(click(2), document)).toEqual({ ok: true, submits: false });
 });
@@ -84,7 +89,7 @@ test("execute: mailto and tel links are reported as contact methods, never opene
   page(`<a href="mailto:owner@site.dev">Email me</a><a href="tel:+15550100">Call</a>`);
   let opened = 0;
   document.querySelectorAll("a").forEach((a) => a.addEventListener("click", (e) => { opened++; e.preventDefault(); }));
-  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0, observation_revision: currentRevision });
   const email = execute(click(1), document);
   expect(email.note).toMatch(/opens an email app/);
   expect(email.note).not.toContain("owner@site.dev");
@@ -111,7 +116,7 @@ test("sending needs a verified domain and the owner's approval; destroying is ne
   page(`<form id="c"></form><button type="submit" form="c" aria-label="Submit contact form and send email">ping</button><button>Delete account</button>`);
   let sent = 0;
   document.querySelector("button")!.addEventListener("click", (e) => { sent++; e.preventDefault(); });
-  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0 });
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0, observation_revision: currentRevision });
   expect(execute(click(1), document).note).toMatch(/only fires on a domain the owner has verified/);
   expect(execute(click(1), document, { verified: true, dryRun: true })).toEqual({ ok: true, submits: true, confirm: "send" });
   expect(execute(click(1), document, { verified: true }).note).toMatch(/owner has not approved/);
@@ -123,7 +128,7 @@ test("sending needs a verified domain and the owner's approval; destroying is ne
 
 test("typing reports when a field rejects the text", () => {
   page(`<select id="s"><option value="">Pick</option><option value="a">A</option></select>`);
-  const r = execute({ thought: "", action: "type", target_id: 1, text: "Z", confusion: 0 }, document, { verified: true });
+  const r = execute({ thought: "", action: "type", target_id: 1, text: "Z", confusion: 0, observation_revision: currentRevision }, document, { verified: true });
   expect(r).toEqual({ ok: false, note: "the field did not keep the typed text" });
 });
 
@@ -138,17 +143,17 @@ test("visitor mode: only the search box, no social or commerce controls, no form
     <div role="button" aria-label="Like"></div><button>123 Likes. Follow</button><a href="/p">Products you might like</a>
     <a href="/cart/add?id=1">Add to cart</a><form role="search"><input type="search" placeholder="Search"><button type="submit">Go</button></form>
     <form><input type="email" aria-label="Email"><button type="submit">Create account</button></form>`);
-  const act = (action: "click" | "type", id: number) => execute({ thought: "", action, target_id: id, text: action === "type" ? "x" : null, confusion: 0 }, document, { dryRun: true });
+  const act = (action: "click" | "type", id: number) => execute({ thought: "", action, target_id: id, text: action === "type" ? "x" : null, confusion: 0, observation_revision: currentRevision }, document, { dryRun: true });
   expect(act("click", 1).note).toMatch(/visitor mode never likes/); // an icon button labelled Like
   expect(act("click", 2).note).toMatch(/visitor mode never likes/);
   expect(act("click", 3)).toEqual({ ok: true, submits: false }); // a plain link still navigates
   expect(act("click", 4).note).toMatch(/visitor mode never likes/); // add to cart, even as a link
-  expect(execute({ thought: "", action: "type", target_id: 5, text: "shoes", confusion: 0 }, document)).toEqual({ ok: true });
+  expect(execute({ thought: "", action: "type", target_id: 5, text: "shoes", confusion: 0, observation_revision: currentRevision }, document)).toEqual({ ok: true });
   expect(act("click", 6)).toEqual({ ok: true, submits: true }); // the search form's own button
   expect(act("type", 7).note).toMatch(/only uses the site's search box/);
   expect(act("click", 8).note).toMatch(/only submits the site's search/);
   // The verified owner may do all of it.
-  for (const id of [1, 2, 4, 8]) expect(execute({ thought: "", action: "click", target_id: id, text: null, confusion: 0 }, document, { verified: true, dryRun: true }).ok).toBe(true);
+  for (const id of [1, 2, 4, 8]) expect(execute({ thought: "", action: "click", target_id: id, text: null, confusion: 0, observation_revision: currentRevision }, document, { verified: true, dryRun: true }).ok).toBe(true);
 });
 
 test("icon-only buttons read by their accessible name", () => {

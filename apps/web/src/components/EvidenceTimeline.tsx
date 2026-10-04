@@ -14,6 +14,11 @@ const ACTION_LABEL: Record<Step['action'], string> = {
   give_up: 'Stopped',
 }
 
+function actionLabel(step: Step) {
+  if (!step.interrupted) return ACTION_LABEL[step.action]
+  return ({ click: 'Click not confirmed', type: 'Field entry not confirmed', scroll: 'Scroll not confirmed', back: 'Back navigation not confirmed', done: 'Completion not confirmed', give_up: 'Stop not confirmed' })[step.action]
+}
+
 export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; branded?: boolean }) {
   const [selected, setSelected] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -65,7 +70,7 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Journey replay</p>
           <h2 id="journey-evidence-title" className="mt-2 text-2xl font-light tracking-tight">See every meaningful moment</h2>
-          <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">Screenshots show the page after an action. Select a step to inspect what Scout tried, what changed and where confusion rose.</p>
+          <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">Select a step to inspect what Scout tried, the captured page and where confusion rose. Interrupted actions have no confirmed result.</p>
         </div>
         <AgentPresence
           activity={`Reviewing step ${selected + 1} of ${steps.length}`}
@@ -87,7 +92,7 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
                 >
                   <span className="pt-0.5 font-mono text-xs text-muted">{String(index + 1).padStart(2, '0')}</span>
                   <span className="min-w-0">
-                    <span className="block text-sm">{ACTION_LABEL[step.action]}</span>
+                    <span className="block text-sm">{actionLabel(step)}</span>
                     <span className="mt-1 block truncate font-mono text-[10px] text-muted">{step.url}</span>
                   </span>
                   {step.evidence && <CameraIcon aria-label="Screenshot saved" className="mt-0.5 size-4 text-accent" />}
@@ -102,7 +107,7 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
                 {screenshot && !failedImages.has(evidence?.screenshot_path ?? '') ? (
                   <img
                     src={screenshot}
-                    alt={`Page after step ${selected + 1}: ${ACTION_LABEL[current.action]}`}
+                    alt={`Captured page for step ${selected + 1}: ${actionLabel(current)}`}
                     className="h-full w-full object-contain"
                     loading="lazy"
                     decoding="async"
@@ -141,8 +146,8 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
             <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Step {selected + 1}</p>
             <p className="mt-3 leading-relaxed">{current.thought}</p>
             <dl className="mt-6 grid gap-4 border-t border-line pt-4 text-sm">
-              <Detail term="Action" value={`${current.action}${current.target_id != null ? ` · element ${current.target_id}` : ''}`} />
-              <Detail term="Result page" value={evidence?.result_url ?? current.url} mono />
+              <Detail term="Action" value={`${actionLabel(current)}${current.target_id != null ? ` · element ${current.target_id}` : ''}`} />
+              <Detail term={current.interrupted || !evidence ? 'Recorded page' : 'Result page'} value={current.interrupted ? current.url : evidence?.result_url ?? current.url} mono />
               <Detail term="Confusion" value={`${current.confusion} of 3`} />
               {current.provider && <Detail term="Decision" value={`${current.provider}${current.decision_confidence != null ? ` · ${Math.round(current.decision_confidence * 100)}% confidence` : ''}`} />}
               {current.fallback_reason && <Detail term="Fallback" value={current.fallback_reason} />}
@@ -173,7 +178,7 @@ function PrintEvidenceJourney({ steps, images, branded }: { steps: Step[]; image
         <div>
           <p className="report-print-kicker">Visual evidence</p>
           <h2>{branded ? 'What the test user saw' : 'What Scout saw'}</h2>
-          <p>Each frame was captured after the action shown. Form values were masked before capture.</p>
+          <p>Frames show the captured page for each recorded step. Interrupted actions have no confirmed result. Form values were masked before capture.</p>
         </div>
         {!branded && <AgentBird variant="solid" className="report-print-bird" phase={0.4} title="Scout, the Walkthru test agent" />}
       </header>
@@ -187,14 +192,14 @@ function PrintEvidenceJourney({ steps, images, branded }: { steps: Step[]; image
             return (
               <figure key={evidence.screenshot_path} className="report-print-frame">
                 {image ? (
-                  <img src={image} alt={`Page after step ${index + 1}: ${ACTION_LABEL[step.action]}`} loading="eager" />
+                  <img src={image} alt={`Captured page for step ${index + 1}: ${actionLabel(step)}`} loading="eager" />
                 ) : (
                   <div className="report-print-frame-missing">Screenshot unavailable</div>
                 )}
                 <figcaption>
                   <span className="report-print-step">{String(index + 1).padStart(2, '0')}</span>
                   <span>
-                    <strong>{step.interrupted ? `${ACTION_LABEL[step.action]} (interrupted)` : ACTION_LABEL[step.action]}</strong>
+                    <strong>{actionLabel(step)}</strong>
                     <span>{step.thought}</span>
                   </span>
                   <span className="report-print-confusion">

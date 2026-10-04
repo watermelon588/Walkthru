@@ -1,6 +1,6 @@
 /** Runs one PersonaStep inside the page. Returns a note for the agent when something went wrong. */
 
-import { findById } from "./snapshot";
+import { resolveTarget } from "./snapshot";
 import { isBasket, isCommerce, isDestructive, isSearchField, isSearchForm, isSending, isSocial } from "./safety";
 
 export type Step = {
@@ -9,6 +9,7 @@ export type Step = {
   target_id: number | null;
   text: string | null;
   confusion: number;
+  observation_revision?: string | null;
 };
 
 /** confirm: "send" means the owner must approve in the side panel before this click runs for real. */
@@ -49,8 +50,9 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
       return { ok: true };
     case "click":
     case "type": {
-      const el = step.target_id == null ? null : findById(doc, step.target_id);
-      if (!el) return { ok: false, note: `element #${step.target_id} not found` };
+      const target = resolveTarget(doc, step.target_id, step.observation_revision);
+      if (!target.el) return { ok: false, note: target.note };
+      const el = target.el;
       const input = el as HTMLInputElement;
       const text = [(el as HTMLElement).innerText ?? el.textContent, el.tagName === "INPUT" ? input.value : "", el.getAttribute("aria-label")].filter(Boolean).join(" ");
       // Mirrors _enforce in app/agent/persona.py. Plain links only navigate, so they stay allowed.
@@ -81,7 +83,9 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
       const willSubmit = step.action === "click" && submits(el);
       if (opts.dryRun) return { ok: true, submits: willSubmit };
       (el as HTMLElement).scrollIntoView?.({ block: "center", behavior: "instant" as ScrollBehavior });
-      if (step.action === "type") return type(el as HTMLElement, step.text ?? "");
+      const ready = resolveTarget(doc, step.target_id, step.observation_revision, true);
+      if (!ready.el) return { ok: false, note: ready.note };
+      if (step.action === "type") return type(el as HTMLElement, step.text ?? "", () => resolveTarget(doc, step.target_id, step.observation_revision, true).note);
       (el as HTMLElement).click();
       return { ok: true, submits: willSubmit };
     }
@@ -90,16 +94,20 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
   }
 }
 
-function type(el: HTMLElement, value: string): ExecResult {
+function type(el: HTMLElement, value: string, recheck: () => string | undefined): ExecResult {
   const input = el as HTMLInputElement;
   if (el.isContentEditable) {
     el.focus();
+    const stale = recheck();
+    if (stale) return { ok: false, note: stale };
     el.textContent = value;
     el.dispatchEvent(new Event("input", { bubbles: true }));
     return { ok: true };
   }
   if (!("value" in input)) return { ok: false, note: "element is not an input" };
   input.focus();
+  const stale = recheck();
+  if (stale) return { ok: false, note: stale };
   // React and Vue listen for native setters, so set through the prototype descriptor.
   const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : el.tagName === "SELECT" ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;

@@ -40,7 +40,8 @@ def fake_llm(monkeypatch):
 
 
 def test_run_report_merges_branches():
-    steps = [{"thought": "Looking for sign up", "action": "scroll", "target_id": None, "text": None, "confusion": 2, "url": HARD + "/"}]
+    steps = [{"thought": "Looking for sign up", "action": "click", "target_id": None, "text": None, "confusion": 2,
+              "url": HARD + "/", "result_url": HARD + "/", "errors_after": ["Sign-up link could not be opened"]}]
     rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps)
     kinds = {f.kind for f in rep.findings}
     assert kinds == {"ux", "accessibility", "seo", "security", "geo"}
@@ -141,7 +142,7 @@ def test_a_journey_where_everything_worked_keeps_no_ux_findings():
     mailto = [ok | {"note_after": "this link opens an email app; it is a working contact method, so Walkthru did not open it"}]
     assert problem_steps(mailto) == set()
     looping = [ok] * 5
-    assert problem_steps(looping, "stuck") == {3, 4, 5}
+    assert problem_steps(looping, "stuck") == set()  # the agent's limit does not establish a site failure
 
 
 def test_local_dev_server_skips_host_level_findings():
@@ -152,19 +153,12 @@ def test_local_dev_server_skips_host_level_findings():
     assert any(k in "/.env is publicly readable" for k in CODE_LEVEL_SECURITY)
 
 
-def test_report_is_told_which_controls_existed_on_the_final_page(monkeypatch):
-    seen = []
-
-    def call(schema, messages, fast=False, paid=False):
-        seen.append(messages[-1][1])
-        if schema is FirstImpression:
-            return FirstImpression(what="w", who="w", first_click="c", trust=[], clarity=0), 0
-        return Synthesis(summary="s", ux_findings=[], top_fixes=[]), 0
-
-    monkeypatch.setattr(runtime, "call", call)
+def test_report_context_preserves_controls_that_existed_on_the_final_page():
     steps = [{"thought": "no other way to sign up", "action": "give_up", "target_id": None, "text": None, "confusion": 3, "url": HARD + "/"}]
-    report.run_report(HARD + "/", "Some page text that is long enough.", goal="sign up", status="gave_up", steps=steps, final_controls=["button: Continue with Google"])
-    assert any("Continue with Google" in m and "Never claim a button" in m for m in seen)
+    inputs = report.synthesis_inputs({"site": HARD + "/", "goal": "sign up", "status": "gave_up", "steps": steps,
+                                      "final_controls": ["button: Continue with Google"]})
+    text = inputs["messages"][-1][1]
+    assert "Continue with Google" in text and "Never claim a button" in text
 
 
 def test_report_text_never_contains_em_or_en_dashes():

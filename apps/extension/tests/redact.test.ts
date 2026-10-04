@@ -16,3 +16,14 @@ test("masks key-looking tokens", () => {
   expect(redact(`key ${stripe}`)).toBe("key [key]");
   expect(redact(`token ${github}`)).toBe("token [key]");
 });
+
+test('masks URL credentials and value-bearing query/fragment text', () => {
+  const masked = redact('https://name:privatePassword@site.test/path?auth=privateQuery#privateFragment');
+  expect(masked).not.toMatch(/name|private/);
+  expect(masked).toContain('site.test/path?auth=');
+});
+
+test('masks long mixed opaque tokens while retaining long plain words', () => {
+  expect(redact('aB9_'.repeat(12))).toBe('[token]');
+  expect(redact('documentation'.repeat(4))).toBe('documentation'.repeat(4));
+});

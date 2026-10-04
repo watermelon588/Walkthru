@@ -36,7 +36,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
   const isScan = run.kind !== 'test'  // scans, watch checks and comparison parts have no journey
   const counts = { high: 0, medium: 0, low: 0 }
   for (const f of r?.findings ?? []) counts[f.severity]++
-  const stopped = ['gave_up', 'budget', 'stuck', 'captcha', 'stopped'].includes(run.status)
+  const stopped = run.status !== 'running' && run.status !== 'done'
   const agentState: AgentPresenceState = stopped ? 'stopped' : r ? 'complete' : 'observing'
   const agentActivity = stopped
     ? STATUS_LABEL[run.status]
@@ -47,7 +47,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
         : 'Testing this flow'
 
   return (
-    <article className="report-root" data-branded={brand ? '' : undefined} style={brand ? ({ '--brand': brand.color } as React.CSSProperties) : undefined}>
+    <article className="report-root min-w-0 [overflow-wrap:anywhere]" data-branded={brand ? '' : undefined} style={brand ? ({ '--brand': brand.color } as React.CSSProperties) : undefined}>
       {brand && <BrandCover run={run} brand={brand} />}
       <header className="report-cover grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
@@ -68,6 +68,8 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
         <>
           <p className="mt-8 max-w-[64ch] text-lg leading-relaxed">{r.summary}</p>
 
+          {!isScan && stopped && <JourneyCoverage run={run} />}
+
           <section aria-label="Summary" className="report-summary mt-8 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3">
             <Stat label="Findings" value={String(r.findings.length)} note={`${counts.high} high / ${counts.medium} medium / ${counts.low} low`} />
             {isScan ? (
@@ -75,7 +77,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
             ) : (
               <Stat label="Outcome" value={STATUS_LABEL[run.status]} note={`${steps.length} steps`} />
             )}
-            <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'never confused'} />
+            <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'no confusion recorded'} />
           </section>
 
           {/* `ignore` is only passed on the owner's page, so strangers on /r/ see the score but not the badge code. */}
@@ -138,7 +140,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
           <section aria-label="All findings" className="report-print-section mt-12">
             <h2 className="text-xl font-light tracking-tight">All findings</h2>
             {r.findings.length === 0 ? (
-              <p role="status" className="mt-4 text-sm text-muted">Nothing to report. Nice.</p>
+              <p role="status" className="mt-4 text-sm text-muted">No findings were recorded within this report's measured scope.</p>
             ) : (
               <ul className="mt-4 border-t border-line">
                 {r.findings.map((f, i) => <FindingRow key={i} f={f} ignore={ignore} />)}
@@ -157,6 +159,23 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
         </>
       )}
     </article>
+  )
+}
+
+function JourneyCoverage({ run }: { run: Run }) {
+  const actions = (run.steps ?? []).filter((step) => step.action !== 'done' && step.action !== 'give_up')
+  const interrupted = actions.filter((step) => step.interrupted).length
+  return (
+    <section aria-label="Journey coverage" className="mt-5 max-w-[64ch] rounded-2xl border border-line px-5 py-4 text-sm leading-relaxed text-muted">
+      <p className="font-medium text-ink">Partial journey: {STATUS_LABEL[run.status]}</p>
+      <p className="mt-1">
+        {actions.length === 0
+          ? 'No journey actions were recorded. The requested flow was not verified.'
+          : `${actions.length} ${actions.length === 1 ? 'action record is' : 'action records are'} available. The full requested flow was not verified.`}
+        {interrupted > 0 && ` ${interrupted} ${interrupted === 1 ? 'action ended' : 'actions ended'} before the result was confirmed.`}
+      </p>
+      <p className="mt-1">Findings describe the recorded evidence and technical checks. An early stop does not establish a defect in the site.</p>
+    </section>
   )
 }
 
@@ -185,7 +204,15 @@ function FindingRow({ f, ignore }: { f: Finding; ignore?: IgnoreControls }) {
         <h3 className="font-medium">{f.title}</h3>
         <p className="mt-1 leading-relaxed text-muted">{f.detail}</p>
         <p className="mt-2 leading-relaxed"><span className="text-muted">Fix: </span>{f.fix}</p>
-        {f.evidence && <p className="mt-2 truncate font-mono text-xs text-muted">{f.evidence}</p>}
+        {f.evidence && (
+          <>
+            <details className="no-print mt-3 text-xs text-muted">
+              <summary className="w-fit cursor-pointer py-1 text-ink">View evidence</summary>
+              <p className="mt-2 whitespace-pre-wrap font-mono leading-relaxed [overflow-wrap:anywhere]">{f.evidence}</p>
+            </details>
+            <p className="print-only mt-3 whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted [overflow-wrap:anywhere]">{f.evidence}</p>
+          </>
+        )}
         {ignore && <IgnoreControl fp={fp} reason={reason} controls={ignore} />}
       </div>
     </li>

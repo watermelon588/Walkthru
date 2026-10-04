@@ -5,9 +5,10 @@ vi.mock("../lib/evidence", () => ({ shouldCaptureEvidence: () => false, captureS
 
 const site = "https://fixture.test";
 const actionId = "00000000-0000-0000-0000-000000000005";
-const action = { action: "click", target_id: 1, thought: "Read the guide", confusion: 0, url: site };
+const revision = "00000000-0000-4000-8000-000000000006";
+const action = { observation_revision: revision, action: "click", target_id: 1, thought: "Read the guide", confusion: 0, url: site };
 const running = { run_id: "00000000000000000000000000000001", status: "running", action, action_id: actionId };
-const observation = { url: site, title: "Guide", text: "Guide", errors: [], elements: [{ id: 1, tag: "a", text: "Guide" }] };
+const observation = { revision, url: site, title: "Guide", text: "Guide", errors: [], elements: [{ id: 1, tag: "a", text: "Guide" }] };
 let actions: number;
 let snapshots: number;
 
@@ -152,4 +153,39 @@ test("a page that never answers ends the step instead of hanging the run", async
   await vi.advanceTimersByTimeAsync(30_000);
   await check;
   vi.useRealTimers();
+});
+
+test.each(['scroll', 'back'] as const)('the run loop accepts %s with a captured revision and no target revision echo', async (kind) => {
+  const step = { ...action, action: kind, target_id: null, observation_revision: null };
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/observe')) return response({ ...running, status: 'done', steps: [step] });
+    return response({ ...running, action: step });
+  }));
+  const progress: Progress[] = [];
+  await runTest(options(), p => progress.push(p));
+  expect(progress.at(-1)?.status).toBe('done');
+  expect(actions).toBe(1);
+  expect(snapshots).toBe(2);
+});
+
+test.each(['old page', 'old API', 'wrong revision'])('mixed versions (%s) stop before any browser action or dry run', async (version) => {
+  if (version === 'old page') {
+    const original = vi.mocked(chrome.tabs.sendMessage).getMockImplementation()!;
+    vi.mocked(chrome.tabs.sendMessage).mockImplementation(async (...args: any[]) => args[1].type === 'snapshot' ? { ...observation, revision: undefined } : Reflect.apply(original, chrome.tabs, args));
+  }
+  const step = { ...action, observation_revision: version === 'old API' ? undefined : version === 'wrong revision' ? 'different' : revision };
+  const stops: string[] = [];
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/policy')) return response({ journeys: true });
+    if (url.endsWith('/stop')) { stops.push(String(init?.body)); return response({ ...running, status: 'stopped', steps: [] }); }
+    return response({ ...running, verified: true, action: step });
+  }));
+  const progress: Progress[] = [];
+  await runTest(options(), p => progress.push(p));
+  expect(actions).toBe(0);
+  expect(stops).toHaveLength(1);
+  expect(stops[0]).toContain('stale target:');
+  expect(progress.at(-1)).toMatchObject({ phase: 'finished', status: 'stopped', code: 'browser_version' });
+  expect(progress.at(-1)?.message).toContain('reload the website tab');
 });

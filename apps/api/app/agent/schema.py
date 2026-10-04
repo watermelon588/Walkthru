@@ -3,8 +3,9 @@
 import re
 from datetime import datetime
 from typing import Annotated, Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import BaseModel, BeforeValidator, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, Field, field_validator, model_validator
 
 Action = Literal["click", "type", "scroll", "back", "done", "give_up"]
 
@@ -14,12 +15,43 @@ Action = Literal["click", "type", "scroll", "back", "done", "give_up"]
 Line = Annotated[str, Field(max_length=300)]
 
 
+def _context_text(text: str | None) -> str | None:
+    """Extra contextual labels are untrusted visible text, never form values."""
+    if text is None:
+        return None
+    def public_url(match: re.Match) -> str:
+        try:
+            url = urlsplit(match[0])
+            return urlunsplit((url.scheme, url.netloc.rsplit("@", 1)[-1], url.path,
+                               urlencode([(key, "[hidden]") for key, _ in parse_qsl(url.query, keep_blank_values=True)]),
+                               "[hidden]" if url.fragment else ""))
+        except ValueError:
+            return "[url]"
+
+    text = re.sub(r"https?://[^\s<>\"']+", public_url, text)
+    text = re.sub(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", "[email]", text, flags=re.IGNORECASE)
+    text = re.sub(r"\b(?:sk|pk|rk|ghp|gho|xox[abp]|AKIA|AIza)[_-]?[A-Za-z0-9_-]{6,}\b|\b[A-Za-z0-9_-]{40,}\b", "[key]", text)
+    text = re.sub(r"(?<!\w)(?:\d{4}-\d{2}-\d{2}|\d{1,3}(?:\.\d{1,3}){3}|\+?\d[\d .-]{6,}\d)(?!\w)",
+                  lambda m: m[0] if re.fullmatch(r"\d{4}-\d{2}-\d{2}|\d{1,3}(?:\.\d{1,3}){3}", m[0])
+                  or len(re.sub(r"\D", "", m[0])) < 8 else "[number]", text)
+    return text[:160]
+
+
 class Element(BaseModel):
     id: int = Field(ge=0, le=100_000)
     tag: str = Field(max_length=20)  # a, button, input, select, textarea
     text: str = Field(default="", max_length=300)  # visible text or aria-label, already redacted client side
     type: str | None = Field(default=None, max_length=40)  # input type
     state: Literal["filled", "empty", "checked", "unchecked"] | None = None  # form fields only; never the value
+    region: str | None = Field(default=None, max_length=160)
+    row: str | None = Field(default=None, max_length=160)
+    in_view: bool | None = None
+    occluded: bool | None = None
+
+    @field_validator("region", "row")
+    @classmethod
+    def mask_context(cls, value: str | None) -> str | None:
+        return _context_text(value)
 
 
 class WebVitals(BaseModel):
@@ -62,6 +94,24 @@ class Observation(BaseModel):
     diagnostics: BrowserDiagnostics | None = None
     scroll_pct: int | None = Field(default=None, ge=0, le=100)  # how far down the page the viewport is
     at_end: bool | None = None  # the viewport reaches the bottom of the page
+    revision: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    elements_truncated: bool | None = None
+    candidate_limit_reached: bool | None = None
+    omitted_elements: int | None = Field(default=None, ge=0, le=1_000_000)
+    context_truncated: bool | None = None
+
+    @model_validator(mode="after")
+    def bound_context(self) -> "Observation":
+        remaining = 6000
+        for element in self.elements:
+            for field in ("region", "row"):
+                text = getattr(element, field)
+                if text is not None:
+                    if len(text) > remaining:
+                        setattr(element, field, text[:remaining] or None)
+                        self.context_truncated = True
+                    remaining -= min(len(text), remaining)
+        return self
 
 
 class StepEvidence(BaseModel):

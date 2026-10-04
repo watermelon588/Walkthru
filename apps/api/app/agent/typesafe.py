@@ -14,7 +14,7 @@ from typing import Any
 import httpx
 
 from app import providers
-from app.agent.schema import PersonaStep
+from app.agent.schema import Observation, PersonaStep
 
 API_URL = "https://api.typesafe.ai/v1/systemone"
 DEFAULT_MODEL = "jev-1.13.0"
@@ -52,6 +52,9 @@ def _element_description(element: dict) -> str:
         parts.append(element["type"])
     if element.get("text"):
         parts.append(f'labelled "{element["text"]}"')
+    for key in ("region", "row"):
+        if element.get(key):
+            parts.append(f'{key} {element[key]!r}')
     return " ".join(parts)
 
 
@@ -62,10 +65,12 @@ def _history(steps: list[dict]) -> list[dict]:
 
 
 def build_request(state: dict, *, model: str = DEFAULT_MODEL) -> dict:
-    observation = state["observation"]
+    observation = Observation.model_validate(state["observation"]).model_dump(exclude_none=True)
     click_targets: dict[str, str] = {"none": "No visible element should be clicked."}
     type_targets: dict[str, str] = {"none": "No visible field should receive text."}
     for element in observation.get("elements", []):
+        if element.get("occluded") or element.get("in_view") is False:
+            continue
         key = f'e{element["id"]}'
         description = _element_description(element)
         if _can_click(element):

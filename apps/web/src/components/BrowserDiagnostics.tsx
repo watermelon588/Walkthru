@@ -1,4 +1,4 @@
-import type { BrowserDiagnostics as BrowserDiagnosticsData } from '../lib/runs'
+import type { AccessibilityIssue, BrowserDiagnostics as BrowserDiagnosticsData } from '../lib/runs'
 
 export function BrowserDiagnostics({ diagnostics }: { diagnostics: BrowserDiagnosticsData }) {
   const { accessibility, web_vitals: vitals } = diagnostics
@@ -9,7 +9,7 @@ export function BrowserDiagnostics({ diagnostics }: { diagnostics: BrowserDiagno
   ].filter((metric): metric is NonNullable<typeof metric> => Boolean(metric))
 
   return (
-    <section aria-labelledby="browser-evidence-title" className="mt-6 border-t border-line pt-5">
+    <section aria-labelledby="browser-evidence-title" className="mt-6 min-w-0 border-t border-line pt-5 [overflow-wrap:anywhere]">
       <p id="browser-evidence-title" className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Browser evidence</p>
 
       {metrics.length > 0 ? (
@@ -35,19 +35,35 @@ export function BrowserDiagnostics({ diagnostics }: { diagnostics: BrowserDiagno
       {accessibility.issues.length > 0 && (
         <ul className="mt-3 space-y-2" aria-label="Accessibility issues on this step">
           {accessibility.issues.slice(0, 3).map((issue) => (
-            <li key={`${issue.rule}-${issue.target ?? ''}`} className="rounded-xl border border-line bg-surface px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-[10px] text-muted">{issue.rule}</span>
-                <span className={issue.severity === 'high' ? 'text-[10px] text-danger' : 'text-[10px] text-muted'}>{issue.severity}</span>
-              </div>
-              <p className="mt-1.5 text-xs leading-relaxed">{issue.message}</p>
-              {issue.target && <p className="mt-1.5 truncate font-mono text-[10px] text-muted">{issue.target}</p>}
-            </li>
+            <DiagnosticIssue key={`${issue.rule}-${issue.target ?? ''}`} issue={issue} />
           ))}
         </ul>
       )}
-      {accessibility.issues.length > 3 && <p className="mt-2 text-xs text-muted">+{accessibility.issues.length - 3} more issues in this step</p>}
+      {accessibility.issues.length > 3 && (
+        <details className="mt-3 text-xs text-muted">
+          <summary className="w-fit cursor-pointer py-1 text-ink">View {accessibility.issues.length - 3} more recorded issues</summary>
+          <ul className="mt-3 space-y-2" aria-label="More accessibility issues on this step">
+            {accessibility.issues.slice(3).map((issue, index) => <DiagnosticIssue key={`${issue.rule}-${issue.target ?? ''}-${index}`} issue={issue} />)}
+          </ul>
+        </details>
+      )}
+      {accessibility.total > accessibility.issues.length && (
+        <p className="mt-3 text-xs leading-relaxed text-muted">Details were retained for {accessibility.issues.length} of {accessibility.total} detected issues on this step.</p>
+      )}
     </section>
+  )
+}
+
+function DiagnosticIssue({ issue }: { issue: AccessibilityIssue }) {
+  return (
+    <li className="min-w-0 rounded-xl border border-line bg-surface px-3 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0 font-mono text-[10px] text-muted">{issue.rule}</span>
+        <span className={issue.severity === 'high' ? 'shrink-0 text-[10px] text-danger' : 'shrink-0 text-[10px] text-muted'}>{issue.severity}</span>
+      </div>
+      <p className="mt-1.5 text-xs leading-relaxed">{issue.message}</p>
+      {issue.target && <p className="mt-1.5 whitespace-pre-wrap font-mono text-[10px] text-muted [overflow-wrap:anywhere]">{issue.target}</p>}
+    </li>
   )
 }
 

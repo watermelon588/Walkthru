@@ -192,6 +192,11 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
         return;
       }
       const step = reply.action;
+      // Mixed versions must stop before even dry-run: an old injected listener ignores revision fields.
+      if (step.action !== 'done' && step.action !== 'give_up' && (!obs.revision ||
+        ((step.action === 'click' || step.action === 'type') && step.observation_revision !== obs.revision))) {
+        throw new Error('stale target: this page or API does not support the current observation. Update Walkthru and the API, reload the website tab, and restart the test.');
+      }
       if (reply.action_id) {
         if (acted.has(reply.action_id)) throw new Error("Walkthru returned an earlier action. The test stopped to avoid repeating it.");
         acted.add(reply.action_id);
@@ -219,7 +224,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       }
       await setAgentStatus(tabId, "observing", "Reading the updated page");
       obs = await humanCheck(tabId, await send<Observation>(tabId, { type: "snapshot" }), opts.signal);
-      if (note) obs.note = obs.note ? `${obs.note}; ${note}` : note;
+      if (note) obs.note = note.startsWith('stale target:') ? note : obs.note ? `${obs.note}; ${note}` : note;
       const stepIndex = steps.length - 1;
       let evidence: StepEvidence | undefined;
       if (shouldCaptureEvidence(step, obs, stepIndex, capturedCount)) {
@@ -243,7 +248,8 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     finish(reply, steps, onProgress, evidenceWarning);
   } catch (e) {
     if (tabId) await setAgentStatus(tabId, "stopped", "The run needs attention");
-    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning, `the browser run failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 280), opts.connection)) return;
+    const recovery = e instanceof Error && e.message.startsWith('stale target:') ? e.message : undefined;
+    if (runId && await closeRun(runId, steps, onProgress, evidenceWarning, `the browser run failed: ${e instanceof Error ? e.message : String(e)}`.slice(0, 280), opts.connection, recovery)) return;
     onProgress({ phase: "error", steps, runId, message: e instanceof Error ? e.message : String(e), evidenceWarning,
       ...(e instanceof ContentConnectionError ? { code: "browser_connection" } : {}) });
   }
@@ -256,10 +262,12 @@ async function closeRun(
   evidenceWarning?: string,
   reason?: string,
   connection?: string,
+  recovery?: string,
 ): Promise<boolean> {
   try {
     const stopped = await stopRun(runId, reason, undefined, connection);
-    onProgress({ phase: "finished", steps: stopped.steps, status: "stopped", runId, evidenceWarning });
+    onProgress({ phase: "finished", steps: stopped.steps, status: "stopped", runId, evidenceWarning,
+      ...(recovery ? { message: recovery, code: 'browser_version' } : {}) });
     return true;
   } catch {
     return false;
