@@ -2,6 +2,9 @@ import { toCsv } from './export'
 import { supabase } from './supabase'
 import { apiError } from './apiError'
 import { confirmedAccessRequest } from './accessRequest'
+import { accountIdentity, planCache } from './planCache'
+import { HISTORY_PAGE_SIZE, RUN_SUMMARY_COLUMNS, encodeRunCursor, runCursorFilter, type HistoryPage } from './runHistory'
+import { NOTIFICATION_EVENT, type Notification } from './notifications'
 
 export type Step = {
   thought: string
@@ -172,14 +175,31 @@ export const EVIDENCE_RETENTION_DAYS = 30
 
 /** The signed-in user's own runs. Row-level security also lets them read public reports and reports shared into their
  *  team workspaces, so the owner filter is what keeps those out of this list. */
-export async function listRuns(): Promise<Run[]> {
+export type RunSummary = Pick<Run, 'id' | 'site' | 'goal' | 'persona' | 'kind' | 'status' | 'public' | 'created_at' | 'updated_at' | 'group_id'>
+
+export async function listRunsPage(cursor?: string, signal?: AbortSignal, expectedIdentity?: string): Promise<HistoryPage<RunSummary>> {
   if (!supabase) throw new Error('Supabase is not configured')
-  const userId = (await supabase.auth.getSession()).data.session?.user.id
-  if (!userId) throw new Error('Sign in first')
-  const { data, error } = await supabase.from('runs').select(COLUMNS).eq('user_id', userId).neq('kind', 'compare_part').order('created_at', { ascending: false }).limit(50)
+  const filter = cursor ? runCursorFilter(cursor) : null
+  const session = (await supabase.auth.getSession()).data.session
+  if (!session) throw new Error('Sign in first')
+  const identity = accountIdentity(session)
+  if (expectedIdentity !== undefined && identity !== expectedIdentity) throw new Error('Your account changed. Refresh your history.')
+  let query = supabase.from('runs').select(RUN_SUMMARY_COLUMNS).eq('user_id', session.user.id).neq('kind', 'compare_part')
+    .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(HISTORY_PAGE_SIZE)
+  if (filter) query = query.or(filter)
+  if (signal) query = query.abortSignal(signal)
+  const { data, error } = await query
   if (error) throw error
-  return data as Run[]
+  if (signal?.aborted) throw new Error('History request cancelled')
+  if (accountIdentity((await supabase.auth.getSession()).data.session) !== identity) throw new Error('Your account changed. Refresh your history.')
+  const rows = (data ?? []) as unknown as RunSummary[]
+  const runs = rows.slice(0, HISTORY_PAGE_SIZE)
+  // A server row cap can return fewer than requested. Only an empty keyset page proves exhaustion.
+  return { runs, next_cursor: runs.length ? encodeRunCursor(runs[runs.length - 1]!) : null }
 }
+
+/** Bounded recent selector for Compare. History downloads no report, journey text or screenshot paths. */
+export const listRuns = async () => (await listRunsPage()).runs
 
 export async function getRun(id: string): Promise<Run | null> {
   if (!supabase) throw new Error('Supabase is not configured')
@@ -222,13 +242,40 @@ export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`,
 export const exportAccount = () => api<Record<string, unknown>>('/account/export', undefined, true, 'GET')
 /** The server decides the plan (apps/api/app/plans.py). */
 export type PlanSummary = { plan: 'free' | 'launch' | 'pro' | 'plus'; runs_allowed: number; runs_left: number; expires_at: string | null; max_steps: number; logged_in: boolean; personas: string[]; sites: number; sites_used: string[] }
-export const getPlan = () => api<PlanSummary>('/me/plan', undefined, true, 'GET')
-// One request shared by the sidebar meter and the page that shows it. `fresh` re-reads after a run or a grant.
-let planCache: Promise<PlanSummary> | null = null
-export function loadPlan(fresh = false): Promise<PlanSummary> {
-  if (!planCache || fresh) planCache = getPlan().catch((e) => { planCache = null; throw e })
-  return planCache
+async function readPlan(session: { access_token: string; user: { id: string } }): Promise<PlanSummary> {
+  const identity = accountIdentity(session)
+  const res = await fetch(`${API}/me/plan`, { headers: { Authorization: `Bearer ${session.access_token}` }, signal: AbortSignal.timeout(15_000) })
+  if (!res.ok) throw new Error(await apiError(res))
+  const plan = await res.json() as PlanSummary
+  if (accountIdentity((await supabase?.auth.getSession())?.data.session ?? null) !== identity) throw new Error('Your account changed. Try again.')
+  return plan
 }
+export async function getPlan(): Promise<PlanSummary> {
+  const session = (await supabase?.auth.getSession())?.data.session
+  if (!session) throw new Error('Sign in first')
+  return readPlan(session)
+}
+/** Account/token scoped, sixty-second display cache only. Server admission always rechecks limits. */
+export async function loadPlan(fresh = false): Promise<PlanSummary> {
+  const session = (await supabase?.auth.getSession())?.data.session ?? null
+  return planCache.read(accountIdentity(session), () => session ? readPlan(session) : Promise.reject(new Error('Sign in first')), fresh)
+}
+// Auth callbacks only invalidate memory; never call Auth methods from inside them.
+const planAuthListener = supabase?.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT') planCache.clear()
+  else planCache.observe(accountIdentity(session))
+})
+// Registered before any mounted meter listeners: invalidate once, then all consumers share the new read.
+function invalidatePlanOnNote(event: Event) {
+  const section = (event as CustomEvent<Notification>).detail?.section
+  if (section === 'runs' || section === 'billing') planCache.clear()
+}
+if (typeof window !== 'undefined') window.addEventListener(NOTIFICATION_EVENT, invalidatePlanOnNote)
+import.meta.hot?.dispose(() => {
+  planAuthListener?.data.subscription.unsubscribe()
+  window.removeEventListener(NOTIFICATION_EVENT, invalidatePlanOnNote)
+  planCache.clear()
+})
 /** New reports use stable rule ids; old reports keep their title-based key. */
 export function legacyFingerprint(f: Pick<Finding, 'kind' | 'title'>): string {
   return `${f.kind}:${f.title.toLowerCase().replace(/\d+/g, '#').split(/\s+/).filter(Boolean).join(' ')}`

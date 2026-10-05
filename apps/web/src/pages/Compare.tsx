@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell'
 import { Locked, PageHeader } from '../components/PageHeader'
 import { ComparisonCharts } from '../components/ComparisonCharts'
 import { comparable } from '../lib/comparison'
-import { getPlan, getRun, listRuns, startCompare, timeAgo, type CompareSite, type Run } from '../lib/runs'
+import { getPlan, getRun, listRuns, startCompare, timeAgo, type CompareSite, type Run, type RunSummary } from '../lib/runs'
 import { Skeleton, SkeletonPanel, Working } from '../components/Loading'
 import { fileStamp, slug, type Cell } from '../lib/export'
 import { ExportBar, PrintHeader } from '../components/ExportBar'
@@ -17,7 +17,7 @@ export default function Compare() {
   const navigate = useNavigate()
   const [search] = useSearchParams()
   const [paid, setPaid] = useState<boolean | null>(null)
-  const [past, setPast] = useState<Run[]>([])
+  const [past, setPast] = useState<RunSummary[]>([])
   const [urls, setUrls] = useState(['', search.get('competitor') ?? '', '', ''])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

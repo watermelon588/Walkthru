@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 import { disconnectExtension, signingOutExtension } from './extension'
 import { authSessionId, sameLogin } from './sessionHandoff'
 import { toast } from './toast'
+import { planCache } from './planCache'
 
 export type SessionState = { loading: true; session: null } | { loading: false; session: Session | null }
 export type AccountType = 'individual' | 'business'
@@ -21,15 +22,23 @@ export function useSession(): SessionState {
   const [state, setState] = useState<SessionState>(() => (supabase ? { loading: true, session: null } : { loading: false, session: null }))
   useEffect(() => {
     if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => setState({ loading: false, session: data.session }))
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setState({ loading: false, session }))
-    return () => data.subscription.unsubscribe()
+    let active = true, revision = 0
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      revision++
+      if (active) setState({ loading: false, session })
+    })
+    const before = revision
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && revision === before) setState({ loading: false, session: data.session })
+    }).catch(() => { if (active && revision === before) setState({ loading: false, session: null }) })
+    return () => { active = false; data.subscription.unsubscribe() }
   }, [])
   return state
 }
 
 let signOutTask: Promise<void> | undefined
 export function signOut(): Promise<void> {
+  planCache.clear()
   if (!signOutTask) signOutTask = disconnectAndSignOut().finally(() => { signOutTask = undefined })
   return signOutTask
 }

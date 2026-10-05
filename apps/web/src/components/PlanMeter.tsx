@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { loadPlan, type PlanSummary } from '../lib/runs'
+import { useSession } from '../lib/auth'
+import { accountIdentity, planCache } from '../lib/planCache'
 import { Orb, Skeleton } from './Loading'
 
 gsap.registerPlugin(useGSAP)
@@ -13,20 +15,30 @@ const PLAN_NAME: Record<PlanSummary['plan'], string> = { free: 'Free', launch: '
 const short = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000))
 
-type State = { kind: 'loading' } | { kind: 'ready'; plan: PlanSummary } | { kind: 'error' }
+type State = { kind: 'loading' } | { kind: 'ready'; plan: PlanSummary } | { kind: 'error'; message: string }
 
 function usePlan() {
-  const [state, setState] = useState<State>({ kind: 'loading' })
+  const { session } = useSession()
+  const identity = accountIdentity(session)
+  const [value, setValue] = useState<{ identity: string; state: State } | null>(null)
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    const read = (fresh: boolean) => loadPlan(fresh).then((plan) => active && setState({ kind: 'ready', plan })).catch(() => active && setState({ kind: 'error' }))
+    let revision = 0
+    if (!identity) return
+    const read = (fresh: boolean) => {
+      const request = ++revision
+      return loadPlan(fresh).then((plan) => { if (active && request === revision) setValue({ identity, state: { kind: 'ready', plan } }) })
+        .catch((error: unknown) => { if (active && request === revision) setValue({ identity, state: { kind: 'error', message: error instanceof Error ? error.message : 'Could not read your plan.' } }) })
+    }
     read(false)
     // A finished run or a new pass changes the count: re-read it (lib/notifications).
-    const onNote = (e: Event) => { const s = (e as CustomEvent<Notification>).detail?.section; if (s === 'runs' || s === 'billing') read(true) }
+    const onNote = (e: Event) => { const s = (e as CustomEvent<Notification>).detail?.section; if (s === 'runs' || s === 'billing') read(false) }
     window.addEventListener(NOTIFICATION_EVENT, onNote)
     return () => { active = false; window.removeEventListener(NOTIFICATION_EVENT, onNote) }
-  }, [])
-  return state
+  }, [identity, attempt])
+  const state: State = value?.identity === identity ? value.state : { kind: 'loading' }
+  return { state, retry: () => { planCache.clear(); setValue(null); setAttempt((n) => n + 1) } }
 }
 
 function tone(p: PlanSummary) {
@@ -36,7 +48,7 @@ function tone(p: PlanSummary) {
 
 /** Dashboard: which plan you are on and how many test runs are left, the first thing under the page title. */
 export function PlanMeter() {
-  const state = usePlan()
+  const { state, retry } = usePlan()
   const root = useRef<HTMLElement>(null)
   const plan = state.kind === 'ready' ? state.plan : null
 
@@ -51,7 +63,7 @@ export function PlanMeter() {
     })
   }, { scope: root, dependencies: [plan?.runs_left, plan?.plan] })
 
-  if (state.kind === 'error') return null
+  if (state.kind === 'error') return <section role="alert" className="mt-8 rounded-2xl border border-line p-6 text-sm"><p className="text-danger">Could not read your plan: {state.message}</p><button type="button" onClick={retry} className="mt-3 min-h-11 text-ink underline">Try again</button></section>
   if (!plan) {
     return (
       <section role="status" aria-busy="true" aria-label="Loading your plan" className="mt-8 grid gap-5 rounded-2xl border border-line p-6 md:grid-cols-[auto_1fr] md:items-end md:gap-10">
@@ -123,7 +135,8 @@ export function PlanMeter() {
 
 /** Sidebar: the same numbers in one line and a thin bar, on every signed-in page. */
 export function PlanMini() {
-  const state = usePlan()
+  const { state, retry } = usePlan()
+  if (state.kind === 'error') return <p role="alert" className="mt-6 text-xs text-muted">Plan unavailable. <button type="button" onClick={retry} className="min-h-11 text-ink underline">Try again</button></p>
   if (state.kind !== 'ready') return null
   const p = state.plan
   const t = tone(p)
