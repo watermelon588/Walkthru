@@ -2,9 +2,9 @@
 
 Date: 2026-10-04. Source of product direction: [root plan](../plan.md). This is an implementation workflow in the existing project, not a request to create separate chats, scheduled jobs or deployments.
 
-**R-S1, R-S2 and R-S3 completed; next session: R-S4.** The completed scope is bounded reporting, current browser context, stale-target protection and bounded browser navigation below. The full mission engine, financial wallet and report-v2 redesign remain later work. Later sessions remain proposals until their work is started and verified.
+**R-S1, R-S2, R-S3, R-S4 and R-S14a completed; R-S5 is next.** The completed scope includes bounded reporting, current browser context, stale-target protection, bounded navigation, evidence-based task completion and slim paged owner history with exact count reads. The full mission engine, financial wallet and report-v2 redesign remain later work. Later sessions remain proposals until their work is started and verified.
 
-**Scope extension (2026-10-04):** founder requests cache/cost efficiency, database pagination/index verification, practical keywords/backlinks and clearly separated report chapters. The [audited extension](seo-geo-report-expansion.md) is the detailed contract, including all twelve backlink tactics and the Distribb review. Preserve the original twenty IDs; add four pending slices, R-S5a/R-S7a/R-S14a/R-S17a. There are now **24 planned slices, three complete**, not twenty sessions with hidden extra work. Optional provider integrations and outreach are not activated by the plan.
+**Scope extension (2026-10-04):** founder requests cache/cost efficiency, database pagination/index verification, practical keywords/backlinks and clearly separated report chapters. The [audited extension](seo-geo-report-expansion.md) is the detailed contract, including all twelve backlink tactics and the Distribb review. Preserve the original twenty IDs; add four suffix slices, R-S5a/R-S7a/R-S14a/R-S17a. There are now **24 planned slices, five complete**; R-S14a is complete and the other suffix slices remain pending. Optional provider integrations and outreach are not activated by the plan.
 
 ## Working contract
 
@@ -126,11 +126,19 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Owner objective/checkpoints remain authoritative; persona impatience/preferences cannot silently replace them or invent business rules.
-- [ ] Navigation, a generic toast or a scroll alone cannot confirm an unrelated goal; same-URL SPA success can confirm a matching declared milestone.
-- [ ] Site block, controller loss, user stop, safety stop and budget stop remain distinct, and compact factual history preserves unresolved work.
+- [x] Owner objective/checkpoints remain authoritative; persona impatience/preferences cannot silently replace them or invent business rules.
+- [x] Navigation, a generic toast or a scroll alone cannot confirm an unrelated goal; same-URL SPA success can confirm a matching declared milestone.
+- [x] Site block, controller loss, user stop, safety stop and budget stop remain distinct, and compact factual history preserves unresolved work.
 
 **Verification:** clear and ambiguous goals, unrelated notices, same-URL transitions, false done, legitimate site block and persona conflict fixtures. Use scripted models first. **Dependency:** R-S2/R-S3. **Handoff:** completion contract, tested cases, unresolved ambiguity and model-ready context baseline.
+
+**Completed 2026-10-05.** The original owner goal stays authoritative in generative and Jev decisions. Checkpoints declare `kind=navigation|outcome` and optional exact public `text_contains`; unknown functional expectations stay unconfirmed. Planner phrases must occur in the owner goal or initial public page, and known functional verbs prevent a final URL-only shortcut. Model progress cannot skip checkpoints. Code records ordered fresh, same-origin milestone evidence and ends immediately once all checkpoints are proven, including same-URL transitions. Scroll, generic/pre-existing/negated notices, field values, provider metadata and reused signals cannot establish completion. A bounded wait can capture delayed proof only after a real preceding action with matching executor feedback.
+
+**Stops and report context:** unsupported completion/abandonment gets one corrective decision, then `agent_lost`; newly observed, still-current action errors may establish `site_block`. Safety, owner Stop, bot boundaries and budgets retain their distinct behavior and unresolved work. A 6,000-character factual history retains confirmed milestones, failed/refused alternatives and recent actions without typed values or model narration. Report synthesis separately receives bounded milestone evidence and unresolved checkpoints, preserving the existing saved report schema.
+
+**Checks:** 49 scripted completion cases; final focused controller/report/safety suite **256 passed**, final combined full API **902 passed, 19 existing PostgREST-dependent skipped**, one existing Starlette/AnyIO warning, exit 0 in 526.71 seconds. Whole API Ruff and diff checks passed. The full run includes disposable PostgreSQL checkpoint/restart, idempotency, queue, migration and rate-limit suites. Broad sandbox verification also passed 862 tests. An existing concurrent rate-limit fixture was stabilized against legitimate UTC-minute rollover, retaining exact admissions, counter totals, retry bounds and separate rollover/permissions checks; production SQL is unchanged. Final ignored evidence: `evals/results/restructure-session-4/api-full-final-c.log`, fresh `api-full-final-20261005c` basetemp, process-only local `WEB_URL` and disabled tracing.
+
+**Limits and next handoff:** [completion contract](task-completion-contract.md). Strict public-state matching proves the declared UI milestone, not backend persistence, email delivery, authorization or dataset correctness. Missing expectations and arbitrary-language planner fidelity remain bounded limitations. Native installed-extension/deployed acceptance and live model quality remain later gates. **R-S5 is next**, versioned detailed reports and legacy consumers; R-S5a chapter parity and R-S6 owner-defined assertions follow. No dependency, paid call, price, migration, deployment, commit or push is bundled into this slice.
 
 **Checkpoint A:** R-S1 through R-S4 demonstrate truthful reports and current-state actions on owned fixtures. This does not select a paid model or clear native installed-extension acceptance.
 
@@ -315,13 +323,15 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Query/index inventory includes owner lists, public cache lookup, jobs, citation scheduling/history, teams and admission counts. Inspect deployed plans only with authorized access; add indexes when measured patterns justify overhead.
-- [ ] Lists use slim projections, bounded continuation and deterministic tie handling; owner history has a `(created_at, id)` cursor or documented equivalent. MCP filters/limits in the database. Detail loads and bounded exports remain separate.
-- [ ] Navigation works beyond fifty reports with equal timestamps/concurrent inserts, no cross-owner records; invalid cursors fail clearly. Preserve existing keyset chat/event behavior; scope client plan-display caches to account/session and reset on sign-out.
-- [ ] Admission uses server-side exact/atomic counts where needed, never length of a row-capped result. Financial reservations remain R-S8 authority; an index is not a concurrency fix.
-- [ ] Justified schema changes use new migrations, reviewed activation and RLS/rollback checks. Never edit applied SQL. Reconcile stale documentation that currently claims exact counts are already implemented.
+- [x] Query/index inventory includes owner lists, public cache lookup, jobs, citation scheduling/history, teams and admission counts. Deployed plans remain uninspected; measurements do not justify a new index.
+- [x] Owner lists use slim projections, bounded continuation and deterministic `(created_at,id)` tie handling. MCP filters/limits in the database. Detail and export contracts remain separate; unrelated team shared-run timestamp-only continuation is documented, not claimed fixed.
+- [x] Navigation works beyond fifty reports with equal timestamps/concurrent newest inserts, explicit owner filtering and invalid-cursor errors. Existing keyset chat/events are preserved; plan-display caches scope to account/token and reset on sign-out.
+- [x] Selected admission totals use exact server counts and complete slim distinct/site pagination, never length of capped results. Existing citation atomic admission remains intact; financial reservations and atomic run admission remain R-S8/R-S9.
+- [x] No schema change or migration was justified. Applied SQL remains unchanged; current count documentation now describes exact reads and their concurrency limits.
 
 **Verification:** isolated large histories, response bytes and p50/p95, read-only `EXPLAIN (ANALYZE, BUFFERS)` on eligible test queries, count-over-row-cap cases, tied cursors and privacy. Do not run mutating admission RPCs to collect plans. **Dependency:** existing database contracts; count findings gate R-S9, final performance proof gates R-S20. **Handoff:** query/index matrix, measured bottlenecks, migration status and uninspected live plans.
+
+**Completion evidence (2026-10-05):** [query inventory and measurement ledger](database-history-queries.md). Affected API suites 136 passed, then legacy citation fixture repair 89 passed; whole API Ruff passed. Web 34 passed, TypeScript/build and zero-warning lint passed. Actual Edge 20/20 component checks passed; migrated local PostgreSQL 2,500-row/100-page tied history, concurrent newest insertion and RLS passed, plus five literal-regex checks. Synthetic web metadata payload is 12,542 bytes versus 1,347,041 previously for the same 50 rows; warmed local SQL/fetch/JSON p50 2.139 versus 13.558 ms, not production latency. No migration/index/paid call/deployment/publication. Initial combined API verification reported 895 passed/19 skipped/two failures, both repaired; broad sandbox verification then passed 862 tests. Final combined full API **902 passed, 19 existing PostgREST skipped**, one existing warning, exit 0 in 526.71 seconds, including disposable PostgreSQL suites after stabilizing the unrelated fixed-window concurrency fixture. Hosted PostgREST parsing, deployed plans and team shared-run tie migration remain explicit limits.
 
 ## R-S15: pilots and pricing decision, not automatic activation
 

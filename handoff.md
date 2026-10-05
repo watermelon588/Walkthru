@@ -2,6 +2,8 @@
 
 _Written 2026-09-24 at the end of a long build session. Branch `1`, last commit `c647981`, everything pushed to https://github.com/watermelon588/Walkthru. The previous handoff (2026-09-22, T24) is in git history._
 
+**Current handoff, 2026-10-05:** the dated sections below preserve the September baseline. R-S1/R-S2/R-S3/R-S4/R-S14a are complete; **R-S5 is next**, versioned detailed reports and legacy consumers. Read [CURRENT_STATE.md](CURRENT_STATE.md), [the session workflow](docs/restructure-sessions.md) and [the completion contract](docs/task-completion-contract.md) for current verification, unresolved functional expectations and native/deployed acceptance limits. No R-S4/R-S14a commit, push or deployment is implied by this handoff.
+
 ## Start here (reading order)
 
 | # | File | Why |

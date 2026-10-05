@@ -1,6 +1,6 @@
 # SEO, GEO, report structure and efficiency extension
 
-Date: 2026-10-04. Founder direction supplements [the product plan](../plan.md) and [session workflow](restructure-sessions.md). This document records an SEO/GEO/efficiency audit and proposed acceptance criteria, not newly shipped growth capabilities. R-S1, R-S2 and R-S3 are complete; R-S4 task/persona separation and proven completion is next (status updated 2026-10-05). The workflow has 24 planned slices, three complete; the four growth/report/cache/database suffix slices remain pending.
+Date: 2026-10-04. Founder direction supplements [the product plan](../plan.md) and [session workflow](restructure-sessions.md). This document records an SEO/GEO/efficiency audit and proposed acceptance criteria, not newly shipped growth capabilities. R-S1, R-S2, R-S3, R-S4 and R-S14a are complete; R-S5 is next (status updated 2026-10-05). The workflow has 24 planned slices, five complete; growth/report/cache suffix slices remain pending. Database history/count evidence is [recorded separately](database-history-queries.md), as is [bounded task completion](task-completion-contract.md).
 
 ## Product boundary and judgment
 
@@ -18,8 +18,8 @@ Source inspection, not a live database/deployment audit. R-S1/R-S2/R-S3 applicat
 | Duplicate work | Request idempotency and an already-saved report guard avoid repeat execution in their existing paths | Distinguish replay from a deliberately fresh test; crash after inference but before persistence can still repeat work |
 | LLM prefix cache | Runtime caches clients/graphs, not model answers; no explicit provider cache setup or durable cache-token ledger is present | Provider-supported prefix reuse and actual hit/input/output/write accounting; do not assume automatic provider caching never occurs |
 | Indexes | Migrations define owner-history, job/queue, team and citation indexes, including `runs_user_created(user_id, created_at desc)` | Match actual filters/order to indexes; validate applied schema and query plans before proposing new indexes |
-| Pagination | Team chat/events use ID cursors; citation history reads use bounded database batches | Dashboard fetches the latest 50 full reports/steps without a next cursor; MCP loads owner history then slices it |
-| Counts | Some admission counts fetch matching run IDs and count returned rows | Server-side aggregate/count semantics and concurrency verification; API row caps must not undercount financial/quota admission |
+| Pagination | R-S14a owner history now uses slim timestamp/ID keyset pages; MCP filters and limits in the database. Team chat/events keep ID cursors; citation detail history remains bounded | Deployed row-cap/parser checks remain pending; team shared-run timestamp-only continuation remains a separate limitation |
+| Counts | R-S14a implements exact HEAD totals for run/scan/free/founding/citation counts and complete slim pagination for distinct batches/site usage | Exact reads are not atomic run reservations; R-S8/R-S9 still own wallet and concurrent admission. See [database evidence](database-history-queries.md) |
 | Jev | Experimental opt-in bounded browser decisions with confidence-gated generative fallback | No SEO/GEO or comparison integration; no established end-to-end latency improvement |
 | SEO comparison | Existing comparison queues the owner's site plus up to three competitors and scans them concurrently | Not a keyword/backlink research engine; keep verification/permission limits explicit; comparison currently uses the default crawl route |
 | Growth and chapters | Technical SEO/GEO, sampled citation history and grouped deterministic fix batches exist | Search Console connector, full keyword/backlink opportunities and consistently separated report chapters are pending |
@@ -126,7 +126,7 @@ Reuse the saved evidence/report contract for web, print/export, fix prompts and 
 
 ## Implementation order and proof
 
-Preserve all twenty original session IDs and R-S1/R-S2/R-S3 completion. Add four explicitly pending focused slices: **R-S5a** chaptered presentation and consumer parity, **R-S7a** safe cache reuse/measurement, **R-S14a** database query/index/pagination performance, and **R-S17a** earned-link opportunities and citation-aware recommendations. These are additional work, not a claim that the expanded scope fits twenty unchanged sessions. Detailed dependencies and verification are in [the workflow](restructure-sessions.md).
+Preserve all twenty original session IDs and R-S1/R-S2/R-S3 completion. Add four focused suffix slices: **R-S5a** chaptered presentation and consumer parity, **R-S7a** safe cache reuse/measurement, **R-S14a** database query/index/pagination performance (completed 2026-10-05), and **R-S17a** earned-link opportunities and citation-aware recommendations. The three other suffix slices remain pending. Detailed dependencies, verification and deployed limitations are in [the workflow](restructure-sessions.md).
 
 R-S17 gains keyword/page/intent briefs and measured versus advisory modes. Jev is only a possible confidence-gated helper for ambiguous bounded classification after deterministic evidence extraction. Do not insert it into every scanner or treat confidence as proof. Benchmark end-to-end p50/p95 latency, fallback rate, correct classification and full cost against deterministic-only and the current synthesis route; a serial failed Jev call can add latency and cost.
 
