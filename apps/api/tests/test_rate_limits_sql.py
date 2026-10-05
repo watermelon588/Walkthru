@@ -18,10 +18,14 @@ def hit(q, key="user:a", limit=20, seconds=60) -> int:
 
 
 def test_racing_requests_get_exactly_the_limit(q):
+    # Atomic counting is tested in one window; the next test covers rollover. A 60-second
+    # UTC bucket can end during the burst and legitimately admit a second batch. Choose
+    # the first fixed bucket ending one hour after setup, using the database's own clock.
+    seconds = int(q("select extract(epoch from clock_timestamp())")[0][0]) + 3600
     with ThreadPoolExecutor(10) as pool:
-        waits = list(pool.map(lambda _: hit(q), range(50)))
+        waits = list(pool.map(lambda _: hit(q, seconds=seconds), range(50)))
     assert waits.count(0) == 20  # never 21 through, however the requests interleave
-    assert all(0 < w <= 60 for w in waits if w)  # the rest are told when the window ends
+    assert all(0 < w <= 3600 for w in waits if w)  # the rest are told when the window ends
     assert q("select hits from public.rate_limits") == [(50,)]
 
 
