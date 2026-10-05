@@ -80,6 +80,7 @@ def fake_db(monkeypatch):
     monkeypatch.setattr(db, "clear_ignored", lambda user_id, origin, fp: ignored.pop((user_id, origin, fp), None))
     monkeypatch.setattr(db, "ignored_for_user", lambda user_id: [{"origin": o, "fingerprint": fp, "reason": why} for (u, o, fp), why in ignored.items() if u == user_id])
     monkeypatch.setattr(db, "test_runs_since", test_runs_since)
+    monkeypatch.setattr(db, "test_run_count_since", lambda user_id, since: len(test_runs_since(user_id, since)))
     monkeypatch.setattr(db, "runs_in_group", lambda group_id: [r for r in rows.values() if r.get("group_id") == group_id])
     monkeypatch.setattr(db, "test_users_for", lambda user_id: [])  # tests/test_plus.py fakes these tables
     monkeypatch.setattr(db, "get_brand", lambda user_id: None)

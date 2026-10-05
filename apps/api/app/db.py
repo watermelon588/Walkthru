@@ -6,8 +6,12 @@ reuses one keep-alive connection. Every call fails fast (4 s connect) and retrie
 `setup()` alone still speaks SQL, because schema changes need it; run it with `python -m app.db`.
 """
 
+import base64
+import binascii
 import json
 import os
+import re
+import uuid
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
@@ -33,7 +37,7 @@ def client() -> httpx.Client:
     )
 
 
-def _request(method: str, path: str, *, params: dict | None = None, json_body: Any = None, prefer: str | None = None) -> Any:
+def _response(method: str, path: str, *, params: dict | None = None, json_body: Any = None, prefer: str | None = None) -> httpx.Response:
     headers = {"Prefer": prefer} if prefer else {}
     for attempt in range(2):  # every call here is idempotent, so one retry is safe
         try:
@@ -47,8 +51,22 @@ def _request(method: str, path: str, *, params: dict | None = None, json_body: A
                 raise DatabaseUnavailable(f"{r.status_code} {r.text[:200]}")
             continue
         r.raise_for_status()
-        return r.json() if r.content else None
-    return None
+        return r
+    raise DatabaseUnavailable("Database request did not complete")
+
+
+def _request(method: str, path: str, *, params: dict | None = None, json_body: Any = None, prefer: str | None = None) -> Any:
+    r = _response(method, path, params=params, json_body=json_body, prefer=prefer)
+    return r.json() if r.content else None
+
+
+def _exact_count(table: str, filters: dict) -> int:
+    """Count in PostgreSQL, independent of PostgREST's response row cap. Never guess zero."""
+    r = _response("HEAD", f"/rest/v1/{table}", params=filters | {"select": "id", "limit": "0"}, prefer="count=exact")
+    match = re.fullmatch(r"(?:\*|\d+-\d+)/(\d{1,19})", r.headers.get("Content-Range", ""))
+    if not match:
+        raise DatabaseUnavailable("Database did not return an exact count")
+    return int(match[1])
 
 
 def _now() -> str:
@@ -119,15 +137,93 @@ def runs_for_user(user_id: str) -> list[dict]:
     return _rows({"user_id": f"eq.{user_id}", "select": "*", "order": "created_at.asc"})
 
 
+RUN_HISTORY_FIELDS = "id,site,goal,persona,status,created_at,updated_at,kind,public,group_id,tier,launch_score:report->launch_ready->score"
+
+
+def _history_cursor(cursor: str, user_id: str, site: str) -> tuple[str, str]:
+    try:
+        if len(cursor) > 2048:
+            raise ValueError
+        raw = base64.b64decode(cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True)
+        item = json.loads(raw)
+        if not isinstance(item, dict) or set(item) != {"v", "user", "site", "created_at", "id"} or type(item["v"]) is not int or item["v"] != 1:
+            raise ValueError
+        if item["user"] != user_id or item["site"] != site:
+            raise ValueError
+        created = datetime.fromisoformat(item["created_at"])
+        if created.tzinfo is None or not re.fullmatch(r"[a-f0-9]{32}", item["id"]):
+            raise ValueError
+        return created.astimezone(UTC).isoformat(), item["id"]
+    except (ValueError, TypeError, KeyError, binascii.Error, UnicodeError, OverflowError) as exc:
+        raise ValueError("Invalid run history cursor. Start again from the first page.") from exc
+
+
+def run_history_page(user_id: str, *, limit: int = 20, cursor: str | None = None, site: str = "") -> dict:
+    """Owner-only slim history, newest first with a deterministic timestamp/id continuation.
+
+    Cursor scope does not grant access: the owner filter is present on every database query.
+    Scores are projected as a scalar; reports, steps and contact fields are never downloaded.
+    """
+    user_id = str(uuid.UUID(user_id))
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 50:
+        raise ValueError("Run history limit must be between 1 and 50.")
+    if not isinstance(site, str) or len(site) > 512:
+        raise ValueError("Site filter must be at most 512 characters.")
+    site = site.lower()
+    params = {"user_id": f"eq.{user_id}", "select": RUN_HISTORY_FIELDS, "order": "created_at.desc,id.desc", "limit": str(limit + 1)}
+    if site:
+        # A literal, case-insensitive substring. Quoted PostgREST values protect delimiters;
+        # regex escaping prevents user input from becoming a wildcard/pattern.
+        literal = re.escape(site).replace("\\", "\\\\").replace('"', '\\"')
+        params["site"] = f'imatch."{literal}"'
+    if cursor is not None:
+        created, run_id = _history_cursor(cursor, user_id, site)
+        params["or"] = f'(created_at.lt."{created}",and(created_at.eq."{created}",id.lt.{run_id}))'
+    rows = []
+    while len(rows) < limit + 1:
+        page = _rows(params | {"limit": str(limit + 1 - len(rows))})
+        if not page:
+            break
+        rows.extend(page)
+        last = page[-1]
+        boundary = f'(created_at.lt."{last["created_at"]}",and(created_at.eq."{last["created_at"]}",id.lt.{last["id"]}))'
+        if boundary == params.get("or"):
+            raise DatabaseUnavailable("Database run history did not advance")
+        params["or"] = boundary
+    visible = rows[:limit]
+    next_cursor = None
+    if len(rows) > limit:
+        last = visible[-1]
+        token = {"v": 1, "user": user_id, "site": site, "created_at": last["created_at"], "id": last["id"]}
+        next_cursor = base64.urlsafe_b64encode(json.dumps(token, separators=(",", ":")).encode()).rstrip(b"=").decode()
+    return {"runs": visible, "next_cursor": next_cursor}
+
+
 def test_runs_since(user_id: str, since: str) -> list[dict]:
-    return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}", "select": "site"})
+    """Complete site-only usage history. Continue even when the server caps a page below 500."""
+    rows, after = [], None
+    while True:
+        params = {"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}", "select": "id,site", "order": "id.asc", "limit": "500"}
+        if after:
+            params["id"] = f"gt.{after}"
+        page = _rows(params)
+        if not page:
+            return rows
+        last = page[-1]["id"]
+        if not re.fullmatch(r"[a-f0-9]{32}", last) or (after is not None and last <= after):
+            raise DatabaseUnavailable("Database usage history did not advance")
+        rows.extend(page)
+        after = last
+
+
+def test_run_count_since(user_id: str, since: str) -> int:
+    return _exact_count("runs", {"user_id": f"eq.{user_id}", "kind": "eq.test", "created_at": f"gte.{since}"})
 
 
 def free_runs_today(kind: str = "test") -> int:
     """Free test runs (or Instant Scans, kind="scan") started today, UTC. Counted in the database, so every API process sees the same number."""
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    # ponytail: fetches ids to count them; switch to a Prefer: count=exact HEAD past a few thousand runs a day
-    return len(_rows({"kind": f"eq.{kind}", "tier": "eq.free", "created_at": f"gte.{today}", "select": "id"}))
+    return _exact_count("runs", {"kind": f"eq.{kind}", "tier": "eq.free", "created_at": f"gte.{today}"})
 
 
 # ---------- entitlements (paid passes; SPEC.md "Plans", payment.md) ----------
@@ -224,7 +320,7 @@ def open_offers() -> list[dict]:
 
 
 def paid_founding_offers() -> int:
-    return len(_select("billing_offers", {"founding": "eq.true", "status": "eq.paid", "select": "id"}))
+    return _exact_count("billing_offers", {"founding": "eq.true", "status": "eq.paid"})
 
 
 def mark_offer(offer_id: str, from_status: str, values: dict) -> bool:
@@ -380,8 +476,8 @@ def queue_citation_batch(site_id: str, batch: str, rows: list[dict], caps: dict,
 
 def citation_capacity() -> dict:
     quotas = _select("citation_quota", {"select": "engine,day,used,next_at"})
-    queued = _citation_rows({"status": "eq.queued", "select": "engine", "order": "id.asc"}, 5000)
-    return {"quotas": quotas, "queued": {e: sum(1 for c in queued if c["engine"] == e) for e in ("web", "memory")}}
+    queued = {e: _exact_count("citation_checks", {"status": "eq.queued", "engine": f"eq.{e}"}) for e in ("web", "memory")}
+    return {"quotas": quotas, "queued": queued}
 
 
 def defer_citation_engine(engine: str, until: str) -> None:
@@ -396,11 +492,23 @@ def citation_checks_for(site_id: str, since: str | None = None, limit: int = 500
 
 
 def citation_checks_done_since(engine: str, since: str) -> int:
-    return len(_select("citation_checks", {"engine": f"eq.{engine}", "checked_at": f"gte.{since}", "select": "id", "limit": "5000"}))
+    return _exact_count("citation_checks", {"engine": f"eq.{engine}", "checked_at": f"gte.{since}"})
 
 
 def citation_batches_since(site_id: str, since: str) -> int:
-    return len({r["batch_id"] for r in _select("citation_checks", {"site_id": f"eq.{site_id}", "created_at": f"gte.{since}", "select": "batch_id", "limit": "5000"})})
+    batches, after = set(), None
+    while True:
+        params = {"site_id": f"eq.{site_id}", "created_at": f"gte.{since}", "select": "id,batch_id", "order": "id.asc", "limit": "500"}
+        if after is not None:
+            params["id"] = f"gt.{after}"
+        page = _select("citation_checks", params)
+        if not page:
+            return len(batches)
+        last = page[-1]["id"]
+        if not isinstance(last, int) or (after is not None and last <= after):
+            raise DatabaseUnavailable("Database citation history did not advance")
+        batches.update(row["batch_id"] for row in page)
+        after = last
 
 
 def add_notification(row: dict) -> None:
@@ -560,7 +668,7 @@ def touch_api_key(key_id: str) -> None:
 def user_scans_today(user_id: str) -> int:
     today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     # Owner scans from MCP and each site of a competitor comparison share one daily cap.
-    return len(_rows({"user_id": f"eq.{user_id}", "kind": "in.(scan,compare_part)", "created_at": f"gte.{today}", "select": "id"}))
+    return _exact_count("runs", {"user_id": f"eq.{user_id}", "kind": "in.(scan,compare_part)", "created_at": f"gte.{today}"})
 
 
 # ---------- watched sites (Plus weekly watch; ARCHITECTURE.md `watch`) ----------

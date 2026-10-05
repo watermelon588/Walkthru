@@ -102,15 +102,30 @@ def test_legacy_source_title_never_supplies_the_domain():
 
 
 def test_capacity_and_history_reads_page_past_server_row_caps(monkeypatch):
+    import httpx
+
     from app import db
     rows = [{"id": i, "engine": "memory"} for i in range(1201)]
+    counted = []
+
+    def head(req):
+        counted.append(dict(req.url.params))
+        assert req.method == "HEAD" and req.url.path == "/rest/v1/citation_checks"
+        assert req.headers["Prefer"] == "count=exact" and req.url.params["limit"] == "0"
+        assert req.url.params["status"] == "eq.queued" and req.url.params["select"] == "id"
+        count = len(rows) if req.url.params["engine"] == "eq.memory" else 0
+        return httpx.Response(200, headers={"Content-Range": f"*/{count}"})
+
     def select(table, params):
         if table == "citation_quota":
             return []
         start = int(params["offset"])
         return rows[start:start + min(100, int(params["limit"]))]
     monkeypatch.setattr(db, "_select", select)
-    assert db.citation_capacity()["queued"]["memory"] == 1201
+    with httpx.Client(base_url="https://database.test", transport=httpx.MockTransport(head)) as client:
+        monkeypatch.setattr(db, "client", lambda: client)
+        assert db.citation_capacity()["queued"] == {"web": 0, "memory": 1201}
+    assert [params["engine"] for params in counted] == ["eq.web", "eq.memory"]
     assert len(db.citation_checks_for("test", limit=1100)) == 1100
 
 

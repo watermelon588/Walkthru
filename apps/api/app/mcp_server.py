@@ -345,17 +345,26 @@ def recheck(site: str, finding: dict, pages: list[str], *, verified: bool) -> st
 
 
 @server.tool(structured_output=False)
-def list_runs(site: str = "", limit: int = 10) -> str:
-    """Your most recent Walkthru runs and scans, newest first, optionally only for one site (any part of the address)."""
-    # ponytail: reads every run of the user (the export query); add a limited query if accounts grow past a few hundred runs
-    rows = [r for r in reversed(db.runs_for_user(_user.get())) if site.lower() in r["site"].lower()][: max(1, min(limit, 50))]
+def list_runs(site: str = "", limit: int = 10, cursor: str | None = None) -> str:
+    """Your most recent Walkthru runs and scans, newest first. Optional site is a literal address substring.
+    Pass the returned next cursor with the same site filter to continue; at most 50 rows per page.
+    """
+    try:
+        page = db.run_history_page(_user.get(), site=site, limit=max(1, min(limit, 50)), cursor=cursor)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    rows = page["runs"]
     if not rows:
+        if cursor is not None:
+            return "No more runs" + (f" for {site}." if site else ".")
         return "No runs yet" + (f" for {site}." if site else ".") + " Use scan_site to start."
     out = []
     for r in rows:
-        score = ((r.get("report") or {}).get("launch_ready") or {}).get("score")
+        score = r.get("launch_score")
         out.append(f"- {r['id']} {r['created_at'][:16]} {r['site']} {'scan' if r.get('kind') == 'scan' else repr(r.get('goal'))} "
                    f"{r.get('status')}, score {score if score is not None else '-'}")
+    if page["next_cursor"]:
+        out += ["", f"Next cursor: {page['next_cursor']}", "Call list_runs with this cursor and the same site filter for the next page."]
     return "\n".join(out)
 
 
