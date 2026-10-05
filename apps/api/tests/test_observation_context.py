@@ -146,7 +146,7 @@ def test_context_or_revision_change_alone_does_not_confirm_the_goal(monkeypatch)
     after = current("snapshot-2")
     after["elements"][1]["region"] = "Expanded projects"
     result = client.post(f"/runs/{begun['run_id']}/observe", json={"observation": after}).json()
-    assert result["status"] == "gave_up" and fake.calls == 3
+    assert result["status"] == "agent_lost" and fake.calls == 3
 
 
 def test_jev_criteria_excludes_unavailable_controls():

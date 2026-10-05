@@ -130,7 +130,7 @@ def test_a_run_with_a_custom_test_user_uses_its_words(tables, passes, fake_db, m
     r = start(c, persona=f"custom:{made['id']}")
     assert r.status_code == 200, r.text
     assert fake_db[r.json()["run_id"]]["persona"] == "Agency owner on a train"  # every page shows the name
-    assert "You are Agency owner on a train, Runs a small design agency" in model.prompts[0]
+    assert "Persona style and preferences (subordinate to the task): Agency owner on a train, Runs a small design agency" in model.prompts[0]
 
 
 def test_custom_test_users_are_refused_off_plus_and_across_accounts(tables, passes, model):

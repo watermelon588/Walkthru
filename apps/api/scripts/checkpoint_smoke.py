@@ -44,9 +44,11 @@ def run(phase: str, thread: str) -> None:
     if phase == "start":
         if graph.get_state(config).values:
             raise RuntimeError("This smoke thread already exists; use a fresh UUID")
-        graph.invoke({"run_id": thread, "site": observation["url"], "goal": "read the guide", "persona": "first_timer",
+        graph.invoke({"run_id": thread, "site": observation["url"], "goal": "open the guide page", "persona": "first_timer",
                       "logged_in": False, "verified": False, "observation": observation, "first_text": observation["text"],
-                      "steps": [], "status": "running", "tokens": 0, "max_steps": 4}, config)
+                      "steps": [], "status": "running", "tokens": 0, "max_steps": 4, "start_url": observation["url"],
+                      "plan": {"intent": "Open guide", "checkpoints": [{"description": "Open guide", "kind": "navigation", "url_contains": "/guide"}]},
+                      "plan_done": 0}, config)
         state = graph.get_state(config)
         assert state.next and len(state.values["steps"]) == 1 and model.calls == 1
     else:
@@ -54,7 +56,8 @@ def run(phase: str, thread: str) -> None:
         assert state.next and len(state.values["steps"]) == 1 and model.calls == 0, "Pending action was not recovered"
         graph.invoke(Command(resume={"observation": observation | {"url": "https://fixture.invalid/guide", "elements": []}}), config)
         state = graph.get_state(config)
-        assert not state.next and state.values["status"] == "done" and len(state.values["steps"]) == 2 and model.calls == 1
+        assert not state.next and state.values["status"] == "done" and len(state.values["steps"]) == 1 and model.calls == 0
+        assert state.values["checkpoint_evidence"][0]["checkpoint"] == 1
         assert state.values["first_text"] == observation["text"]
         assert state.values["steps"][0]["thought"] == "Read the guide"
         saver.delete_thread(thread)

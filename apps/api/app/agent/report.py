@@ -190,6 +190,11 @@ def render_steps(steps: list[dict]) -> str:
             line += f"; executor: {s['note_after']}"
         if s.get("safe_stop"):
             line += " [Walkthru stopped here on purpose; not a site problem]"
+        proofs = ([s["checkpoint_evidence"]] if s.get("checkpoint_evidence") else []) + s.get("additional_checkpoint_evidence", [])
+        for proof in proofs:
+            line += "; observed checkpoint evidence=" + json.dumps(proof, ensure_ascii=True)
+        if s.get("unresolved_checkpoints"):
+            line += "; unresolved checkpoints=" + json.dumps(s["unresolved_checkpoints"], ensure_ascii=True)
         lines.append(line)
     return "\n".join(lines)
 
@@ -282,7 +287,7 @@ def problem_steps(steps: list[dict], status: str | None = None) -> set[int]:
     out = set()
     for i, s in enumerate(steps, start=1):
         note = (s.get("note_after") or "").lower()
-        if s.get("code") == "agent_lost" or "stale target:" in note:
+        if s.get("code") in {"agent_lost", "safe_stop", "visitor_mode_limit"} or "stale target:" in note:
             continue  # the executor refused this action; new page messages cannot establish its failure
         if s.get("action") not in {"click", "type", "scroll", "back"}:
             continue  # deciding to give up is not a browser outcome
@@ -436,6 +441,9 @@ def _evidence_prompt(state: ReportState, context: list[str], findings: list[Find
                                                  "accessibility": {k: v for k, v in (s["diagnostics"].get("accessibility") or {}).items() if k in ("status", "total")}}
                                                for i, s in enumerate(steps, start=1) if s.get("diagnostics")]),
         "observed_journey_outcomes": _prompt_values(observed[-5:]),
+        "checkpoint_evidence": _prompt_values([p for s in steps for p in
+            (([s["checkpoint_evidence"]] if s.get("checkpoint_evidence") else []) + s.get("additional_checkpoint_evidence", []))][:4]),
+        "unresolved_checkpoints": _prompt_values(next((s["unresolved_checkpoints"] for s in reversed(steps) if s.get("unresolved_checkpoints")), [])),
         "omitted_journey_outcomes": max(0, len(observed) - 5),
         "omitted_findings": len(findings) - len(selected),
         "omitted_findings_by_kind": {},

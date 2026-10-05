@@ -196,12 +196,14 @@ class PersonaStep(BaseModel):
     wait_condition: Literal["settled", "url_changed", "text_changed"] = "settled"
     wait_timeout_ms: int = Field(default=1000, ge=100, le=5000)
     confusion: int = Field(ge=0, le=3, description="0 clear, 1 hesitant, 2 confused, 3 stuck")
-    progress: int = Field(default=0, ge=0, le=4, description="How many checklist items are complete, counting what your previous actions achieved.")
+    progress: int = Field(default=0, ge=0, le=4, description="Advisory checklist count. Walkthru alone confirms milestones from observed evidence.")
 
 
 class Checkpoint(BaseModel):
     description: str = Field(max_length=200, description="One observable milestone, in plain words.")
+    kind: Literal["navigation", "outcome"] = Field(default="outcome", description="Navigation only for opening a specified page. Account creation, send, save, filter and other results are outcomes.")
     url_contains: str | None = Field(default=None, max_length=100, description="Part of the URL that is only true once this checkpoint is reached, e.g. '/pricing'. Null unless you are sure.")
+    text_contains: str | None = Field(default=None, min_length=1, max_length=160, description="Exact public finish-state phrase specified by the owner or known from the start page. Never invent a success phrase or business rule. Null when unknown.")
 
 
 class GoalPlan(BaseModel):

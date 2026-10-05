@@ -36,7 +36,7 @@ def page(path, elements=(), **extra):
 
 def planned(monkeypatch, *checkpoints, intent="check the flow", feasible=True, refusal=None):
     monkeypatch.setattr(goal, "plan", lambda site, g, obs, paid=False: {
-        "intent": intent, "checkpoints": [{"description": d, "url_contains": u} for d, u in checkpoints], "feasible": feasible, "refusal": refusal})
+        "intent": intent, "checkpoints": [{"description": d, "kind": "navigation" if u else "outcome", "url_contains": u} for d, u in checkpoints], "feasible": feasible, "refusal": refusal})
 
 
 def start(c, obs, **kw):
@@ -73,7 +73,7 @@ def test_checkpoint_url_finishes_the_run_in_code(monkeypatch):
     assert r["status"] == "running"  # first checkpoint reached by URL, one left
 
 
-def test_model_progress_on_the_last_checkpoint_ends_the_run(monkeypatch):
+def test_model_progress_alone_cannot_end_the_run(monkeypatch):
     planned(monkeypatch, ("open the Skyguide AI project", None), ("click the next project link", None))
     use(monkeypatch, [
         PersonaStep(thought="open it", action="click", target_id=1, confusion=0, progress=0),
@@ -84,8 +84,10 @@ def test_model_progress_on_the_last_checkpoint_ends_the_run(monkeypatch):
     r = start(c, page("/", [{"id": 1, "tag": "a", "text": "Skyguide AI"}])).json()
     r = observe(c, r["run_id"], page("/work/skyguide-ai", [NEXT]))
     r = observe(c, r["run_id"], page("/work/neuron", [NEXT]))
-    assert r["status"] == "done" and len(r["steps"]) == 3
-    assert r["steps"][-1]["action"] == "done" and "every checkpoint" in r["steps"][-1]["thought"]
+    from app.main import runtime as rt
+    values = rt.get_state("free", {"configurable": {"thread_id": r["run_id"]}}).values
+    assert r["status"] == "running" and len(values["steps"]) == 3 and values["plan_done"] == 0
+    assert values["steps"][-1]["action"] == "click" and values["steps"][-1]["progress"] == 0
 
 
 def test_the_persona_sees_the_checklist_and_where_each_step_led(monkeypatch):
@@ -116,7 +118,7 @@ def test_planner_outage_falls_back_to_the_typed_goal(monkeypatch):
     assert plan["feasible"] and plan["checkpoints"][0]["description"] == "sign up"
 
 
-def test_scrolling_down_is_progress_but_scrolling_at_the_end_is_stuck(monkeypatch):
+def test_scrolling_down_is_progress_but_scrolling_at_the_end_is_controller_loss(monkeypatch):
     planned(monkeypatch, ("read to the end", None))
     use(monkeypatch, [PersonaStep(thought="scroll", action="scroll", confusion=0)])
     c = TestClient(app)
@@ -128,7 +130,7 @@ def test_scrolling_down_is_progress_but_scrolling_at_the_end_is_stuck(monkeypatc
         r = observe(c, r["run_id"], page("/work/a", scroll_pct=100, at_end=True))
         if r["status"] != "running":
             break
-    assert r["status"] == "stuck"
+    assert r["status"] == "agent_lost"
 
 
 def test_a_click_that_changes_nothing_is_recorded(monkeypatch):
@@ -169,7 +171,7 @@ def test_done_right_after_a_click_that_changed_nothing_is_questioned(monkeypatch
     assert "not confirmed" in model.last[-1][1]
 
 
-def test_insisting_on_done_without_proof_ends_as_gave_up(monkeypatch):
+def test_insisting_on_done_without_proof_ends_as_controller_loss(monkeypatch):
     planned(monkeypatch, ("sign up", None))
     use(monkeypatch, [
         PersonaStep(thought="submit", action="click", target_id=1, confusion=0),
@@ -179,16 +181,16 @@ def test_insisting_on_done_without_proof_ends_as_gave_up(monkeypatch):
     form = page("/signup", [{"id": 1, "tag": "button", "text": "Create account"}])
     r = start(c, form).json()
     r = observe(c, r["run_id"], form)
-    assert r["status"] == "gave_up" and "could not confirm" in r["steps"][-1]["thought"]
+    assert r["status"] == "agent_lost" and "could not confirm" in r["steps"][-1]["thought"]
 
 
-def test_done_after_the_page_moved_on_is_accepted(monkeypatch):
+def test_done_after_the_page_moved_on_does_not_prove_signup(monkeypatch):
     planned(monkeypatch, ("sign up", None))
     use(monkeypatch, [PersonaStep(thought="submit", action="click", target_id=1, confusion=0), PersonaStep(thought="welcome page", action="done", confusion=0)])
     c = TestClient(app)
     r = start(c, page("/signup", [{"id": 1, "tag": "button", "text": "Create account"}])).json()
     r = observe(c, r["run_id"], page("/welcome"))
-    assert r["status"] == "done"
+    assert r["status"] == "agent_lost"
 
 
 def test_a_click_that_changed_nothing_is_evidence_for_the_report():

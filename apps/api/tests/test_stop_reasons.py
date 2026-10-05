@@ -49,12 +49,12 @@ def test_giving_up_after_picking_a_missing_element_is_walkthrus_limit_not_the_si
     assert done["status"] == "agent_lost" and done["code"] == "agent_lost" and "may not affect people" in done["report"]
 
 
-def test_an_ordinary_give_up_stays_gave_up(monkeypatch):
+def test_abandonment_without_an_observed_site_failure_is_controller_loss(monkeypatch):
     use([step("click", 1), step("give_up")], monkeypatch)
     c = TestClient(app)
     r = start(c, HOME)
     done = observe(c, r["run_id"], page("https://fixture.test/pricing", [{"id": 1, "tag": "a", "text": "Pricing"}])).json()
-    assert done["status"] == "gave_up" and "code" not in done
+    assert done["status"] == "agent_lost" and done["code"] == "agent_lost"
 
 
 def test_a_visitor_mode_stop_carries_its_code_and_message(monkeypatch):

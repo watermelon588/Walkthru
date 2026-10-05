@@ -59,6 +59,9 @@ def test_one_user_hammering_one_host_is_refused(fake_db, monkeypatch):
 
 
 def test_the_audit_log_keeps_actions_and_labels_but_never_typed_values(fake_db, monkeypatch):
+    from app.agent import goal
+    monkeypatch.setattr(goal, "plan", lambda *args, **kw: {"intent": "Open pricing", "checkpoints": [
+        {"description": "Open pricing", "kind": "navigation", "url_contains": "/pricing"}]})
     use([step("type", 2, "private search words"), step("click", 1), PersonaStep(thought="ok", action="done", confusion=0)], monkeypatch)
     c = TestClient(app)
     run = begin(c).json()
@@ -66,7 +69,7 @@ def test_the_audit_log_keeps_actions_and_labels_but_never_typed_values(fake_db, 
     observe(c, run["run_id"], page("https://fixture.test/pricing", [{"id": 1, "tag": "a", "text": "Plans"}]))  # the click worked
     [row] = [a for a in fake_db.audit if a.get("run_id") == run["run_id"]]
     assert row["mode"] == "visitor" and row["host"] == "fixture.test" and row["status"] == "done"
-    assert [a["action"] for a in row["actions"]] == ["type", "click", "done"]
+    assert [a["action"] for a in row["actions"]] == ["type", "click"]
     assert row["actions"][0]["target"] == "Search" and row["actions"][1]["target"] == "Pricing"
     assert "private search words" not in str(row["actions"])
 

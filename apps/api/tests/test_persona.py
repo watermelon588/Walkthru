@@ -22,7 +22,7 @@ class FakeModel:
 
     def invoke(self, messages):
         self.calls += 1
-        return self.script.pop(0)
+        return self.script.pop(0) if len(self.script) > 1 else self.script[0]
 
 
 class FakeDecisionModel:
@@ -89,6 +89,9 @@ def test_local_web_origins_pass_cors_preflight(origin):
 
 
 def test_click_then_done(monkeypatch):
+    from app.agent import goal
+    monkeypatch.setattr(goal, "plan", lambda *args, **kw: {"intent": "Open the app", "checkpoints": [
+        {"description": "Open the app", "kind": "navigation", "url_contains": "/app"}]})
     fake = use(
         [
             PersonaStep(thought="Sign up looks right", action="click", target_id=2, confusion=0),
@@ -102,8 +105,8 @@ def test_click_then_done(monkeypatch):
     assert r["status"] == "running"
     assert r["action"]["action"] == "click" and r["action"]["target_id"] == 2
     r = observe(c, r["run_id"], page("https://fixture.test/app", [])).json()
-    assert r["status"] == "done" and len(r["steps"]) == 2
-    assert fake.calls == 2  # interrupt/resume never re-runs the LLM
+    assert r["status"] == "done" and len(r["steps"]) == 1
+    assert fake.calls == 1  # code proves declared navigation; no extra inference
     assert observe(c, r["run_id"], page("x", [])).status_code == 409
     assert c.get(f"/runs/{r['run_id']}").json()["status"] == "done"
 
@@ -262,7 +265,7 @@ def test_safe_mode_blocks_dangerous_click(monkeypatch, passes):
     c = TestClient(app)
     settings = page("https://fixture.test/settings", [{"id": 1, "tag": "button", "text": "Delete account"}])
     r = start(c, settings, logged_in=True)
-    assert r["status"] == "gave_up" and "safe mode" in r["steps"][0]["thought"]
+    assert r["status"] == "safe_stop" and "safe mode" in r["steps"][0]["thought"]
 
 
 def test_missing_element_becomes_scroll(monkeypatch):
@@ -366,7 +369,7 @@ def test_confirmations_reach_the_agent_and_a_second_send_is_refused(monkeypatch)
     r = start(c, form)
     assert r["status"] == "running"  # first send allowed (owner confirms in the panel)
     r = observe(c, r["run_id"], form | {"notices": ["Thanks! Your message was sent."]}).json()
-    assert r["status"] == "done" and "never sends twice" in r["steps"][-1]["thought"]
+    assert r["status"] == "safe_stop" and "never sends twice" in r["steps"][-1]["thought"]
     assert r["steps"][0]["sent"] is True
     assert "page then confirmed: Thanks! Your message was sent." in render_steps(r["steps"])
 

@@ -152,9 +152,9 @@ def test_nested_and_infinite_scroll_progress_continues_until_step_budget():
 def test_scroll_then_done_is_questioned_and_wait_preserves_real_click_proof():
     graph, config, model, _ = session([step(scroll_container_id=1), step("done"), step("done")])
     result = graph.invoke(Command(resume={"observation": page(executor_result=outcome())}), config)
-    assert result["status"] == "gave_up" and model.calls == 3
+    assert result["status"] == "agent_lost" and model.calls == 3
     assert not _confirmed({"steps": [{"action": "wait", "notices_after": ["Welcome"]}]})
-    assert _confirmed({"steps": [{"action": "click", "url": "a", "result_url": "a"},
+    assert not _confirmed({"steps": [{"action": "click", "url": "a", "result_url": "a"},
                                 {"action": "wait", "url": "a", "result_url": "b", "notices_after": ["Welcome"]}]})
 
 

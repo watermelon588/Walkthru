@@ -38,7 +38,7 @@ def test_persona_survives_abrupt_process_exit_and_cleans_all_checkpoint_tables(c
     assert json.loads(start.stdout)["steps"] == 1
     resume = subprocess.run([sys.executable, "-m", "scripts.checkpoint_smoke", "resume", thread],
                             env=env, capture_output=True, text=True, timeout=45, check=True)
-    assert json.loads(resume.stdout) == {"thread": thread, "phase": "resume", "steps": 2, "status": "done"}
+    assert json.loads(resume.stdout) == {"thread": thread, "phase": "resume", "steps": 1, "status": "done"}
     for table in ("checkpoints", "checkpoint_blobs", "checkpoint_writes"):
         assert conn.execute(f"select count(*) from walkthru_checkpoints.{table}").fetchone()[0] == 0
 
@@ -87,6 +87,9 @@ def test_startup_requires_migration_and_matching_version_and_pool_closes(conn, m
 
 
 def test_http_observation_resumes_after_api_lifespan_restart(conn, monkeypatch):
+    from app.agent import goal
+    monkeypatch.setattr(goal, "plan", lambda *args, **kw: {"intent": "Open the guide", "checkpoints": [
+        {"description": "Open the guide", "kind": "navigation", "url_contains": "/guide"}]})
     install(conn)
     runtime.close_checkpointer()
     monkeypatch.setenv("CHECKPOINT_DATABASE_URL", conn.info.dsn)
@@ -110,6 +113,7 @@ def test_http_observation_resumes_after_api_lifespan_restart(conn, monkeypatch):
     with TestClient(main.app) as client:
         response = client.post(f"/runs/{run_id}/observe", json={"observation": page | {"url": "https://fixture.test/guide", "elements": []}})
         assert response.status_code == 200
-        assert response.json()["status"] == "done" and len(response.json()["steps"]) == 2 and model.calls == 1
+        assert response.json()["status"] == "done" and len(response.json()["steps"]) == 1 and model.calls == 0
+        assert response.json()["steps"][0]["checkpoint_evidence"]["checkpoint"] == 1
         assert runtime.checkpointer().conn is not first_pool
         assert client.get(f"/runs/{run_id}").json()["status"] == "done"
