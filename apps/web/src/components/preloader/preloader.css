@@ -1,0 +1,25 @@
+/* Preloader (components/preloader): the thinking-orbs Orb, centred. Tokens only; fade only under reduced motion. */
+
+.pl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pl-overlay[data-leaving] { opacity: 0; pointer-events: none; }
+.pl-page { display: grid; min-height: 100dvh; place-items: center; background: var(--bg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pl-content { animation: pl-in 0.45s cubic-bezier(0.23, 1, 0.32, 1) both; }
+  .pl-overlay[data-leaving] .pl-content {
+    translate: 0 -6px;
+    scale: 0.98;
+    filter: blur(3px);
+    transition: translate 0.5s cubic-bezier(0.23, 1, 0.32, 1), scale 0.5s cubic-bezier(0.23, 1, 0.32, 1), filter 0.5s ease-out;
+  }
+}
+
+@keyframes pl-in { from { opacity: 0; scale: 0.94; filter: blur(4px); } }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router'
 import { Toaster } from './components/Toaster'
 import { NotificationsProvider } from './components/NotificationsProvider'
+import { Preloader, RouteLoader } from './components/preloader/Preloader'
 import Landing from './pages/Landing'
 import { useExtensionDisconnect } from './lib/auth'
 
@@ -79,9 +80,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollManager />
+      <RouteLoader />
       <NotificationsProvider>
         <Toaster />
-        <Suspense fallback={<div role="status" aria-label="Loading" className="min-h-[100dvh] bg-bg" />}>
+        <Suspense fallback={<Preloader />}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/agent-lab" element={<AgentLab />} />
