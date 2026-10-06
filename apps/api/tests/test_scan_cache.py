@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from app import db, main
+from app import db, main, scan_reuse
 
 lookup = db.recent_public_scan
 
@@ -20,7 +20,7 @@ def test_database_lookup_is_public_anonymous_complete_and_recent(monkeypatch):
         "site": "eq.https://example.test/a?x=1", "kind": "eq.scan", "tier": "eq.free",
         "user_id": "is.null", "public": "eq.true", "status": "eq.done",
         "report": "not.is.null", "created_at": query["created_at"],
-        "order": "created_at.desc", "limit": "1", "select": "id,site,report",
+        "order": "created_at.desc", "limit": "1", "select": "id,site,report,created_at",
     }
     assert before <= datetime.fromisoformat(query["created_at"][3:]) <= datetime.now(UTC) - timedelta(minutes=10)
     monkeypatch.setattr(db, "_rows", lambda params: [])
@@ -29,7 +29,8 @@ def test_database_lookup_is_public_anonymous_complete_and_recent(monkeypatch):
 
 @pytest.fixture
 def cached(monkeypatch):
-    row = {"id": "cached", "site": "https://example.test/", "report": {"summary": "Saved report"}}
+    row = {"id": "cached", "site": "https://example.test/", "created_at": datetime.now(UTC).isoformat(),
+           "report": {"summary": "Saved report", "scan_version": scan_reuse.version()}}
     monkeypatch.setattr(db, "recent_public_scan", lambda site: row)
     monkeypatch.setattr(main.fetch, "assert_public", lambda site: None)
     monkeypatch.setattr(main, "run_scan", lambda *a, **k: pytest.fail("cache hit started a new scan"))
@@ -76,13 +77,13 @@ def test_cache_hit_still_counts_address_limit(monkeypatch, cached):
 ])
 def test_ineligible_rows_trigger_a_fresh_scan(monkeypatch, fake_db, change):
     row = {"id": "old", "site": "https://example.test/", "kind": "scan", "tier": "free",
-           "user_id": None, "public": True, "status": "done", "report": {"summary": "Old"},
+           "user_id": None, "public": True, "status": "done", "report": {"summary": "Old", "scan_version": scan_reuse.version()},
            "created_at": (datetime.now(UTC) - timedelta(seconds=change.get("age", 1))).isoformat()}
     row.update({k: v for k, v in change.items() if k != "age"})
     fake_db["old"] = row
     monkeypatch.setattr(main.fetch, "assert_public", lambda site: None)
     scans = []
-    def scan(site):
+    def scan(site, **_):
         scans.append(site)
         return "new", {"site": site, "report": {"summary": "Fresh"}}
     monkeypatch.setattr(main, "run_scan", scan)
@@ -95,11 +96,11 @@ def test_ineligible_rows_trigger_a_fresh_scan(monkeypatch, fake_db, change):
 def test_newest_match_reused_without_extending_expiry(monkeypatch, fake_db):
     for name, age in [("older", 500), ("newer", 10)]:
         fake_db[name] = {"id": name, "site": "https://example.test/", "kind": "scan", "tier": "free",
-                         "user_id": None, "public": True, "status": "done", "report": {"summary": name},
+                         "user_id": None, "public": True, "status": "done", "report": {"summary": name, "scan_version": scan_reuse.version()},
                          "created_at": (datetime.now(UTC) - timedelta(seconds=age)).isoformat()}
     original = fake_db["newer"].copy()
     monkeypatch.setattr(main.fetch, "assert_public", lambda site: None)
-    monkeypatch.setattr(main, "run_scan", lambda site: pytest.fail("started new scan"))
+    monkeypatch.setattr(main, "run_scan", lambda site, **_: pytest.fail("started new scan"))
     response = TestClient(main.app).post("/scans", json={"site": "https://EXAMPLE.test"})
     assert response.json()["run_id"] == "newer"
     assert fake_db["newer"] == original

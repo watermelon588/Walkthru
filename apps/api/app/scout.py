@@ -16,8 +16,9 @@ from collections import Counter
 from datetime import UTC, datetime
 
 import httpx
+from fastapi import HTTPException
 
-from app import db
+from app import db, provider_usage, reservations
 
 log = logging.getLogger("walkthru.scout")
 
@@ -110,6 +111,7 @@ def context(team_id: str, question: str, thread: str, board: list[dict], runs: l
     return text[:CONTEXT_CHARS]
 
 
+@provider_usage.stage("scout")
 def ask(question: str, data: str) -> str:
     """One answer from the first Gemini model that gives one. Raises RuntimeError when none does."""
     token = key()
@@ -124,13 +126,16 @@ def ask(question: str, data: str) -> str:
         if left < 3:
             break
         try:
-            r = httpx.post(f"{URL}/models/{model}:generateContent", headers={"x-goog-api-key": token}, json=body, timeout=httpx.Timeout(min(25, left), connect=5.0))
-            r.raise_for_status()
-            parts = (((r.json().get("candidates") or [{}])[0].get("content") or {}).get("parts") or [])
-            answer = "".join(str(p.get("text") or "") for p in parts if not p.get("thought")).strip()
-            if answer:
-                return re.sub(r"\*\*|__|^#+\s*", "", answer, flags=re.MULTILINE)[:3000]
-            log.warning("scout: %s gave an empty answer", model)
+            with provider_usage.attempt("gemini", model):
+                r = httpx.post(f"{URL}/models/{model}:generateContent", headers={"x-goog-api-key": token}, json=body, timeout=httpx.Timeout(min(25, left), connect=5.0))
+                r.raise_for_status()
+                response = r.json()
+                provider_usage.capture(response.get("usageMetadata"), "gemini", response.get("responseId"))
+                parts = (((response.get("candidates") or [{}])[0].get("content") or {}).get("parts") or [])
+                answer = "".join(str(p.get("text") or "") for p in parts if not p.get("thought")).strip()
+                if answer:
+                    return re.sub(r"\*\*|__|^#+\s*", "", answer, flags=re.MULTILINE)[:3000]
+                raise ValueError("empty answer")
         except (httpx.HTTPError, ValueError) as e:
             log.warning("scout: %s failed: %s", model, str(e)[:200])
     raise RuntimeError("no model answered")
@@ -158,9 +163,15 @@ def reply(team_id: str, thread: str, question: str, asker: dict) -> None:
             runs = db.runs_brief([s["run_id"] for s in shares])
             board = teams._board(team_id, shares, runs, names)
             try:
-                text = ask(MENTION.sub(NAME, question), context(team_id, question, thread, board, runs, names))
+                # R-S9: the workspace's daily answers are reserved in the shared ledger; the count above is the quick check.
+                with reservations.work("scout", team_id, f"scout-{uuid.uuid4().hex}", DAILY) as dispatch:
+                    data = context(team_id, question, thread, board, runs, names)
+                    dispatch()
+                    text = ask(MENTION.sub(NAME, question), data)
             except RuntimeError:
                 text = "The free AI models I use are busy or out of quota right now. Try again in a few minutes."
+            except HTTPException as e:  # no reservation: the daily limit, capacity, or the ledger is unreachable
+                text = str(e.detail)
         db.insert_message({"team_id": team_id, "thread": thread, "author_id": None, "author_name": NAME, "bot": True,
                            "body": teams.clean_body(text), "mentions": [asker["id"]], "client_id": str(uuid.uuid4())})
     except Exception:

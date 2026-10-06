@@ -361,7 +361,174 @@ class LaunchReady(BaseModel):
     areas: dict[str, int | None] = Field(default_factory=dict)  # ux, security, geo, seo, speed; None = not measured
 
 
+class FilterCountAssertion(BaseModel):
+    """One supplied synthetic UI expectation, never a data-fetch instruction."""
+
+    model_config = {"extra": "forbid"}
+    path: str = Field(min_length=1, max_length=200, pattern=r"^/[A-Za-z0-9/_.-]*$")
+    filter_value: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9 _.-]+$")
+    count_label: str = Field(default="Filtered records", min_length=1, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9 _-]*$")
+    expected_count: int | None = Field(default=None, ge=0, le=100_000, strict=True)
+    dataset_id: str | None = Field(default=None, min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_.-]+$")
+    dataset_at: datetime | None = None
+    max_age_seconds: int = Field(default=3600, ge=1, le=86400, strict=True)
+    tolerance: int = Field(default=0, ge=0, le=100, strict=True)
+
+    @field_validator("filter_value", "count_label", "dataset_id")
+    @classmethod
+    def public_marker(cls, value):
+        if value is not None and _context_text(value) != value:
+            raise ValueError("Use public synthetic labels, without private numbers or key-like identifiers")
+        return value
+
+    @field_validator("dataset_at")
+    @classmethod
+    def timezone_required(cls, value):
+        if value is not None and value.tzinfo is None:
+            raise ValueError("Dataset time must include a timezone")
+        return value
+
+
+class ReportAssertion(BaseModel):
+    id: Literal["filtered_count:1"] = "filtered_count:1"
+    status: Literal["passed", "failed", "blocked", "inconclusive"]
+    expected: FilterCountAssertion
+    observed_count: int | None = Field(default=None, ge=0, le=100_000)
+    observed_dataset_id: str | None = Field(default=None, max_length=80)
+    observed_dataset_at: datetime | None = None
+    evaluated_at: datetime
+    state_reached: bool = False
+    reason: str = Field(max_length=400)
+    evidence_refs: list[str] = Field(default_factory=list, max_length=1)
+
+    @model_validator(mode="after")
+    def justified_verdict(self):
+        if self.evaluated_at.tzinfo is None or (self.observed_dataset_at and self.observed_dataset_at.tzinfo is None):
+            raise ValueError("Assertion times must include a timezone")
+        if self.state_reached != bool(self.evidence_refs) or (not self.state_reached and any(value is not None for value in
+                (self.observed_count, self.observed_dataset_id, self.observed_dataset_at))):
+            raise ValueError("Reached state and observed assertion data need recorded evidence")
+        if self.status in {"passed", "failed"}:
+            expected = self.expected
+            if not self.state_reached or self.observed_count is None or expected.expected_count is None or not expected.dataset_at or not expected.dataset_id:
+                raise ValueError("Assertion verdict needs a declared dataset and recorded count")
+            if not self.evidence_refs or self.observed_dataset_id != expected.dataset_id or self.observed_dataset_at != expected.dataset_at:
+                raise ValueError("Assertion verdict needs matching dataset evidence")
+            if not 0 <= (self.evaluated_at - expected.dataset_at).total_seconds() <= expected.max_age_seconds:
+                raise ValueError("Assertion verdict needs fresh expected data")
+            passed = abs(self.observed_count - expected.expected_count) <= expected.tolerance
+            if (self.status == "passed") != passed:
+                raise ValueError("Assertion verdict differs from its counts and tolerance")
+        return self
+
+
+class ReportEvidence(BaseModel):
+    id: str = Field(max_length=160)
+    source: Literal["scanner", "step", "milestone", "first_impression", "assertion"]
+    observed: str = Field(max_length=1000)
+    url: str | None = Field(default=None, max_length=2000)
+    step: int | None = Field(default=None, ge=1)
+    finding_index: int | None = Field(default=None, ge=0)
+
+
+class ReportIssue(BaseModel):
+    id: str = Field(max_length=160)
+    finding_index: int = Field(ge=0)
+    observation_type: Literal["scanner", "browser_observation", "subjective"]
+    observed_facts: list[str] = Field(max_length=10)
+    expected_result: str | None = Field(default=None, max_length=1000)
+    actual_result: str = Field(max_length=4000)
+    interpretation: str = Field(max_length=600)
+    cause_hypothesis: str | None = Field(default=None, max_length=600)
+    proposed_change: str = Field(max_length=400)
+    reproduction_steps: list[str] = Field(max_length=20)
+    acceptance_test: str = Field(max_length=1000)
+    evidence_refs: list[str] = Field(min_length=1, max_length=10)
+
+
+class ReportCheckpoint(BaseModel):
+    description: str = Field(max_length=200)
+    expected_result: str | None = Field(default=None, max_length=300)
+    actual_result: str | None = Field(default=None, max_length=1000)
+    status: Literal["passed", "unconfirmed", "not_tested"]
+    evidence_refs: list[str] = Field(default_factory=list, max_length=1)
+
+
+class ReportCoverage(BaseModel):
+    checks: dict[str, Literal["complete", "unavailable"]]
+    actions_with_outcomes: int = Field(ge=0)
+    declared_checkpoints: int = Field(ge=0, le=4)
+    confirmed_checkpoints: int = Field(ge=0, le=4)
+    audited_urls: list[str] = Field(max_length=55)
+    crawl_truncated: bool
+
+
+class ReportAssessment(BaseModel):
+    objective: str = Field(max_length=2000)
+    outcome: Literal["completed", "unconfirmed", "blocked", "not_tested"]
+    stop_reason: str = Field(max_length=100)
+    coverage: ReportCoverage
+    limitations: list[str] = Field(max_length=30)
+    checkpoints: list[ReportCheckpoint] = Field(max_length=4)
+    issues: list[ReportIssue]
+    evidence_index: list[ReportEvidence]
+    assertions: list[ReportAssertion] = Field(default_factory=list, max_length=1)
+
+    @model_validator(mode="after")
+    def permitted_evidence(self) -> "ReportAssessment":
+        records = {e.id: e for e in self.evidence_index}
+        if self.coverage.actions_with_outcomes != sum(e.source == "step" for e in self.evidence_index):
+            raise ValueError("Action coverage differs from recorded evidence")
+        if self.coverage.declared_checkpoints != len(self.checkpoints) or self.coverage.confirmed_checkpoints != sum(c.status == "passed" for c in self.checkpoints):
+            raise ValueError("Coverage differs from checkpoint evidence")
+        if len(records) != len(self.evidence_index) or len({i.id for i in self.issues}) != len(self.issues):
+            raise ValueError("Duplicate report evidence or issue id")
+        sources = {"scanner": "scanner", "browser_observation": "step", "subjective": "first_impression"}
+        for assertion in self.assertions:
+            if any(ref not in records or records[ref].source != "assertion" for ref in assertion.evidence_refs):
+                raise ValueError("Assertion references unsupported evidence")
+            for ref in assertion.evidence_refs:
+                record = records[ref]
+                step = records.get(f"step:{record.step}")
+                if not step or step.source != "step" or step.url != record.url:
+                    raise ValueError("Assertion has no matching executed step evidence")
+                markers = [f"Filter: {assertion.expected.filter_value};"]
+                if assertion.observed_dataset_id:
+                    markers.append(f"Dataset: {assertion.observed_dataset_id};")
+                if assertion.observed_dataset_at:
+                    markers.append(f"Dataset time: {assertion.observed_dataset_at.isoformat()};")
+                if any(marker not in record.observed for marker in markers):
+                    raise ValueError("Assertion dataset or filter differs from recorded evidence")
+            if assertion.observed_count is not None and assertion.evidence_refs and f"{assertion.expected.count_label}: {assertion.observed_count};" not in records[assertion.evidence_refs[0]].observed:
+                raise ValueError("Assertion count differs from recorded evidence")
+        for issue in self.issues:
+            evidence = [records.get(ref) for ref in issue.evidence_refs]
+            if any(e is None or e.source != sources[issue.observation_type] or
+                   (e.source == "scanner" and e.finding_index != issue.finding_index) for e in evidence):
+                raise ValueError("Issue references unsupported evidence")
+            if issue.observed_facts != [e.observed for e in evidence]:
+                raise ValueError("Observed facts differ from permitted evidence")
+            if issue.actual_result != "; ".join(issue.observed_facts)[:4000]:
+                raise ValueError("Actual result differs from permitted evidence")
+            if issue.expected_result is not None and issue.expected_result not in {c.expected_result for c in self.checkpoints}:
+                raise ValueError("Expected result was not declared")
+        for number, checkpoint in enumerate(self.checkpoints, 1):
+            if any(ref not in records or records[ref].source != "milestone" for ref in checkpoint.evidence_refs):
+                raise ValueError("Checkpoint references unsupported evidence")
+            if checkpoint.status == "passed" and not checkpoint.evidence_refs:
+                raise ValueError("Passed checkpoint needs evidence")
+            if checkpoint.status == "passed" and (checkpoint.expected_result is None or checkpoint.evidence_refs != [f"milestone:{number}"]):
+                raise ValueError("Passed checkpoint needs its declared matching evidence")
+            if checkpoint.status == "passed" and checkpoint.actual_result != records[checkpoint.evidence_refs[0]].observed:
+                raise ValueError("Checkpoint actual result differs from evidence")
+        if self.outcome == "completed" and (not self.checkpoints or any(c.status != "passed" for c in self.checkpoints)):
+            raise ValueError("Completed outcome needs all checkpoint evidence")
+        return self
+
+
 class Report(BaseModel):
+    version: Literal[1, 2] = 1
+    assessment: ReportAssessment | None = None
     summary: str
     first_impression: FirstImpression | None = None
     findings: list[Finding]
@@ -379,3 +546,20 @@ class Report(BaseModel):
     agent_ready: AgentReady | None = None  # P1.7, shown next to the GEO score
     stack: dict | None = None  # app/scans/stack.py: hosting, framework, backend and the evidence for each (P1.3)
     funnel: dict | None = None  # app/agent/funnel.py, paid runs only; `previous` holds the last run of the same goal
+    scan_version: str | None = None  # app/scan_reuse.py: code and model version of a server scan; reuse requires a match
+    opportunities: dict | None = None  # app/scans/opportunities.py: advisory keyword/content map; never findings or score
+
+    @field_validator("version", mode="before")
+    @classmethod
+    def supported_version(cls, value):
+        if type(value) is not int or value not in (1, 2):
+            raise ValueError("Unsupported report version")
+        return value
+
+    @model_validator(mode="after")
+    def report_version(self) -> "Report":
+        if (self.version == 2) != (self.assessment is not None):
+            raise ValueError("Report version does not match assessment")
+        if self.assessment and sorted(i.finding_index for i in self.assessment.issues) != list(range(len(self.findings))):
+            raise ValueError("Assessment must cover each report finding exactly once")
+        return self

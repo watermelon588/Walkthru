@@ -155,6 +155,26 @@ test("a page that never answers ends the step instead of hanging the run", async
   vi.useRealTimers();
 });
 
+test("a declared synthetic assertion stays identical across a retried start request", async () => {
+  const assertion = { path: "/dashboard", filter_value: "Active", count_label: "Filtered records", expected_count: 2,
+    dataset_id: "synthetic-sales-v1", dataset_at: "2026-10-06T04:00:00Z", max_age_seconds: 3600, tolerance: 0 };
+  const starts: RequestInit[] = [];
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
+    if (url.endsWith("/policy")) return response({ journeys: true, idempotency: "v1" });
+    if (url.endsWith("/runs")) {
+      starts.push(init);
+      if (starts.length === 1) throw new TypeError("start response lost");
+      return response({ ...running, status: "done", steps: [] });
+    }
+    throw new Error("Unexpected endpoint");
+  }));
+  await runTest({ ...options(), assertion }, () => {});
+  expect(starts).toHaveLength(2);
+  expect(starts[0]!.body).toBe(starts[1]!.body);
+  expect(JSON.parse(starts[0]!.body as string).assertion).toEqual(assertion);
+  expect(actions).toBe(0);
+});
+
 test.each(['scroll', 'back'] as const)('the run loop accepts %s with a captured revision and no target revision echo', async (kind) => {
   const step = { ...action, action: kind, target_id: null, observation_revision: null };
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {

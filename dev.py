@@ -54,12 +54,21 @@ def pipe(name: str, proc: subprocess.Popen) -> None:
             say(name, line)
 
 
+def server_env(name: str) -> dict[str, str]:
+    """This fixed-port dev stack overrides stale .env deployment/preview addresses in its children only."""
+    env = os.environ | {"PYTHONUNBUFFERED": "1", "FORCE_COLOR": "1"}
+    if name == "api":
+        env["WEB_URL"] = "http://localhost:5173"
+    elif name in {"web", "ext"}:
+        env.update(VITE_API_URL="http://localhost:8010", VITE_WEB_URL="http://localhost:5173")
+    return env
+
+
 def start(name: str, cmd: list[str], cwd: str) -> subprocess.Popen:
     # Windows: each server gets its own hidden console. uvicorn --reload stops its worker with a console
     # Ctrl+C event, and in a shared console that event would also kill this script and the whole stack.
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    env = os.environ | {"PYTHONUNBUFFERED": "1", "FORCE_COLOR": "1"}
-    proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, creationflags=flags)
+    proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=server_env(name), creationflags=flags)
     procs.append(proc)
     threading.Thread(target=pipe, args=(name, proc), daemon=True).start()
     return proc

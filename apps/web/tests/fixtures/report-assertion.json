@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "assessment": {
+    "objective": "Filter Active records",
+    "outcome": "completed",
+    "stop_reason": "done",
+    "coverage": {
+      "checks": {},
+      "actions_with_outcomes": 1,
+      "declared_checkpoints": 1,
+      "confirmed_checkpoints": 1,
+      "audited_urls": [],
+      "crawl_truncated": false
+    },
+    "limitations": [
+      "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior.",
+      "This count assertion checks the declared synthetic filter state only; it does not verify backend persistence, authorization or broader task completion."
+    ],
+    "checkpoints": [
+      {
+        "description": "Reach /dashboard with Filter: Active",
+        "expected_result": "Filter: Active",
+        "actual_result": "Filter: Active",
+        "status": "passed",
+        "evidence_refs": [
+          "milestone:1"
+        ]
+      }
+    ],
+    "issues": [],
+    "evidence_index": [
+      {
+        "id": "step:1",
+        "source": "step",
+        "observed": "Step 1: Browser action has a recorded public outcome.",
+        "url": "https://fixture.test/dashboard",
+        "step": 1,
+        "finding_index": null
+      },
+      {
+        "id": "milestone:1",
+        "source": "milestone",
+        "observed": "Filter: Active",
+        "url": "https://fixture.test/dashboard",
+        "step": 1,
+        "finding_index": null
+      },
+      {
+        "id": "assertion:1",
+        "source": "assertion",
+        "observed": "Filter: Active; Filtered records: 3; Dataset: synthetic-sales-v1; Dataset time: 2026-10-06T04:00:00+00:00;",
+        "url": "https://fixture.test/dashboard",
+        "step": 1,
+        "finding_index": null
+      }
+    ],
+    "assertions": [
+      {
+        "id": "filtered_count:1",
+        "status": "failed",
+        "expected": {
+          "path": "/dashboard",
+          "filter_value": "Active",
+          "count_label": "Filtered records",
+          "expected_count": 2,
+          "dataset_id": "synthetic-sales-v1",
+          "dataset_at": "2026-10-06T04:00:00Z",
+          "max_age_seconds": 3600,
+          "tolerance": 0
+        },
+        "observed_count": 3,
+        "observed_dataset_id": "synthetic-sales-v1",
+        "observed_dataset_at": "2026-10-06T04:00:00Z",
+        "evaluated_at": "2026-10-06T04:00:00Z",
+        "state_reached": true,
+        "reason": "The declared filter state was reached; the visible count differs from the supplied expectation.",
+        "evidence_refs": [
+          "assertion:1"
+        ]
+      }
+    ]
+  },
+  "summary": "Scoped synthetic filter check",
+  "first_impression": null,
+  "findings": [],
+  "top_fixes": [],
+  "verified": false,
+  "tokens": 0,
+  "checks": {},
+  "check_reasons": {},
+  "site_audit": null,
+  "geo": null,
+  "comparison": null,
+  "model": null,
+  "pages": {},
+  "launch_ready": null,
+  "agent_ready": null,
+  "stack": null,
+  "funnel": null,
+  "scan_version": null,
+  "opportunities": null
+}

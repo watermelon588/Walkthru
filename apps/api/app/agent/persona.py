@@ -13,9 +13,10 @@ from typing import Any, Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from app.agent import assertions
 from app.agent import goal as goals
 from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_basket, is_commerce, is_destructive, is_search_field, is_sending, is_social
-from app.agent.schema import Observation, PersonaStep
+from app.agent.schema import FilterCountAssertion, Observation, PersonaStep
 
 # looping: Walkthru stopped the test user for going in circles (its own limit, never a site problem).
 # bot_wall: the site's bot protection stopped the test. agent_lost: Walkthru could not find or use the control it
@@ -51,6 +52,8 @@ class SessionState(TypedDict, total=False):
     plan_done: int  # checklist items complete
     checkpoint_evidence: list[dict]  # code-confirmed, ordered public milestones, never provider progress
     start_url: str
+    assertion: dict | None
+    assertion_outcome: dict
 
 
 def system_prompt(state: SessionState) -> str:
@@ -186,11 +189,14 @@ def build_graph(model: Any, checkpointer: Any):
         from app.agent.runtime import unwrap  # local import: runtime imports this module
 
         def ask(msgs: list) -> tuple[PersonaStep, int, dict]:
-            if hasattr(model, "decide"):
-                decision = model.decide(state, msgs)
-                return decision.step, decision.tokens, decision.metadata
-            answer, spent = unwrap(model.invoke(msgs))
-            return answer, spent, {"provider": "llm"}
+            from app import provider_usage
+
+            with provider_usage.scope(run_id=state.get("run_id")), provider_usage.stage("persona_decision"):
+                if hasattr(model, "decide"):
+                    decision = model.decide(state, msgs)
+                    return decision.step, decision.tokens, decision.metadata
+                answer, spent = unwrap(model.invoke(msgs))
+                return answer, spent, {"provider": "llm"}
 
         observed_stop = _observation_stop(state["observation"])
         if observed_stop:
@@ -297,7 +303,8 @@ def build_graph(model: Any, checkpointer: Any):
                 steps[-1] = steps[-1] | {"checkpoint_evidence": proofs[0]}
                 if len(proofs) > 1:
                     steps[-1] = steps[-1] | {"additional_checkpoint_evidence": proofs[1:]}
-        return {"observation": after, "steps": steps}
+        assertion_outcome = assertions.evaluate(FilterCountAssertion.model_validate(state["assertion"]), after, state.get("start_url", ""), len(steps)) if state.get("assertion") else None
+        return {"observation": after, "steps": steps, **({"assertion_outcome": assertion_outcome} if assertion_outcome else {})}
 
     def check(state: SessionState) -> dict:
         steps = state["steps"]

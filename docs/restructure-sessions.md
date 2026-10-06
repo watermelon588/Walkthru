@@ -2,9 +2,9 @@
 
 Date: 2026-10-04. Source of product direction: [root plan](../plan.md). This is an implementation workflow in the existing project, not a request to create separate chats, scheduled jobs or deployments.
 
-**R-S1, R-S2, R-S3, R-S4 and R-S14a completed; R-S5 is next.** The completed scope includes bounded reporting, current browser context, stale-target protection, bounded navigation, evidence-based task completion and slim paged owner history with exact count reads. The full mission engine, financial wallet and report-v2 redesign remain later work. Later sessions remain proposals until their work is started and verified.
+**R-S1, R-S2, R-S3, R-S4, R-S5, R-S5a, R-S6, R-S7, R-S7a, R-S8, R-S9, R-S14a and R-S18 completed locally; R-S10 is next.** The completed scope includes bounded reporting, current browser context, stale-target protection, bounded navigation, evidence-based task completion and slim paged owner history with exact count reads. Additive report v2 and legacy consumers are complete. Chaptered reports with prompt/MCP parity are complete. The full mission engine and financial wallet remain later work. Later sessions remain proposals until their work is started and verified.
 
-**Scope extension (2026-10-04):** founder requests cache/cost efficiency, database pagination/index verification, practical keywords/backlinks and clearly separated report chapters. The [audited extension](seo-geo-report-expansion.md) is the detailed contract, including all twelve backlink tactics and the Distribb review. Preserve the original twenty IDs; add four suffix slices, R-S5a/R-S7a/R-S14a/R-S17a. There are now **24 planned slices, five complete**; R-S14a is complete and the other suffix slices remain pending. Optional provider integrations and outreach are not activated by the plan.
+**Scope extension (2026-10-04):** founder requests cache/cost efficiency, database pagination/index verification, practical keywords/backlinks and clearly separated report chapters. The [audited extension](seo-geo-report-expansion.md) is the detailed contract, including all twelve backlink tactics and the Distribb review. Preserve the original twenty IDs; add four suffix slices, R-S5a/R-S7a/R-S14a/R-S17a. There are now **24 planned slices, thirteen complete**; R-S5a, R-S7a and R-S14a are complete and R-S17a remains pending. Optional provider integrations and outreach are not activated by the plan.
 
 ## Working contract
 
@@ -150,11 +150,17 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] New report records distinguish observed facts, expected/actual result, hypotheses, recommendations, reproduction and acceptance test; missing expectations are unknown rather than invented.
-- [ ] Coverage/outcome/limitations come first; substantive claims reference permitted evidence. No minimum defect count or verbosity requirement.
-- [ ] Legacy JSON, export/fix-prompt/compare consumers and private/public access keep their intended behavior; unknown versions fail clearly.
+- [x] New report records distinguish observed facts, expected/actual result, hypotheses, recommendations, reproduction and acceptance test; missing expectations are unknown rather than invented.
+- [x] Coverage/outcome/limitations come first; substantive claims reference permitted evidence. No minimum defect count or verbosity requirement.
+- [x] Legacy JSON, export/fix-prompt/compare consumers and private/public access keep their intended behavior; unknown versions fail clearly.
 
 **Verification:** versioned serialization, legacy fixtures, false/unsupported evidence refs, clean mission and export compatibility; UI check for expanded detail and scope. **Dependency:** R-S1/R-S4. **Handoff:** version contract and consumer migration matrix; schema activation only if separately required and authorized.
+
+**Completion (2026-10-05):** [version contract and consumer matrix](report-v2-contract.md). New reports retain legacy fields and add code-built scope, outcome, limitations, checkpoint proof, detailed issues and a validated evidence index. Unknown expectations/hypotheses stay null; clean missions require no findings. Private/public/team web, CSV/PDF, full/chat fix prompts, MCP and rerun comparison preserve legacy behavior while rejecting unsupported versions.
+
+**Verification:** full offline API **915 passed, 19 existing PostgREST skipped**, one existing warning; final affected prompt/manual-only, privacy and clean regressions **78 passed**; API Ruff passed. Web **42 passed**, TypeScript/Vite build and zero-warning lint passed (existing bundle warnings remain). Isolated offline Edge **15/15 checks passed**, including keyboard detail, print restoration, mobile/desktop, owner/public, legacy/future and zero-issue cases; screenshots inspected. Graphify code-only consumer traversal informed the changes with no model enrichment.
+
+**Limits and next handoff:** R-S5a chapter navigation/section parity is next. Structured references do not establish semantic certainty, causation, backend persistence or live/deployed acceptance; R-S6 adds owner assertions. No dependency, paid call, migration, pricing or deployment. GitHub publication remains with the separately authorized agent.
 
 ## R-S5a: make the dossier readable by section
 
@@ -164,12 +170,20 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Coverage and three next actions lead; contents navigation, prominent numbered headings and plain-language summaries work on narrow screens and keyboard. Relevant empty/unavailable sections retain honest status.
-- [ ] Issues have one primary section, stable IDs and cross-links; facts, hypotheses and marketing opportunities remain distinguishable. AI citation evidence retains its independent sampling date/source.
-- [ ] Web, print/export, generated section prompts and bounded MCP retrieval agree on IDs, recommendations, evidence and limitations. Existing tools keep compatibility; section/cursor arguments are documented new APIs, not assumed existing ones.
-- [ ] Full details are inspectable, not forced into the first screen; private/shared/legacy access and redaction remain intact.
+- [x] Coverage and three next actions lead; contents navigation, prominent numbered headings and plain-language summaries work on narrow screens and keyboard. Relevant empty/unavailable sections retain honest status.
+- [x] Issues have one primary section, stable IDs and cross-links; facts, hypotheses and marketing opportunities remain distinguishable. AI citation evidence retains its independent sampling date/source.
+- [x] Web, print/export, generated section prompts and bounded MCP retrieval agree on IDs, recommendations, evidence and limitations. Existing tools keep compatibility; section/cursor arguments are documented new APIs, not assumed existing ones.
+- [x] Full details are inspectable, not forced into the first screen; private/shared/legacy access and redaction remain intact.
 
 **Verification:** clean/interrupted/legacy/long multi-section fixtures, keyboard and mobile/desktop review, printed evidence and prompt/MCP contract parity. No live inference needed. **Dependency:** R-S5. **Handoff:** inspected dossier, consumer compatibility matrix and pending independent citation embedding/connector inputs.
+
+**Completed 2026-10-06.** [Chapter contract](report-v2-contract.md#chapters-r-s5a). Ten fixed chapters are derived in code from saved findings (kind gives the one primary chapter; a small rule table adds shared-cause cross-links), so legacy and v2 reports both get chapters with no schema change, migration or model call. Statuses are `issues`, `clear`, `unconfirmed`, `not_measured`, `not_tested`, `separate` and `reference`; keyword, backlink and AI-citation chapters state that they were not measured in the report rather than showing a pass. Next actions are the three highest open findings (severity, chapter order, report order), excluding ignored findings. Python `report_chapters.py` and TypeScript `reportChapters.ts` are checked against one Python-generated fixture (`web/tests/fixtures/report-chapters.json`: v2 scan, long multi-chapter legacy journey, clean scan, interrupted journey).
+
+**Consumers:** the web report (private, public, team) leads with scope, Start here and Contents, then ten numbered chapters holding their issues with visible stable IDs, cross-links and the existing evidence/assessment disclosure; the timeline, first impression, GEO/agent readiness and audit coverage sit in their chapters. The duplicate technical-checks grid was removed (its states now appear per chapter). v2 CSV appends `chapter` and `also_affects`; v1 CSV keeps its six columns. `GET /runs/{id}/fix-prompt?section=` and MCP `get_fix_prompt(section=)` build the existing deterministic plan for one chapter (422 unknown key, 409 or tool error for a chapter with nothing to fix); paid owners get a per-chapter copy button. MCP `get_report` adds next actions and the chapter index; new optional `section` and `cursor` arguments read one chapter ten issues at a time, after the same owner check.
+
+**Verification:** full offline API **930 passed, 19 existing PostgREST skipped**, one existing Starlette/AnyIO warning, exit 0 in 462.40 seconds (process-only local `WEB_URL`, tracing and cacheprovider disabled, basetemp `evals/results/restructure-session-5a/api-full-20261006a`). After a final legacy-wording fix, the chapter/prompt/MCP/contract/ownership suites **98 passed**; whole API Ruff passed. Web **46 passed** (4 new parity/CSV/anchor tests), TypeScript/Vite build and zero-warning lint passed. Actual `ReportView` in isolated headless Edge (loopback only, external requests blocked): **42/42 checks**, no console errors or warnings, across the four shared cases plus owner/public, unknown-version, print expansion/restoration, print visibility, keyboard anchor navigation and 320/768/1024/1440 widths; screenshots inspected. Ignored artifacts: `evals/results/restructure-session-5a/`. Graphify code refresh/query informed consumer discovery (no LLM tokens).
+
+**Limits and next handoff:** legacy findings without rule IDs get no cross-links; the web ignore match omits the API's generated-rule fallback for such legacy rows. Keyword, backlink and AI-citation chapters are honest status shells until R-S17/R-S17a; citation history is linked for owners, not embedded. JSON account export is unchanged. Hosted, live-model and installed-extension acceptance remain later gates. **R-S6 is next**, one owner-defined read-only assertion. No dependency, paid call, migration, pricing or deployment; publication stays with the separate agent.
 
 ## R-S6: one meaningful assertion
 
@@ -179,11 +193,13 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] A declared record/filter/count assertion yields passed, failed, blocked or inconclusive with evidence and dataset/time/tolerance context.
-- [ ] Missing, stale or inaccessible expected data is inconclusive; visible UI assertions do not claim backend authorization or persistence.
-- [ ] Human-prepared auth and current side-effect boundaries are preserved; assertion failure does not imply that the controller failed to reach the state.
+- [x] A declared record/filter/count assertion yields passed, failed, blocked or inconclusive with evidence and dataset/time/tolerance context.
+- [x] Missing, stale or inaccessible expected data is inconclusive; visible UI assertions do not claim backend authorization or persistence.
+- [x] Human-prepared auth and current side-effect boundaries are preserved; assertion failure does not imply that the controller failed to reach the state.
 
 **Verification:** matching/mismatching/stale datasets and genuine blocked flow; no external live-data probe or broad backend credentials. **Dependency:** R-S4/R-S5. **Handoff:** the golden mission and exact assertion/fixture needed for comparison.
+
+**Completed 2026-10-06:** one optional verified-owner declaration in the extension, deterministic filter milestone and count evaluation over executed public snapshots, checkpoint/report-job retention and additive report v2 readers. Dataset identity/time/freshness, tolerance, reason and source-bound step evidence remain separate from UI milestone completion. Shared report/print/JSON, full/chat prompts and MCP expose the result; journey chapters name unresolved assertions. No connector or generic DSL. Final full offline API **975 passed/19 existing skips**, final affected **65 passed**, broader consumers **121 passed**, whole Ruff; web **51 passed/build/lint**; extension **160 passed/one opt-in skip**, TypeScript/build/lint; actual styled Edge **47/47**, no runtime exceptions. Compiled injection/scripted graph/report missions cover matching, mismatch, stale and recognizable CAPTCHA fixtures. The `./dev` plan-display failure was a stale port-5174 CORS origin; fixed child-process URLs and verified actual port-5173 browser access. [Exact golden mission, expected definition, evidence and limits](filter-count-assertion.md). Native installed-extension, signed-in account, deployed/live-model and targeted assertion comparison acceptance remain later gates. **R-S7 is next.** No dependency, migration, pricing, paid call, deployment, commit or push; existing R-S18 work is preserved.
 
 ## R-S7: record model attempts and cost inputs
 
@@ -193,11 +209,13 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Input/output/cache/reasoning/image/tool charges are separately represented where supplied; missing usage stays unknown, not zero.
-- [ ] Durable operation IDs distinguish attempts/retries/stages and keep credentials, private payloads and unrestricted model text out of cost logs.
-- [ ] Price versions and currency/micro-unit arithmetic produce auditable estimates without charging customers or changing routing.
+- [x] Input/output/cache/reasoning/image/tool charges are separately represented where supplied; missing usage stays unknown, not zero.
+- [x] Durable operation IDs distinguish attempts/retries/stages and keep credentials, private payloads and unrestricted model text out of cost logs.
+- [x] Price versions and currency/micro-unit arithmetic produce auditable estimates without charging customers or changing routing.
 
 **Verification:** fake provider responses with cached/thinking/missing usage, timeout and repeated acknowledgements; migration/RLS checks if storage changes are approved. **Dependency:** existing runtime/job contracts. **Handoff:** usage contract, price source date, unknown-usage policy and measured versus assumed cost fields.
+
+**Completed locally 2026-10-06:** bounded provider receipts retain supplied cache/reasoning/modality/tool usage and failed-response usage, with operation/stage/attempt IDs, real integer job IDs, leases, request replay and parallel-worker correlation. Existing runtime, Jev, citation and Scout calls are instrumented. Native SDK receipts take precedence over missing-as-zero normalization. Versioned integer Groq token-list estimates are partial; actual costs and unsupported tariffs remain unknown. Proposed numbered migration 0004 is service-only, immutable/idempotent and tested on disposable PostgreSQL, including concurrency, process exit, lost acknowledgements, privacy/RLS and rollback. **Recording defaults off; no configured migration or flag activation.** Final full API **1,022 passed/19 existing skips**, fresh final consumers **108 passed**, whole Ruff/diff checks green. [Usage contract, sources, activation gate and remaining limits](provider-usage.md). No dependency, live provider call, customer charge, routing/price change, deployment, commit or push. **R-S7a is next.**
 
 ## R-S7a: reuse safely and prove the savings
 
@@ -207,12 +225,18 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Distinguish saved-report reads, exact request replay, eligible result reuse, deterministic artifact reuse and provider prefix hits. Keys include permitted scope/privacy, evidence hash and scanner/prompt/report/model versions; timestamps and cached/fresh labels are visible.
-- [ ] Expiry, version change, revocation/deletion and simultaneous misses cannot leak private data or double-dispatch equivalent eligible work. No raw credentials or typed values in keys. Fresh fix checks bypass stale evidence; changed DOM/account/state cannot reuse a browser action.
-- [ ] Supported provider cache usage is recorded with input/output/reasoning/write/storage fields as applicable; unknown values stay unknown and fallback costs count. Implicit provider hits may occur without explicit configuration; absent code does not prove zero hits.
-- [ ] Owned/offline measurements report hit rate, p50/p95 and avoided work. Paid economics remain estimates until separately authorized observations; no guaranteed savings percentage.
+- [x] Distinguish saved-report reads, exact request replay, eligible result reuse, deterministic artifact reuse and provider prefix hits. Keys include permitted scope/privacy, evidence hash and scanner/prompt/report/model versions; timestamps and cached/fresh labels are visible.
+- [x] Expiry, version change, revocation/deletion and simultaneous misses cannot leak private data or double-dispatch equivalent eligible work. No raw credentials or typed values in keys. Fresh fix checks bypass stale evidence; changed DOM/account/state cannot reuse a browser action.
+- [x] Supported provider cache usage is recorded with input/output/reasoning/write/storage fields as applicable; unknown values stay unknown and fallback costs count. Implicit provider hits may occur without explicit configuration; absent code does not prove zero hits.
+- [x] Owned/offline measurements report hit rate, p50/p95 and avoided work. Paid economics remain estimates until separately authorized observations; no guaranteed savings percentage.
 
 **Verification:** cached versus fresh public scan, private/public separation, revocation, concurrent misses, version/TTL changes, worker loss and mocked provider hit/miss/unknown usage. **Dependency:** R-S7; R-S9 for expensive new dispatch. **Handoff:** eligibility matrix, measured savings and provider support gaps.
+
+**Completed 2026-10-06.** [Reuse contract and measurements](scan-reuse.md). The existing ten-minute anonymous public Instant Scan reuse was audited and kept as the only eligible result reuse; owner/MCP/watch/comparison/journey/browser work always observes fresh. New scan reports carry `scan_version`, a hash of the scanner/report/contract/schema/scoring/comparison source and configured model lists; reuse requires an exact match, so deploys and model changes invalidate older scans and pre-versioning reports never match. `POST /scans` returns a `reuse` label (`fresh`/`reused`/`coalesced`, source run, observed time, age, reuse expiry, version) and accepts `fresh: true`, which bypasses reuse but pays the address, daily-capacity and per-host limits. The public report shows a reuse note with **Scan again now**. Simultaneous misses start one scan: striped in-process locks plus an atomic shared claim on the existing fixed-window counter keyed by hashed version/URL/newest scan row, so a finished scan frees the next claim at once; losers wait up to 30 s for the winner's report, else 503 with Retry-After rather than a second scan. Keys are hashes only. Provider cache channels remain the R-S7 receipt fields (unknown stays null; fallback attempts are counted separately); no provider cache configuration was added. No migration, dependency, model/provider call or pricing change.
+
+**Measured (offline, owned loopback fixtures, scripted model, in-memory storage):** 60 repeat visits over four URLs ran 4 scans (93.3% reuse, 112 model calls avoided; reused p50 5.6 ms vs fresh 2,894 ms); after a version change, 8 simultaneous visitors ran 1 scan; 3 fresh checks ran 3 scans. Excludes network, model and production database time; no savings percentage is claimed.
+
+**Verification and limits:** final full offline API **1,036 passed, 19 existing PostgREST skips**; reuse/cache suites 34 passed; web 51 passed, TypeScript/Vite build and lint; API Ruff; reuse note in isolated Edge 12/12. A scan that fails before saving a row holds its claim up to 60 s; when the counter database is unreachable cross-process coalescing is best effort (fails open). Deterministic artifact reuse and explicit provider cache configuration are not implemented. **R-S8 is next**, atomic reservation and settlement, which needs a reviewed storage contract before any migration activation.
 
 ## R-S8: reserve and settle money atomically
 
@@ -222,11 +246,17 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Concurrent admission atomically reserves the accepted maximum from available service balance/global funded budget and fails closed if authoritative storage is unavailable.
-- [ ] Settlement/release/replay is idempotent; crashed/uncertain attempts cannot be freed merely because a worker lease expired.
-- [ ] Reporting capacity is reserved, refunds/grants have explicit ownership, and money uses integer units plus versioned prices.
+- [x] Concurrent admission atomically reserves the accepted maximum from available service balance/global funded budget and fails closed if authoritative storage is unavailable.
+- [x] Settlement/release/replay is idempotent; crashed/uncertain attempts cannot be freed merely because a worker lease expired.
+- [x] Reporting capacity is reserved, refunds/grants have explicit ownership, and money uses integer units plus versioned prices.
 
 **Verification:** real isolated SQL races, insufficient balance, replay, crash after provider response and out-of-order reconciliation; no live checkout needed. **Dependency:** R-S7 and reviewed storage contract. **Handoff:** ledger authority, state machine, migration status and pending failure cases.
+
+**Completed locally 2026-10-06.** [Ledger contract](run-reservations.md). Proposed migration **0005_run_reservations.sql** (+ `.down.sql`) adds `run_reservations` and `spend_budgets` with RLS, service-only RPCs and a founder-only refund. One `reserve_run` transaction takes a per-user advisory lock and the funded budget rows, replays the same run key, fails closed when unfunded, counts credits in the exact pass window and adds the run's maximum micro-USD cost to daily/monthly liability before inserting. Provider work is marked dispatched before the first model call; dispatched reservations can only be settled (no lease or timer release); settlements record `credit` separately from cost, so refused goals and post-dispatch start failures return the credit while their cost stays counted, and unknown actual cost keeps the reserved maximum. `RESERVATIONS=off` by default; `postgres` wires reserve/dispatch/release/settle into run start and the report job, failing closed (402/409/503) before any model call. Caps are versioned (`run-caps-2026-10-06`) and default to 0 pending founder approval.
+
+**Verification:** disposable PostgreSQL 13 passed (20-way credit race admits 3, 10-way budget race admits 3, unfunded, 8-way replay, release-after-dispatch refusal, idempotent/conflicting settlement, refused-goal credit, crash after dispatch in an exited process, out-of-order marks, founder refunds, role denial, rollback/reapply); wiring 14 passed; R-S7 rollback test made order-aware; final full offline API **1,063 passed, 19 existing PostgREST skips**.
+
+**Limits and next handoff:** migration and flag not activated; pre-activation runs are not in the ledger (activate at a window boundary); budget locks serialize admission platform-wide; actual costs settle as unknown until receipt/statement reconciliation; only journey runs reserve. **R-S9 is next**: the same admission for scans, MCP, Scout, watch and citations before any paid route.
 
 ## R-S9: admission applies everywhere
 
@@ -236,12 +266,18 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Every model/data/media entry point authorizes owner/workspace/key scope and reserves before dispatch; no alternate free pool or client-selected wallet/price.
-- [ ] Admission counts and balances are authoritative under concurrency and cannot undercount through API row limits; use R-S14a query/count findings before activation.
-- [ ] Scheduled work has an accepted cap; quotas/concurrency and stopped-job policies compose with financial reservations.
-- [ ] Existing request replay cannot debit or execute twice; sending a stored template/report does not unnecessarily regenerate it.
+- [x] Every model/data/media entry point authorizes owner/workspace/key scope and reserves before dispatch; no alternate free pool or client-selected wallet/price.
+- [x] Admission counts and balances are authoritative under concurrency and cannot undercount through API row limits; use R-S14a query/count findings before activation.
+- [x] Scheduled work has an accepted cap; quotas/concurrency and stopped-job policies compose with financial reservations. (`WATCH_CHECKS_PER_DAY` default 20 is a proposal pending founder approval.)
+- [x] Existing request replay cannot debit or execute twice; sending a stored template/report does not unnecessarily regenerate it.
 
 **Verification:** explicit entry-point coverage matrix, unauthorized/cross-workspace keys, queued/watch/citation races and insufficient funds. **Dependency:** R-S8. **Handoff:** inventory of covered operations and disabled/uncovered routes; customer paid adoption stays off until the inventory is complete.
+
+**Completed locally 2026-10-07.** [Inventory and contract](work-admission.md). Proposed migration **0006_work_admission.sql** (+ `.down.sql`) adds `operation` and multi-unit reservations to the R-S8 ledger and one service-only `reserve_work`; `reserve_run` becomes its `run` operation with the R-S8 replay answer. Anonymous Instant Scans (one platform-wide daily pool), MCP scans/reruns/finding checks, comparisons (units = sites), watch checks (weekly, manual, deploy hook), AI answer batches (units = answers) and Scout (owner = workspace) reserve before dispatch; each operation has its own allowance per owner and UTC day, all share the funded budget. `reservations.work()` releases undispatched work, settles finished work with its credit and failed work without it. Reused scans and stored-report sends reserve nothing; a settled replay is refused (409), never executed twice. `RESERVATIONS=off` keeps every existing check unchanged.
+
+**Verification:** disposable PostgreSQL 10 new (16-way public scan race admits 4, 4-way multi-unit comparison race admits 3, per-operation allowance with one shared budget, run credits unaffected by same-window scans, released re-admission, settled replay, roles, rollback/reapply) plus R-S8 13 and R-S7 7; offline wiring 21 (also with the database address unreachable). Full results in CURRENT_STATE.md.
+
+**Limits and next handoff:** migration/flag/caps not activated; a comparison retried after its final save failed re-runs its parts under one reservation; a refused Instant Scan holds its page's coalescing claim up to 60 s; per-owner and budget locks serialize admission. **R-S10 is next**: quote, cap and settlement UI.
 
 ## R-S10: customers see scope and the hard cap
 
@@ -374,12 +410,16 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 - [ ] Suggested topic/keyword intent maps to actual pages and business brief; measured query demand is distinguished from hypotheses and no invented volume/difficulty appears.
 - [ ] Keyword direction includes target page, primary/supporting intent, quoted copy, proposed title/description/outline, named internal links and success measurement. Label sparse prelaunch, owner-query and approved external-research modes.
 - [ ] CTR/content trends, near-page-one opportunities, brand/nonbrand and cannibalization use consistent sourced windows and explicit incompleteness. Search Console is not arbitrary competitor keyword/backlink data.
-- [ ] Rewrites quote the source text; briefs do not invent product claims or citations. Technical accessibility, content advice and sampled answer visibility remain separate.
-- [ ] Next action and retest/measurement window are explicit; no rank/traffic/citation guarantee or paid keyword integration without a separate budget decision.
-- [ ] Recalibrate strict 60/160-character and exactly-one-H1 heuristics against current primary guidance; advisory presentation checks are not proven ranking failures. Update conflicting fix recipes as well as findings.
-- [ ] Deterministic scanning/aggregation comes first. Jev may be benchmarked as a narrow confidence-gated fallback for ambiguous bounded intent/opportunity classification, not a crawler or universal abstraction. Measure fallback rate, correctness, full cost and end-to-end p50/p95 against the simpler route before adoption.
+- [x] Rewrites quote the source text; briefs do not invent product claims or citations. Technical accessibility, content advice and sampled answer visibility remain separate.
+- [x] Next action and retest/measurement window are explicit; no rank/traffic/citation guarantee or paid keyword integration without a separate budget decision.
+- [x] Recalibrate strict 60/160-character and exactly-one-H1 heuristics against current primary guidance; advisory presentation checks are not proven ranking failures. Update conflicting fix recipes as well as findings.
+- [x] Deterministic scanning/aggregation comes first. Jev may be benchmarked as a narrow confidence-gated fallback for ambiguous bounded intent/opportunity classification, not a crawler or universal abstraction. Measure fallback rate, correctness, full cost and end-to-end p50/p95 against the simpler route before adoption.
 
 **Verification:** search-data and no-data fixture modes, contradictory business claims, partial query windows, dated answer provenance. **Dependency:** R-S16 for measured mode; advisory mode explicitly states missing demand data. **Handoff:** example opportunity map and optional research inputs still unbuilt.
+
+**Advisory mode completed locally 2026-10-07 (measured mode pending R-S16).** [Contract](keyword-opportunities.md). A deterministic page/intent map is built from the audited public pages during the existing crawl (`scans/opportunities.py`), stored as `report.opportunities`, never as findings or score: quoted intent hypotheses (h1 else title), supporting h2s, current copy, proposals that only rearrange the page's own words, gaps, inbound and suggested internal links, overlaps, next action, effort and a Search Console measurement plan; noindex pages excluded; no volume/difficulty/rank/traffic fields. The Keywords chapter shows "Advisory, no search data" with the map (web, print, Contents), `section=keywords` prompts are content briefs separate from repairs, and MCP returns the same text. Title/description length and h1-count checks are recalibrated against current Google guidance (no length limit, truncation only; no ideal heading count) as advisory with severities lowered where unsupported, a `seo_guidance` registry (status, source, reviewed 2026-10-06), guidance lines in prompts and corrected recipes; finding titles and rule IDs are unchanged so ignores persist.
+
+**Verification:** R-S17 tests 10 passed; shared chapter fixture regenerated with a `keyword-advisory` case (web 51 passed); Keywords chapter in isolated Edge 9/9. **Pending in this slice:** owner business brief, owner-query and approved-research modes, Search Console trends/CTR/near-page-one/brand/cannibalization (needs R-S16 after R-S9), and an optional Jev benchmark (not adopted). The first two acceptance boxes and the search-data box stay open.
 
 ## R-S17a: useful authority and citation recommendations
 
@@ -405,11 +445,17 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Relevant PSI/Lighthouse audits/attribution are retained with bounds, URL, device, timing and measurement source; unavailable metrics remain unavailable.
-- [ ] Single-browser observations, lab runs and population field p75 values are never conflated; missing field data cannot be presented as healthy.
-- [ ] Proposed fixes reference the measured opportunity/resource; estimated opportunity savings are labelled estimates, not real conversion gains.
+- [x] Relevant PSI/Lighthouse audits/attribution are retained with bounds, URL, device, timing and measurement source; unavailable metrics remain unavailable.
+- [x] Single-browser observations, lab runs and population field p75 values are never conflated; missing field data cannot be presented as healthy.
+- [x] Proposed fixes reference the measured opportunity/resource; estimated opportunity savings are labelled estimates, not real conversion gains.
 
 **Verification:** lab-only/field/unavailable/partial audit fixtures and current documented response signatures. **Dependency:** R-S5 and existing metrics. **Handoff:** attribution contract and any separate CrUX/connectivity prerequisite.
+
+**Completion (2026-10-06):** [performance attribution contract](performance-attribution.md). Additive bounded mobile PSI evidence retains relevant Lighthouse audit/resource/element locators, reported measurement conditions, separate lab and CrUX p75 coverage, errors and estimated savings. Shared private/public/team/PDF report readers expose that evidence; single-browser diagnostics have explicit provenance; full/chat prompts preserve the measured target and bypass unrelated generic image snippets. Legacy summaries remain readable. No new provider request, model call, dependency or migration.
+
+**Verification:** final current affected API **112 passed**, dedicated attribution **18 passed**, whole API Ruff; web **51 passed**, TypeScript/Vite build and zero-warning lint; isolated externally blocked Edge **84/84**, zero console warnings/errors, mobile/desktop screenshots inspected. Two broad runs had **963/972 passed and 19 existing skips**, each with one concurrent R-S6 chapter-fixture snapshot mismatch. Fresh current chapter/report/export/MCP consumers pass; the broad runs are not claimed fully green. A stable combined release run remains R-S20. Exact logs, capture bounds and limitations are in the contract; ignored artifacts are `evals/results/restructure-session-18/`.
+
+**Handoff:** R-S18 is complete independently of the reserved R-S6 work. R-S7 remains the next independent provider-usage slice. Live PSI/CrUX availability, installed-extension and deployed acceptance are unverified. Graphify code-only refresh/query and source review informed consumer discovery, with no LLM graph enrichment.
 
 ## R-S19: visual evidence that remains truthful
 

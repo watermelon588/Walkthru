@@ -9,7 +9,7 @@ from collections.abc import Callable
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from app import db
+from app import db, provider_usage
 
 UNKNOWN = "We could not confirm this request's result. Check the run in your dashboard before starting another test."
 SAFE_HEADERS = {"x-walkthru-code", "retry-after"}
@@ -18,7 +18,9 @@ SAFE_HEADERS = {"x-walkthru-code", "retry-after"}
 def run(request: Request, user_id: str, operation: str, body: dict, perform: Callable[[str], dict], run_id: str | None = None):
     raw_key = request.headers.get("Idempotency-Key")
     if raw_key is None:  # Older clients retain their contract, without automatic retry guarantees.
-        return perform(run_id or uuid.uuid4().hex)
+        resource = run_id or uuid.uuid4().hex
+        with provider_usage.scope(run_id=resource, user_id=user_id):
+            return perform(resource)
     try:
         key = str(uuid.UUID(raw_key))
         resource = str(uuid.UUID(run_id)) if run_id else str(uuid.uuid4())
@@ -43,7 +45,8 @@ def run(request: Request, user_id: str, operation: str, body: dict, perform: Cal
         raise db.DatabaseUnavailable("Unexpected run request claim state")
     try:
         try:
-            result, status, headers = perform(uuid.UUID(claim["run_id"]).hex), 200, {}
+            with provider_usage.scope(operation_id=key, user_id=user_id, run_id=claim["run_id"]):
+                result, status, headers = perform(uuid.UUID(claim["run_id"]).hex), 200, {}
         except HTTPException as error:
             if error.status_code >= 500:
                 raise

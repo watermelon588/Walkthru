@@ -96,11 +96,15 @@ def attach(row: dict, report: dict) -> dict | None:
     """The comparison for a finished paid run, or None (free plan, first run of this goal, or no user)."""
     if row.get("tier") != "paid" or not row.get("user_id"):
         return None
+    from app.agent.report_contract import ensure_supported
+
+    ensure_supported(report)
     user_id, site = str(row["user_id"]), origin(row["site"])
     previous = next((r for r in db.recent_reports(user_id, row["id"])
                      if origin(r["site"]) == site and _goal(r["goal"]) == _goal(row["goal"])), None)
     if previous is None:
         return None
+    ensure_supported(previous["report"])
     try:
         ignored = db.ignored_fingerprints(user_id, site)
     except (httpx.HTTPError, db.DatabaseUnavailable):  # still useful without them (e.g. before the table is applied)

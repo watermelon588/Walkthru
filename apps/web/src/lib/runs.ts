@@ -1,4 +1,4 @@
-import { toCsv } from './export'
+import { assertSupportedReport, reportCsv, type ReportAssessment } from './reportContract'
 import { supabase } from './supabase'
 import { apiError } from './apiError'
 import { confirmedAccessRequest } from './accessRequest'
@@ -80,6 +80,8 @@ export type Compared = {
 }
 
 export type Report = {
+  version?: 1 | 2
+  assessment?: ReportAssessment | null
   summary: string
   first_impression: { what: string; who: string; first_click: string; trust: string[]; clarity: number } | null
   findings: Finding[]
@@ -113,7 +115,7 @@ export type Report = {
     truncated: boolean
     urls: string[]
     robots_respected: boolean
-    mobile_vitals?: { url: string; status: 'field_data' | 'lab_only' | 'unavailable'; lab_score: number | null; lcp_ms: number | null; cls: number | null; inp_ms: number | null }[]
+    mobile_vitals?: import('./performance').PerformanceMeasurement[]
   } | null
   /** Launch Ready score (app/agent/score.py). null areas were not measured. Absent on reports before 2026-09-24. */
   /** Only on competitor comparisons (kind 'compare'): one entry per site, yours first. */
@@ -125,6 +127,26 @@ export type Report = {
   /** Detected hosting, framework and backend (P1.3). */
   stack?: { hosting: string | null; framework: string | null; backend: string | null; evidence: Record<string, string> } | null
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
+  /** Advisory keyword/content map built from the site's own pages (apps/api/app/scans/opportunities.py). No search data. */
+  opportunities?: KeywordMap | null
+  /** Code and model version of a server scan (apps/api/app/scan_reuse.py). */
+  scan_version?: string | null
+}
+
+export type KeywordOpportunity = {
+  url: string
+  primary_intent: { text: string; source: 'h1' | 'title' } | null
+  supporting: { text: string; source: 'h2' }[]
+  current: { title: string | null; description: string | null; h1: string[] }
+  proposed: { title: string | null; description: string | null; outline: string[]; basis: string }
+  gaps: string[]
+  internal_links: { inbound_from: string[]; suggested_from: string[] }
+  next_action: string
+  effort: 'low' | 'medium'
+}
+export type KeywordMap = {
+  mode: 'prelaunch_advisory'; demand_data: 'none'; basis: string; measurement: string; pages_considered: number
+  excluded_noindex: string[]; pages: KeywordOpportunity[]; overlaps: { intent: string; pages: string[]; note: string }[]
 }
 
 export type Run = {
@@ -205,7 +227,9 @@ export async function getRun(id: string): Promise<Run | null> {
   if (!supabase) throw new Error('Supabase is not configured')
   const { data, error } = await supabase.from('runs').select(COLUMNS).eq('id', id).maybeSingle()
   if (error) throw error
-  return data as Run | null
+  const run = data as Run | null
+  assertSupportedReport(run?.report)
+  return run
 }
 
 export async function evidenceUrls(paths: string[]): Promise<Record<string, string>> {
@@ -235,7 +259,10 @@ export async function api<T>(path: string, body?: unknown, auth = true, method: 
   return res.json()
 }
 
-export const instantScan = (site: string, email?: string) => api<{ run_id: string; url: string; report: Report }>('/scans', { site, email: email || null }, false)
+/** How an Instant Scan answer was produced (apps/api/app/scan_reuse.py): a new scan, a saved one reused, or another request's scan awaited. */
+export type ScanReuse = { status: 'fresh' | 'reused' | 'coalesced'; source_run_id: string; observed_at: string; age_seconds: number; reused_until: string; scan_version: string }
+export const instantScan = (site: string, email?: string, fresh = false) =>
+  api<{ run_id: string; url: string; report: Report; reuse: ScanReuse }>('/scans', { site, email: email || null, fresh }, false)
 export const shareRun = (id: string) => api<{ url: string }>(`/runs/${id}/share`)
 export const emailRun = (id: string) => api<{ sent: boolean; to: string }>(`/runs/${id}/email`)
 export const deleteRun = (id: string) => api<{ deleted: string }>(`/runs/${id}`, undefined, true, 'DELETE')
@@ -310,11 +337,12 @@ export async function ignoredFindings(site: string): Promise<Record<string, stri
 export const ignoreFinding = (runId: string, fp: string, reason: string) => api<{ ignored: string }>(`/runs/${runId}/findings/ignore`, { fingerprint: fp, reason })
 export const unignoreFinding = (runId: string, fp: string) =>
   api<{ cleared: string }>(`/runs/${runId}/findings/ignore?fingerprint=${encodeURIComponent(fp)}`, undefined, true, 'DELETE')
-/** The agent fix prompt as Markdown (paid plans; 402 on free). */
-export async function getFixPrompt(runId: string, style: 'full' | 'chat'): Promise<string> {
+/** The agent fix prompt as Markdown (paid plans; 402 on free). `section`: one report chapter's findings only. */
+export async function getFixPrompt(runId: string, style: 'full' | 'chat', section?: string): Promise<string> {
   const token = (await supabase?.auth.getSession())?.data.session?.access_token
   if (!token) throw new Error('Sign in first')
-  const res = await fetch(`${API}/runs/${runId}/fix-prompt?style=${style}`, { headers: { Authorization: `Bearer ${token}` } })
+  const query = new URLSearchParams({ style, ...(section ? { section } : {}) })
+  const res = await fetch(`${API}/runs/${runId}/fix-prompt?${query}`, { headers: { Authorization: `Bearer ${token}` } })
   if (!res.ok) throw new Error(await apiError(res))
   return res.text()
 }
@@ -350,7 +378,7 @@ export const deleteAccount = (confirm: string) => api<{ deleted: boolean }>('/ac
 export const stopRun = (id: string, requestKey = crypto.randomUUID()) => api<{ run_id: string; status: 'stopped'; steps: Step[]; report_status: 'generating' | 'ready' }>(`/runs/${id}/stop`, undefined, true, 'POST', requestKey)
 
 export function findingsCsv(run: Run): string {
-  return toCsv([['kind', 'severity', 'title', 'detail', 'fix', 'evidence'], ...(run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence])])
+  return reportCsv(run)
 }
 
 export function timeAgo(iso: string): string {

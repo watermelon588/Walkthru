@@ -17,7 +17,7 @@ import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app import db
+from app import db, provider_usage
 
 log = logging.getLogger("walkthru.jobs")
 LEASE_S = 15 * 60  # longer than the slowest job, a comparison of four sites
@@ -51,9 +51,13 @@ def handle(kind: str, p: dict) -> None:
     if kind == "finish_run":
         if not _reported(p["run_id"]):  # an earlier attempt already wrote it
             main.finish_run(p["run_id"], p["values"])
+        if _reported(p["run_id"]):  # R-S8: settle on every attempt; identical outcomes are idempotent
+            from app import reservations
+
+            reservations.settle((db.get_run(p["run_id"]) or {}).get("user_id"), p["run_id"], "completed")  # credit used
     elif kind == "compare":
         if not _reported(p["run_id"]):
-            main._compare(p["run_id"], p["user_id"], p["urls"])
+            main._compare(p["run_id"], p["user_id"], p["urls"], p.get("reservation"))
     elif kind == "watch_check":
         watch.check(p["site"], p["reason"])
     elif kind == "watch_site":
@@ -82,7 +86,11 @@ def run_one() -> bool:
         return False
     values: dict = {"status": "done", "locked_until": None, "last_error": None}
     try:
-        handle(job["kind"], job["payload"])
+        payload = job["payload"]
+        operation_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"walkthru:job:{job['id']}"))
+        with provider_usage.scope(operation_id=operation_id, job_id=job["id"], job_attempt=job["attempts"], job_lease_id=job["lease"],
+                                  run_id=payload.get("run_id"), user_id=payload.get("user_id") or payload.get("asker_id")):
+            handle(job["kind"], payload)
     except Exception as e:  # any failure is retried or recorded, never lost
         last = job["attempts"] >= job["max_attempts"]
         log.warning("job %s (%s) failed on attempt %s%s", job["id"], job["kind"], job["attempts"], "" if last else ", will retry", exc_info=True)

@@ -1,7 +1,8 @@
 """Process-wide models, checkpointer and compiled graph. Env-driven, no config classes.
 
 `call(schema, messages)` is the one door to the LLM for everything except the persona loop:
-it returns the parsed object plus the tokens used, so every run can log its cost.
+it returns the parsed object plus legacy tokens. Separate provider receipts retain
+attempt/stage usage and price inputs when PROVIDER_USAGE=postgres is activated.
 """
 
 import atexit
@@ -16,7 +17,7 @@ from dotenv import load_dotenv
 from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel
 
-from app import providers
+from app import provider_usage, providers
 from app.agent.persona import build_graph
 from app.agent.schema import PersonaStep
 from app.agent.typesafe import DEFAULT_MODEL as DEFAULT_JEV_MODEL
@@ -76,10 +77,11 @@ def openrouter(schema: type[BaseModel], model: str, timeout: float = 90):
         r = httpx.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body, timeout=httpx.Timeout(timeout, connect=5.0))
         r.raise_for_status()
         data = r.json()
+        provider_usage.capture(data.get("usage"), "openrouter", data.get("id"))
         if not data.get("choices"):  # free providers sometimes answer 200 with only an error body
             raise RuntimeError(f"OpenRouter {model}: {str(data.get('error'))[:200]}")
         args = data["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
-        raw = SimpleNamespace(usage_metadata={"total_tokens": (data.get("usage") or {}).get("total_tokens", 0)})
+        raw = SimpleNamespace(usage_metadata={"total_tokens": (data.get("usage") or {}).get("total_tokens")})
         return {"raw": raw, "parsed": schema.model_validate_json(args), "parsing_error": None}
 
     return RunnableLambda(run, name=f"openrouter:{model}")
@@ -122,6 +124,7 @@ def claude(schema: type[BaseModel], timeout: float = 30):
                 chat.append({"role": role, "content": text})
         msg = client.messages.create(model=CLAUDE_MODEL, max_tokens=2048, temperature=0, system=system, messages=chat,
                                      tools=[tool], tool_choice={"type": "tool", "name": "answer"})
+        provider_usage.capture(msg.usage.model_dump(), "anthropic", msg.id)
         block = next(b for b in msg.content if b.type == "tool_use")
         raw = SimpleNamespace(usage_metadata={"total_tokens": msg.usage.input_tokens + msg.usage.output_tokens})
         return {"raw": raw, "parsed": schema.model_validate(block.input), "parsing_error": None}
@@ -129,13 +132,14 @@ def claude(schema: type[BaseModel], timeout: float = 30):
     return RunnableLambda(run, name=f"claude:{CLAUDE_MODEL}")
 
 
-def guarded(provider: str, model):
+def guarded(provider: str, model, *, model_name: str = "unknown"):
     """Keep LangChain's fallback/config propagation while sharing health across models and schemas."""
     from langchain_core.runnables import RunnableConfig, RunnableLambda
 
     def run(messages, config: RunnableConfig):
-        with providers.guard(provider):
+        with provider_usage.attempt(provider, model_name), providers.guard(provider):
             result = model.invoke(messages, config=config)
+            provider_usage.capture_raw(result.get("raw") if isinstance(result, dict) else result)
             unwrap(result)  # include_raw may return a parsing error instead of raising; allow fallback in that case.
             return result
 
@@ -158,12 +162,12 @@ def free_pool(schema: type[BaseModel], writer: bool = False, paid: bool = False)
     for name in GROQ_MODELS:
         gpt_oss = name.startswith("openai/gpt-oss")
         llm = ChatGroq(model=name, temperature=0, max_tokens=2048, timeout=8, max_retries=0, **({"reasoning_effort": "low"} if gpt_oss else {}))
-        groq.append(guarded("groq", llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {}))))
-    gemini = [guarded("gemini", ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0).with_structured_output(schema, include_raw=True)) for name in GEMINI_MODELS]
-    slow = [guarded("openrouter", openrouter(schema, name)) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
+        groq.append(guarded("groq", llm.with_structured_output(schema, include_raw=True, **({"method": "json_schema", "strict": True} if gpt_oss else {})), model_name=name))
+    gemini = [guarded("gemini", provider_usage.observe_gemini(ChatGoogleGenerativeAI(model=name, temperature=0, timeout=20, max_retries=0)).with_structured_output(schema, include_raw=True), model_name=name) for name in GEMINI_MODELS]
+    slow = [guarded("openrouter", openrouter(schema, name), model_name=name) for name in OPENROUTER_MODELS] if writer and os.environ.get("OPENROUTER_API_KEY") else []
     chain = groq[:1] + slow + groq[1:] + gemini
     if paid and claude_enabled():
-        chain = [guarded("claude_vertex", claude(schema))] + chain  # Pro and Plus: Claude first, the free chain behind it
+        chain = [guarded("claude_vertex", claude(schema), model_name=CLAUDE_MODEL)] + chain  # Pro and Plus: Claude first, the free chain behind it
     return chain[0].with_fallbacks(chain[1:])
 
 
@@ -189,7 +193,7 @@ def _llm_model(tier: str):
         from langchain_anthropic import ChatAnthropic
 
         model = ChatAnthropic(model=PAID_MODEL, max_tokens=1024, temperature=0, timeout=30, max_retries=0).with_structured_output(PersonaStep, include_raw=True)
-        return guarded("anthropic", model).with_fallbacks([free_pool(PersonaStep)])
+        return guarded("anthropic", model, model_name=PAID_MODEL).with_fallbacks([free_pool(PersonaStep)])
     return free_pool(PersonaStep)  # ponytail: paid tier rides the free pool until an Anthropic key exists
 
 
@@ -215,7 +219,9 @@ def structured(schema: type[BaseModel], fast: bool = False, paid: bool = False):
 def call(schema: type[BaseModel], messages: list, fast: bool = False, paid: bool = False) -> tuple[Any, int]:
     """One LLM call returning (parsed schema instance, tokens used). fast=True skips the slow report writer
     (used before a run starts, where the owner is waiting). paid=True puts Claude first when it is configured."""
-    return unwrap(structured(schema, fast, paid).invoke(messages))
+    name = {"GoalPlan": "goal_plan", "FirstImpression": "first_impression", "Synthesis": "synthesis"}.get(schema.__name__, "other")
+    with provider_usage.stage(name):
+        return unwrap(structured(schema, fast, paid).invoke(messages))
 
 
 def make_checkpointer():
@@ -311,7 +317,8 @@ def graph(tier: str):
 
 def invoke(tier: str, value: Any, config: dict) -> dict:
     """Never replay a mutating graph invocation after losing its database acknowledgement."""
-    return graph(tier).invoke(value, config)
+    with provider_usage.scope(run_id=config.get("configurable", {}).get("thread_id")):
+        return graph(tier).invoke(value, config)
 
 
 def get_state(tier: str, config: dict):

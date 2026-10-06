@@ -188,8 +188,8 @@ export function ScanForm() {
     try {
       // Loaded on submit so the landing page does not ship the Supabase client.
       const { instantScan } = await import('../lib/runs')
-      const { run_id } = await instantScan(site)
-      navigate(`/r/${run_id}`)
+      const { run_id, reuse } = await instantScan(site)
+      navigate(`/r/${run_id}`, { state: { reuse } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'The scan failed. Try again in a minute.')
       setBusy(false)

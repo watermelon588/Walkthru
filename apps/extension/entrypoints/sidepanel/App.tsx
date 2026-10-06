@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { getPlan, getSession, getTestUsers, WEB_URL, type GoalPlan, type PlanSummary, type TestUser } from "../../lib/api";
+import { getPlan, getSession, getTestUsers, WEB_URL, type FilterCountAssertion, type GoalPlan, type PlanSummary, type TestUser } from "../../lib/api";
+import { CountAssertionFields } from "./CountAssertionFields";
 import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
 import { suggestGoals } from "../../lib/goals";
@@ -38,6 +39,8 @@ export function App() {
   const [results, setResults] = useState<Result[]>([]);
   const [current, setCurrent] = useState<{ index: number; total: number; label: string } | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [checkCount, setCheckCount] = useState(false);
+  const [assertion, setAssertion] = useState<FilterCountAssertion>({ path: "/dashboard.html", filter_value: "Active", count_label: "Filtered records", expected_count: null, dataset_id: null, dataset_at: null, max_age_seconds: 3600, tolerance: 0 });
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<PlanSummary | null>(null);
@@ -64,6 +67,7 @@ export function App() {
           abort.current?.abort();
           setProgress({ phase: "error", steps: [], message: SESSION_CHANGED });
           setLoggedIn(false);
+          setCheckCount(false);
           setResults([]); setUnderstood(null); setCurrent(null); setPlan(null); setCustom([]);
         }
         connection.current = next;
@@ -161,7 +165,7 @@ export function App() {
         setCurrent({ index, total: people.length, label: labelOf(who) });
         if (index > 0) await openStart(startUrl, signal, pinned);
         let last: Progress = { phase: "idle", steps: [] };
-        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal, connection: pinned };
+        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal, connection: pinned, ...(checkCount ? { assertion: structuredClone(assertion) } : {}) };
         await runTest(opts, (p) => {
           last = p;
           if (connection.current !== pinned) return;
@@ -258,6 +262,7 @@ export function App() {
             {plan.runs_left} of {plan.runs_allowed} test runs left {plan.plan === "free" ? "this month" : "in your pass"}, up to {plan.max_steps} steps each.
           </p>
         )}
+        <CountAssertionFields enabled={checkCount} onEnable={setCheckCount} value={assertion} onChange={setAssertion} disabled={running} />
         <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">
           <button type="submit" className="primary" disabled={!canStart}>{running ? "Testing…" : people.length > 1 ? `Start ${people.length} tests` : "Start test"}</button>

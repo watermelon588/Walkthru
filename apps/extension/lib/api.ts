@@ -50,6 +50,13 @@ export type StartBody = {
   logged_in: boolean;
   max_steps: number;
   observation: Observation;
+  assertion?: FilterCountAssertion;
+};
+
+/** One read-only check against an owner-supplied synthetic dataset. Missing expectations stay unknown. */
+export type FilterCountAssertion = {
+  path: string; filter_value: string; count_label: string; expected_count: number | null;
+  dataset_id: string | null; dataset_at: string | null; max_age_seconds: number; tolerance: number;
 };
 
 /** A Plus owner's own test user (`GET /me/test-users`). */

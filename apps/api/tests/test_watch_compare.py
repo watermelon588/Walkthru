@@ -57,7 +57,7 @@ def test_check_emails_only_when_something_changed(monkeypatch, fake_db):
     site = db.add_site(USER, "https://site.test/")
     results = iter([report("A"), report("A"), report("A", "B")])
 
-    def scan(url, *, user_id=None, kind="scan"):
+    def scan(url, *, user_id=None, kind="scan", **_):
         run_id = f"{len(fake_db):032d}"
         fake_db[run_id] = {"id": run_id, "report": next(results)}
         return run_id, {"site": url, "report": fake_db[run_id]["report"]}
@@ -116,14 +116,14 @@ def test_compare_is_paid_and_survives_an_unreachable_competitor(monkeypatch, pas
     monkeypatch.setattr(main.fetch, "assert_public", lambda url: None)
     monkeypatch.setattr(db, "user_scans_today", lambda uid: 0)
     started = []
-    monkeypatch.setattr(main, "_compare", lambda run_id, uid, urls: started.append(urls))
+    monkeypatch.setattr(main, "_compare", lambda run_id, uid, urls, *_: started.append(urls))
     assert c.post("/compare", json=body).status_code == 402  # free plan
     grant(passes, "pro")
     run_id = c.post("/compare", json=body).json()["run_id"]
     urls = ["https://mine.test", "https://rival.test", "https://gone.test"]
     assert fake_db[run_id]["kind"] == "compare" and started == [urls]
 
-    def scan(url, *, user_id=None, kind="scan"):
+    def scan(url, *, user_id=None, kind="scan", **_):
         assert kind == "compare_part" and user_id == USER  # private sub-scans, kept out of the runs list
         if "gone" in url:
             raise ValueError("That site did not respond. Check the address and try again.")

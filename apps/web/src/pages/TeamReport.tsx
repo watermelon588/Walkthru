@@ -8,10 +8,8 @@ import { Chat } from '../components/team/Chat'
 import { getRun, type Run } from '../lib/runs'
 import { getMembers, useTeamLive, type Members } from '../lib/teams'
 import { SkeletonReport } from '../components/Loading'
-import type { Cell } from '../lib/export'
+import { reportCsvRows } from '../lib/reportContract'
 import { ExportBar } from '../components/ExportBar'
-
-const findingsRows = (run: Run): Cell[][] => [['kind', 'severity', 'title', 'detail', 'fix', 'evidence'], ...(run.report?.findings ?? []).map((f) => [f.kind, f.severity, f.title, f.detail, f.fix, f.evidence])]
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run; team: Members } | { kind: 'missing' } | { kind: 'error'; message: string }
 
@@ -50,7 +48,7 @@ export default function TeamReport() {
         <div className="mt-6">
           <div className="no-print mb-8 flex flex-wrap items-center gap-2">
             <a href="#comments" className={btnGhost}><ChatCircleIcon weight="light" className="size-4" /> Comments</a>
-            <ExportBar filename={`walkthru-${state.run.id.slice(0, 8)}`} csv={() => findingsRows(state.run)} />
+            <ExportBar filename={`walkthru-${state.run.id.slice(0, 8)}`} csv={() => reportCsvRows(state.run)} />
           </div>
           <ReportView run={state.run} />
           <section id="comments" aria-labelledby="comments-heading" className="no-print mt-16 scroll-mt-24 border-t border-line pt-10">

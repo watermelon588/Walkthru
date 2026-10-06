@@ -15,7 +15,11 @@ from functools import lru_cache
 from urllib.parse import urlsplit
 
 from app.agent.compare import fingerprint, is_ignored, legacy_fingerprint
+from app.agent.report_chapters import TITLE as CHAPTER_TITLE
+from app.agent.report_chapters import chapter_of
+from app.agent.report_contract import ensure_supported, issue_for, issue_lines, scope_lines
 from app.agent.schema import finding_rule
+from app.scans import opportunities, seo_guidance
 from app.scans import stack as stacks
 
 BATCHES = (
@@ -40,6 +44,10 @@ RULES = [
 ]
 
 
+class EmptyChapter(ValueError):
+    """A chapter prompt was requested for a chapter with no open findings."""
+
+
 def _mask(text: str) -> str:
     return SECRET.sub(lambda m: (m.group(1) or m.group(0)[:4]) + "[hidden]", text or "")
 
@@ -59,6 +67,10 @@ def rule_of(finding: dict) -> str:
 
 def recipe(finding: dict) -> dict | None:
     """The recipe for a finding's rule: an exact id first, then the most specific matching pattern."""
+    if finding.get("kind") == "performance" and (finding.get("evidence") or "").startswith(("PageSpeed Insights, mobile lab:", "CrUX p75 (")):
+        # R-S18's measured audit/resource is authoritative; the generic perf.* image recipe may be unrelated.
+        return {"why": "Use the recorded audit and resource to choose the change. Lab opportunities are estimates, not proven causes of field p75 results.",
+                "risk": "Keep existing behavior and verify with the same URL, device and throttling. Estimated savings are not guaranteed gains."}
     rule, book = rule_of(finding), _recipes()
     if rule in book["exact"]:
         return book["exact"][rule]
@@ -125,17 +137,18 @@ def _fill(text: str, places: dict) -> str:
     return re.sub(r"\{(url|origin|host|supabase_url)\}", lambda m: places[m.group(1)], text)
 
 
-def plan(run: dict, report: dict, ignored: dict) -> dict:
+def plan(run: dict, report: dict, ignored: dict, section: str | None = None) -> dict:
     """Findings grouped into batches (each item: finding, recipe, step) and the manual steps. Used by both prompt styles,
-    get_finding and the fix pull request."""
+    get_finding and the fix pull request. `section` keeps one report chapter's findings (R-S5a section prompts)."""
+    ensure_supported(report)
     stack = report.get("stack") or None
-    kept = [f for f in report.get("findings", []) if not is_ignored(f, ignored)]
+    kept = [f for f in report.get("findings", []) if not is_ignored(f, ignored) and (section is None or chapter_of(f) == section)]
     batches: dict[str, list[dict]] = {key: [] for key, _ in BATCHES}
     manual: list[dict] = []
     for f in sorted(kept, key=lambda f: SEVERITY.get(f["severity"], 3)):
         r = recipe(f) or {}
         s = step(f, stack)
-        item = {"finding": f, "recipe": r, "step": s, "batched": True}
+        item = {"finding": f, "recipe": r, "step": s, "batched": True, "issue": issue_for(report, f)}
         only_manual = bool(r.get("manual")) and not r.get("steps") and not r.get("change") and not r.get("header")
         if s and s.get("manual"):  # a header the host cannot send (GitHub Pages)
             only_manual = True
@@ -151,8 +164,14 @@ def finding_lines(item: dict, report: dict, places: dict, fixes: dict, *, headin
     """Why, where, the change for this stack, the risk and the local check, for one finding."""
     f, r, s = item["finding"], item["recipe"], item["step"]
     lines = [heading, f"**{f['severity'].capitalize()} {f['kind']} issue.** {_mask(f['detail'])}", ""]
+    issue = item.get("issue") or issue_for(report, f)
+    if issue:
+        lines.extend(_mask(line) for line in issue_lines(issue))
     if r.get("why"):
         lines += [f"Why it matters: {r['why']}", ""]
+    guidance = seo_guidance.note(rule_of(f))
+    if guidance:  # advisory presentation checks are not ranking failures (R-S17)
+        lines += [guidance, ""]
     lines += _where(f, report.get("pages", {}))
     if s:
         lines += [f"Change for {s['label']}, in `{_fill(s['file'], places)}`:", "", f"```{s['lang'] if s['lang'] != 'text' else ''}",
@@ -171,13 +190,21 @@ def finding_lines(item: dict, report: dict, places: dict, fixes: dict, *, headin
     return lines
 
 
-def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
-    p = plan(run, report, ignored)
+def build(run: dict, report: dict, ignored: dict, style: str = "full", section: str | None = None) -> str:
+    """The whole plan, or one chapter's part of it when `section` names a chapter (a smaller prompt per chapter)."""
+    if section == "keywords" and (report.get("opportunities") or {}).get("pages"):
+        return _content_brief(run, report["opportunities"])
+    p = plan(run, report, ignored, section)
+    if section and not (p["batches"] or p["manual"]):
+        raise EmptyChapter(f"The {CHAPTER_TITLE[section]} chapter of this report has no open findings to fix.")
     places = _places(run, report)
     fixes = {f["id"]: f for f in (report.get("geo") or {}).get("fixes", [])}
     tested = "an Instant Scan of the homepage" if run.get("kind") == "scan" else f'a test of "{run.get("goal")}"'
+    scope = scope_lines(report)
+    if section:  # the chapter first, so the agent knows this is one part of a larger report
+        scope = [f"## Chapter: {CHAPTER_TITLE[section]}", "This prompt covers only this chapter's open findings. Other chapters have their own prompts.", "", *scope]
     if style == "chat":
-        return _chat(run, p, places, tested)
+        return _chat(run, p, places, tested, scope)
 
     stack = p["stack"]
     how = "; ".join(f"{k}: {v}" for k, v in (stack or {}).get("evidence", {}).items())
@@ -195,6 +222,7 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
         *[f"- {rule}" for rule in RULES],
         "",
     ]
+    lines[2:2] = scope
     n = 0
     for b, (_, title, items) in enumerate(p["batches"], start=1):
         lines += [f"## Batch {b}: {title} ({len(items)} {'fix' if len(items) == 1 else 'fixes'})", ""]
@@ -213,6 +241,8 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full") -> str:
             text = r.get("manual_text") or (item["step"] or {}).get("note") or f["fix"]
             check = f" Check: `{_fill(r['check'], places)}`" if r.get("check") and not item["batched"] else ""
             lines.append(f"- **{where}: {f['title']}.** {_mask(text)}{check}")
+            if not item["batched"] and item.get("issue"):
+                lines.extend(_mask(line) for line in issue_lines(item["issue"]))
         lines.append("")
     lines += ["## Verify", "Run the same Walkthru test again (or `verify_finding` from the Walkthru MCP server). These should show as fixed:",
               *[f"- {f['title']}" for f in everything], ""]
@@ -237,10 +267,10 @@ def _fix_for(finding: dict, fixes: dict) -> dict | None:
     return None
 
 
-def _chat(run: dict, p: dict, places: dict, tested: str) -> str:
+def _chat(run: dict, p: dict, places: dict, tested: str, scope: list[str] = ()) -> str:
     """Short parts for chat builders (Lovable, Bolt), each at most CHAT_LIMIT characters with its own header, in batch
     order. Every finding is included: long plans become more parts, never "and N more"."""
-    lines: list[str] = []
+    lines: list[str] = list(scope)
     n = 0
     for b, (_, title, items) in enumerate(p["batches"], start=1):
         lines.append(f"Batch {b}, {title}:")
@@ -249,12 +279,18 @@ def _chat(run: dict, p: dict, places: dict, tested: str) -> str:
             f, s = item["finding"], item["step"]
             where = f" In {_fill(s['file'], places)}." if s else ""
             check = f" Check: {_fill(item['recipe']['check'], places)}" if item["recipe"].get("check") else ""
+            detail = item.get("issue")
+            if detail:
+                check += f" Evidence: {', '.join(detail['evidence_refs'])}. Acceptance: {detail['acceptance_test']}"
             lines.append(_mask(f"{n}. {f['title']}: {item['recipe'].get('change') or f['fix']}{where}{check}")[:1500])
         lines.append(f"Stop here and check batch {b} works before going on.")
     if p["manual"]:
         lines.append("Do these yourself, outside the code:")
-        lines += [_mask(f"- {MANUAL.get(it['recipe'].get('manual'), 'Hosting settings')}: {it['finding']['title']}. "
-                        f"{it['recipe'].get('manual_text') or it['finding']['fix']}")[:1500] for it in p["manual"]]
+        for item in p["manual"]:
+            detail = item.get("issue")
+            evidence = f" Evidence: {', '.join(detail['evidence_refs'])}. Acceptance: {detail['acceptance_test']}" if detail else ""
+            lines.append(_mask(f"- {MANUAL.get(item['recipe'].get('manual'), 'Hosting settings')}: {item['finding']['title']}. "
+                               f"{item['recipe'].get('manual_text') or item['finding']['fix']}{evidence}")[:1500])
     head = (f"Walkthru fix plan for {run['site']} ({tested}), part {{i}} of {{n}}. Stack: {stacks.label(p['stack'])}. "
             "Keep existing behavior, ask before adding dependencies, never paste secrets.\n")
     tail = "\nWhen this part works, paste the next part.\n"
@@ -267,6 +303,24 @@ def _chat(run: dict, p: dict, places: dict, tested: str) -> str:
     total = len(parts)
     return "\n\n".join(head.format(i=i, n=total) + "\n".join(part) + (tail if i < total else "\n")
                        for i, part in enumerate(parts, start=1)).strip() + "\n"
+
+
+def _content_brief(run: dict, advice: dict) -> str:
+    """Keywords and content (R-S17): a content brief kept apart from technical repairs. It reuses the page's own words
+    and asks for nothing that would add unconfirmed claims."""
+    return "\n".join([
+        f"# Content brief for {run['site']}", "",
+        "## Chapter: Keywords and content",
+        "Advisory direction from Walkthru's audit of the public pages. It is a content brief, not a bug list: the owner decides.",
+        "",
+        "## Rules",
+        "- Use only facts already on the site. Do not add product claims, numbers, customer names, reviews or citations.",
+        "- Keep each page's meaning; change titles, descriptions, headings and links only where this brief proposes it.",
+        "- Ask the owner before publishing anything new, and list any wording they must confirm.",
+        "- No change here promises rankings, traffic or AI citations.",
+        "",
+        *opportunities.lines(advice),
+    ]) + "\n"
 
 
 def chat_parts(text: str) -> list[str]:

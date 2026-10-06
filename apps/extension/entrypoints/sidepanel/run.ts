@@ -1,6 +1,6 @@
 /** The step loop. Lives here (side panel page) because Chrome suspends the MV3 worker. */
 
-import { getRunPolicy, observe, startRun, stopRun, type GoalPlan, type RunReply, type StepEvidence } from "../../lib/api";
+import { getRunPolicy, observe, startRun, stopRun, type FilterCountAssertion, type GoalPlan, type RunReply, type StepEvidence } from "../../lib/api";
 import type { AgentState } from "../../lib/agent-bird";
 import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
@@ -8,7 +8,7 @@ import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
 import type { Observation } from "../../lib/snapshot";
 import { assertConnection, connectionId, getSession, SESSION_CHANGED } from "../../lib/session";
 
-export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean; connection?: string };
+export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean; connection?: string; assertion?: FilterCountAssertion };
 export type Progress = {
   phase: "idle" | "starting" | "running" | "finished" | "error";
   steps: Step[];
@@ -171,6 +171,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     if (opts.signal.aborted) throw new Error("The site owner pressed Stop.");
     let reply = await startRun({ site: opts.site, goal: opts.goal, persona: opts.persona,
       ...(opts.group_id ? { group_id: opts.group_id } : {}), logged_in: opts.logged_in,
+      ...(opts.assertion ? { assertion: opts.assertion } : {}),
       max_steps: opts.max_steps, observation: obs }, undefined, connection);
     runId = reply.run_id;
     if (reply.plan) emit({ plan: reply.plan });

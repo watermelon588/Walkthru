@@ -7,15 +7,20 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 
-from app import db, deliver, plans
+from app import db, deliver, plans, reservations
 from app.agent import compare
 
 log = logging.getLogger("walkthru.watch")
 EVERY = timedelta(days=7)
 HOOK_COOLDOWN = timedelta(minutes=10)
+# R-S9 accepted cap on scheduled and triggered checks per owner per UTC day (weekly, manual and deploy hooks together).
+# Plus watches up to 5 sites; each site's manual/hook checks are also spaced by HOOK_COOLDOWN. Pending founder approval.
+CHECKS_PER_DAY = int(os.environ.get("WATCH_CHECKS_PER_DAY", "20"))
 
 
 def hook_hash(token: str) -> str:
@@ -39,7 +44,8 @@ def check(site: dict, reason: str = "weekly") -> dict:
     from app.main import WEB_URL, run_scan
 
     previous = db.get_run(site["last_run_id"]) if site.get("last_run_id") else None
-    run_id, fresh = run_scan(site["site"], user_id=str(site["user_id"]), kind="watch")
+    with reservations.work("watch", str(site["user_id"]), f"watch-{uuid.uuid4().hex}", CHECKS_PER_DAY) as dispatch:
+        run_id, fresh = run_scan(site["site"], user_id=str(site["user_id"]), kind="watch", dispatch=dispatch)
     diff = changes(previous.get("report") if previous else None, fresh["report"]) | {"reason": reason, "run_id": run_id, "baseline": previous is None}
     db.update_site(site["id"], {"last_run_id": run_id, "last_changes": diff, "next_check_at": (datetime.now(UTC) + EVERY).isoformat()})
     if previous and (diff["new"] or diff["fixed"]):

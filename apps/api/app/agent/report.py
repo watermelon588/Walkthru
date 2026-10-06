@@ -28,6 +28,9 @@ class ReportState(TypedDict, total=False):
     persona: str
     status: str  # persona outcome, or "scan"
     intent: str  # the goal as the planner understood it
+    checkpoints: list[dict]  # declared expectations, not inferred by the report writer
+    assertion: dict | None
+    assertion_outcome: dict | None
     steps: list[dict]
     page_text: str  # visible homepage text (from the first observation, or fetched)
     verified: bool
@@ -42,6 +45,7 @@ class ReportState(TypedDict, total=False):
     seo_measured: bool
     security_measured: bool
     site_audit: dict
+    opportunities: dict  # R-S17 advisory keyword/content map, code only
     geo: list[dict]
     geo_summary: dict
     finding_pages: dict  # finding fingerprint -> every affected page (code only, never the model)
@@ -152,6 +156,7 @@ def site_scan(state: ReportState) -> dict:
             "seo_measured": result.coverage.pages_scanned > 0,
             "security_measured": result.coverage.pages_scanned > 0,
             "production_like": result.production_like,
+            "opportunities": result.opportunities,
             "site_audit": {
                 "pages_scanned": result.coverage.pages_scanned,
                 "page_limit": result.coverage.page_limit,
@@ -265,7 +270,7 @@ def browser_findings(steps: list[dict]) -> tuple[list[Finding], bool, bool]:
                 kind="performance",
                 severity=severity,
                 title=title,
-                detail=f"The browser observed {labels[metric]} at {shown}; the good threshold is {good} {'ms' if metric != 'cls' else ''}.".strip(),
+                detail=f"A single browser visit observed {labels[metric]} at {shown}; the good threshold is {good} {'ms' if metric != 'cls' else ''}. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.".strip(),
                 fix=fix,
                 evidence=f"step {index}: {url}"[:300],
             )
@@ -564,6 +569,7 @@ def plain(text: str) -> str:
 
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
+    from app.agent.report_contract import build_assessment
 
     inputs = synthesis_inputs(state)
     code_findings, local, steps, fi = inputs["code_findings"], inputs["local"], inputs["steps"], inputs["fi"]
@@ -572,7 +578,7 @@ def synthesize(state: ReportState) -> dict:
     syn, used = (Synthesis(summary="", ux_findings=[], top_fixes=[]), 0) if unfinished_without_failure else runtime.call(Synthesis, inputs["messages"], paid=state.get("paid", False))
     written = [Finding.model_validate(f.model_dump() | {"kind": "ux", "title": plain(f.title), "detail": plain(f.detail),
                                                         "fix": plain(f.fix), "rule": None})
-               for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status"))]
+               for f in grounded_ux(syn.ux_findings, code_findings, steps, state.get("status")) if steps or fi]
     findings = written + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])
@@ -602,11 +608,14 @@ def synthesize(state: ReportState) -> dict:
                        if local else state.get("performance_reason", "No mobile performance result was available.")}
         if local or (not state.get("performance_measured", False) and not browser_performance) else {},
         site_audit=state.get("site_audit"),
+        opportunities=state.get("opportunities") or None,
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),
         pages=state.get("finding_pages") or {},
         stack=_with_backend(state.get("stack"), code_findings),
     )
+    report.assessment = build_assessment(state, [f.model_dump() for f in findings], [f.model_dump() for f in code_findings], report.checks)
+    report.version = 2
     report.launch_ready = LaunchReady.model_validate(score.launch_ready(report.model_dump(), state.get("status", "scan")))
     report.agent_ready = AgentReady.model_validate(score.agent_ready(report.model_dump(), state.get("status", "scan"), state.get("steps", [])))
     return {"synthesis": report.model_dump(), "tokens": used}
@@ -640,10 +649,10 @@ def build_graph():
 _graph = None
 
 
-def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False, intent: str = "") -> Report:
+def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False, intent: str = "", checkpoints: list[dict] | None = None, assertion: dict | None = None, assertion_outcome: dict | None = None) -> Report:
     global _graph
     _graph = _graph or build_graph()
-    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "intent": intent, "tokens": 0, "notes": []})
+    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "intent": intent, "checkpoints": checkpoints or [], "assertion": assertion, "assertion_outcome": assertion_outcome, "tokens": 0, "notes": []})
     report = Report.model_validate(out["synthesis"])
     report.tokens = out["tokens"]
     return report

@@ -13,7 +13,7 @@ from pathlib import Path
 from starlette.datastructures import MutableHeaders
 
 _context: ContextVar[dict | None] = ContextVar("request_log_context", default=None)
-_EVENTS = {"request_finished", "request_failed", "server_error", "database_unavailable", "checkpoint_ready", "checkpoint_unavailable"}
+_EVENTS = {"request_finished", "request_failed", "server_error", "database_unavailable", "checkpoint_ready", "checkpoint_unavailable", "provider_usage_uncertain"}
 
 
 def request_context(scope: dict) -> dict:
@@ -54,6 +54,11 @@ class JsonFormatter(logging.Formatter):
                                "function": tb.tb_frame.f_code.co_name})
                 tb = tb.tb_next
             row["frames"] = list(frames)
+        if event == "provider_usage_uncertain":
+            for key in ("provider_attempt_id", "operation_id"):
+                value = getattr(record, key, "")
+                if isinstance(value, str) and re.fullmatch(r"[a-f0-9-]{36}", value):
+                    row[key] = value
         # No message, args, body, URL, headers, exception string, locals, or arbitrary extra fields.
         return json.dumps(row, ensure_ascii=True, separators=(",", ":"))
 

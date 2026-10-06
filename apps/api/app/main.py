@@ -5,6 +5,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from contextvars import copy_context
 from datetime import UTC, datetime, timedelta
 from itertools import pairwise
 from typing import Literal
@@ -36,13 +37,17 @@ from app import (
     notify,
     plans,
     plus,
+    provider_usage,
+    reservations,
     retention,
+    scan_reuse,
     teams,
     watch,
 )
-from app.agent import compare, fix_prompt, funnel, goal, policy, report, runtime, score
+from app.agent import assertions, compare, fix_prompt, funnel, goal, policy, report, runtime, score
+from app.agent.report_contract import ReportContractError, ensure_supported
 from app.agent.safety import MAX_STEPS
-from app.agent.schema import AgentReady, Comparison, Observation, StepEvidence
+from app.agent.schema import AgentReady, Comparison, FilterCountAssertion, Observation, StepEvidence
 from app.auth import require_user
 from app.observability import RequestLog, configure_logging, request_context, support_headers
 from app.scans import fetch, security
@@ -64,6 +69,7 @@ if _web.hostname in {"localhost", "127.0.0.1"}:
 async def _lifespan(_app: FastAPI):
     await run_in_threadpool(runtime.initialize_checkpointer)
     try:
+        await run_in_threadpool(provider_usage.initialize)
         async with mcp_server.server.session_manager.run():  # the MCP transport needs its task group running
             yield
     finally:
@@ -103,6 +109,11 @@ app.add_middleware(
     expose_headers=["Retry-After", "X-Walkthru-Code", "X-Request-Id", "Idempotency-Replayed"],
 )
 app.add_middleware(RequestLog)  # wraps CORS and BodyLimit, including their early responses
+
+
+@app.exception_handler(ReportContractError)
+def _report_contract_error(request: Request, error: ReportContractError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": str(error)})
 
 
 def _database_unavailable(request: Request, error: Exception) -> JSONResponse:
@@ -191,6 +202,7 @@ class StartRun(BaseModel):
     logged_in: bool = False
     max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)  # clamped to the plan
     observation: Observation
+    assertion: FilterCountAssertion | None = None
 
 
 class Observe(BaseModel):
@@ -262,11 +274,25 @@ def _start_run(body: StartRun, user: dict, run_id: str) -> dict:
         abuse.record_refusal(user["id"], host, policy.mode(verifying.done() and verifying.result()), body.goal, e.code)
         raise HTTPException(e.status, e.message, headers={"X-Walkthru-Code": e.code}) from e
     # Read the goal for its intent before any step, and refuse unsafe goals without using a run.
-    goal_plan = goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
-    marks.append(("goal_planner", time.monotonic()))
-    if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
-        raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
-    db.insert_run(run_id, user["id"], body.site, body.goal, persona, tier, body.logged_in, group_id=group_id)
+    if body.assertion and not verifying.result():
+        raise HTTPException(403, "Verify ownership before checking a synthetic dashboard dataset.")
+    # R-S8: the run credit and its maximum provider cost are reserved atomically before any model call; a failure
+    # before the first dispatch returns them, anything after keeps them counted until settlement.
+    reservation = reservations.reserve(user["id"], run_id, usage)
+    reservations.dispatched(reservation)
+    try:
+        with provider_usage.scope(run_id=run_id, user_id=user["id"]):
+            goal_plan = assertions.mission_plan(body.assertion, body.goal) if body.assertion else goal.plan(body.site, body.goal, body.observation.model_dump(mode="json"), paid=tier == "paid")
+        marks.append(("goal_planner", time.monotonic()))
+        if not goal_plan.get("feasible", True) and goal_plan.get("refusal"):
+            reservations.settle(user["id"], run_id, "refused", credit=False, reservation_id=reservation)  # still no run used
+            raise HTTPException(422, f"Walkthru will not run this goal: {goal_plan['refusal']}")
+        db.insert_run(run_id, user["id"], body.site, body.goal, persona, tier, body.logged_in, group_id=group_id)
+    except HTTPException:
+        raise
+    except Exception:
+        reservations.settle(user["id"], run_id, "failed", credit=False, reservation_id=reservation)  # cost stays counted
+        raise
     _background.submit(teams.auto_share, user["id"], run_id, body.site, "test")  # Plus workspaces with auto-share on
     marks.append(("insert_run", time.monotonic()))
     verified = verifying.result()  # owner-verified domains may send real messages after confirmation
@@ -392,6 +418,7 @@ def run_policy(user: dict = Depends(require_user)) -> dict:
 @app.get("/runs/{run_id}")
 def get_run(run_id: str, user: dict = Depends(require_user)) -> dict:
     row = _owned(run_id, user)
+    ensure_supported(row.get("report"))
     return {"run_id": run_id, "status": row["status"], "steps": row["steps"], "report": row.get("report")}
 
 
@@ -418,9 +445,16 @@ def unignore_finding(run_id: str, fingerprint: str, user: dict = Depends(require
 
 
 @app.get("/runs/{run_id}/fix-prompt")
-def get_fix_prompt(run_id: str, style: Literal["full", "chat"] = "full", download: bool = False, user: dict = Depends(require_user)) -> Response:
+def get_fix_prompt(run_id: str, style: Literal["full", "chat"] = "full", download: bool = False, section: str | None = None,
+                   user: dict = Depends(require_user)) -> Response:
     """The agent fix prompt as Markdown (paid plans). Built on request, never stored in the report, so the free plan
-    cannot read it through the report row."""
+    cannot read it through the report row. `section` limits it to one report chapter (R-S5a)."""
+    from app.agent.report_chapters import resolve
+
+    try:
+        section = resolve(section) if section is not None else None
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
     row = _owned(run_id, user)
     if plans.current(user["id"])["plan"].name == "free":
         raise HTTPException(402, "The agent fix prompt is part of the paid plans.")
@@ -430,8 +464,12 @@ def get_fix_prompt(run_id: str, style: Literal["full", "chat"] = "full", downloa
         ignored = db.ignored_fingerprints(user["id"], compare.origin(row["site"]))
     except (httpx.HTTPError, db.DatabaseUnavailable):
         ignored = {}
-    text = fix_prompt.build(row, row["report"], ignored, style)
-    headers = {"Content-Disposition": 'attachment; filename="walkthru-fixes.md"'} if download else {}
+    try:
+        text = fix_prompt.build(row, row["report"], ignored, style, section)
+    except fix_prompt.EmptyChapter as error:
+        raise HTTPException(409, str(error)) from error
+    name = f"walkthru-fixes-{section}.md" if section else "walkthru-fixes.md"
+    headers = {"Content-Disposition": f'attachment; filename="{name}"'} if download else {}
     return Response(text, media_type="text/markdown; charset=utf-8", headers=headers)
 
 
@@ -508,22 +546,28 @@ def finish_run(run_id: str, values: dict) -> None:
         return
     try:
         verified = bool(row["user_id"]) and _verified(row["site"], str(row["user_id"]))
-        rep = report.run_report(
-            row["site"],
-            values.get("first_text", ""),
-            goal=row["goal"],
-            persona=row["persona"],
-            status=values.get("status", row["status"]),
-            steps=values.get("steps", []),
-            verified=verified,
-            final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
-            paid=row.get("tier") == "paid",  # GEO on every audited page for paid plans (SPEC.md)
-            intent=(values.get("plan") or {}).get("intent", ""),
-        )
+        with provider_usage.scope(run_id=run_id, user_id=row.get("user_id")):
+            rep = report.run_report(
+                row["site"],
+                values.get("first_text", ""),
+                goal=row["goal"],
+                persona=row["persona"],
+                status=values.get("status", row["status"]),
+                steps=values.get("steps", []),
+                verified=verified,
+                final_controls=[f"{e.get('tag')}: {e.get('text')}" for e in (values.get("observation") or {}).get("elements", []) if e.get("text")][:40],
+                paid=row.get("tier") == "paid",  # GEO on every audited page for paid plans (SPEC.md)
+                intent=(values.get("plan") or {}).get("intent", ""),
+                checkpoints=(values.get("plan") or {}).get("checkpoints", []),
+                assertion=values.get("assertion"), assertion_outcome=values.get("assertion_outcome"),
+            )
         rep.tokens += values.get("tokens", 0)
         try:
             comparison = compare.attach(row, rep.model_dump())
             rep.comparison = Comparison.model_validate(comparison) if comparison else None
+        except ReportContractError:
+            if rep.assessment:
+                rep.assessment.limitations.append("Comparison unavailable: the previous saved report could not be interpreted safely.")
         except Exception:  # a failed comparison must never lose the report
             log.warning("rerun comparison failed for run %s", run_id, exc_info=True)
         before_run = db.get_run(rep.comparison.previous_run_id) if rep.comparison else None
@@ -559,6 +603,7 @@ def _verified(site: str, user_id: str) -> bool:
 class ScanRequest(BaseModel):
     site: str = Field(pattern=r"^https?://", max_length=2000)
     email: EmailStr | None = None
+    fresh: bool = False  # skip reuse of a saved scan, e.g. to check a fix (R-S7a); still counts every limit
 
 
 SCAN_LIMIT, SCAN_WINDOW = 5, 3600  # per address, shared by every API process (app/limits.py). The daily cap is plans.FREE_SCANS_PER_DAY.
@@ -566,7 +611,8 @@ SCAN_LIMIT, SCAN_WINDOW = 5, 3600  # per address, shared by every API process (a
 
 @app.post("/scans")
 def instant_scan(body: ScanRequest, request: Request) -> dict:
-    """Free homepage scan: first impression, SEO basics, security headers. Public report, no login."""
+    """Free homepage scan: first impression, SEO basics, security headers. Public report, no login. A current saved scan
+    of the same page from the last ten minutes is reused and labelled (app/scan_reuse.py) unless `fresh` is set."""
     if not limits.local_dev(request):  # counted only once the body is valid, so a typo does not use a scan
         limits.hit(f"scan:{limits.address(request)}", SCAN_LIMIT, SCAN_WINDOW, "Too many scans from this address. Try again in an hour or sign in.")
     try:
@@ -575,18 +621,20 @@ def instant_scan(body: ScanRequest, request: Request) -> dict:
         if policy.category(site) == "site owner opt-out" or abuse.paused("", policy.host(site)):
             raise ValueError("The owner of this site asked Walkthru not to scan it.")
         fetch.assert_public(site)
-        cached = db.recent_public_scan(site)
-        if cached:
-            run_id, rep = cached["id"], cached
-        else:
+
+        def scan() -> tuple[str, dict]:
             if db.free_runs_today("scan") >= plans.FREE_SCANS_PER_DAY:
                 raise HTTPException(429, "Free scan capacity is used up for today. Try again tomorrow.")
-            run_id, rep = run_scan(site)
+            # R-S9: a reused report never reaches here, so only a fresh scan reserves (one platform-wide daily pool).
+            with reservations.work("public_scan", reservations.PUBLIC, f"scan-{uuid.uuid4().hex}", plans.FREE_SCANS_PER_DAY) as dispatch:
+                return run_scan(site, dispatch=dispatch)
+
+        run_id, rep, reuse = scan_reuse.get_or_scan(site, scan, fresh=body.fresh)
     except (ValueError, httpx.InvalidURL) as e:
         raise HTTPException(422, str(e)) from e
     if body.email:
         deliver.send_report(body.email, f"{WEB_URL}/r/{run_id}", rep["site"], rep["report"])
-    return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep["report"]}
+    return {"run_id": run_id, "url": f"{WEB_URL}/r/{run_id}", "report": rep["report"], "reuse": reuse}
 
 
 TARGET_SCANS, TARGET_WINDOW = 30, 3600  # scans of one host per hour, all users and processes together (SD-2.3)
@@ -598,9 +646,10 @@ def polite(site: str) -> None:
                "This site was scanned many times in the last hour. Try again later, or open its latest report.")
 
 
-def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tuple[str, dict]:
+def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan", dispatch=lambda: None) -> tuple[str, dict]:
     """One server-side scan, stored as a run. Anonymous Instant Scans are public; an owner's scan (MCP) is private.
-    Raises ValueError with a message for the caller when the site cannot be scanned."""
+    Raises ValueError with a message for the caller when the site cannot be scanned. `dispatch` is the caller's
+    admission (reservations.work), called once the site answered and right before the first model call."""
     site = site.strip()
     if "://" not in site:
         site = f"https://{site}"  # agents and people type "example.com"
@@ -620,7 +669,10 @@ def run_scan(site: str, *, user_id: str | None = None, kind: str = "scan") -> tu
     # Exposed files and keys only on a host this owner verified, checked after redirects (same rule as journey runs).
     # Comparisons must use the same public scope even when the caller owns one of the sites.
     verified = kind != "compare_part" and bool(user_id) and _verified(str(resp.url), user_id)
-    rep = report.run_report(str(resp.url), fetch.page_text(resp.text), verified=verified)
+    dispatch()
+    with provider_usage.scope(run_id=run_id, user_id=user_id):
+        rep = report.run_report(str(resp.url), fetch.page_text(resp.text), verified=verified)
+    rep.scan_version = scan_reuse.version()
     db.set_report(run_id, rep.model_dump(), status="done")
     return run_id, {"site": str(resp.url), "report": rep.model_dump()}
 
@@ -965,12 +1017,19 @@ def start_compare(body: CompareRequest, user: dict = Depends(require_user)) -> d
     if db.user_scans_today(user["id"]) + len(urls) > mcp_server.SCANS_PER_DAY:
         raise HTTPException(429, f"That would pass your {mcp_server.SCANS_PER_DAY} scans for today. Try again tomorrow.")
     run_id = uuid.uuid4().hex
-    db.insert_run(run_id, user["id"], body.site, f"Compared with {len(urls) - 1} competitor{'s' if len(urls) > 2 else ''}", "stranger", "paid", False, kind="compare")
-    jobs.enqueue("compare", {"run_id": run_id, "user_id": user["id"], "urls": urls})
+    # R-S9: every site of the comparison is reserved now, in the owner's daily scan allowance, and settled by the job.
+    reservation = reservations.reserve_work("scan", user["id"], f"compare-{run_id}", mcp_server.SCANS_PER_DAY, units=len(urls))
+    try:
+        db.insert_run(run_id, user["id"], body.site, f"Compared with {len(urls) - 1} competitor{'s' if len(urls) > 2 else ''}", "stranger", "paid", False, kind="compare")
+        jobs.enqueue("compare", {"run_id": run_id, "user_id": user["id"], "urls": urls, "reservation": reservation})
+    except Exception:
+        reservations.release(reservation)  # nothing was queued, so nothing can dispatch
+        raise
     return {"run_id": run_id}
 
 
-def _compare(run_id: str, user_id: str, urls: list[str]) -> None:
+def _compare(run_id: str, user_id: str, urls: list[str], reservation: str | None = None) -> None:
+    reservations.dispatched(reservation)
     def one(url: str) -> dict:
         try:
             part_id, fresh = run_scan(url, user_id=user_id, kind="compare_part")
@@ -986,9 +1045,10 @@ def _compare(run_id: str, user_id: str, urls: list[str]) -> None:
                 "impression": (rep.get("first_impression") or {}).get("what")}
 
     with ThreadPoolExecutor(max_workers=len(urls)) as pool:
-        sites = list(pool.map(one, urls))
+        sites = [future.result() for future in [pool.submit(copy_context().run, one, url) for url in urls]]
     sites[0]["yours"] = True
     db.set_report(run_id, {"compare": sites}, status="done")
+    reservations.settle_work(reservation)
     notify.comparison_ready(user_id, run_id, " vs ".join(policy.host(u) for u in urls[:4]))
 
 

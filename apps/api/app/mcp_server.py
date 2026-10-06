@@ -22,7 +22,7 @@ from mcp.server.mcpserver.exceptions import ToolError  # its message reaches the
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import ValidationError
 
-from app import db, limits, plans
+from app import db, limits, plans, reservations
 
 KEY_PREFIX = "wt_"
 MAX_KEYS = 5
@@ -54,8 +54,9 @@ server = MCPServer(
     "Walkthru",
     instructions=(
         "Walkthru is the launch check for apps built with AI. Reports: scan_site for SEO, AI search readiness and passive "
-        "security on a public site, get_report to read any of the user's reports, get_fix_prompt for a ready list of "
-        "fixes to apply in this codebase, get_finding for everything about one finding, verify_finding to re-check just "
+        "security on a public site, get_report to read any of the user's reports (its chapter index names each chapter; "
+        "pass section for one chapter), get_fix_prompt for a ready list of fixes to apply in this codebase (section for "
+        "one chapter), get_finding for everything about one finding, verify_finding to re-check just "
         "that finding after a fix, rerun to repeat every check, compare_sites for competitors, accept_finding for a "
         "deliberate won't-fix. Ownership: get_site_verification gives the meta tag to put in this codebase's <head> and "
         "checks it once deployed; verified sites get the owner-only security checks. GitHub: list_github_repos and "
@@ -69,19 +70,31 @@ server = MCPServer(
 
 
 def _row(run_id: str) -> dict:
+    from app.agent.report_contract import ensure_supported
+
     row = db.get_run(run_id) if run_id.isalnum() and len(run_id) == 32 else None
     if row is None or str(row.get("user_id")) != _user.get():
         raise ToolError("No run with that id in your account. Use list_runs to see your runs.")
+    try:
+        ensure_supported(row.get("report"))
+    except ValueError as error:
+        raise ToolError(str(error)) from error
     return row
 
 
-def _summary(row: dict, full: bool = False) -> str:
+def _summary(row: dict, full: bool = False, ignored: dict | None = None) -> str:
+    from app.agent.report_chapters import chapters, next_actions
+    from app.agent.report_contract import ensure_supported, issue_for, issue_lines, scope_lines
     from app.main import WEB_URL  # the web address links point to
 
     rep = row.get("report")
     link = f"{WEB_URL}/app/runs/{row['id']}"
     if not rep:
         return f"Run {row['id']} for {row['site']} is {row['status']} and has no report yet. Open {link} or try again in a minute."
+    try:
+        ensure_supported(rep)
+    except ValueError as error:
+        raise ToolError(str(error)) from error
     if "compare" in rep:
         return _compare_summary(row, rep["compare"], link)
     score = (rep.get("launch_ready") or {}).get("score")
@@ -92,12 +105,25 @@ def _summary(row: dict, full: bool = False) -> str:
         "",
         rep.get("summary", ""),
     ]
+    lines[4:4] = scope_lines(rep)
+    actions = next_actions(rep, ignored)
+    if actions:
+        lines += ["", "## Next actions", *[f"{i + 1}. [{a['severity']}] {a['title']}: {a['fix']} (id: {a['id']}, chapter: {a['chapter']})"
+                                            for i, a in enumerate(actions)]]
+    lines += ["", "## Chapters", *[f"{c['number']:02d} {c['title']} ({c['key']}): {c['label']}. {c['summary']}"
+                                   + (f" Issues: {', '.join(c['issue_ids'])}." if c["issue_ids"] else "")
+                                   + (f" Related from other chapters: {', '.join(c['cross_links'])}." if c["cross_links"] else "")
+                                   for c in chapters(rep, row.get("kind") or "scan", row.get("status") or "done", ignored)],
+              "Pass a chapter key as get_report(run_id, section=...) for that chapter only."]
     if rep.get("top_fixes"):
         lines += ["", "## Fix these first", *[f"{i + 1}. {fix}" for i, fix in enumerate(rep["top_fixes"])]]
     findings = rep.get("findings") or []
     lines += ["", f"## Findings ({len(findings)})"]
     for fid, f in _ids(findings):
         lines.append(f"- [{f['severity']}] {f['kind']}: {f['title']} (id: {fid})" + (f"\n  Evidence: {f['evidence']}\n  Fix: {f['fix']}" if full else ""))
+        issue = issue_for(rep, f)
+        if full and issue:
+            lines.extend(issue_lines(issue))
     if not full and findings:
         lines += ["", "Call get_report for evidence and fixes, or get_fix_prompt for a prompt to apply them."]
     if findings:
@@ -128,13 +154,9 @@ def finding_id(finding: dict) -> str:
 
 def _ids(findings: list[dict]) -> list[tuple[str, dict]]:
     """Each finding with an id unique in its report. Two cookies can break the same rule, so the second is rule#2."""
-    seen: dict[str, int] = {}
-    out = []
-    for f in findings:
-        base = finding_id(f)
-        seen[base] = seen.get(base, 0) + 1
-        out.append((base if seen[base] == 1 else f"{base}#{seen[base]}", f))
-    return out
+    from app.agent.report_contract import finding_ids
+
+    return list(zip(finding_ids(findings), findings, strict=True))
 
 
 def _find(row: dict, rule: str) -> tuple[str, dict]:
@@ -173,10 +195,12 @@ def _scan(site: str) -> dict:
     user = _user.get()
     _within_daily_cap(user)
     try:
-        run_id, _ = run_scan(site, user_id=user)
+        # R-S9: the database reservation is the authority for the daily cap; the count above is the quick answer.
+        with reservations.work("scan", user, f"mcp-scan-{uuid.uuid4().hex}", SCANS_PER_DAY) as dispatch:
+            run_id, _ = run_scan(site, user_id=user, dispatch=dispatch)
     except ValueError as e:  # not public, not responding: say so plainly
         raise ToolError(str(e)) from e
-    except HTTPException as e:  # the site's hourly scan limit (SD-2.3)
+    except HTTPException as e:  # the site's hourly scan limit (SD-2.3), or no reservation
         raise ToolError(str(e.detail)) from e
     return db.get_run(run_id)
 
@@ -188,23 +212,92 @@ def scan_site(url: str) -> str:
     return _summary(_scan(url))
 
 
-@server.tool(structured_output=False)
-def get_report(run_id: str) -> str:
-    """Read one of your Walkthru reports in full: summary, Launch Ready score, every finding with its evidence and fix."""
-    return _summary(_row(run_id), full=True)
+CHAPTER_PAGE = 10  # issues per get_report(section=...) call
+
+
+def _ignored(row: dict) -> dict:
+    from app.agent import compare
+
+    return db.ignored_fingerprints(_user.get(), compare.origin(row["site"]))
+
+
+def _section(key: str) -> str:
+    from app.agent.report_chapters import resolve
+
+    try:
+        return resolve(key)
+    except ValueError as error:
+        raise ToolError(str(error)) from error
+
+
+def _chapter(row: dict, key: str, cursor: str, ignored: dict) -> str:
+    """One chapter of a report: its summary and its issues in full, CHAPTER_PAGE at a time."""
+    from app.agent.report_chapters import also_affects, chapters
+    from app.agent.report_contract import issue_for, issue_lines
+
+    rep = row.get("report")
+    if not rep:
+        return f"Run {row['id']} has no report yet. Try again in a minute."
+    if "compare" in rep:
+        raise ToolError("Site comparisons have no chapters. Read each site's own report run.")
+    start = int(cursor) if cursor.isdigit() else 0 if not cursor else -1
+    if start < 0:
+        raise ToolError("cursor must be the number returned as next cursor by the previous call.")
+    c = next(c for c in chapters(rep, row.get("kind") or "scan", row.get("status") or "done", ignored) if c["key"] == key)
+    found = dict(_ids(rep.get("findings") or []))
+    page = c["issue_ids"][start:start + CHAPTER_PAGE]
+    lines = [f"# {c['number']:02d} {c['title']}: {row['site']} (run {row['id']})", f"Status: {c['label']}.", c["summary"], ""]
+    if key == "keywords" and (rep.get("opportunities") or {}).get("pages"):  # R-S17 advisory map, same text as the prompt
+        from app.scans import opportunities
+
+        lines += opportunities.lines(rep["opportunities"])
+    for fid in page:
+        f = found[fid]
+        lines += [f"- [{f['severity']}] {f['title']} (id: {fid})", f"  Evidence: {f['evidence']}", f"  Fix: {f['fix']}"]
+        others = [o for o in also_affects(f) if o != key]
+        if others:
+            lines.append(f"  Also affects chapters: {', '.join(others)}")
+        issue = issue_for(rep, f)
+        if issue:
+            lines.extend(issue_lines(issue))
+    if c["cross_links"]:
+        lines += ["", f"Related issues filed under other chapters: {', '.join(c['cross_links'])}. Read them with get_finding."]
+    end = start + len(page)
+    if end < len(c["issue_ids"]):
+        lines += ["", f"Showing issues {start + 1} to {end} of {len(c['issue_ids'])}. next cursor: {end}"]
+    if c["issue_ids"]:
+        lines += ["", f"get_fix_prompt(run_id, section=\"{key}\") gives a fix prompt for this chapter only."]
+    return "\n".join(lines)
 
 
 @server.tool(structured_output=False)
-def get_fix_prompt(run_id: str, style: str = "full") -> str:
+def get_report(run_id: str, section: str = "", cursor: str = "") -> str:
+    """Read one of your Walkthru reports: summary, Launch Ready score, next actions, the chapter index and every
+    finding with its evidence and fix. section (optional): one chapter key from the index (journey, accessibility,
+    performance, seo, keywords, authority, geo, citations, security, evidence) to read only that chapter, 10 issues
+    per call; pass the returned next cursor as cursor to continue."""
+    row = _row(run_id)
+    ignored = _ignored(row) if row.get("report") else {}
+    if section:
+        return _chapter(row, _section(section), cursor.strip(), ignored)
+    return _summary(row, full=True, ignored=ignored)
+
+
+@server.tool(structured_output=False)
+def get_fix_prompt(run_id: str, style: str = "full", section: str = "") -> str:
     """A Markdown prompt listing every finding in the report with where it is, the required change and an acceptance
-    check, ready for you to apply in this codebase. style: "full" or "chat" (shorter)."""
-    from app.agent import compare, fix_prompt
+    check, ready for you to apply in this codebase. style: "full" or "chat" (shorter). section (optional): one chapter
+    key from get_report, for a smaller prompt with only that chapter's findings."""
+    from app.agent import fix_prompt
 
     row = _row(run_id)
     if not row.get("report"):
         raise ToolError("The report is not ready yet. Try again in a minute.")
-    ignored = db.ignored_fingerprints(_user.get(), compare.origin(row["site"]))
-    return fix_prompt.build(row, row["report"], ignored, "chat" if style == "chat" else "full")
+    key = _section(section) if section else None
+    try:
+        return fix_prompt.build(row, row["report"], _ignored(row), "chat" if style == "chat" else "full", key)
+    except fix_prompt.EmptyChapter as error:
+        raise ToolError(str(error)) from error
 
 
 @server.tool(structured_output=False)
@@ -267,9 +360,13 @@ def verify_finding(run_id: str, rule: str) -> str:
 
     _as_owner(lambda u: polite(row["site"]))  # a re-check fetches the site too (SD-2.3)
     try:
-        result = recheck(row["site"], f, pages, verified=_verified(row["site"], user))
+        with reservations.work("scan", user, f"mcp-verify-{uuid.uuid4().hex}", SCANS_PER_DAY) as dispatch:
+            dispatch()  # the re-check may call PageSpeed straight away
+            result = recheck(row["site"], f, pages, verified=_verified(row["site"], user))
     except ValueError as e:
         raise ToolError(str(e)) from e
+    except HTTPException as e:  # no reservation (R-S9)
+        raise ToolError(str(e.detail)) from e
     return result
 
 

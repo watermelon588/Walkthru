@@ -4,14 +4,19 @@ import { BrandClosing, BrandCover } from './BrandCover'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
 import { SkeletonReport, Working } from './Loading'
-import { LaunchChecks } from './LaunchChecks'
 import { LaunchReady } from './LaunchReady'
 import { FixPrompt } from './FixPrompt'
 import { AgentReadiness } from './AgentReadiness'
 import { GeoReadiness } from './GeoReadiness'
+import { KeywordMap } from './KeywordMap'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
 import { TestUsersCompared } from './TestUsersCompared'
+import { FindingAssessment, ReportScope } from './ReportAssessment'
+import { ChapterContents, ChapterPrompt, ChapterSection, CrossLinks, NextActions } from './ReportChapters'
+import { PerformanceEvidence } from './PerformanceEvidence'
+import { alsoAffects, CHAPTER_TITLE, chapterOf, chapters, findingIds, issueAnchor, nextActions } from '../lib/reportChapters'
+import { OUTCOME_LABEL, reportProblem, type ReportAssessment, type ReportIssue } from '../lib/reportContract'
 
 // What the server does while the report is pending, in its real order. Paced on a timer, not tied to server progress.
 const RUNNING_STEPS = ['Reading the page like a stranger', 'Choosing the next click', 'Noting what feels confusing', 'Saving a screenshot of each important screen']
@@ -30,6 +35,13 @@ export type IgnoreControls = {
  *  the report in the owner's branding: their cover and color, no Walkthru marks. The screen view does not change. */
 export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreControls; brand?: Brand | null }) {
   const r = run.report
+  const problem = reportProblem(r)
+  if (problem) return <article className="report-root"><p role="alert" className="text-sm text-danger">{problem}</p></article>
+  const assessment = r?.version === 2 ? r.assessment : null
+  const ignored = ignore?.ignored ?? {}
+  const chapterList = r ? chapters(r, run.kind, run.status, ignored) : []
+  const ids = r ? findingIds(r.findings) : []
+  const titles = Object.fromEntries(ids.map((id, i) => [id, r!.findings[i].title]))
   const steps = run.steps ?? []
   const peak = Math.max(0, ...steps.map((s) => s.confusion))
   const stuckAt = steps.findIndex((s) => s.confusion >= 2)
@@ -56,7 +68,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
           <h1 className="mt-2 text-3xl font-extralight tracking-tight md:text-5xl">{isScan ? 'Instant Scan' : run.goal}</h1>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
             <span>{PERSONA_LABEL[run.persona] ?? run.persona}</span>
-            {!isScan && <StatusPill status={run.status} />}
+            {!isScan && (assessment ? <span>{OUTCOME_LABEL[assessment.outcome]}</span> : <StatusPill status={run.status} />)}
             <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleString()}</time>
             {r?.model && <span>Test user and report: {r.model}</span>}
           </div>
@@ -66,16 +78,20 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
 
       {r ? (
         <>
+          {assessment && <ReportScope assessment={assessment} />}
           <p className="mt-8 max-w-[64ch] text-lg leading-relaxed">{r.summary}</p>
 
-          {!isScan && stopped && <JourneyCoverage run={run} />}
+          {!assessment && !isScan && stopped && <JourneyCoverage run={run} />}
+
+          <NextActions actions={nextActions(r, ignored)} />
+          <ChapterContents chapters={chapterList} />
 
           <section aria-label="Summary" className="report-summary mt-8 grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-3">
             <Stat label="Findings" value={String(r.findings.length)} note={`${counts.high} high / ${counts.medium} medium / ${counts.low} low`} />
             {isScan ? (
               <Stat label="First impression clarity" value={r.first_impression ? `${3 - r.first_impression.clarity} of 3` : 'Not judged'} note={r.first_impression ? '3 = instantly clear' : 'no readable text before JavaScript runs'} />
             ) : (
-              <Stat label="Outcome" value={STATUS_LABEL[run.status]} note={`${steps.length} steps`} />
+              <Stat label="Outcome" value={assessment ? OUTCOME_LABEL[assessment.outcome] : STATUS_LABEL[run.status]} note={`${steps.length} steps`} />
             )}
             <Stat label={isScan ? 'Security scan' : 'Peak confusion'} value={isScan ? (r.verified ? 'Full' : 'Headers only') : `${peak} of 3`} note={isScan ? (r.verified ? 'domain verified' : 'verify your domain for exposed files and secrets') : stuckAt >= 0 ? `first at step ${stuckAt + 1}` : 'no confusion recorded'} />
           </section>
@@ -90,37 +106,13 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
 
           {run.status === 'safe_stop' && (
             <p className="no-print mt-6 max-w-[64ch] rounded-2xl border border-line px-5 py-4 text-sm leading-relaxed text-muted">
-              The test user stopped at the send button, so nothing was sent. Walkthru only sends on a verified domain, once per run, after the owner approves.{' '}
+              {assessment ? 'An action was prevented by safety rules. Review recorded outcomes; the stopped action does not confirm completion or a website defect.' : 'The test user stopped at the send button, so nothing was sent. Walkthru only sends on a verified domain, once per run, after the owner approves.'}{' '}
               <a href="/docs#verify" className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">Verify your domain</a> to test the full flow.
             </p>
           )}
-          {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} branded={!!brand} />}
-          {!isScan && steps.length > 0 && <RetentionNote run={run} />}
-
-          {run.group_id && <TestUsersCompared run={run} owner={!!ignore} />}
-
-          {r.first_impression && (
-            <section aria-label="First impression" className="report-print-section mt-12">
-              <h2 className="text-xl font-light tracking-tight">First impression, five seconds in</h2>
-              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-                <Item term="What this site does" desc={r.first_impression.what} />
-                <Item term="Who it is for" desc={r.first_impression.who} />
-                <Item term="What they would click first" desc={r.first_impression.first_click} />
-                <Item term="Trust signals" desc={r.first_impression.trust.join(', ') || 'none noticed'} />
-              </dl>
-            </section>
-          )}
-
           {ignore && r.findings.length > 0 && (
             <FixPrompt runId={run.id} paid={ignore.canIgnore} count={r.findings.filter((f) => !ignore.ignored[ignoredKey(f, ignore.ignored)]).length} />
           )}
-
-          {r.geo && <GeoReadiness geo={r.geo} />}
-          {r.agent_ready && <AgentReadiness agent={r.agent_ready} />}
-
-          {r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
-
-          <LaunchChecks findings={r.findings} verified={r.verified} states={r.checks} reasons={r.check_reasons} />
 
           {r.top_fixes.length > 0 && (
             <section aria-label="Top fixes" className="report-print-section print-break-before mt-14">
@@ -137,16 +129,45 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
             </section>
           )}
 
-          <section aria-label="All findings" className="report-print-section mt-12">
-            <h2 className="text-xl font-light tracking-tight">All findings</h2>
-            {r.findings.length === 0 ? (
-              <p role="status" className="mt-4 text-sm text-muted">No findings were recorded within this report's measured scope.</p>
-            ) : (
-              <ul className="mt-4 border-t border-line">
-                {r.findings.map((f, i) => <FindingRow key={i} f={f} ignore={ignore} />)}
-              </ul>
-            )}
-          </section>
+          {chapterList.map((c) => (
+            <ChapterSection key={c.key} chapter={c}>
+              {c.key === 'journey' && (
+                <>
+                  {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} branded={!!brand} />}
+                  {!isScan && steps.length > 0 && <RetentionNote run={run} />}
+                  {run.group_id && <TestUsersCompared run={run} owner={!!ignore} />}
+                  {r.first_impression && (
+                    <section aria-label="First impression" className="mt-10">
+                      <h3 className="text-xl font-light tracking-tight">First impression, five seconds in</h3>
+                      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <Item term="What this site does" desc={r.first_impression.what} />
+                        <Item term="Who it is for" desc={r.first_impression.who} />
+                        <Item term="What they would click first" desc={r.first_impression.first_click} />
+                        <Item term="Trust signals" desc={r.first_impression.trust.join(', ') || 'none noticed'} />
+                      </dl>
+                    </section>
+                  )}
+                </>
+              )}
+              {c.key === 'performance' && <PerformanceEvidence measurements={r.site_audit?.mobile_vitals} />}
+              {c.key === 'geo' && r.geo && <GeoReadiness geo={r.geo} />}
+              {c.key === 'geo' && r.agent_ready && <AgentReadiness agent={r.agent_ready} />}
+              {c.key === 'citations' && ignore && (
+                <p className="no-print mt-4 text-sm"><a href="/app/visibility" className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">Open AI answers</a> for dated samples and their sources.</p>
+              )}
+              {c.key === 'keywords' && r.opportunities && r.opportunities.pages.length > 0 && <KeywordMap map={r.opportunities} />}
+              {c.key === 'evidence' && r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
+              {c.issue_ids.length > 0 && (
+                <ul className="mt-6 border-t border-line">
+                  {r.findings.map((f, i) => chapterOf(f) === c.key && (
+                    <FindingRow key={i} id={ids[i]} f={f} ignore={ignore} assessment={assessment ?? undefined} issue={assessment?.issues.find((item) => item.finding_index === i)} />
+                  ))}
+                </ul>
+              )}
+              <CrossLinks ids={c.cross_links} titles={titles} />
+              {ignore?.canIgnore && c.status === 'issues' && <ChapterPrompt runId={run.id} chapter={c} />}
+            </ChapterSection>
+          ))}
           {brand && <BrandClosing brand={brand} scan={isScan} />}
         </>
       ) : (
@@ -190,18 +211,25 @@ function RetentionNote({ run }: { run: Run }) {
   )
 }
 
-function FindingRow({ f, ignore }: { f: Finding; ignore?: IgnoreControls }) {
+function FindingRow({ id, f, ignore, assessment, issue }: { id: string; f: Finding; ignore?: IgnoreControls; assessment?: ReportAssessment; issue?: ReportIssue }) {
   const tone = f.severity === 'high' ? 'text-danger' : f.severity === 'medium' ? 'text-ink' : 'text-muted'
   const fp = ignoredKey(f, ignore?.ignored ?? {})
   const reason = ignore?.ignored[fp]
+  const also = alsoAffects(f)
   return (
-    <li className={`grid gap-2 border-b border-line py-5 sm:grid-cols-[7rem_1fr] ${reason ? 'opacity-60' : ''}`}>
+    <li id={issueAnchor(id)} className={`grid scroll-mt-24 gap-2 border-b border-line py-5 sm:grid-cols-[7rem_1fr] ${reason ? 'opacity-60' : ''}`}>
       <div className="flex gap-2 text-xs sm:flex-col sm:gap-1">
         <span className={`font-medium ${tone}`}>{f.severity}</span>
         <span className="text-muted">{KIND_LABEL[f.kind]}</span>
       </div>
       <div className="min-w-0">
         <h3 className="font-medium">{f.title}</h3>
+        <p className="mt-1 font-mono text-[11px] text-muted">id: {id}</p>
+        {also.length > 0 && (
+          <p className="mt-1 text-xs text-muted">Also affects {also.map((key, i) => (
+            <span key={key}>{i > 0 && ', '}<a href={`#chapter-${key}`} className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">{CHAPTER_TITLE[key]}</a></span>
+          ))}</p>
+        )}
         <p className="mt-1 leading-relaxed text-muted">{f.detail}</p>
         <p className="mt-2 leading-relaxed"><span className="text-muted">Fix: </span>{f.fix}</p>
         {f.evidence && (
@@ -214,6 +242,7 @@ function FindingRow({ f, ignore }: { f: Finding; ignore?: IgnoreControls }) {
           </>
         )}
         {ignore && <IgnoreControl fp={fp} reason={reason} controls={ignore} />}
+        {assessment && issue && <FindingAssessment assessment={assessment} issue={issue} />}
       </div>
     </li>
   )

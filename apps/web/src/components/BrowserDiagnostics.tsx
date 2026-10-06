@@ -11,6 +11,7 @@ export function BrowserDiagnostics({ diagnostics }: { diagnostics: BrowserDiagno
   return (
     <section aria-labelledby="browser-evidence-title" className="mt-6 min-w-0 border-t border-line pt-5 [overflow-wrap:anywhere]">
       <p id="browser-evidence-title" className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Browser evidence</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted">Single-browser observation captured {diagnostics.captured_at}. Values may change during the visit. These are separate from Lighthouse lab runs and CrUX population p75 data.</p>
 
       {metrics.length > 0 ? (
         <dl className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-line bg-line">

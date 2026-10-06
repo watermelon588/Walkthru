@@ -54,6 +54,22 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 16. **Over time means comparison, not more runs.** Reruns and weekly watch compare finding fingerprints against the previous result for the same site. Only changes are reported and emailed.
 17. **Team workspaces: the API decides, RLS backs it up, Realtime only nudges.** Membership and role are read from the database on every team request (non-members get 404). Browsers only read team rows through RLS (`is_team_member`), shared runs and their screenshots through `shared_with_me(run)`, and never see invitations. Seats and ownership change inside locked SQL functions. See [docs/team-collaboration.md](docs/team-collaboration.md).
 
+## Versioned report JSON (R-S5, 2026-10-05)
+
+New reports retain existing fields in `runs.report` and add integer `version=2` with an `assessment`: code-owned scope/outcome/limitations, declared checkpoint proof, one detailed issue per finding and a source-checked evidence index. Missing version is legacy v1; unknown or contradictory versions fail clearly. References, facts/actual results, source binding and coverage counts are validated before API/MCP/web readers use the report. Missing expectations and causal hypotheses remain null. Access checks and Supabase RLS remain authoritative.
+
+The shared owner/public/team body, CSV/PDF, JSON, fix-prompt and MCP readers retain legacy behavior; comparisons still use existing finding fingerprints. No relational migration or additional model call is needed. [Contract, consumer matrix and verification](docs/report-v2-contract.md) records the bounded semantic/public-UI limits. R-S6 adds owner assertions.
+
+**Report chapters (R-S5a, 2026-10-06):** `app/agent/report_chapters.py` and `apps/web/src/lib/reportChapters.ts` derive ten fixed chapters, honest statuses, cross-links and three next actions from the saved report on read (no stored field or migration), checked against one shared fixture. The web report, CSV, `fix-prompt?section=` and MCP `get_report(section, cursor)` / `get_fix_prompt(section)` use them. [Chapter contract](docs/report-v2-contract.md#chapters-r-s5a).
+
+**Owner filtered-count assertion (R-S6, 2026-10-06):** optional `StartRun.assertion` supplies one synthetic filter/count expectation on a verified domain. `agent/assertions.py` derives the declared filter milestone without a planner call, evaluates only fresh executed same-origin public snapshots and records passed/failed/blocked/inconclusive separately from UI completion. Existing graph checkpoints/report jobs carry definition/outcome; additive `assessment.assertions` and source-bound evidence are validated by API and web readers. Extension configuration, shared report/print/JSON, prompt/MCP scope and journey chapters expose count/data/time/tolerance context. No backend connector or migration. [Contract, golden fixture and dev plan-display fix](docs/filter-count-assertion.md).
+
+## Performance attribution (R-S18, 2026-10-06)
+
+`site_audit.mobile_vitals` retains its legacy score and field-metric fields and adds bounded PSI/Lighthouse lab audits, resource URLs/element selectors, fetch/retrieval timing, reported device/throttling, errors/warnings and explicitly estimated savings. Top-level LCP/CLS/INP remain CrUX population p75; `lab.metrics` are a separate synthetic run. Browser diagnostics remain a third, single-visit source. Missing field data stays unknown, even with a good lab score. Generic performance fix recipes are bypassed for new PSI/CrUX evidence so measured JavaScript opportunities cannot receive unrelated image snippets.
+
+`PerformanceEvidence` renders the additive data in the shared owner/public/team report chapter and existing PDF path. No migration, additional provider/model call or dependency. [Contract, bounds, primary signatures and verification](docs/performance-attribution.md).
+
 ## Owner history and exact count reads (R-S14a, 2026-10-05)
 
 Dashboard history reads metadata only in descending `(created_at,id)` pages, excludes comparison parts and filters the owner explicitly in addition to RLS. Stored timestamp precision and 32-character hexadecimal run IDs form the continuation boundary. MCP uses the same ordering with owner/site-scoped cursors, database-side literal site filtering, maximum 50 rows and a scalar launch score projection. Detail reports and account exports remain separate. Web continuation ends only after an empty page; the API fills at most `limit + 1` rows through advancing short server-capped subpages.
@@ -149,7 +165,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - No model calls. Shown in the report with copy buttons.
 
 ### `fix-prompt`
-- `app/agent/fix_prompt.py`: `build(report, style) -> str`. `style` is `full` or `chat`.
+- `app/agent/fix_prompt.py`: `build(run, report, ignored, style, section=None) -> str`. `style` is `full` or `chat`; `section` keeps one report chapter.
   - A pure function over the stored report JSON and the fix pack. No model call.
   - It uses only findings already in the report, so it cannot add claims.
   - Leaked key values stay masked.
@@ -218,7 +234,7 @@ Dependency direction is one way. `entitlements` comes first because every paid p
 - **Tools:**
   - `scan_site(url)`.
   - `get_report(run_id)`.
-  - `get_fix_prompt(run_id)`.
+  - `get_fix_prompt(run_id, style, section)`; `get_report(run_id, section, cursor)` reads one chapter at a time.
   - `rerun(run_id)`: server-side checks. Journeys rerun in the extension until the cloud runner exists.
   - `list_runs(site)`.
   - `get_finding`, `verify_finding` (P1.4, above).
@@ -329,3 +345,25 @@ Safe mode on logged-in pages (never click delete / remove / cancel subscription 
 
 ## Environment variables
 See [.env.example](.env.example). Web reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`. Never expose service-role keys to the web app.
+
+## Provider receipts (R-S7)
+
+`app/provider_usage.py` holds a bounded receipt contract alongside legacy report token totals. Runtime fallbacks, persona corrections, Jev, citations and Scout retain supplied usage per attempt; native SDK receipts precede lossy normalized counters. Request keys and job ID/lease context reach stages and parallel comparison children. Cache/reasoning/modality/tool details stay separate, unknown remains null, and versioned integer price estimates are partial rather than billed totals.
+
+`PROVIDER_USAGE=off` is the default. Proposed migration 0004 adds service-only RLS/RPC storage with immutable/idempotent begin/completion acknowledgements, pre-dispatch confirmation and pending crash uncertainty. It has only been applied to disposable test databases. No hosted/schema activation, model route or customer billing changed. [Exact contract, pricing sources, verification and activation limits](docs/provider-usage.md).
+
+## Instant Scan reuse (R-S7a)
+
+`app/scan_reuse.py` gates the only eligible result reuse: anonymous public free Instant Scans of the exact URL under ten minutes old whose `report.scan_version` matches the current hash of scanner/report/scoring source and configured model lists. `POST /scans` labels answers `fresh`, `reused` or `coalesced` with the observed time and accepts `fresh: true`. Simultaneous misses share one scan through striped process locks and a hashed claim on the Postgres fixed-window counter, keyed by the newest scan row so a finished scan frees the next claim. Owner, MCP, watch, comparison, journey and browser work never reuse. [Reuse contract and measurements](docs/scan-reuse.md).
+
+## Run reservations (R-S8)
+
+`app/reservations.py` admits a journey run only after `reserve_run` (proposed migration 0005) atomically reserves one run credit and the plan's maximum provider cost in integer micro-USD against the funded daily/monthly budget. The reservation is marked dispatched before the first model call; dispatched work can only be settled, never released on a lease. Settlements record credit separately from cost; refunds are founder-only. `RESERVATIONS=off` by default; `postgres` fails closed. [Ledger contract](docs/run-reservations.md).
+
+## Shared work admission (R-S9)
+
+Every other model/data entry point reserves in the same ledger through `reserve_work` (proposed migration 0006): anonymous Instant Scans (one platform-wide daily pool), MCP scans and finding checks, comparisons (one unit per site), watch checks (weekly, manual, deploy hook), AI answer batches (one unit per answer) and Scout (per workspace). Each operation has its own allowance per owner and UTC day; all share the funded platform budget. `reservations.work()` releases work that never dispatched, settles finished work with its credit and failed work without it. Reused scans and stored-report sends reserve nothing. [Inventory and contract](docs/work-admission.md).
+
+## Keyword direction, advisory mode (R-S17)
+
+`app/scans/opportunities.py` turns the crawled public pages into `report.opportunities`: quoted intent hypotheses, proposals from the page's own words, gaps, internal links and a measurement plan, with no demand numbers and no findings or score effect. The Keywords chapter, `section=keywords` content brief and MCP share it. `app/scans/seo_guidance.py` marks title/description length and heading-count checks as advisory against current Google guidance. [Contract](docs/keyword-opportunities.md).

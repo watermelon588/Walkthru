@@ -1,0 +1,1077 @@
+{
+  "cases": [
+    {
+      "name": "v2-scan",
+      "kind": "scan",
+      "status": "done",
+      "report": {
+        "version": 2,
+        "assessment": {
+          "objective": "",
+          "outcome": "not_tested",
+          "stop_reason": "scan",
+          "coverage": {
+            "checks": {
+              "seo": "complete",
+              "security": "unavailable"
+            },
+            "actions_with_outcomes": 0,
+            "declared_checkpoints": 0,
+            "confirmed_checkpoints": 0,
+            "audited_urls": [],
+            "crawl_truncated": false
+          },
+          "limitations": [
+            "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior."
+          ],
+          "checkpoints": [],
+          "issues": [
+            {
+              "id": "seo.title.missing",
+              "finding_index": 0,
+              "observation_type": "scanner",
+              "observed_facts": [
+                "<head> has no title"
+              ],
+              "expected_result": null,
+              "actual_result": "<head> has no title",
+              "interpretation": "The deterministic check found no title element.",
+              "cause_hypothesis": null,
+              "proposed_change": "Add a descriptive title.",
+              "reproduction_steps": [
+                "Repeat the same seo check (seo.title.missing) on the recorded page/scope."
+              ],
+              "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+              "evidence_refs": [
+                "scanner:0"
+              ]
+            }
+          ],
+          "evidence_index": [
+            {
+              "id": "scanner:0",
+              "source": "scanner",
+              "observed": "<head> has no title",
+              "url": null,
+              "step": null,
+              "finding_index": 0
+            }
+          ],
+          "assertions": []
+        },
+        "summary": "One measured SEO issue; journey not tested.",
+        "first_impression": null,
+        "findings": [
+          {
+            "kind": "seo",
+            "severity": "low",
+            "title": "Missing title",
+            "detail": "The deterministic check found no title element.",
+            "fix": "Add a descriptive title.",
+            "evidence": "<head> has no title",
+            "rule": "seo.title.missing"
+          }
+        ],
+        "top_fixes": [
+          "Add a descriptive title."
+        ],
+        "verified": false,
+        "tokens": 0,
+        "checks": {
+          "seo": "complete",
+          "security": "unavailable"
+        },
+        "check_reasons": {},
+        "site_audit": null,
+        "geo": null,
+        "comparison": null,
+        "model": null,
+        "pages": {},
+        "launch_ready": null,
+        "agent_ready": null,
+        "stack": null,
+        "funnel": null,
+        "scan_version": null,
+        "opportunities": null
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "not_tested",
+          "label": "Not tested",
+          "summary": "No journey ran. This report checks public pages only.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "issues",
+          "label": "1 open issue",
+          "summary": "1 open issue, 0 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "seo.title.missing"
+          ],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "What was tested and what was not: 1 evidence record, 0 audited pages and 1 stated limitation.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": [
+        {
+          "id": "seo.title.missing",
+          "chapter": "seo",
+          "severity": "low",
+          "title": "Missing title",
+          "fix": "Add a descriptive title."
+        }
+      ]
+    },
+    {
+      "name": "long-legacy-journey",
+      "kind": "test",
+      "status": "gave_up",
+      "report": {
+        "summary": "Signup stalled after the email step.",
+        "top_fixes": [
+          "Fix the submit error"
+        ],
+        "verified": false,
+        "tokens": 0,
+        "checks": {
+          "accessibility": "complete",
+          "performance": "unavailable",
+          "seo": "complete",
+          "security": "complete",
+          "geo": "complete"
+        },
+        "check_reasons": {
+          "performance": "PageSpeed did not answer within the time limit."
+        },
+        "geo": {
+          "score": 41,
+          "band": "foundation",
+          "categories": [],
+          "ai_words": 12,
+          "ai_view": "",
+          "notes": []
+        },
+        "findings": [
+          {
+            "kind": "seo",
+            "severity": "low",
+            "title": "3 of 9 images have no alt text",
+            "detail": "3 of 9 images have no alt text.",
+            "fix": "Fix 3 of 9 images have no alt text.",
+            "evidence": "https://site.test/",
+            "rule": "seo.image.alt_missing"
+          },
+          {
+            "kind": "ux",
+            "severity": "high",
+            "title": "Submit shows a network error",
+            "detail": "Submit shows a network error.",
+            "fix": "Fix submit shows a network error.",
+            "evidence": "Step 4: Network error",
+            "rule": "ux.submit_network_error"
+          },
+          {
+            "kind": "geo",
+            "severity": "high",
+            "title": "Homepage content only appears after JavaScript runs",
+            "detail": "Homepage content only appears after JavaScript runs.",
+            "fix": "Fix homepage content only appears after javascript runs.",
+            "evidence": "https://site.test/",
+            "rule": "geo.homepage_content_only_appears_after_javascript_runs"
+          },
+          {
+            "kind": "security",
+            "severity": "medium",
+            "title": "Cookie \"sid\" lacks Secure",
+            "detail": "Cookie \"sid\" lacks Secure.",
+            "fix": "Fix cookie \"sid\" lacks secure.",
+            "evidence": "https://site.test/",
+            "rule": "sec.cookie.flags_missing"
+          },
+          {
+            "kind": "security",
+            "severity": "medium",
+            "title": "Cookie \"csrf\" lacks Secure",
+            "detail": "Cookie \"csrf\" lacks Secure.",
+            "fix": "Fix cookie \"csrf\" lacks secure.",
+            "evidence": "https://site.test/",
+            "rule": "sec.cookie.flags_missing"
+          },
+          {
+            "kind": "accessibility",
+            "severity": "medium",
+            "title": "2 images are missing text alternatives",
+            "detail": "2 images are missing text alternatives.",
+            "fix": "Fix 2 images are missing text alternatives.",
+            "evidence": "https://site.test/",
+            "rule": "a11y.image.alt_missing"
+          },
+          {
+            "kind": "security",
+            "severity": "low",
+            "title": "No SPF record",
+            "detail": "No SPF record.",
+            "fix": "Fix no spf record.",
+            "evidence": "https://site.test/"
+          }
+        ]
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "issues",
+          "label": "1 open issue",
+          "summary": "1 open issue, 1 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "ux.submit_network_error"
+          ],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "issues",
+          "label": "1 open issue",
+          "summary": "1 open issue, 0 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "a11y.image.alt_missing"
+          ],
+          "cross_links": [
+            "seo.image.alt_missing"
+          ]
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "PageSpeed did not answer within the time limit.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "issues",
+          "label": "1 open issue",
+          "summary": "1 open issue, 0 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "seo.image.alt_missing"
+          ],
+          "cross_links": [
+            "a11y.image.alt_missing",
+            "geo.homepage_content_only_appears_after_javascript_runs"
+          ]
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "issues",
+          "label": "1 open issue",
+          "summary": "1 open issue, 1 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "geo.homepage_content_only_appears_after_javascript_runs"
+          ],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "issues",
+          "label": "3 open issues",
+          "summary": "3 open issues, 0 high priority. Each lists its evidence, the change and how to check it.",
+          "issue_ids": [
+            "sec.cookie.flags_missing",
+            "sec.cookie.flags_missing#2",
+            "security:no spf record"
+          ],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "Saved before detailed evidence records. Each finding shows its own evidence.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": [
+        {
+          "id": "ux.submit_network_error",
+          "chapter": "journey",
+          "severity": "high",
+          "title": "Submit shows a network error",
+          "fix": "Fix submit shows a network error."
+        },
+        {
+          "id": "geo.homepage_content_only_appears_after_javascript_runs",
+          "chapter": "geo",
+          "severity": "high",
+          "title": "Homepage content only appears after JavaScript runs",
+          "fix": "Fix homepage content only appears after javascript runs."
+        },
+        {
+          "id": "a11y.image.alt_missing",
+          "chapter": "accessibility",
+          "severity": "medium",
+          "title": "2 images are missing text alternatives",
+          "fix": "Fix 2 images are missing text alternatives."
+        }
+      ]
+    },
+    {
+      "name": "clean-scan",
+      "kind": "scan",
+      "status": "done",
+      "report": {
+        "summary": "Nothing to fix in scope.",
+        "top_fixes": [],
+        "findings": [],
+        "verified": true,
+        "tokens": 0,
+        "checks": {
+          "accessibility": "complete",
+          "performance": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "geo": "complete"
+        },
+        "geo": {
+          "score": 88,
+          "band": "excellent",
+          "categories": [],
+          "ai_words": 900,
+          "ai_view": "",
+          "notes": []
+        }
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "not_tested",
+          "label": "Not tested",
+          "summary": "No journey ran. This report checks public pages only.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect accessibility.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect performance.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect seo foundations.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect geo readiness.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect security and email hygiene.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "Saved before detailed evidence records. Each finding shows its own evidence.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": []
+    },
+    {
+      "name": "interrupted-journey",
+      "kind": "test",
+      "status": "agent_lost",
+      "report": {
+        "summary": "The run stopped before any action.",
+        "top_fixes": [],
+        "findings": [],
+        "verified": false,
+        "tokens": 0
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "unconfirmed",
+          "label": "Outcome unconfirmed",
+          "summary": "No journey issue was recorded, but the requested outcome was not confirmed. See the scope above.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect seo foundations.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect security and email hygiene.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "Saved before detailed evidence records. Each finding shows its own evidence.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": []
+    },
+    {
+      "name": "assertion-failed",
+      "kind": "test",
+      "status": "done",
+      "report": {
+        "version": 2,
+        "assessment": {
+          "objective": "Filter Active records",
+          "outcome": "completed",
+          "stop_reason": "done",
+          "coverage": {
+            "checks": {},
+            "actions_with_outcomes": 1,
+            "declared_checkpoints": 1,
+            "confirmed_checkpoints": 1,
+            "audited_urls": [],
+            "crawl_truncated": false
+          },
+          "limitations": [
+            "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior.",
+            "This count assertion checks the declared synthetic filter state only; it does not verify backend persistence, authorization or broader task completion."
+          ],
+          "checkpoints": [
+            {
+              "description": "Reach /dashboard with Filter: Active",
+              "expected_result": "Filter: Active",
+              "actual_result": "Filter: Active",
+              "status": "passed",
+              "evidence_refs": [
+                "milestone:1"
+              ]
+            }
+          ],
+          "issues": [],
+          "evidence_index": [
+            {
+              "id": "step:1",
+              "source": "step",
+              "observed": "Step 1: Browser action has a recorded public outcome.",
+              "url": "https://fixture.test/dashboard",
+              "step": 1,
+              "finding_index": null
+            },
+            {
+              "id": "milestone:1",
+              "source": "milestone",
+              "observed": "Filter: Active",
+              "url": "https://fixture.test/dashboard",
+              "step": 1,
+              "finding_index": null
+            },
+            {
+              "id": "assertion:1",
+              "source": "assertion",
+              "observed": "Filter: Active; Filtered records: 3; Dataset: synthetic-sales-v1; Dataset time: 2026-10-06T04:00:00+00:00;",
+              "url": "https://fixture.test/dashboard",
+              "step": 1,
+              "finding_index": null
+            }
+          ],
+          "assertions": [
+            {
+              "id": "filtered_count:1",
+              "status": "failed",
+              "expected": {
+                "path": "/dashboard",
+                "filter_value": "Active",
+                "count_label": "Filtered records",
+                "expected_count": 2,
+                "dataset_id": "synthetic-sales-v1",
+                "dataset_at": "2026-10-06T04:00:00Z",
+                "max_age_seconds": 3600,
+                "tolerance": 0
+              },
+              "observed_count": 3,
+              "observed_dataset_id": "synthetic-sales-v1",
+              "observed_dataset_at": "2026-10-06T04:00:00Z",
+              "evaluated_at": "2026-10-06T04:00:00Z",
+              "state_reached": true,
+              "reason": "The declared filter state was reached; the visible count differs from the supplied expectation.",
+              "evidence_refs": [
+                "assertion:1"
+              ]
+            }
+          ]
+        },
+        "summary": "Scoped synthetic filter check",
+        "first_impression": null,
+        "findings": [],
+        "top_fixes": [],
+        "verified": false,
+        "tokens": 0,
+        "checks": {},
+        "check_reasons": {},
+        "site_audit": null,
+        "geo": null,
+        "comparison": null,
+        "model": null,
+        "pages": {},
+        "launch_ready": null,
+        "agent_ready": null,
+        "stack": null,
+        "funnel": null,
+        "scan_version": null,
+        "opportunities": null
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "unconfirmed",
+          "label": "Outcome unconfirmed",
+          "summary": "Declared filtered count: failed. UI checkpoint completion is shown separately; inspect the count evidence above.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect seo foundations.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "This check did not run for this report.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect security and email hygiene.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "What was tested and what was not: 3 evidence records, 0 audited pages and 2 stated limitations.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": []
+    },
+    {
+      "name": "keyword-advisory",
+      "kind": "scan",
+      "status": "done",
+      "report": {
+        "summary": "Nothing to fix in scope.",
+        "top_fixes": [],
+        "findings": [],
+        "verified": true,
+        "tokens": 0,
+        "checks": {
+          "accessibility": "complete",
+          "performance": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "geo": "complete"
+        },
+        "geo": {
+          "score": 88,
+          "band": "excellent",
+          "categories": [],
+          "ai_words": 900,
+          "ai_view": "",
+          "notes": []
+        },
+        "opportunities": {
+          "mode": "prelaunch_advisory",
+          "demand_data": "none",
+          "basis": "b",
+          "measurement": "m",
+          "pages_considered": 1,
+          "excluded_noindex": [],
+          "overlaps": [],
+          "pages": [
+            {
+              "url": "https://site.test/",
+              "primary_intent": {
+                "text": "Plan trips",
+                "source": "h1"
+              },
+              "supporting": [],
+              "current": {
+                "title": null,
+                "description": null,
+                "h1": [
+                  "Plan trips"
+                ]
+              },
+              "proposed": {
+                "title": "Plan trips",
+                "description": null,
+                "outline": [
+                  "Plan trips"
+                ],
+                "basis": "b"
+              },
+              "gaps": [
+                "No title element."
+              ],
+              "internal_links": {
+                "inbound_from": [],
+                "suggested_from": []
+              },
+              "next_action": "n",
+              "effort": "low"
+            }
+          ]
+        }
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "not_tested",
+          "label": "Not tested",
+          "summary": "No journey ran. This report checks public pages only.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect accessibility.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect performance.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect seo foundations.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "advisory",
+          "label": "Advisory, no search data",
+          "summary": "1 page mapped from the site's own copy. Intents are hypotheses to confirm; no search volume, difficulty, rank or traffic data was used.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "not_measured",
+          "label": "Not measured",
+          "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect geo readiness.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect security and email hygiene.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "Saved before detailed evidence records. Each finding shows its own evidence.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": []
+    }
+  ]
+}

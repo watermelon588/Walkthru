@@ -73,6 +73,46 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def begin_provider_attempt(attempt_id: str, identity: dict) -> bool:
+    """Idempotent receipt acknowledgement, never permission to replay inference."""
+    return _request("POST", "/rest/v1/rpc/begin_provider_attempt", json_body={"p_id": attempt_id, "p_identity": identity})
+
+
+def finish_provider_attempt(attempt_id: str, result: dict) -> bool:
+    """An identical terminal acknowledgement is safe to retry; conflicting writes fail."""
+    return _request("POST", "/rest/v1/rpc/finish_provider_attempt", json_body={"p_id": attempt_id, "p_result": result})
+
+
+def reserve_run(user_id: str, key: str, window_start: str, window_end: str, allowed: int, max_cost: int, price_version: str) -> dict:
+    """R-S8 atomic credit and budget reservation (migrations/0005). Replays of the same key return the same reservation."""
+    return _request("POST", "/rest/v1/rpc/reserve_run", json_body={
+        "p_user": user_id, "p_key": key, "p_window_start": window_start, "p_window_end": window_end,
+        "p_allowed": allowed, "p_max_cost": max_cost, "p_price_version": price_version}) or {}
+
+
+def reserve_work(owner: str, operation: str, key: str, window_start: str, window_end: str, allowed: int, units: int,
+                 max_cost: int, price_version: str) -> dict:
+    """R-S9 shared admission (migrations/0006): the same ledger and funded budget for every operation."""
+    return _request("POST", "/rest/v1/rpc/reserve_work", json_body={
+        "p_owner": owner, "p_operation": operation, "p_key": key, "p_window_start": window_start, "p_window_end": window_end,
+        "p_allowed": allowed, "p_units": units, "p_max_cost": max_cost, "p_price_version": price_version}) or {}
+
+
+def mark_reservation_dispatched(reservation_id: str) -> bool:
+    return bool(_request("POST", "/rest/v1/rpc/mark_reservation_dispatched", json_body={"p_id": reservation_id}))
+
+
+def finish_reservation(reservation_id: str, outcome: dict) -> bool:
+    """Identical terminal replays return True; conflicting or impossible transitions return False."""
+    return bool(_request("POST", "/rest/v1/rpc/finish_reservation", json_body={"p_id": reservation_id, "p_outcome": outcome}))
+
+
+def reservation_for(user_id: str, key: str) -> dict | None:
+    rows = _request("GET", "/rest/v1/run_reservations", params={"user_id": f"eq.{user_id}", "operation_key": f"eq.{key}",
+                                                               "select": "id,state,dispatched", "limit": "1"}) or []
+    return rows[0] if rows else None
+
+
 def _rows(params: dict) -> list[dict]:
     return _request("GET", "/rest/v1/runs", params=params) or []
 
@@ -107,9 +147,16 @@ def recent_public_scan(site: str) -> dict | None:
         "site": f"eq.{site}", "kind": "eq.scan", "tier": "eq.free",
         "user_id": "is.null", "public": "eq.true", "status": "eq.done",
         "report": "not.is.null", "created_at": f"gt.{since}",
-        "order": "created_at.desc", "limit": "1", "select": "id,site,report",
+        "order": "created_at.desc", "limit": "1", "select": "id,site,report,created_at",
     })
     return rows[0] if rows else None
+
+
+def latest_public_scan_id(site: str) -> str | None:
+    """The newest anonymous free Instant Scan row of this exact URL in any state (app/scan_reuse.py claim generation)."""
+    rows = _rows({"site": f"eq.{site}", "kind": "eq.scan", "tier": "eq.free", "user_id": "is.null",
+                  "order": "created_at.desc,id.desc", "limit": "1", "select": "id"})
+    return rows[0]["id"] if rows else None
 
 
 def update_run(run_id: str, status: str, steps: list[dict], tokens: int = 0) -> None:

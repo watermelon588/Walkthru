@@ -14,7 +14,7 @@ import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans import backend, fetch, geo, geo_depth, security, seo, seo_depth, takeover, tls
+from app.scans import backend, fetch, geo, geo_depth, opportunities, security, seo, seo_depth, takeover, tls
 
 USER_AGENT = "WalkthruBot"
 DEFAULT_MAX_PAGES = 10
@@ -43,6 +43,7 @@ class SiteAudit:
     production_like: bool = False  # a local host that deliberately serves production headers (the eval fixtures)
     geo: geo.GeoResult | None = None
     pages: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (kind, title, every affected page)
+    opportunities: dict | None = None  # R-S17 advisory keyword/content map (app/scans/opportunities.py)
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -327,5 +328,10 @@ def audit(
         remote=remote,
     )
     page_map: list[tuple[str, str, list[str]]] = []
+    try:  # advisory content direction from the same crawled pages; never sinks the audit
+        advice = opportunities.build([(page_url, response.text, _links(response.text, page_url, base)) for page_url, response in pages]) if pages else None
+    except Exception:
+        logging.getLogger("walkthru").warning("opportunity map failed for %s", root_url, exc_info=True)
+        advice = None
     return SiteAudit(_aggregate(seo_records, len(pages), page_map), _aggregate(security_records, len(pages), page_map), coverage,
-                     production_like, readiness, page_map + readiness.pages)
+                     production_like, readiness, page_map + readiness.pages, advice)

@@ -130,7 +130,7 @@ def test_performance_scan_maps_pagespeed_evidence(monkeypatch):
     assert measured is True
     assert findings[0].kind == "performance"
     assert findings[0].title == "Mobile performance score 42/100"
-    assert findings[0].evidence == "PageSpeed Insights, mobile: 42"
+    assert findings[0].evidence == "PageSpeed Insights, mobile lab: 42; https://site.test"
 
 
 def test_dns_txt_record_verifies_a_domain(monkeypatch):

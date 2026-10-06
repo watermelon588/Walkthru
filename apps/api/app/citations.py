@@ -26,9 +26,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from fastapi import HTTPException
 from selectolax.parser import HTMLParser
 
-from app import db, notify, plans, providers
+from app import db, notify, plans, provider_usage, providers, reservations
 from app.citation_evidence import VERSION, analyze, clean, domain_of, first, gemini_sources, groq_sources, source
 
 log = logging.getLogger("walkthru.citations")
@@ -182,6 +183,8 @@ MEMORY_SYSTEM = ("Answer the person's question the way an AI assistant would, fr
                  "companies by name. Keep it under 150 words.")
 
 
+@provider_usage.stage("citation_web")
+@provider_usage.attempt("groq", WEB_MODEL)
 @providers.guard("groq")
 def ask_web(prompt: str) -> dict:
     key = os.environ.get("GROQ_API_KEY")
@@ -194,6 +197,7 @@ def ask_web(prompt: str) -> dict:
         raise Busy("groq rate limit")
     r.raise_for_status()
     body = r.json()
+    provider_usage.capture(body.get("usage"), "openai", body.get("id"))
     msg = body["choices"][0]["message"]
     if not (msg.get("content") or "").strip():
         raise RuntimeError("empty Groq answer")
@@ -202,6 +206,8 @@ def ask_web(prompt: str) -> dict:
             "tokens": (body.get("usage") or {}).get("total_tokens", 0), "model": WEB_MODEL}
 
 
+@provider_usage.stage("citation_memory")
+@provider_usage.attempt("gemini", GEMINI_MODELS[0] if GEMINI_MODELS else "unknown")
 @providers.guard("gemini")
 def ask_memory(prompt: str, *, mode: str | None = None) -> dict:
     key = gemini_key()
@@ -223,6 +229,7 @@ def ask_memory(prompt: str, *, mode: str | None = None) -> dict:
             log.warning("citations: %s answered %s", model, r.status_code)
             continue
         data = r.json()
+        provider_usage.capture(data.get("usageMetadata"), "gemini", data.get("responseId"))
         cand = (data.get("candidates") or [{}])[0]
         answer = "".join(str(p.get("text") or "") for p in ((cand.get("content") or {}).get("parts") or []) if not p.get("thought")).strip()
         if not answer:
@@ -252,8 +259,20 @@ def queue_batch(site: dict, prompts: list[dict], engines: tuple[str, ...], *, we
              "result": {"provenance": provenance(e), "context": context,
                         "prompt_group": "branded" if first(p["prompt"], context["brand"], context["domain"]) is not None else "unbranded"}}
             for p in prompts for e in engines]
-    outcome = db.queue_citation_batch(site["id"], batch, rows, DAILY, weekly)
+    # R-S9: one unit per queued answer, within a day's worth of the owner's plan (every site, prompt and engine once),
+    # reserved before the queue accepts it. Queued checks may run at any time, so it is marked dispatched before queueing
+    # (a queue refusal then settles without the credit) and settled when the batch's last check finishes (_maybe_announce).
+    lim = limit_for(str(site["user_id"]))
+    allowed = lim.sites * lim.prompts * len(lim.engines) if lim else 0
+    reservation = reservations.reserve_work("citations", str(site["user_id"]), f"citations-{batch}", allowed, units=len(rows))
+    reservations.dispatched(reservation)
+    try:
+        outcome = db.queue_citation_batch(site["id"], batch, rows, DAILY, weekly)
+    except Exception:
+        reservations.settle_work(reservation, failed=True)  # unknown whether it was queued: cost stays counted
+        raise
     if outcome != "ok":
+        reservations.settle_work(reservation, failed=True)
         messages = {"pending": "This site already has answers waiting. Let that batch finish first.",
                     "recent": "These prompts were queued in the last day. Try again tomorrow.",
                     "capacity": "The shared free-provider queue is full for the next seven daily quota windows. Try again after capacity clears.",
@@ -297,7 +316,8 @@ def process(max_checks: int = 30, sleep=time.sleep) -> int:
                 continue
             mode = (saved.get("provenance") or {}).get("mode", "memory")
             # Do not silently upgrade an already queued memory request to web search.
-            got = ask_memory(check["prompt"], mode=mode) if ENGINES[engine] is ask_memory else ENGINES[engine](check["prompt"])
+            with provider_usage.scope(operation_id=check["id"], user_id=site["user_id"], job_attempt=check.get("attempts", 0) + 1):
+                got = ask_memory(check["prompt"], mode=mode) if ENGINES[engine] is ask_memory else ENGINES[engine](check["prompt"])
             context = saved.get("context") or {"brand": site["brand"], "domain": domain_of(site["site"]), "competitors": site.get("competitors") or []}
             result = analyze(got["answer"], got["sources"], **context, citation_status=got.get("citation_status", "unresolved"))
             result.update(provenance=got.get("provenance") or saved.get("provenance") or provenance(engine), context=context,
@@ -335,6 +355,8 @@ def _maybe_announce(check: dict) -> None:
         if batch and all(c["status"] != "queued" for c in batch):
             site = db.citation_site(check["site_id"])
             done = [c for c in batch if c["status"] == "done"]
+            # Idempotent: every finishing check of the batch sends the same settlement.
+            reservations.settle(site["user_id"], f"citations-{check['batch_id']}", "completed", credit=bool(done))
             named = sum(1 for c in done if any(b["you"] and b["mentioned"] for b in (c.get("result") or {}).get("brands", [])))
             notify.send(site["user_id"], "visibility", "citations.done", f"AI answers checked for {site['brand']}"[:200],
                         f"Named in {named} of {len(done)} answers.", "/app/visibility")
@@ -357,7 +379,7 @@ def run_due() -> int:
                 queue_batch(site, prompts, lim.engines, weekly=True)
                 queued += 1
             db.update_citation_site(site["id"], {"next_check_at": (now + EVERY).isoformat()})
-        except QueueFull:
+        except (QueueFull, HTTPException):  # queue full, or no reservation (R-S9): try again in 6 hours, not every minute
             db.update_citation_site(site["id"], {"next_check_at": (now + timedelta(hours=6)).isoformat()})
         except Exception:
             log.warning("citation schedule failed for %s", site.get("site"), exc_info=True)

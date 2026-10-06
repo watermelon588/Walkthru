@@ -1,0 +1,90 @@
+{
+  "version": 2,
+  "assessment": {
+    "objective": "",
+    "outcome": "not_tested",
+    "stop_reason": "scan",
+    "coverage": {
+      "checks": {
+        "seo": "complete",
+        "security": "unavailable"
+      },
+      "actions_with_outcomes": 0,
+      "declared_checkpoints": 0,
+      "confirmed_checkpoints": 0,
+      "audited_urls": [],
+      "crawl_truncated": false
+    },
+    "limitations": [
+      "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior."
+    ],
+    "checkpoints": [],
+    "issues": [
+      {
+        "id": "seo.title.missing",
+        "finding_index": 0,
+        "observation_type": "scanner",
+        "observed_facts": [
+          "<head> has no title"
+        ],
+        "expected_result": null,
+        "actual_result": "<head> has no title",
+        "interpretation": "The deterministic check found no title element.",
+        "cause_hypothesis": null,
+        "proposed_change": "Add a descriptive title.",
+        "reproduction_steps": [
+          "Repeat the same seo check (seo.title.missing) on the recorded page/scope."
+        ],
+        "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+        "evidence_refs": [
+          "scanner:0"
+        ]
+      }
+    ],
+    "evidence_index": [
+      {
+        "id": "scanner:0",
+        "source": "scanner",
+        "observed": "<head> has no title",
+        "url": null,
+        "step": null,
+        "finding_index": 0
+      }
+    ],
+    "assertions": []
+  },
+  "summary": "One measured SEO issue; journey not tested.",
+  "first_impression": null,
+  "findings": [
+    {
+      "kind": "seo",
+      "severity": "low",
+      "title": "Missing title",
+      "detail": "The deterministic check found no title element.",
+      "fix": "Add a descriptive title.",
+      "evidence": "<head> has no title",
+      "rule": "seo.title.missing"
+    }
+  ],
+  "top_fixes": [
+    "Add a descriptive title."
+  ],
+  "verified": false,
+  "tokens": 0,
+  "checks": {
+    "seo": "complete",
+    "security": "unavailable"
+  },
+  "check_reasons": {},
+  "site_audit": null,
+  "geo": null,
+  "comparison": null,
+  "model": null,
+  "pages": {},
+  "launch_ready": null,
+  "agent_ready": null,
+  "stack": null,
+  "funnel": null,
+  "scan_version": null,
+  "opportunities": null
+}

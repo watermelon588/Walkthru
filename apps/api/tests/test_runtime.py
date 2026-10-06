@@ -15,7 +15,7 @@ from app.agent.typesafe import JevFallback
 @pytest.fixture(autouse=True)
 def plain_models(monkeypatch):
     # These tests inspect configuration/order. Real guarded fallback execution is in test_providers.py.
-    monkeypatch.setattr(runtime, "guarded", lambda provider, model: model)
+    monkeypatch.setattr(runtime, "guarded", lambda provider, model, **kwargs: model)
 
 
 class FakeRunnable:

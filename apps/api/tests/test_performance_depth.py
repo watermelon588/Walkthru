@@ -27,7 +27,8 @@ def test_paid_pagespeed_checks_at_most_five_pages_and_real_user_vitals(monkeypat
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:
         findings, measured, rows = performance.scan_pages(urls, client)
     assert measured and len(rows) == 5 and set(requested) == set(urls[:5])
-    assert rows[0] == {"url": urls[0], "status": "field_data", "lab_score": 91, "lcp_ms": 3100, "cls": 0.18, "inp_ms": 230}
+    assert {k: rows[0][k] for k in ("url", "status", "lab_score", "lcp_ms", "cls", "inp_ms")} == {"url": urls[0], "status": "field_data", "lab_score": 91, "lcp_ms": 3100, "cls": 0.18, "inp_ms": 230}
+    assert rows[0]["field_status"] == "complete"
     assert len([f for f in findings if "Core Web Vitals" in f.title]) == 5
 
 

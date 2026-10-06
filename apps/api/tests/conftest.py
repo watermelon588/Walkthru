@@ -8,6 +8,7 @@ import pytest
 
 os.environ["RETENTION_JOB"] = "0"  # before app.main is imported
 os.environ["WARMUP"] = "0"
+os.environ["WEB_URL"] = "http://localhost:5173"  # deterministic test CORS, independent of local/deployment .env
 
 from app import db
 from app.auth import require_user
@@ -65,6 +66,9 @@ def fake_db(monkeypatch):
         return max(found, key=lambda r: r["created_at"], default=None)
 
     monkeypatch.setattr(db, "recent_public_scan", recent_public_scan)
+    monkeypatch.setattr(db, "latest_public_scan_id", lambda site: max(
+        (r for r in rows.values() if r.get("site") == site and r.get("kind") == "scan" and r.get("tier") == "free" and r.get("user_id") is None),
+        key=lambda r: (r["created_at"], r["id"]), default={}).get("id"))
     monkeypatch.setattr(db, "update_run", update_run)
     monkeypatch.setattr(db, "mark_run_stopped", mark_run_stopped)
     monkeypatch.setattr(db, "set_report", set_report)

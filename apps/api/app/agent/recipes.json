@@ -254,22 +254,22 @@
       "risk": "None.", "check": "curl -s {url} | grep -i og:site_name"},
 
     "seo.missing_meta_description": {
-      "why": "Search engines and link previews show a random snippet instead of your pitch.",
+      "why": "Advisory: search engines usually build snippets from page text, and link previews often show the description when it exists.",
       "steps": {
-        "nextjs": {"file": "app/layout.tsx (and each page's metadata)", "snippet": "export const metadata = {\n  title: 'Your product: what it does',\n  description: 'One or two sentences, 120 to 160 characters, saying what it does and for whom.',\n}", "note": "Give each page its own description."},
+        "nextjs": {"file": "app/layout.tsx (and each page's metadata)", "snippet": "export const metadata = {\n  title: 'Your product: what it does',\n  description: 'One or two sentences saying what it does and for whom.',\n}", "note": "Give each page its own description."},
         "astro": {"file": "src/layouts/Layout.astro <head>", "snippet": "<meta name=\"description\" content={description} />", "note": "Pass a description from each page."},
-        "wordpress": {"file": "your SEO plugin (Yoast or Rank Math), page settings", "snippet": "Meta description: one or two sentences, 120 to 160 characters.", "note": ""},
-        "*": {"file": "index.html <head>", "snippet": "<meta name=\"description\" content=\"One or two sentences, 120 to 160 characters, saying what it does and for whom.\">", "note": "Single-page apps: this is the description for every route unless you set it per page."}
+        "wordpress": {"file": "your SEO plugin (Yoast or Rank Math), page settings", "snippet": "Meta description: one or two sentences saying what the page offers. No fixed length; long ones are shortened in results.", "note": ""},
+        "*": {"file": "index.html <head>", "snippet": "<meta name=\"description\" content=\"One or two sentences saying what it does and for whom.\">", "note": "Single-page apps: this is the description for every route unless you set it per page."}
       },
       "risk": "None.",
       "check": "curl -s {url} | grep -i '<meta name=\"description\"'"
     },
-    "seo.meta_description_is_too_short": {"why": "A very short description wastes the space search results give you.",
-      "change": "Rewrite the meta description to 120 to 160 characters: what it does, for whom, and why it is different.", "risk": "None.",
+    "seo.meta_description_is_too_short": {"why": "Advisory: a very short description is often replaced with text from the page.",
+      "change": "Rewrite the meta description to say what the page offers, for whom, and why it is different. There is no required length.", "risk": "None.",
       "check": "curl -s {url} | grep -i '<meta name=\"description\"'"},
-    "seo.page_title_is_too_short": {"why": "The title is the headline in search results; a short one says little.",
-      "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = { title: 'Your product: the one thing it does' }", "note": "30 to 60 characters."},
-                "*": {"file": "index.html <head>", "snippet": "<title>Your product: the one thing it does</title>", "note": "30 to 60 characters."}},
+    "seo.page_title_is_too_short": {"why": "Advisory: the title is the headline in search results; a very short one may say little.",
+      "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = { title: 'Your product: the one thing it does' }", "note": "No required length; put the key words first."},
+                "*": {"file": "index.html <head>", "snippet": "<title>Your product: the one thing it does</title>", "note": "No required length; put the key words first."}},
       "risk": "None.", "check": "curl -s {url} | grep -i '<title>'"},
     "seo.no_canonical_link": {"why": "Without a canonical link, copies of a page (with tracking parameters, www or not) compete with each other.",
       "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = { metadataBase: new URL('https://yourdomain.com'), alternates: { canonical: '/' } }", "note": "Set each page's own canonical path."},
@@ -279,7 +279,7 @@
       "steps": {"nextjs": {"file": "app/layout.tsx metadata", "snippet": "export const metadata = {\n  openGraph: { title: 'Your product', description: 'What it does', images: ['/og.png'] },\n}", "note": "A 1200 x 630 image works everywhere."},
                 "*": {"file": "index.html <head>", "snippet": "<meta property=\"og:title\" content=\"Your product\">\n<meta property=\"og:description\" content=\"What it does\">\n<meta property=\"og:image\" content=\"https://yourdomain.com/og.png\">", "note": ""}},
       "risk": "None.", "check": "curl -s {url} | grep -i 'og:'"},
-    "seo.more_than_one_hn_heading": {"why": "Several h1 headings blur what the page is about.", "change": "Keep one <h1> per page (the page's main headline) and turn the others into <h2>.", "risk": "Check your styling: some sites style h1 directly.", "check": "curl -s {url} | grep -o '<h1' | wc -l"},
+    "seo.more_than_one_hn_heading": {"why": "Advisory: search engines set no ideal heading count, but several h1s can blur the main heading for screen-reader users.", "change": "Optional: keep one <h1> for the page's main headline and use <h2> for section titles.", "risk": "Check your styling: some sites style h1 directly.", "check": "curl -s {url} | grep -o '<h1' | wc -l"},
     "seo.image.alt_missing": {"why": "Images without alt text are invisible to search engines and screen readers.",
       "change": "Add a short alt text describing each meaningful image; use alt=\"\" for decorative ones.", "risk": "None.", "check": "curl -s {url} | grep -o '<img[^>]*>' | grep -v alt= | head"},
     "seo.broken_internal_link": {"why": "Visitors and crawlers hit a dead end.", "change": "Fix or remove each broken link the report lists, or redirect the old address.", "risk": "None.", "check": "curl -s -o /dev/null -w '%{http_code}\\n' <broken link>"},

@@ -106,7 +106,7 @@ def test_compare_accept_and_share(monkeypatch, passes, fake_db):
     _session(monkeypatch, passes, fake_db)
     monkeypatch.setattr(main.fetch, "assert_public", lambda url: None)
     started = []
-    monkeypatch.setattr(main, "_compare", lambda run_id, uid, urls: started.append(urls))
+    monkeypatch.setattr(main, "_compare", lambda run_id, uid, urls, *_: started.append(urls))
     with TestClient(app) as c:
         key = _key(c)
         error, text = _call(c, key, "compare_sites", {"site": "site.test", "competitors": ["rival.test"]})

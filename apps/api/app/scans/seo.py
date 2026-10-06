@@ -18,28 +18,30 @@ def check_html(html: str, url: str) -> list[Finding]:
     tree = HTMLParser(html)
     out: list[Finding] = []
 
+    # Length and heading-count checks are advisory presentation checks, not ranking failures: Google sets no length
+    # limit for titles or descriptions and no ideal heading count (app/scans/seo_guidance.py has the sources).
     title = (tree.css_first("title").text(strip=True) if tree.css_first("title") else "") or ""
     if not title:
-        out.append(_f("high", "Missing page title", "The page has no <title>. Search results and browser tabs show the URL instead.", "Add a title of 15 to 60 characters that says what the page is.", url))
+        out.append(_f("high", "Missing page title", "The page has no <title>. Search results and browser tabs show the URL or other page text instead.", "Add a title that says what this page is and names the site.", url))
     elif len(title) < 15:
-        out.append(_f("medium", "Page title is too short", f'The title is "{title}" ({len(title)} characters).', "Use 15 to 60 characters that describe the page and the brand.", title))
+        out.append(_f("low", "Page title is too short", f'The title is "{title}" ({len(title)} characters). Advisory: a very short title may say little about the page.', "Describe this page and the brand in the title. There is no required length.", title))
     elif len(title) > 60:
-        out.append(_f("low", "Page title is too long", f"The title is {len(title)} characters and will be cut off in search results.", "Keep the title under 60 characters.", title))
+        out.append(_f("low", "Page title is too long", f"The title is {len(title)} characters. Advisory: there is no length limit, but long titles are shortened in search results to fit the screen.", "Put the most important words first. Shortening is optional.", title))
 
     desc = tree.css_first('meta[name="description"]')
     content = (desc.attributes.get("content") or "").strip() if desc else ""
     if not content:
-        out.append(_f("high", "Missing meta description", "Search engines will pick a random snippet of page text as the summary.", "Add a meta description of 50 to 160 characters that says what the site does and for whom.", url))
+        out.append(_f("medium", "Missing meta description", "No meta description. Advisory: search engines usually build snippets from page text, and link previews often show the description when it exists.", "Add a short description of what this page offers and for whom. There is no required length.", url))
     elif len(content) < 50:
-        out.append(_f("low", "Meta description is too short", f"{len(content)} characters; search engines often replace short descriptions with text from the page.", "Write 50 to 160 characters that say what the page offers and why to click.", content))
+        out.append(_f("low", "Meta description is too short", f"{len(content)} characters. Advisory: a very short description is often replaced with text from the page.", "Say what the page offers and why to visit. There is no required length.", content))
     elif len(content) > 160:
-        out.append(_f("low", "Meta description is too long", f"{len(content)} characters; it will be truncated in results.", "Keep it under 160 characters.", content[:80]))
+        out.append(_f("low", "Meta description is too long", f"{len(content)} characters. Advisory: there is no length limit, but long snippets are shortened to fit the screen.", "Put the key point first. Shortening is optional.", content[:80]))
 
     h1s = [h.text(strip=True) for h in tree.css("h1")]
     if not h1s:
-        out.append(_f("medium", "No h1 heading", "The page has no top-level heading, so the main topic is unclear to search engines and screen readers.", "Add exactly one h1 that states what the page is about.", url))
+        out.append(_f("low", "No h1 heading", "The page has no top-level heading. Advisory: a clear main heading helps visitors and screen-reader users find the topic; search engines also read prominent headings.", "Add one main heading that states what the page is about.", url))
     elif len(h1s) > 1:
-        out.append(_f("low", "More than one h1 heading", f"{len(h1s)} h1 elements: {', '.join(h1s[:3])}.", "Keep one h1 per page; use h2 for sections.", " | ".join(h1s[:3])))
+        out.append(_f("low", "More than one h1 heading", f"{len(h1s)} h1 elements: {', '.join(h1s[:3])}. Advisory: there is no ideal number of headings for search; several h1s can blur the main heading for screen-reader users.", "Optional: keep one main h1 and use h2 for section titles.", " | ".join(h1s[:3])))
 
     if not tree.css_first('link[rel="canonical"]'):
         out.append(_f("low", "No canonical link", "Without a canonical URL, variants like ?utm= or trailing slashes can split ranking signals.", 'Add <link rel="canonical" href="..."> pointing at the preferred URL.', url))
