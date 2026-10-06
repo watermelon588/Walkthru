@@ -50,6 +50,7 @@ const Privacy = page(() => import('./pages/Privacy'))
 const Terms = page(() => import('./pages/Terms'))
 const Security = page(() => import('./pages/Security'))
 const NotFound = page(() => import('./pages/NotFound'))
+const Variants = page(() => import('./variants/Variants')) // preview: three alternative home pages
 
 /** New page: start at the top. With a #hash: scroll to it once the (lazy) page has rendered it. */
 function ScrollManager() {
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="/app/team/:id/:tab?" element={<RequireAuth><Team /></RequireAuth>} />
             <Route path="/join" element={<Join />} />
             <Route path="/r/:id" element={<Public />} />
+            <Route path="/variants" element={<Variants />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

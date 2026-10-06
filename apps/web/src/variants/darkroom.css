@@ -1,0 +1,55 @@
+/* Variant 2, Darkroom: black and white photography, one red signal, kinetic width-axis type. Scoped to .dr. See docs/home-variants/darkroom.md */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap");
+
+.dr {
+  --dr-bg: #0b0b0c;
+  --dr-panel: #151517;
+  --dr-ink: #eceae4;
+  --dr-muted: #8f8d87;
+  --dr-faint: #3a3a3d;
+  --dr-line: rgb(236 234 228 / 0.13);
+  --dr-red: #ff3b21;
+  --dr-display: "Archivo", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  color: var(--dr-ink);
+  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+}
+.dr-content { background: var(--dr-bg); }
+.dr ::selection { background: var(--dr-red); color: var(--dr-bg); }
+.dr :focus-visible { outline: 2px solid var(--dr-red); outline-offset: 3px; }
+
+.dr-display { font-family: var(--dr-display); font-weight: 820; text-transform: uppercase; letter-spacing: -0.02em; line-height: 0.86; }
+.dr-title { font-family: var(--dr-display); font-weight: 700; font-stretch: 75%; text-transform: uppercase; letter-spacing: -0.01em; line-height: 0.9; }
+.dr-mono { font-family: "Geist Mono Variable", ui-monospace, monospace; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Kinetic headline: every character carries its own width, pushed around by the pointer. */
+.dr-h1 .dr-char { display: inline-block; font-stretch: calc(var(--s, 100) * 1%); }
+.dr-h1 div { padding-bottom: 0.06em; margin-bottom: -0.06em; }
+.dr-mark { position: relative; isolation: isolate; color: var(--dr-bg); }
+.dr-mark::before { content: ""; position: absolute; inset: 0.02em -0.08em 0.02em; z-index: -1; background: var(--dr-red); transform-origin: left; transform: scaleX(var(--mark, 1)); }
+
+/* Underline input: a single hairline that turns red on focus. */
+.dr-input { width: 100%; min-width: 0; border: 0; border-bottom: 1px solid var(--dr-muted); background: transparent; padding: 0.9rem 0; font-size: 1.1rem; color: var(--dr-ink); border-radius: 0; }
+.dr-input::placeholder { color: #75736e; }
+.dr-input:focus { outline: none; border-bottom-color: var(--dr-red); }
+
+.dr-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; white-space: nowrap; background: var(--dr-red); color: var(--dr-bg); padding: 1rem 1.6rem; font-weight: 650; font-size: 0.95rem; transition: background-color 0.2s, translate 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+.dr-btn:hover { background: var(--dr-ink); }
+.dr-btn:active { translate: 0 1px; }
+.dr-btn--ghost { background: transparent; color: var(--dr-ink); box-shadow: inset 0 0 0 1px var(--dr-line); }
+.dr-btn--ghost:hover { background: var(--dr-ink); color: var(--dr-bg); }
+
+.dr-grain::after { content: ""; position: fixed; inset: -50%; z-index: 65; pointer-events: none; opacity: 0.07; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+.dr-photo { filter: grayscale(1) contrast(1.08) brightness(0.9); }
+
+/* Transcript words light up as you read. */
+.dr-word { color: var(--dr-faint); transition: color 0.2s; }
+
+.dr-row { border-top: 1px solid var(--dr-line); }
+.dr-row:last-child { border-bottom: 1px solid var(--dr-line); }
+
+.dr-faq summary { list-style: none; cursor: pointer; }
+.dr-faq summary::-webkit-details-marker { display: none; }
+.dr-faq .dr-plus { transition: rotate 0.35s cubic-bezier(0.23, 1, 0.32, 1), color 0.2s; }
+.dr-faq[open] .dr-plus { rotate: 45deg; color: var(--dr-red); }

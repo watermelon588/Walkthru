@@ -1,0 +1,58 @@
+/* Variant 3, Markup: a reviewer's proof sheet. Blueprint grid, navy ink, one lime highlighter, hand-drawn notes. Scoped to .mk. See docs/home-variants/markup.md */
+@import url("https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..900&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;700&display=swap");
+
+.mk {
+  --mk-paper: #f5f6f1;
+  --mk-sheet: #fcfcf9;
+  --mk-ink: #1c2230;
+  --mk-muted: #5a6172;
+  --mk-line: rgb(28 34 48 / 0.16);
+  --mk-grid: rgb(43 61 110 / 0.07);
+  --mk-lime: #d6f548;
+  --mk-display: "Schibsted Grotesk", "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --mk-hand: "Caveat", "Segoe Print", cursive;
+  color: var(--mk-ink);
+  font-family: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+}
+.mk-content {
+  background-color: var(--mk-paper);
+  background-image: linear-gradient(var(--mk-grid) 1px, transparent 1px), linear-gradient(90deg, var(--mk-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.mk ::selection { background: var(--mk-lime); color: var(--mk-ink); }
+.mk :focus-visible { outline: 2px solid var(--mk-ink); outline-offset: 3px; }
+
+.mk-display { font-family: var(--mk-display); font-weight: 650; letter-spacing: -0.04em; line-height: 0.98; }
+.mk-mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.mk-hand { font-family: var(--mk-hand); font-weight: 600; line-height: 1.05; }
+
+/* Highlighter: a lime stroke behind the text that sweeps in from the left (--hl drives it). */
+.mk-hl { background: linear-gradient(transparent 52%, var(--mk-lime) 52%, var(--mk-lime) 94%, transparent 94%) no-repeat 0 0 / var(--hl, 100%) 100%; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding-inline: 0.06em; }
+
+/* Ink annotations drawn over captures. */
+.mk-ink { fill: none; stroke: var(--mk-ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.mk-ink--lime { stroke: #9bc20f; stroke-width: 3; }
+
+.mk-sheet { background: var(--mk-sheet); border: 1px solid var(--mk-line); border-radius: 0.5rem; box-shadow: 0 1px 0 var(--mk-line), 0 30px 60px -36px rgb(28 34 48 / 0.35); }
+.mk-tape { position: absolute; width: 5.5rem; height: 1.6rem; background: rgb(214 245 72 / 0.75); mix-blend-mode: multiply; }
+
+.mk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; border-radius: 0.5rem; background: var(--mk-ink); color: var(--mk-sheet); padding: 0.95rem 1.4rem; font-weight: 600; font-size: 0.95rem; transition: background-color 0.2s, color 0.2s, translate 0.2s cubic-bezier(0.23, 1, 0.32, 1); }
+.mk-btn:hover { background: var(--mk-lime); color: var(--mk-ink); }
+.mk-btn:active { translate: 0 1px; }
+.mk-btn--line { background: transparent; color: var(--mk-ink); box-shadow: inset 0 0 0 1.5px var(--mk-ink); }
+
+.mk-input { width: 100%; min-width: 0; border-radius: 0.5rem; border: 1.5px solid var(--mk-ink); background: var(--mk-sheet); padding: 0.9rem 1rem; font-size: 1rem; color: var(--mk-ink); }
+.mk-input::placeholder { color: #6e7484; }
+.mk-input:focus { outline: none; box-shadow: 0 0 0 4px var(--mk-lime); }
+
+.mk-box { display: grid; place-items: center; width: 1.35rem; height: 1.35rem; flex: none; border: 1.5px solid var(--mk-ink); border-radius: 0.25rem; background: var(--mk-sheet); }
+
+/* Rubber stamps for the safety promises. */
+.mk-stamp { display: inline-grid; place-items: center; border: 3px solid var(--mk-ink); border-radius: 0.5rem; padding: 0.7rem 1rem; outline: 1.5px solid var(--mk-ink); outline-offset: 3px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 500; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; mix-blend-mode: multiply; }
+
+.mk-faq summary { list-style: none; cursor: pointer; }
+.mk-faq summary::-webkit-details-marker { display: none; }
+.mk-faq .mk-plus { transition: rotate 0.3s cubic-bezier(0.23, 1, 0.32, 1); }
+.mk-faq[open] .mk-plus { rotate: 45deg; }
+.mk-faq[open] summary span:first-child { background-size: 100% 100%; }
+.mk-faq summary span:first-child { background: linear-gradient(transparent 55%, var(--mk-lime) 55%, var(--mk-lime) 92%, transparent 92%) no-repeat 0 0 / 0% 100%; transition: background-size 0.5s cubic-bezier(0.23, 1, 0.32, 1); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
