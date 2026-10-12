@@ -32,7 +32,7 @@ def test_seo_hard_site_trips_every_seo_trap():
         t = titles(seo.scan(HARD + "/", c))
     assert "Missing meta description" in t  # S1
     assert "More than one h1 heading" in t  # S2
-    assert any("images have no alt text" in x for x in t)  # S3
+    assert any("images have no alt text" in x.lower() for x in t)  # S3
     assert "No canonical link" in t  # S4
     assert "robots.txt blocks all crawlers" in t  # S5
     assert "No sitemap.xml" in t  # S6

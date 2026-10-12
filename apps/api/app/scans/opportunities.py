@@ -11,6 +11,8 @@ import re
 
 from selectolax.parser import HTMLParser
 
+from app.scans.fetch import is_js_shell
+
 MODE = "prelaunch_advisory"
 MAX_PAGES = 10
 BASIS = ("Built from the audited public pages' own copy. No search volume, keyword difficulty, rank or traffic data "
@@ -46,6 +48,7 @@ def _sentence(text: str, limit: int = 200) -> str:
 def facts(url: str, html: str, links: list[str]) -> dict:
     """What one page says about itself: title, description, headings, first paragraph, internal links, body words."""
     tree = HTMLParser(html)
+    shell = is_js_shell(html)  # before scripts are removed below
     robots = tree.css_first('meta[name="robots"]')
     noindex = "noindex" in ((robots.attributes.get("content") or "").lower() if robots else "")
     desc = tree.css_first('meta[name="description"]')
@@ -53,7 +56,7 @@ def facts(url: str, html: str, links: list[str]) -> dict:
         node.decompose()
     paragraph = next((t for t in (_text(p) for p in tree.css("main p, article p, p")) if len(t) >= 40), "")
     return {
-        "url": url, "noindex": noindex,
+        "url": url, "noindex": noindex, "shell": shell,
         "title": _text(tree.css_first("title"))[:300] or None,
         "description": ((desc.attributes.get("content") or "").strip()[:500] or None) if desc else None,
         "h1": [t[:200] for t in (_text(h) for h in tree.css("h1")) if t][:3],
@@ -68,10 +71,12 @@ def _key(text: str | None) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", (text or "").lower()))
 
 
-def build(pages: list[tuple[str, str, list[str]]]) -> dict:
+def build(pages: list[tuple[str, str, list[str]]]) -> dict | None:
     """The advisory map for the audited pages: (url, html, internal links on that page), in crawl order."""
     seen = [facts(url, html, links) for url, html, links in pages]
-    eligible = [p for p in seen if not p["noindex"]]
+    eligible = [p for p in seen if not p["noindex"] and not p["shell"]]  # a JavaScript-only page has no copy to map
+    if not eligible:
+        return None
     inbound = {p["url"]: [q["url"] for q in eligible if q is not p and p["url"] in q["links"]] for p in eligible}
     titles: dict[str, list[str]] = {}
     for p in eligible:

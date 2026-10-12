@@ -2,12 +2,13 @@
 Content and intent review happens in the first-impression LLM call, not here."""
 
 import re
+from urllib.robotparser import RobotFileParser
 
 import httpx
 from selectolax.parser import HTMLParser
 
 from app.agent.schema import Finding
-from app.scans.fetch import get, origin
+from app.scans.fetch import get, origin, text_file
 
 
 def _f(severity: str, title: str, detail: str, fix: str, evidence: str | None = None) -> Finding:
@@ -58,7 +59,8 @@ def check_html(html: str, url: str) -> list[Finding]:
     missing_alt = [i for i in imgs if i.attributes.get("alt") is None]
     if missing_alt:
         srcs = ", ".join((i.attributes.get("src") or "?")[:40] for i in missing_alt[:3])
-        out.append(_f("medium", f"{len(missing_alt)} of {len(imgs)} images have no alt text", "Images without alt text are invisible to search engines and screen readers.", "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.", srcs))
+        # One title on every page, so a crawl merges them into one finding; the count lives in the detail.
+        out.append(_f("medium", "Images have no alt text", f"{len(missing_alt)} of {len(imgs)} images on {url} have no alt text. Images without alt text are invisible to search engines and screen readers.", "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.", srcs))
 
     if not tree.css_first('meta[property="og:title"]'):
         out.append(_f("low", "No Open Graph tags", "Links shared on social apps will show no preview title or image.", "Add og:title, og:description and og:image meta tags.", url))
@@ -68,10 +70,24 @@ def check_html(html: str, url: str) -> list[Finding]:
 def check_robots(text: str | None) -> list[Finding]:
     if text is None:
         return [_f("low", "No robots.txt", "Crawlers fall back to defaults and cannot find your sitemap.", "Add /robots.txt with a Sitemap line.")]
-    block = re.search(r"user-agent:\s*\*\s*(?:\n.*?)*?disallow:\s*/\s*$", text, re.IGNORECASE | re.MULTILINE)
-    if block and not re.search(r"^allow:\s*/\s*$", text, re.IGNORECASE | re.MULTILINE):
+    rules = RobotFileParser()
+    rules.parse(text.splitlines())  # groups are respected: a Disallow: / for one named bot does not block everyone
+    if not rules.can_fetch("*", "/"):
         return [_f("high", "robots.txt blocks all crawlers", "User-agent: * with Disallow: / hides the whole site from search engines.", "Remove the blanket Disallow or limit it to private paths.", "Disallow: /")]
     return []
+
+
+MISSING_PATH = "/walkthru-missing-page-check"  # one read-only GET to an address no site has
+
+
+def check_missing_page(response) -> list[Finding]:
+    """W2: a made-up address that answers 200 with a page is a soft 404."""
+    if response is None or response.status_code != 200 or "html" not in response.headers.get("content-type", "").lower():
+        return []
+    return [_f("medium", "Missing pages return 200", f"A made-up address ({MISSING_PATH}) answered 200 with a page instead of 404. Search engines "
+               "treat these as soft 404s, and broken links look like working pages to visitors and crawlers.",
+               "Return a 404 status for unknown paths: serve a real 404 page, and rewrite only your app's known routes to index.html.",
+               str(response.url))]
 
 
 def check_sitemap(status: int | None, robots: str | None) -> list[Finding]:
@@ -91,6 +107,7 @@ def scan(url: str, c: httpx.Client, html: str | None = None) -> list[Finding]:
         html, url = r.text, str(r.url)
     base = origin(url)
     robots = get(c, f"{base}/robots.txt")
-    robots_text = robots.text if robots is not None and robots.status_code == 200 else None
+    robots_text = text_file(robots)
     sitemap = get(c, f"{base}/sitemap.xml")
-    return check_html(html, url) + check_robots(robots_text) + check_sitemap(sitemap.status_code if sitemap else None, robots_text)
+    return (check_html(html, url) + check_robots(robots_text) + check_sitemap(200 if text_file(sitemap) is not None else None, robots_text)
+            + check_missing_page(get(c, f"{base}{MISSING_PATH}")))

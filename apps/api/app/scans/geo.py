@@ -283,7 +283,7 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
     band = next(name for floor, name in BANDS if total >= floor)
     view = "" if shell else " ".join(text.split()[:60])
     fixes = geo_fixes.build(root_url, list(scope), objects, root_objects=_json_ld(root)[0], blocked=blocked, shell=shell,
-                            llms_ok=llms_ok, indexing=full and not local)
+                            llms_ok=llms_ok, indexing=full and not local, sitemap=bool(sitemap_text))
     depth = geo_depth.analyze(root_url, list(scope), sitemap_text)
     return GeoResult(total, band, cats, findings + depth["findings"], 0 if shell else words, view, notes, fixes, full,
                      page_map + depth["pages"], depth["citability"], depth["trust"], discovery, entities, agent_signals.homepage(root_html))

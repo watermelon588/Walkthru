@@ -215,7 +215,7 @@ def audit(
     shell = fetch.is_js_shell(root.text)
     base = fetch.origin(root_url)
     robots_response = fetch.get(client, f"{base}/robots.txt", same_origin=base)
-    robots_text = robots_response.text if robots_response is not None and robots_response.status_code == 200 else None
+    robots_text = fetch.text_file(robots_response)
     robot_rules = _robots(robots_text, f"{base}/robots.txt")
     sitemap_response = fetch.get(client, f"{base}/sitemap.xml", same_origin=base)
 
@@ -270,8 +270,9 @@ def audit(
     if hidden:  # a UX finding from the served HTML; it travels with the SEO list, the report sorts by kind
         seo_records.append((hidden, root_url))
     seo_records.extend((finding, None) for finding in seo.check_robots(robots_text))
-    sitemap_status = sitemap_response.status_code if sitemap_response is not None else None
+    sitemap_status = 200 if fetch.text_file(sitemap_response) is not None else None
     seo_records.extend((finding, None) for finding in seo.check_sitemap(sitemap_status, robots_text))
+    seo_records.extend((finding, None) for finding in seo.check_missing_page(fetch.get(client, f"{base}{seo.MISSING_PATH}", same_origin=base)))
     security_records.extend((finding, root_url) for finding in security.check_transport(url, root, client))
     # Site-wide passive checks (P1.2): one CORS request, the TLS handshake and CAA lookup. Each fails quietly.
     site_checks = [lambda: security.check_cors(root_url, client), lambda: tls.check(root_url), lambda: tls.check_caa(root_url, client)]
@@ -308,7 +309,7 @@ def audit(
     coverage = AuditCoverage(len(pages), max_pages, duration_ms, truncated, [page_url for page_url, _ in pages])
     production_like = root.headers.get("x-walkthru-fixture") == "production"
     local = fetch.is_local_site(root_url) and not production_like
-    sitemap_text = sitemap_response.text if sitemap_response is not None and sitemap_response.status_code == 200 else ""
+    sitemap_text = fetch.text_file(sitemap_response) or ""
     seo_records.extend(_site_checks(pages, failed, linked_from, depth, sitemap_text, base, truncated=truncated, local=local))
     seo_records.extend(seo_depth.audit(pages, base, client, robot_rules, truncated=truncated, deadline=deadline))
     llms = fetch.get(client, f"{base}/llms.txt", same_origin=base)

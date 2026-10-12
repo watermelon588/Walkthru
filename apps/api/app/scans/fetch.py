@@ -172,6 +172,17 @@ def page_text(html: str, limit: int = 6000) -> str:
 MIN_TEXT = 20  # JS-only shells serve ~0 visible characters (noscript is stripped); real pages serve more
 
 
+def text_file(response) -> str | None:
+    """The body of a real text file (robots.txt, sitemap.xml), or None. Single-page apps often answer every path,
+    these included, with their HTML page and a 200, which is not the file."""
+    if response is None or response.status_code != 200:
+        return None
+    body = response.text
+    if body.lstrip()[:15].lower().startswith(("<!doctype html", "<html")):  # the body, not the header: servers mislabel real files
+        return None
+    return body
+
+
 def is_js_shell(html: str) -> bool:
     """True for single-page apps whose served HTML is an empty shell filled in by JavaScript."""
     tree = HTMLParser(html)

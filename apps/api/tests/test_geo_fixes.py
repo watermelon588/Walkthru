@@ -12,8 +12,8 @@ SHELL = """<!doctype html><html><head><title>Tripverse: plan trips in 3D</title>
 READY = Path(__file__).with_name("test_geo.py").read_text(encoding="utf-8").split('GOOD = """')[1].split('"""')[0]
 
 
-def fixes(pages, robots=None, llms=(404, "")):
-    return geo.audit("https://trip.test/", pages, robots, llms, (200, "", {}), full=True).fixes
+def fixes(pages, robots=None, llms=(404, ""), sitemap="<urlset/>"):
+    return geo.audit("https://trip.test/", pages, robots, llms, (200, "", {}), full=True, sitemap_text=sitemap).fixes
 
 
 def by_id(result):
@@ -54,3 +54,10 @@ def test_free_reports_keep_one_fix_and_the_count():
     result = geo.audit("https://trip.test/", [("https://trip.test/", SHELL)], None, (404, ""), (200, "", {}), full=False)
     summary = result.summary()
     assert len(summary["fixes"]) == 1 and summary["fixes_total"] == len(result.fixes) > 1
+
+
+def test_no_sitemap_means_no_advice_to_submit_one():
+    """A site whose /sitemap.xml is its HTML page has nothing to submit to Bing."""
+    pages = [("https://trip.test/", "<html><head><title>Trip</title></head><body><h1>Trip</h1><p>" + "words " * 80 + "</p></body></html>")]
+    ids = lambda sitemap: {f["id"] for f in geo.audit("https://trip.test/", pages, None, (404, ""), (200, "", {}), full=True, sitemap_text=sitemap).fixes}
+    assert "bing" in ids("<urlset/>") and "bing" not in ids("")

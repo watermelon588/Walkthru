@@ -38,7 +38,7 @@ def framework(html: str) -> str | None:
 
 
 def build(root_url: str, pages: list[tuple[str, str]], objects: list[dict], *, root_objects: list[dict], blocked: list[str],
-          shell: bool, llms_ok: bool | None, indexing: bool = False) -> list[dict]:
+          shell: bool, llms_ok: bool | None, indexing: bool = False, sitemap: bool = True) -> list[dict]:
     """Fixes for what the GEO audit found, most valuable first. `objects` is JSON-LD from every audited page, `root_objects`
     from the homepage only (the site's name comes from there). llms_ok is None when llms.txt was not checked."""
     root_html = pages[0][1] if pages else ""
@@ -97,6 +97,7 @@ def build(root_url: str, pages: list[tuple[str, str]], objects: list[dict], *, r
             "code": key + "\n",
             "note": f"Publish at {base}/{key}.txt. Keep this key for future URL submissions. IndexNow announces changes to supporting search engines; it does not guarantee indexing.",
         })
+    if indexing and sitemap:  # only a sitemap that exists can be submitted
         out.append({
             "id": "bing", "title": "Optional: submit the sitemap to Bing Webmaster Tools", "file": "Bing Webmaster Tools",
             "code": f"{base}/sitemap.xml",

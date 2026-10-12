@@ -135,10 +135,11 @@ def brand_from(html: str, domain: str) -> str:
     og = tree.css_first('meta[property="og:site_name"]')
     if og and (og.attributes.get("content") or "").strip():
         return (og.attributes.get("content") or "").strip()[:80]
-    label = domain.split(".")[0]
+    label = re.sub(r"-\d+$", "", domain.split(".")[0])  # deploy suffixes: tripverse-0.vercel.app is "tripverse"
+    core = re.sub(r"[^a-z]", "", label.lower())
     title = (tree.css_first("title").text() if tree.css_first("title") else "").strip()
     for part in re.split(r"\s[|\-:–—]\s|\s*[|–—]\s*", title):
-        if part.strip() and label.replace("-", "") in part.lower().replace(" ", "").replace("-", ""):
+        if part.strip() and core and core in re.sub(r"[^a-z]", "", part.lower()):
             return part.strip()[:80]
     return label.replace("-", " ").title()[:80] or domain
 
@@ -161,9 +162,9 @@ def suggest(html: str, brand: str, competitors: list[dict]) -> list[str]:
         if parts and 2 <= len(parts[0].split()) <= 10:
             category = parts[0].rstrip(".").lower()
             break
-    category = category or "tools like this"
-    prompts = [f"What are the best {category}?", f"Which {category} do people recommend, and why?", f"How do I choose {category}?",
-               f"What is {brand}?", f"Is {brand} worth it?"]
+    # No category in the page's own words: ask nothing generic ("the best tools like this?" measures nothing).
+    prompts = [f"What are the best {category}?", f"Which {category} do people recommend, and why?", f"How do I choose {category}?"] if category else []
+    prompts += [f"What is {brand}?", f"Is {brand} worth it?"]
     for c in competitors[:3]:
         prompts += [f"What are the best alternatives to {c['name']}?", f"{brand} vs {c['name']}: which is better?"]
     return list(dict.fromkeys(p[:300] for p in prompts))

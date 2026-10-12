@@ -4,7 +4,7 @@ import socket
 
 import httpx
 
-from app.scans import fetch, site
+from app.scans import fetch, seo, site
 
 
 def test_site_audit_respects_robots_origin_cap_and_aggregates(monkeypatch):
@@ -24,7 +24,7 @@ def test_site_audit_respects_robots_origin_cap_and_aggregates(monkeypatch):
         requested.append(str(request.url))
         if request.url.path == "/robots.txt":
             return httpx.Response(200, text="User-agent: WalkthruBot\nDisallow: /private\n", request=request)
-        if request.url.path in ("/sitemap.xml", "/llms.txt"):
+        if request.url.path in ("/sitemap.xml", "/llms.txt", seo.MISSING_PATH):
             return httpx.Response(404, request=request)
         if request.url.path in pages:
             return httpx.Response(200, text=pages[request.url.path], headers={"content-type": "text/html"}, request=request)

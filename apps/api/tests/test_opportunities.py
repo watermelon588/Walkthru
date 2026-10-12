@@ -163,3 +163,9 @@ def test_a_real_crawl_carries_the_map_and_skips_private_pages(monkeypatch):
     assert mapped["http://site.test/guide"]["proposed"] == {
         "title": "Trip planning guide", "description": "Plan a shared trip with friends in five steps.",
         "outline": ["Trip planning guide"], "basis": mapped["http://site.test/guide"]["proposed"]["basis"]}
+
+
+def test_a_javascript_only_site_gets_no_map_rather_than_a_topic_from_its_title():
+    """W3: an app shell has a title but no copy; mapping it would invent briefs from the title alone."""
+    shell = '<html><head><title>TripVerse — 3D Travel Universe</title><script type="module" src="/assets/index.js"></script></head><body><div id="root"></div></body></html>'
+    assert opportunities.build([(f"{BASE}/", shell, [])]) is None

@@ -352,3 +352,14 @@ def test_queued_memory_answer_is_not_silently_upgraded_to_search(store, passes, 
     answer = next(c for c in store[2] if c["engine"] == "memory")
     assert answer["result"]["provenance"]["mode"] == "memory"
     assert answer["result"]["citation_eligible"] is False
+
+
+def test_a_deploy_suffix_still_finds_the_name_and_no_generic_prompt_is_suggested():
+    """tripverse-0.vercel.app titled "TripVerse — 3D Travel Universe": the brand is TripVerse, not "Tripverse 0",
+    and prompts come from the page's words or are left out, never "the best tools like this"."""
+    html = '<html><head><title>TripVerse — 3D Travel Universe</title><meta name="description" content="Agentic 3D travel-planning universe that visualizes and dynamically replans your trip."></head><body><div id="root"></div></body></html>'
+    brand = citations.brand_from(html, "tripverse-0.vercel.app")
+    assert brand == "TripVerse"
+    prompts = citations.suggest(html, brand, [{"name": "Mindtrip", "domain": "mindtrip.ai"}])
+    assert prompts[0] == "What are the best 3d travel universe?" and "What is TripVerse?" in prompts
+    assert not any("tools like this" in p for p in citations.suggest("<html></html>", "Acme", []))
