@@ -27,7 +27,7 @@ BY_KIND = {"ux": "journey", "accessibility": "accessibility", "performance": "pe
 SEVERITY = {"high": 0, "medium": 1, "low": 2}
 STATUS_LABEL = {"issues": None, "clear": "No issue observed in scope", "unconfirmed": "Outcome unconfirmed", "not_measured": "Not measured",
                 "not_tested": "Not tested", "separate": "Measured separately", "reference": "Reference",
-                "advisory": "Advisory, no search data"}
+                "advisory": "Advisory, no search data", "advisory_links": "Advisory, no link data"}
 
 
 def chapter_of(finding: dict) -> str:
@@ -85,6 +85,10 @@ def _status(key, title, report, kind, status, assessment, open_, high):
                             "no search volume, difficulty, rank or traffic data was used.")
     if key == "keywords":
         return "not_measured", "Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here."
+    if key == "authority" and (report.get("authority") or {}).get("tactics"):
+        n = {s: sum(t["state"] == s for t in report["authority"]["tactics"]) for s in ("advisory", "prerequisite_missing", "not_applicable", "not_recommended")}
+        return "advisory_links", (f"{_count(n['advisory'], 'tactic')} with a brief from your own pages, {n['prerequisite_missing']} needing an input you have not supplied, "
+                                  f"{n['not_applicable']} not applicable and {n['not_recommended']} not recommended. No link data was read; nothing is sent or placed.")
     if key == "authority":
         return "not_measured", "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented."
     if key == "citations":

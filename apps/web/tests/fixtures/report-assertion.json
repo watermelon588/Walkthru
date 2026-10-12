@@ -98,5 +98,6 @@
   "stack": null,
   "funnel": null,
   "scan_version": null,
-  "opportunities": null
+  "opportunities": null,
+  "authority": null
 }

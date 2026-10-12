@@ -92,7 +92,8 @@
         "stack": null,
         "funnel": null,
         "scan_version": null,
-        "opportunities": null
+        "opportunities": null,
+        "authority": null
       },
       "chapters": [
         {
@@ -794,7 +795,8 @@
         "stack": null,
         "funnel": null,
         "scan_version": null,
-        "opportunities": null
+        "opportunities": null,
+        "authority": null
       },
       "chapters": [
         {
@@ -1027,6 +1029,201 @@
           "status": "not_measured",
           "label": "Not measured",
           "summary": "Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 7,
+          "key": "geo",
+          "title": "GEO readiness",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect geo readiness.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 8,
+          "key": "citations",
+          "title": "AI citations",
+          "status": "separate",
+          "label": "Measured separately",
+          "summary": "AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 9,
+          "key": "security",
+          "title": "Security and email hygiene",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect security and email hygiene.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 10,
+          "key": "evidence",
+          "title": "Evidence and coverage",
+          "status": "reference",
+          "label": "Reference",
+          "summary": "Saved before detailed evidence records. Each finding shows its own evidence.",
+          "issue_ids": [],
+          "cross_links": []
+        }
+      ],
+      "next_actions": []
+    },
+    {
+      "name": "authority-advisory",
+      "kind": "scan",
+      "status": "done",
+      "report": {
+        "summary": "Nothing to fix in scope.",
+        "top_fixes": [],
+        "findings": [],
+        "verified": true,
+        "tokens": 0,
+        "checks": {
+          "accessibility": "complete",
+          "performance": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "geo": "complete"
+        },
+        "geo": {
+          "score": 88,
+          "band": "excellent",
+          "categories": [],
+          "ai_words": 900,
+          "ai_view": "",
+          "notes": []
+        },
+        "opportunities": {
+          "mode": "prelaunch_advisory",
+          "demand_data": "none",
+          "basis": "b",
+          "measurement": "m",
+          "pages_considered": 1,
+          "excluded_noindex": [],
+          "overlaps": [],
+          "pages": [
+            {
+              "url": "https://site.test/",
+              "primary_intent": {
+                "text": "Plan trips",
+                "source": "h1"
+              },
+              "supporting": [],
+              "current": {
+                "title": null,
+                "description": null,
+                "h1": [
+                  "Plan trips"
+                ]
+              },
+              "proposed": {
+                "title": "Plan trips",
+                "description": null,
+                "outline": [
+                  "Plan trips"
+                ],
+                "basis": "b"
+              },
+              "gaps": [
+                "No title element."
+              ],
+              "internal_links": {
+                "inbound_from": [],
+                "suggested_from": []
+              },
+              "next_action": "n",
+              "effort": "low"
+            }
+          ]
+        },
+        "authority": {
+          "mode": "prelaunch_advisory",
+          "link_data": "none",
+          "tactics": [
+            {
+              "id": "free_tool",
+              "state": "advisory"
+            },
+            {
+              "id": "lost_links",
+              "state": "prerequisite_missing"
+            },
+            {
+              "id": "infographics",
+              "state": "not_applicable"
+            },
+            {
+              "id": "link_exchanges",
+              "state": "not_recommended"
+            }
+          ]
+        }
+      },
+      "chapters": [
+        {
+          "number": 1,
+          "key": "journey",
+          "title": "Journey and UX",
+          "status": "not_tested",
+          "label": "Not tested",
+          "summary": "No journey ran. This report checks public pages only.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 2,
+          "key": "accessibility",
+          "title": "Accessibility",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect accessibility.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 3,
+          "key": "performance",
+          "title": "Performance",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect performance.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 4,
+          "key": "seo",
+          "title": "SEO foundations",
+          "status": "clear",
+          "label": "No issue observed in scope",
+          "summary": "Checked within this report's scope and nothing to fix was found. That is not proof of perfect seo foundations.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 5,
+          "key": "keywords",
+          "title": "Keywords and content",
+          "status": "advisory",
+          "label": "Advisory, no search data",
+          "summary": "1 page mapped from the site's own copy. Intents are hypotheses to confirm; no search volume, difficulty, rank or traffic data was used.",
+          "issue_ids": [],
+          "cross_links": []
+        },
+        {
+          "number": 6,
+          "key": "authority",
+          "title": "Authority and backlinks",
+          "status": "advisory_links",
+          "label": "Advisory, no link data",
+          "summary": "1 tactic with a brief from your own pages, 1 needing an input you have not supplied, 1 not applicable and 1 not recommended. No link data was read; nothing is sent or placed.",
           "issue_ids": [],
           "cross_links": []
         },

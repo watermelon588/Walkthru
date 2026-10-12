@@ -106,3 +106,9 @@ def test_request_response_purge_still_runs_when_screenshot_storage_is_down(monke
     retention.run_pass()
     assert set(purged) == {"audit", "jobs", "limits", "requests"}
     assert len(purged) == 4
+
+
+def test_purging_a_frame_also_drops_its_error_boxes():
+    """R-S19: region boxes live inside the step's evidence, so retention removes them with the screenshot."""
+    step = {"action": "click", "evidence": {"screenshot_path": "a" * 32 + "/step-01.jpg", "regions": [{"kind": "error", "x": 0.1, "y": 0.1, "w": 0.2, "h": 0.05}]}}
+    assert retention.strip_evidence([step]) == [{"action": "click"}]

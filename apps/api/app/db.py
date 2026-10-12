@@ -113,6 +113,21 @@ def reservation_for(user_id: str, key: str) -> dict | None:
     return rows[0] if rows else None
 
 
+USAGE_FIELDS = "operation,operation_key,state,units,dispatched,max_cost_microusd,actual_cost_microusd,price_version,outcome,created_at,updated_at"
+
+
+def reservations_for(user_id: str, limit: int = 50) -> list[dict]:
+    """The owner's newest reservations (R-S10 usage history), slim and bounded."""
+    return _request("GET", "/rest/v1/run_reservations", params={"user_id": f"eq.{user_id}", "select": USAGE_FIELDS,
+                                                               "order": "created_at.desc,id.desc", "limit": str(limit)}) or []
+
+
+def run_usage(user_id: str, run_id: str) -> dict | None:
+    rows = _request("GET", "/rest/v1/run_reservations", params={"user_id": f"eq.{user_id}", "operation_key": f"eq.{run_id}",
+                                                               "operation": "eq.run", "select": USAGE_FIELDS, "limit": "1"}) or []
+    return rows[0] if rows else None
+
+
 def _rows(params: dict) -> list[dict]:
     return _request("GET", "/rest/v1/runs", params=params) or []
 
@@ -586,7 +601,7 @@ def public_reports(user_id: str) -> list[dict]:
 def recent_reports(user_id: str, exclude_id: str, limit: int = 20) -> list[dict]:
     """The user's latest finished test runs with a report, newest first: candidates for rerun comparison."""
     return _rows({"user_id": f"eq.{user_id}", "kind": "eq.test", "id": f"neq.{exclude_id}", "report": "not.is.null",
-                  "select": "id,site,goal,created_at,report", "order": "created_at.desc", "limit": str(limit)})
+                  "select": "id,site,goal,persona,logged_in,created_at,report", "order": "created_at.desc", "limit": str(limit)})
 
 
 # ---------- ignored findings (paid plans; SPEC.md "Ignore a finding") ----------

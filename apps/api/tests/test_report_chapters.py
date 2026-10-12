@@ -49,13 +49,20 @@ KEYWORDS = {**CLEAN, "opportunities": {"mode": "prelaunch_advisory", "demand_dat
             "internal_links": {"inbound_from": [], "suggested_from": []}, "next_action": "n", "effort": "low"}]}}
 
 
+# R-S17a: the same scan with an authority plan built from that map, so the Authority chapter stays in step too.
+AUTHORITY = {**KEYWORDS, "authority": {"mode": "prelaunch_advisory", "link_data": "none", "tactics": [
+    {"id": "free_tool", "state": "advisory"}, {"id": "lost_links", "state": "prerequisite_missing"},
+    {"id": "infographics", "state": "not_applicable"}, {"id": "link_exchanges", "state": "not_recommended"}]}}
+
+
 def cases() -> list[dict]:
     v2 = json.loads((FIXTURES / "report-v2.json").read_text(encoding="utf-8"))
     asserted = json.loads((FIXTURES / "report-assertion.json").read_text(encoding="utf-8"))
     return [{"name": name, "kind": kind, "status": status, "report": rep, "chapters": chapters(rep, kind, status), "next_actions": next_actions(rep)}
             for name, kind, status, rep in (("v2-scan", "scan", "done", v2), ("long-legacy-journey", "test", "gave_up", LONG),
                                             ("clean-scan", "scan", "done", CLEAN), ("interrupted-journey", "test", "agent_lost", INTERRUPTED),
-                                            ("assertion-failed", "test", "done", asserted), ("keyword-advisory", "scan", "done", KEYWORDS))]
+                                            ("assertion-failed", "test", "done", asserted), ("keyword-advisory", "scan", "done", KEYWORDS),
+                                            ("authority-advisory", "scan", "done", AUTHORITY))]
 
 
 def test_shared_fixture_matches_the_api_so_web_and_mcp_agree():

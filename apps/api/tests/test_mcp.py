@@ -90,7 +90,8 @@ def test_mcp_endpoint_checks_the_key_and_plan_then_serves_tools(monkeypatch, pas
         assert tools == {"scan_site", "get_report", "get_fix_prompt", "rerun", "list_runs", "get_finding", "verify_finding", "get_plan",
                          "get_site_verification", "list_github_repos", "open_fix_pull_request", "accept_finding", "reopen_finding",
                          "compare_sites", "share_report", "list_ai_answer_sites", "track_ai_answers", "get_ai_answers", "set_ai_prompts",
-                         "check_ai_answers_now", "list_watched_sites", "watch_site", "check_watched_site_now", "create_deploy_hook"}
+                         "check_ai_answers_now", "list_watched_sites", "watch_site", "check_watched_site_now", "create_deploy_hook",
+                         "get_run_quote", "get_usage"}
 
         got = _rpc(c, key, "tools/call", {"name": "get_report", "arguments": {"run_id": mine}}, id_=3).json()["result"]
         text = got["content"][0]["text"]
@@ -245,12 +246,12 @@ def test_owner_scans_add_https_and_run_owner_checks_on_verified_hosts(monkeypatc
     from app.agent.schema import Report
 
     seen = {}
-    monkeypatch.setattr(main.fetch, "get", lambda c, url, **k: seen.setdefault("url", url) and None)
-    with pytest.raises(ValueError):
-        main.run_scan("example.com", user_id=USER)
+    with monkeypatch.context() as first:  # scoped: undoing everything would also drop the offline database fakes
+        first.setattr(main.fetch, "get", lambda c, url, **k: seen.setdefault("url", url) and None)
+        with pytest.raises(ValueError):
+            main.run_scan("example.com", user_id=USER)
     assert seen["url"] == "https://example.com"
 
-    monkeypatch.undo()
     monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
     monkeypatch.setattr(db, "insert_run", lambda *a, **k: None)
     monkeypatch.setattr(db, "set_report", lambda *a, **k: None)

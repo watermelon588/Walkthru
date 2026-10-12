@@ -251,6 +251,10 @@ def _chapter(row: dict, key: str, cursor: str, ignored: dict) -> str:
         from app.scans import opportunities
 
         lines += opportunities.lines(rep["opportunities"])
+    if key == "authority" and (rep.get("authority") or {}).get("tactics"):  # R-S17a advisory plan, same text as the prompt
+        from app.scans import authority
+
+        lines += authority.lines(rep["authority"])
     for fid in page:
         f = found[fid]
         lines += [f"- [{f['severity']}] {f['title']} (id: {fid})", f"  Evidence: {f['evidence']}", f"  Fix: {f['fix']}"]
@@ -512,6 +516,39 @@ def get_plan() -> str:
                       f"Steps per journey: {s['max_steps']}. Signed-in journeys: {'yes' if s['logged_in'] else 'no'}. Test users: {', '.join(s['personas'])}.",
                       f"Sites: {len(s['sites_used'])} of {s['sites']} used{used}",
                       f"MCP scans and finding checks: {SCANS_PER_DAY} a day."])
+
+
+@server.tool(structured_output=False)
+def get_run_quote(site: str, test_users: list[str] | None = None, logged_in: bool = False) -> str:
+    """The terms a user journey on this site would start under: scope, step and time caps, runs left, price version,
+    maximum provider cost per run and model route. Journeys start only from the Walkthru Chrome extension, which shows
+    and accepts its own quote. test_users: built-in keys such as first_timer (default)."""
+    from fastapi import HTTPException
+
+    from app import quotes
+
+    try:
+        quote = quotes.issue(quotes.terms(_user.get(), _url(site), personas=test_users or ["first_timer"], logged_in=logged_in,
+                                          max_steps=30, assertion=False))
+    except HTTPException as error:
+        raise ToolError(str(error.detail)) from error
+    prerequisite = ("Prerequisite: start it from the Walkthru Chrome extension side panel, in a tab open on this site"
+                    + (" and signed in to the account to test." if logged_in else "."))
+    return "\n".join([quote["summary"], "", *[f"- {rule}" for rule in quote["rules"]], "", prerequisite])
+
+
+@server.tool(structured_output=False)
+def get_usage() -> str:
+    """Your usage history: each test run, scan, watch check and AI answer check, and what happened to its credit and
+    reserved provider cost (used, returned because it never started, not counted after a refusal, or refunded)."""
+    from app import quotes, reservations
+
+    if not reservations.enabled():
+        return "Usage is counted from your run history; the usage ledger is not active yet. Call get_plan for runs left."
+    items = [quotes.explain(r) for r in db.reservations_for(_user.get()) if r.get("operation") != "public_scan"]
+    if not items:
+        return "No usage recorded yet."
+    return "\n".join(f"- {i['created_at'][:16]} {i['text']} {i['cost']}".rstrip() for i in items)
 
 
 # Where the <head> lives in common stacks, for the verification meta tag.

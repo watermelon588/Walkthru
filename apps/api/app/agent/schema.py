@@ -172,6 +172,24 @@ class Observation(BaseModel):
         return self
 
 
+class EvidenceRegion(BaseModel):
+    """R-S19: where something was visible in this exact frame, as fractions of the captured viewport. Measured in the
+    same document just before capture and drawn over the image, never into it, so masking stays intact."""
+
+    model_config = {"extra": "forbid"}
+    kind: Literal["error"]
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    w: float = Field(gt=0, le=1)
+    h: float = Field(gt=0, le=1)
+
+    @model_validator(mode="after")
+    def _inside(self):
+        if self.x + self.w > 1.0001 or self.y + self.h > 1.0001:
+            raise ValueError("Evidence regions must lie inside the captured frame")
+        return self
+
+
 class StepEvidence(BaseModel):
     """Private visual proof captured after one browser action."""
 
@@ -181,6 +199,7 @@ class StepEvidence(BaseModel):
     width: int = Field(ge=1, le=10000)
     height: int = Field(ge=1, le=10000)
     note: str | None = Field(default=None, max_length=300)
+    regions: list[EvidenceRegion] = Field(default_factory=list, max_length=10)
 
 
 class PersonaStep(BaseModel):
@@ -255,7 +274,7 @@ def finding_rule(kind: str, title: str) -> str:
         ("security", r"^\d+ database functions? (?:is|are) callable", "sec.supabase.public_rpc"),
         ("security", r"^anyone can list the files in \d+ storage bucket", "sec.supabase.public_bucket"),
         ("security", r"^\d+ resources load over plain http", "sec.mixed_content"),
-        ("seo", r"^\d+ of \d+ images have no alt text", "seo.image.alt_missing"),
+        ("seo", r"^(?:\d+ of \d+ )?images have no alt text", "seo.image.alt_missing"),
         ("accessibility", r"^(?:\d+ images are missing text alternatives|image is missing text alternative)", "a11y.image.alt_missing"),
         ("accessibility", r"^(?:\d+ form controls have no accessible name|form control has no accessible name)", "a11y.control.name_missing"),
         ("geo", r"^\d+ more pages? only render with javascript", "geo.page.javascript_only"),
@@ -338,6 +357,20 @@ class ComparedFinding(BaseModel):
     pages_unchecked: list[str] = Field(default_factory=list)  # earlier pages this run did not audit
 
 
+class AssertionRecheck(BaseModel):
+    """R-S13 (app/agent/compare.py recheck_assertion). Only like-for-like passed/failed pairs can read as fixed."""
+
+    fingerprint: str = Field(max_length=400)
+    identity: str = Field(max_length=400)
+    verdict: Literal["fixed", "still_failing", "regressed", "still_passing", "first_result", "not_rechecked", "not_comparable"]
+    reason: str = Field(max_length=600)
+    before: Literal["passed", "failed", "blocked", "inconclusive"]
+    after: Literal["passed", "failed", "blocked", "inconclusive"] | None = None
+    before_count: int | None = None
+    after_count: int | None = None
+    expected_count: int | None = None
+
+
 class Comparison(BaseModel):
     """Against the previous run of the same goal on the same site (app/agent/compare.py). Paid plans only."""
 
@@ -347,6 +380,7 @@ class Comparison(BaseModel):
     still_broken: list[ComparedFinding] = Field(default_factory=list)
     new: list[ComparedFinding] = Field(default_factory=list)
     not_rechecked: list[ComparedFinding] = Field(default_factory=list)  # gone only because its pages were not audited
+    assertion: AssertionRecheck | None = None  # R-S13: the declared count check against its previous result
 
 
 class AgentReady(BaseModel):
@@ -548,6 +582,7 @@ class Report(BaseModel):
     funnel: dict | None = None  # app/agent/funnel.py, paid runs only; `previous` holds the last run of the same goal
     scan_version: str | None = None  # app/scan_reuse.py: code and model version of a server scan; reuse requires a match
     opportunities: dict | None = None  # app/scans/opportunities.py: advisory keyword/content map; never findings or score
+    authority: dict | None = None  # app/scans/authority.py (R-S17a): advisory link tactics from that map; never findings or score
 
     @field_validator("version", mode="before")
     @classmethod

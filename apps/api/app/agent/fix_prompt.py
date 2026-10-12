@@ -19,7 +19,7 @@ from app.agent.report_chapters import TITLE as CHAPTER_TITLE
 from app.agent.report_chapters import chapter_of
 from app.agent.report_contract import ensure_supported, issue_for, issue_lines, scope_lines
 from app.agent.schema import finding_rule
-from app.scans import opportunities, seo_guidance
+from app.scans import authority, opportunities, seo_guidance
 from app.scans import stack as stacks
 
 BATCHES = (
@@ -194,6 +194,8 @@ def build(run: dict, report: dict, ignored: dict, style: str = "full", section: 
     """The whole plan, or one chapter's part of it when `section` names a chapter (a smaller prompt per chapter)."""
     if section == "keywords" and (report.get("opportunities") or {}).get("pages"):
         return _content_brief(run, report["opportunities"])
+    if section == "authority" and (report.get("authority") or {}).get("tactics"):
+        return _authority_brief(run, report["authority"])
     p = plan(run, report, ignored, section)
     if section and not (p["batches"] or p["manual"]):
         raise EmptyChapter(f"The {CHAPTER_TITLE[section]} chapter of this report has no open findings to fix.")
@@ -320,6 +322,24 @@ def _content_brief(run: dict, advice: dict) -> str:
         "- No change here promises rankings, traffic or AI citations.",
         "",
         *opportunities.lines(advice),
+    ]) + "\n"
+
+
+def _authority_brief(run: dict, plan: dict) -> str:
+    """Authority and backlinks (R-S17a): an owner's plan, kept apart from code repairs. A coding agent cannot create
+    genuine third-party links by editing a page, so this asks for briefs and inputs, never sends or publishes."""
+    return "\n".join([
+        f"# Authority plan for {run['site']}", "",
+        "## Chapter: Authority and backlinks",
+        "Advisory link tactics from Walkthru's audit of the public pages. It is a plan for the owner, not a bug list and not a task for a coding agent.",
+        "",
+        "## Rules",
+        "- Do not send email or messages, post, register profiles, publish or place links. Prepare drafts only when the owner asks.",
+        "- Use only facts already on the site or supplied by the owner. Never invent publishers, mentions, lists, requests, links or statistics.",
+        "- Mark any paid placement rel=\"sponsored\". Do not propose link exchanges or link networks.",
+        "- Nothing here promises rankings, traffic or AI citations.",
+        "",
+        *authority.lines(plan),
     ]) + "\n"
 
 

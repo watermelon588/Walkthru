@@ -12,7 +12,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -38,6 +38,7 @@ from app import (
     plans,
     plus,
     provider_usage,
+    quotes,
     reservations,
     retention,
     scan_reuse,
@@ -203,6 +204,7 @@ class StartRun(BaseModel):
     max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)  # clamped to the plan
     observation: Observation
     assertion: FilterCountAssertion | None = None
+    quote: str | None = Field(default=None, max_length=8000)  # R-S10: the accepted quote token; optional for older clients
 
 
 class Observe(BaseModel):
@@ -257,6 +259,13 @@ def _start_run(body: StartRun, user: dict, run_id: str) -> dict:
     usage = plans.current(user["id"])
     persona, persona_prompt = _persona(body, usage, user["id"])
     plans.check_start(usage, site=body.site, persona=persona if not persona_prompt else usage["plan"].personas[0], logged_in=body.logged_in)
+    # R-S10: an accepted quote binds this run to its pinned scope and terms; stale or different terms are refused (409).
+    if body.quote:
+        pinned = quotes.accept(body.quote, user["id"], site=body.site, persona=body.persona, logged_in=body.logged_in,
+                               max_steps=body.max_steps, assertion=body.assertion is not None)
+        body = body.model_copy(update={"max_steps": min(body.max_steps, pinned["max_steps"])})  # never past the quoted cap
+    elif os.environ.get("RUN_QUOTES", "optional") == "required":
+        raise HTTPException(428, "Review the run's quote first: update the Walkthru extension and start again.")
     group_id = _group(body, usage, user["id"])
     marks.append(("plan_check", time.monotonic()))
     plan = usage["plan"]
@@ -375,7 +384,7 @@ def _observe(run_id: str, body: Observe, user: dict) -> dict:
         return _stop_run(run_id, StopRequest(reason=reason), user=user) | policy.stop_reason("signed_in_unverified")
     resume ={"observation": body.observation.model_dump(mode="json")}
     if body.evidence:
-        resume["evidence"] = body.evidence.model_dump(mode="json")
+        resume["evidence"] = body.evidence.model_dump(mode="json", exclude_defaults=True)  # no regions measured: same record as before R-S19
     result = runtime.invoke(row["tier"], Command(resume=resume), _cfg(run_id))
     return _reply(run_id, row["tier"], result)
 
@@ -407,6 +416,68 @@ class ReadNotifications(BaseModel):
 def read_notifications(body: ReadNotifications, user: dict = Depends(require_user)) -> dict:
     db.read_notifications(user["id"], body.section)
     return {"read": body.section or "all"}
+
+
+class QuoteRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    site: str = Field(pattern=r"^https?://", max_length=2000)
+    personas: list[str] = Field(default=["first_timer"], min_length=1, max_length=5)
+    logged_in: bool = False
+    max_steps: int = Field(default=MAX_STEPS, ge=1, le=MAX_STEPS)
+    assertion: bool = False
+
+
+@app.post("/runs/quote")
+def quote_run(body: QuoteRequest, user: dict = Depends(require_user)) -> dict:
+    """R-S10: the terms one or more test runs would start under (scope, caps, credits, price version, model route).
+    The client shows it and sends `token` back with each run; POST /runs refuses stale or different terms."""
+    return quotes.issue(quotes.terms(user["id"], body.site, personas=body.personas, logged_in=body.logged_in,
+                                     max_steps=body.max_steps, assertion=body.assertion))
+
+
+@app.get("/me/recheck")
+def recheck_terms(site: str = Query(max_length=2000), user: dict = Depends(require_user)) -> dict:
+    """R-S13: the owner's latest declared count check on this site, to repeat it like for like from the extension.
+    The dataset time is left out on purpose: the owner reads the fresh one from the page."""
+    origin = compare.origin(site)
+    try:
+        rows = db.recent_reports(user["id"], "none")  # ponytail: the latest 20 test runs; page further if owners need older checks
+    except (httpx.HTTPError, db.DatabaseUnavailable) as error:
+        raise HTTPException(503, "Earlier checks are unavailable just now. Try again in a minute.") from error
+    for r in rows:
+        declared = compare.assertion_of(r.get("report") or {})
+        if compare.origin(r["site"]) == origin and declared:
+            return {"run_id": r["id"], "created_at": r["created_at"], "goal": r["goal"], "persona": r.get("persona"),
+                    "logged_in": bool(r.get("logged_in")), "status": declared["status"],
+                    "assertion": FilterCountAssertion.model_validate(declared["expected"] | {"dataset_at": None}).model_dump(mode="json")}
+    return {"run_id": None}
+
+
+@app.get("/me/usage")
+def my_usage(user: dict = Depends(require_user)) -> dict:
+    """R-S10 settlement history: each reservation and what happened to its credit and reserved cost."""
+    if not reservations.enabled():
+        return {"ledger": "off", "items": [], "note": "Usage is counted from your run history; the usage ledger is not active yet."}
+    try:
+        rows = db.reservations_for(user["id"])
+    except (httpx.HTTPError, db.DatabaseUnavailable) as error:
+        raise HTTPException(503, "Usage history is unavailable just now. Try again in a minute.") from error
+    return {"ledger": "active", "items": [quotes.explain(r) for r in rows if r.get("operation") != "public_scan"]}
+
+
+@app.get("/runs/{run_id}/usage")
+def run_usage(run_id: str, user: dict = Depends(require_user)) -> dict:
+    """What one run used: its settlement in plain language, its stop status and the steps it recorded."""
+    row = _owned(run_id, user)
+    steps = [s for s in row.get("steps") or [] if s.get("action") not in ("done", "give_up")]
+    out = {"run_id": run_id, "status": row["status"], "steps_recorded": len(steps), "ledger": "active" if reservations.enabled() else "off"}
+    if reservations.enabled():
+        try:
+            found = db.run_usage(user["id"], run_id)
+        except (httpx.HTTPError, db.DatabaseUnavailable) as error:
+            raise HTTPException(503, "Usage for this run is unavailable just now.") from error
+        out["usage"] = quotes.explain(found) if found else None
+    return out
 
 
 @app.get("/runs/policy")
@@ -563,7 +634,7 @@ def finish_run(run_id: str, values: dict) -> None:
             )
         rep.tokens += values.get("tokens", 0)
         try:
-            comparison = compare.attach(row, rep.model_dump())
+            comparison = compare.attach(row, rep.model_dump(), status=values.get("status", row["status"]))
             rep.comparison = Comparison.model_validate(comparison) if comparison else None
         except ReportContractError:
             if rep.assessment:

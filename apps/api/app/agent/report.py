@@ -19,7 +19,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agent import compare, fix_prompt, score
 from app.agent.schema import AgentReady, Finding, FirstImpression, LaunchReady, Report, Synthesis
-from app.scans import accessibility, email, fetch, performance, security, seo, site, stack
+from app.scans import accessibility, authority, email, fetch, performance, security, seo, site, stack
 
 
 class ReportState(TypedDict, total=False):
@@ -67,7 +67,7 @@ def first_impression(state: ReportState) -> dict:
         # only produces invented detail, so the report says what it could not judge instead.
         return {"first_impression": {}, "notes": ["first impression skipped: no readable page text"]}
     messages = [
-        ("system", "You are a stranger landing on a website for the first time. You have five seconds and you only see the page text below, not its design. Answer plainly, in the second person about the site owner ('your site'). Only mention things present in the text; never describe visuals, layout, colours or typography."),
+        ("system", "You are a stranger landing on a website for the first time. You have five seconds and you only see the page text below, not its design. Answer plainly and call it 'this site': the same answer is shown to its owner and in competitor comparisons. Only mention things present in the text; never describe visuals, layout, colours or typography."),
         ("human", f"Homepage text of {state['site']}:\n\n{state.get('page_text', '')[:5000]}"),
     ]
     fi, used = runtime.call(FirstImpression, messages, paid=state.get("paid", False))
@@ -609,6 +609,7 @@ def synthesize(state: ReportState) -> dict:
         if local or (not state.get("performance_measured", False) and not browser_performance) else {},
         site_audit=state.get("site_audit"),
         opportunities=state.get("opportunities") or None,
+        authority=authority.build(state.get("opportunities")),
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),
         pages=state.get("finding_pages") or {},
