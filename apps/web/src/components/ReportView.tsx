@@ -9,6 +9,7 @@ import { FixPrompt } from './FixPrompt'
 import { AgentReadiness } from './AgentReadiness'
 import { GeoReadiness } from './GeoReadiness'
 import { KeywordMap } from './KeywordMap'
+import { AuthorityPlan } from './AuthorityPlan'
 import { RerunComparison } from './RerunComparison'
 import { SiteAuditCoverage } from './SiteAuditCoverage'
 import { TestUsersCompared } from './TestUsersCompared'
@@ -156,6 +157,7 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
                 <p className="no-print mt-4 text-sm"><a href="/app/visibility" className="text-ink underline decoration-line underline-offset-4 transition hover:decoration-ink">Open AI answers</a> for dated samples and their sources.</p>
               )}
               {c.key === 'keywords' && r.opportunities && r.opportunities.pages.length > 0 && <KeywordMap map={r.opportunities} />}
+              {c.key === 'authority' && r.authority && r.authority.tactics.length > 0 && <AuthorityPlan plan={r.authority} />}
               {c.key === 'evidence' && r.site_audit && <SiteAuditCoverage audit={r.site_audit} />}
               {c.issue_ids.length > 0 && (
                 <ul className="mt-6 border-t border-line">

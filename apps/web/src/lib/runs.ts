@@ -57,6 +57,8 @@ export type StepEvidence = {
   width: number
   height: number
   note?: string
+  /** R-S19: visible error boxes in this exact frame, as fractions of the captured viewport (drawn over, never into, the image). */
+  regions?: { kind: 'error'; x: number; y: number; w: number; h: number }[]
 }
 
 export type Finding = {
@@ -67,6 +69,19 @@ export type Finding = {
   fix: string
   evidence: string | null
   rule?: string | null
+}
+
+/** R-S13 (apps/api/app/agent/compare.py recheck_assertion): the declared count check against its previous result. */
+export type AssertionRecheck = {
+  fingerprint: string
+  identity: string
+  verdict: 'fixed' | 'still_failing' | 'regressed' | 'still_passing' | 'first_result' | 'not_rechecked' | 'not_comparable'
+  reason: string
+  before: 'passed' | 'failed' | 'blocked' | 'inconclusive'
+  after?: 'passed' | 'failed' | 'blocked' | 'inconclusive' | null
+  before_count?: number | null
+  after_count?: number | null
+  expected_count?: number | null
 }
 
 export type Compared = {
@@ -106,7 +121,7 @@ export type Report = {
     entities?: Record<string, { status: string; url?: string }>
   } | null
   model?: string | null
-  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[] } | null
+  comparison?: { previous_run_id: string; previous_at: string; fixed: Compared[]; still_broken: Compared[]; new: Compared[]; not_rechecked?: Compared[]; assertion?: AssertionRecheck | null } | null
   pages?: Record<string, string[]>
   site_audit?: {
     pages_scanned: number
@@ -129,6 +144,8 @@ export type Report = {
   launch_ready?: { score: number | null; areas: Partial<Record<'ux' | 'security' | 'geo' | 'seo' | 'speed', number | null>> } | null
   /** Advisory keyword/content map built from the site's own pages (apps/api/app/scans/opportunities.py). No search data. */
   opportunities?: KeywordMap | null
+  /** Advisory link tactics built from that map (apps/api/app/scans/authority.py, R-S17a). No link data. */
+  authority?: AuthorityPlan | null
   /** Code and model version of a server scan (apps/api/app/scan_reuse.py). */
   scan_version?: string | null
 }
@@ -143,6 +160,15 @@ export type KeywordOpportunity = {
   internal_links: { inbound_from: string[]; suggested_from: string[] }
   next_action: string
   effort: 'low' | 'medium'
+}
+export type AuthorityTactic = {
+  id: string; title: string; state: 'advisory' | 'prerequisite_missing' | 'not_applicable' | 'not_recommended'
+  target: string | null; source: { kind: 'audited_page'; url: string; observed: string } | null; brief: string | null
+  reader_benefit: string; prerequisites: string[]; missing: string[]; effort: 'low' | 'medium' | 'high' | null; measurement: string | null; policy: string | null
+}
+export type AuthorityPlan = {
+  mode: 'prelaunch_advisory'; link_data: 'none'; basis: string; rules: string[]
+  separate: { geo_readiness: string; ai_citations: string; backlinks: string }; policy_source: string; tactics: AuthorityTactic[]
 }
 export type KeywordMap = {
   mode: 'prelaunch_advisory'; demand_data: 'none'; basis: string; measurement: string; pages_considered: number
@@ -358,6 +384,11 @@ export type BillingStatus = {
   prices: { plan: BillingOffer['plan']; founding: boolean; price_cents: number; runs: number; days: number }[]
 }
 export const getBilling = () => api<BillingStatus>('/billing', undefined, true, 'GET')
+/** R-S10: one usage record explained in plain language by the API (quotes.explain). */
+export type UsageItem = { operation: string; key: string | null; state: string; units: number; created_at: string | null; price_version: string | null; text: string; cost: string }
+export const getUsage = () => api<{ ledger: 'off' | 'active'; items: UsageItem[]; note?: string }>('/me/usage', undefined, true, 'GET')
+export const getRunUsage = (id: string) =>
+  api<{ run_id: string; status: string; steps_recorded: number; ledger: 'off' | 'active'; usage?: UsageItem | null }>(`/runs/${id}/usage`, undefined, true, 'GET')
 export async function requestAccess(plan: BillingOffer['plan'], note: string) {
   const userId = (await supabase?.auth.getSession())?.data.session?.user.id
   if (!userId) throw new Error('Sign in first')

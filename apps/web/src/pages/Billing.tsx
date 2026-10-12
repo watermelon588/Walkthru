@@ -4,7 +4,7 @@ import { AppShell } from '../components/AppShell'
 import { btnPrimary } from '../components/Shared'
 import { plans as tiers } from '../content'
 import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
-import { getBilling, requestAccess, startCheckout, type BillingOffer, type BillingStatus } from '../lib/runs'
+import { getBilling, getUsage, requestAccess, startCheckout, type BillingOffer, type BillingStatus, type UsageItem } from '../lib/runs'
 import { SkeletonPanel } from '../components/Loading'
 
 const PLAN_NAME: Record<BillingOffer['plan'], string> = { launch: 'Launch Pack', pro: 'Pro', plus: 'Plus' }
@@ -122,7 +122,37 @@ function BillingContent({ data, returnedFor, waiting, onChange }: { data: Billin
           </ul>
         </section>
       )}
+
+      <UsageHistory />
     </div>
+  )
+}
+
+type UsageLoad = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; items: UsageItem[]; note?: string }
+
+/** R-S10: what happened to each credit and reserved provider cost, explained by the API. */
+export function UsageHistory() {
+  const [usage, setUsage] = useState<UsageLoad>({ kind: 'loading' })
+  useEffect(() => {
+    getUsage().then((u) => setUsage({ kind: 'ready', items: u.items, note: u.note })).catch((e: Error) => setUsage({ kind: 'error', message: e.message }))
+  }, [])
+  return (
+    <section aria-labelledby="usage-heading" aria-busy={usage.kind === 'loading'}>
+      <h2 id="usage-heading" className="text-xl font-light">Usage history</h2>
+      {usage.kind === 'loading' && <p className="mt-4 text-sm text-muted">Loading usage…</p>}
+      {usage.kind === 'error' && <p role="alert" className="mt-4 text-sm text-danger">{usage.message}</p>}
+      {usage.kind === 'ready' && usage.items.length === 0 && <p className="mt-4 text-sm text-muted">{usage.note ?? 'No usage yet. Each run, scan or check you start appears here.'}</p>}
+      {usage.kind === 'ready' && usage.items.length > 0 && (
+        <ul className="mt-6 divide-y divide-line border-y border-line">
+          {usage.items.map((u, i) => (
+            <li key={`${u.operation}-${u.key ?? i}`} className="grid gap-1 py-4 text-sm">
+              <span className="text-ink">{u.text}</span>
+              <span className="font-mono text-xs text-muted">{[u.created_at && time(u.created_at), u.cost, u.price_version && `price ${u.price_version}`].filter(Boolean).join(' · ')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 

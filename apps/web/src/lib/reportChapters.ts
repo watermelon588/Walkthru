@@ -17,7 +17,7 @@ export const CHAPTERS = [
 ] as const
 
 export type ChapterKey = (typeof CHAPTERS)[number][0]
-export type ChapterStatus = 'issues' | 'clear' | 'unconfirmed' | 'not_measured' | 'not_tested' | 'separate' | 'reference' | 'advisory'
+export type ChapterStatus = 'issues' | 'clear' | 'unconfirmed' | 'not_measured' | 'not_tested' | 'separate' | 'reference' | 'advisory' | 'advisory_links'
 export type Chapter = { number: number; key: ChapterKey; title: string; status: ChapterStatus; label: string; summary: string; issue_ids: string[]; cross_links: string[] }
 export type NextAction = { id: string; chapter: ChapterKey; severity: Finding['severity']; title: string; fix: string }
 
@@ -26,7 +26,7 @@ const ORDER = Object.fromEntries(CHAPTERS.map(([key], i) => [key, i])) as Record
 const BY_KIND: Record<Finding['kind'], ChapterKey> = { ux: 'journey', accessibility: 'accessibility', performance: 'performance', seo: 'seo', geo: 'geo', security: 'security' }
 const SEVERITY = { high: 0, medium: 1, low: 2 }
 const STATUS_LABEL: Record<Exclude<ChapterStatus, 'issues'>, string> = {
-  clear: 'No issue observed in scope', unconfirmed: 'Outcome unconfirmed', not_measured: 'Not measured', not_tested: 'Not tested', separate: 'Measured separately', reference: 'Reference', advisory: 'Advisory, no search data',
+  clear: 'No issue observed in scope', unconfirmed: 'Outcome unconfirmed', not_measured: 'Not measured', not_tested: 'Not tested', separate: 'Measured separately', reference: 'Reference', advisory: 'Advisory, no search data', advisory_links: 'Advisory, no link data',
 }
 
 export const chapterOf = (f: Finding): ChapterKey => BY_KIND[f.kind] ?? 'evidence'
@@ -69,6 +69,10 @@ function status(key: ChapterKey, title: string, report: Report, kind: Run['kind'
   const assessment = report.version === 2 ? report.assessment : null
   if (key === 'keywords' && report.opportunities?.pages.length) return ['advisory', `${count(report.opportunities.pages.length, 'page')} mapped from the site's own copy. Intents are hypotheses to confirm; no search volume, difficulty, rank or traffic data was used.`]
   if (key === 'keywords') return ['not_measured', 'Not part of this report. Walkthru has no search demand data for this site, so it gives no keyword direction here.']
+  if (key === 'authority' && report.authority?.tactics.length) {
+    const n = (state: string) => report.authority!.tactics.filter((t) => t.state === state).length
+    return ['advisory_links', `${count(n('advisory'), 'tactic')} with a brief from your own pages, ${n('prerequisite_missing')} needing an input you have not supplied, ${n('not_applicable')} not applicable and ${n('not_recommended')} not recommended. No link data was read; nothing is sent or placed.`]
+  }
   if (key === 'authority') return ['not_measured', 'Not part of this report. Backlinks and earned-link opportunities were not measured, and none are invented.']
   if (key === 'citations') return ['separate', 'AI answers are sampled separately, each with its own date, engine and sources. This report does not include them.']
   if (key === 'evidence') {

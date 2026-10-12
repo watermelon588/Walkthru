@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { RECHECK_LABEL, recheckCounts } from '../lib/comparison'
 import type { Compared, Report } from '../lib/runs'
 
 type Comparison = NonNullable<Report['comparison']>
@@ -59,8 +60,18 @@ export function RerunComparison({ comparison, linkPrevious }: { comparison: Comp
       </div>
       {unchecked.length > 0 && (
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          Not re-checked: {unchecked.map((item) => item.title).join(', ')}. Its pages were outside this run's crawl, so it is not marked fixed.
+          Not re-checked: {unchecked.map((item) => item.title).join(', ')}. This run did not reach the pages or the journey step where it was found, so it is not marked fixed.
         </p>
+      )}
+      {comparison.assertion && (
+        <div className="mt-5 rounded-2xl border border-line px-5 py-4 text-sm">
+          <h3 className="font-medium">
+            Count check: <span className={comparison.assertion.verdict === 'fixed' ? 'text-accent' : comparison.assertion.verdict === 'regressed' || comparison.assertion.verdict === 'still_failing' ? 'text-danger' : 'text-ink'}>{RECHECK_LABEL[comparison.assertion.verdict]}</span>
+          </h3>
+          <p className="mt-1 font-mono text-xs text-muted">{comparison.assertion.identity}</p>
+          <p className="mt-2 text-ink">{comparison.assertion.reason}</p>
+          <p className="mt-1 text-xs text-muted">{recheckCounts(comparison.assertion)}</p>
+        </div>
       )}
     </section>
   )

@@ -4,7 +4,7 @@ import { CHAPTER_TITLE, issueAnchor, type Chapter, type NextAction } from '../li
 import { getFixPrompt } from '../lib/runs'
 
 const TONE: Record<Chapter['status'], string> = {
-  issues: 'text-ink', clear: 'text-accent', unconfirmed: 'text-muted', not_measured: 'text-muted', not_tested: 'text-muted', separate: 'text-muted', reference: 'text-muted', advisory: 'text-muted',
+  issues: 'text-ink', clear: 'text-accent', unconfirmed: 'text-muted', not_measured: 'text-muted', not_tested: 'text-muted', separate: 'text-muted', reference: 'text-muted', advisory: 'text-muted', advisory_links: 'text-muted',
 }
 const num = (n: number) => String(n).padStart(2, '0')
 

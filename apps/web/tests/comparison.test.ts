@@ -32,3 +32,18 @@ test('uses strongest available competitor, handles ties and owner failure', () =
   assert.equal(leaderGap([{ ...own, error: 'Failed' }, rival], 'geo'), null)
   assert.equal(leaderGap([own], 'geo'), null)
 })
+
+// R-S13: the recheck verdict and counts read plainly; nothing but a like-for-like pass says Fixed.
+test('recheck labels and counts', async () => {
+  const { RECHECK_LABEL, recheckCounts } = await import('../src/lib/comparison.ts')
+  assert.equal(RECHECK_LABEL.fixed, 'Fixed')
+  assert.notEqual(RECHECK_LABEL.not_rechecked, 'Fixed')
+  assert.notEqual(RECHECK_LABEL.not_comparable, 'Fixed')
+  const base = { fingerprint: 'assertion:/d|Active|Filtered records', identity: '/d, Filter: Active, Filtered records', reason: 'r' }
+  assert.equal(recheckCounts({ ...base, verdict: 'fixed', before: 'failed', after: 'passed', before_count: 3, after_count: 2, expected_count: 2 }),
+    'Before: failed (3). Now: passed (2), expected 2.')
+  assert.equal(recheckCounts({ ...base, verdict: 'not_rechecked', before: 'failed', after: null, before_count: 3, expected_count: 2 }),
+    'Before: failed (3). Now: not checked, expected 2.')
+  assert.equal(recheckCounts({ ...base, verdict: 'not_rechecked', before: 'failed', after: 'inconclusive', before_count: 3, after_count: null }),
+    'Before: failed (3). Now: inconclusive (no count).')
+})

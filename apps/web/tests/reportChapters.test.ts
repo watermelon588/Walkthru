@@ -10,7 +10,7 @@ const cases = (): Case[] => JSON.parse(readFileSync(new URL('./fixtures/report-c
 
 test('chapters, ids, statuses and summaries match the API for every shared case', () => {
   const all = cases()
-  assert.deepEqual(all.map((c) => c.name), ['v2-scan', 'long-legacy-journey', 'clean-scan', 'interrupted-journey', 'assertion-failed', 'keyword-advisory'])
+  assert.deepEqual(all.map((c) => c.name), ['v2-scan', 'long-legacy-journey', 'clean-scan', 'interrupted-journey', 'assertion-failed', 'keyword-advisory', 'authority-advisory'])
   for (const c of all) {
     assert.deepEqual(chapters(c.report, c.kind, c.status), c.chapters, c.name)
     assert.deepEqual(nextActions(c.report), c.next_actions, c.name)

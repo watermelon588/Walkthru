@@ -28,8 +28,32 @@ function actionLabel(step: Step) {
   return ({ click: 'Click not confirmed', type: 'Field entry not confirmed', scroll: 'Scroll not confirmed', wait: 'Wait not confirmed', back: 'Back navigation not confirmed', done: 'Completion not confirmed', give_up: 'Stop not confirmed' })[step.action]
 }
 
+/** R-S19: error boxes over a captured frame. The viewBox is the captured viewport and `meet` centres it exactly like
+ *  object-contain, so each box lands where it was measured. Drawn over the image; the stored frame is unchanged. */
+function RegionOverlay({ evidence }: { evidence: NonNullable<Step['evidence']> }) {
+  if (!evidence.regions?.length) return null
+  const { width: w, height: h } = evidence
+  return (
+    <svg aria-hidden="true" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" className="pointer-events-none absolute inset-0 h-full w-full">
+      {evidence.regions.map((r, i) => (
+        <rect key={i} x={r.x * w} y={r.y * h} width={r.w * w} height={r.h * h} rx={4} fill="none" className="stroke-danger" strokeWidth={Math.max(2, w / 400)} vectorEffect="non-scaling-stroke" />
+      ))}
+    </svg>
+  )
+}
+
+const errorCount = (n: number) => `${n} visible error ${n === 1 ? 'message' : 'messages'} marked`
+
+/** Seconds since the first saved frame: frames are moments, not a continuous recording. */
+function offset(first: string | undefined, at: string): string {
+  if (!first) return ''
+  const s = Math.max(0, Math.round((Date.parse(at) - Date.parse(first)) / 1000))
+  return s < 60 ? `+${s} s` : `+${Math.floor(s / 60)} min ${s % 60} s`
+}
+
 export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; branded?: boolean }) {
   const [selected, setSelected] = useState(0)
+  const [showRegions, setShowRegions] = useState(true)
   const [playing, setPlaying] = useState(false)
   const [imageResult, setImageResult] = useState<{ key: string; urls: Record<string, string> }>({ key: '', urls: {} })
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set())
@@ -37,6 +61,7 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
   const pathsKey = paths.join('|')
   const images = imageResult.key === pathsKey ? imageResult.urls : {}
   const current = steps[selected]
+  const firstAt = steps.find((s) => s.evidence)?.evidence?.captured_at
 
   useEffect(() => {
     let active = true
@@ -80,6 +105,7 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Journey replay</p>
           <h2 id="journey-evidence-title" className="mt-2 text-2xl font-light tracking-tight">See every meaningful moment</h2>
           <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">Select a step to inspect what Scout tried, the captured page and where confusion rose. Interrupted actions have no confirmed result.</p>
+          <p className="mt-2 max-w-[58ch] text-xs leading-relaxed text-muted">{paths.length} {paths.length === 1 ? 'screenshot' : 'screenshots'} captured at the moments shown, not a continuous recording. Play steps through them in order.</p>
         </div>
         <AgentPresence
           activity={`Reviewing step ${selected + 1} of ${steps.length}`}
@@ -112,8 +138,9 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
 
           <div className="bg-bg p-3 sm:p-5">
             <figure className="overflow-hidden rounded-xl border border-line bg-surface">
-              <div className="flex aspect-[16/10] items-center justify-center">
+              <div className="relative flex aspect-[16/10] items-center justify-center">
                 {screenshot && !failedImages.has(evidence?.screenshot_path ?? '') ? (
+                  <>
                   <img
                     src={screenshot}
                     alt={`Captured page for step ${selected + 1}: ${actionLabel(current)}`}
@@ -122,6 +149,8 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
                     decoding="async"
                     onError={() => evidence && setFailedImages((paths) => new Set(paths).add(evidence.screenshot_path))}
                   />
+                  {evidence && showRegions && <RegionOverlay evidence={evidence} />}
+                  </>
                 ) : (
                   <div className="max-w-[34ch] px-6 text-center">
                     <CameraIcon className="mx-auto size-7 text-muted" weight="light" />
@@ -136,8 +165,17 @@ export function EvidenceTimeline({ steps, branded = false }: { steps: Step[]; br
                   </div>
                 )}
               </div>
+              {evidence?.regions?.length ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-bg px-3 py-2 text-[11px] text-muted">
+                  <label htmlFor="show-regions" className="flex items-center gap-2 text-ink">
+                    <input id="show-regions" type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} />
+                    Show error locations
+                  </label>
+                  <span>{errorCount(evidence.regions.length)}, measured in this frame just before capture and drawn over it, not into it.</span>
+                </div>
+              ) : null}
               <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-bg px-3 py-2 text-[11px] text-muted">
-                <span>{evidence ? new Date(evidence.captured_at).toLocaleString() : `Step ${selected + 1}`}</span>
+                <span>{evidence ? <>{new Date(evidence.captured_at).toLocaleString()} <span className="font-mono">{offset(firstAt, evidence.captured_at)}</span></> : `Step ${selected + 1}`}</span>
                 {evidence && <span>{evidence.width} × {evidence.height}</span>}
               </figcaption>
             </figure>
@@ -187,7 +225,7 @@ function PrintEvidenceJourney({ steps, images, branded }: { steps: Step[]; image
         <div>
           <p className="report-print-kicker">Visual evidence</p>
           <h2>{branded ? 'What the test user saw' : 'What Scout saw'}</h2>
-          <p>Frames show the captured page for each recorded step. Interrupted actions have no confirmed result. Form values were masked before capture.</p>
+          <p>Frames show the captured page for each recorded step, at the moments shown; they are not a continuous recording. Red boxes mark visible error messages measured in that frame. Interrupted actions have no confirmed result. Form values were masked before capture.</p>
         </div>
         {!branded && <AgentBird variant="solid" className="report-print-bird" phase={0.4} title="Scout, the Walkthru test agent" />}
       </header>
@@ -201,7 +239,10 @@ function PrintEvidenceJourney({ steps, images, branded }: { steps: Step[]; image
             return (
               <figure key={evidence.screenshot_path} className="report-print-frame">
                 {image ? (
-                  <img src={image} alt={`Captured page for step ${index + 1}: ${actionLabel(step)}`} loading="eager" />
+                  <div className="relative">
+                    <img src={image} alt={`Captured page for step ${index + 1}: ${actionLabel(step)}${evidence.regions?.length ? `, ${errorCount(evidence.regions.length)}` : ''}`} loading="eager" />
+                    <RegionOverlay evidence={evidence} />
+                  </div>
                 ) : (
                   <div className="report-print-frame-missing">Screenshot unavailable</div>
                 )}

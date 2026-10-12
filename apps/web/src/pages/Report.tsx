@@ -7,7 +7,7 @@ import { FixPullRequest } from '../components/FixPullRequest'
 import { ShareToTeam } from '../components/ShareToTeam'
 import { btnGhost } from '../components/Shared'
 import { copyText } from '../lib/clipboard'
-import { deleteRun, emailRun, findingsCsv, getBranding, getPlan, getRun, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Brand, type Run } from '../lib/runs'
+import { deleteRun, emailRun, findingsCsv, getBranding, getPlan, getRun, getRunUsage, ignoredFindings, ignoreFinding, shareRun, stopRun, unignoreFinding, type Brand, type Run } from '../lib/runs'
 import { SkeletonReport } from '../components/Loading'
 
 type State = { kind: 'loading' } | { kind: 'ready'; run: Run } | { kind: 'missing' } | { kind: 'error'; message: string }
@@ -87,9 +87,27 @@ export default function Report() {
               },
             }}
           />
+          {state.run.kind === 'test' && state.run.status !== 'running' && <RunUsage runId={state.run.id} />}
         </div>
       )}
     </AppShell>
+  )
+}
+
+/** R-S10: what this run used, settled by the API's usage ledger. Owner-only; not printed. */
+export function RunUsage({ runId }: { runId: string }) {
+  const [usage, setUsage] = useState<Awaited<ReturnType<typeof getRunUsage>> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => { getRunUsage(runId).then(setUsage).catch((e: Error) => setError(e.message)) }, [runId])
+  if (error) return <p className="no-print mt-10 text-xs text-muted">Usage for this run could not be loaded: {error}</p>
+  if (!usage) return null
+  const steps = `${usage.steps_recorded} ${usage.steps_recorded === 1 ? 'step' : 'steps'} recorded`
+  return (
+    <section aria-labelledby="run-usage-heading" className="no-print mt-10 rounded-2xl border border-line px-5 py-4 text-sm">
+      <h2 id="run-usage-heading" className="text-xs uppercase tracking-wide text-muted">Usage</h2>
+      <p className="mt-2 text-ink">{usage.usage ? usage.usage.text : usage.ledger === 'off' ? 'Counted as one test run from your plan.' : 'Not settled yet.'}</p>
+      <p className="mt-1 font-mono text-xs text-muted">{[steps, usage.usage?.cost].filter(Boolean).join(' · ')}</p>
+    </section>
   )
 }
 

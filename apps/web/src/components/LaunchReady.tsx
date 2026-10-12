@@ -18,6 +18,7 @@ const AREAS: { id: keyof Score['areas']; label: string; weight: number }[] = [
 export function LaunchReady({ score, runId, isPublic, isScan, isOwner }: { score: Score; runId: string; isPublic: boolean; isScan: boolean; isOwner: boolean }) {
   if (score.score === null) return null
   const b = band(score.score)
+  const untested = AREAS.filter((a) => score.areas[a.id] == null)
   return (
     <section aria-labelledby="launch-ready-title" className="report-print-section mt-10">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Launch Ready score</p>
@@ -27,8 +28,14 @@ export function LaunchReady({ score, runId, isPublic, isScan, isOwner }: { score
           <p className="flex items-baseline gap-3">
             <span className="text-6xl font-extralight tracking-[-0.03em]">{score.score}</span>
             <span className="text-sm text-muted">of 100</span>
-            <span className={`text-sm font-medium ${b.tone}`}>{b.label}</span>
+            <span className={`text-sm font-medium ${b.tone}`}>{b.label}{untested.length > 0 && ' on what was checked'}</span>
           </p>
+          {untested.length > 0 && (
+            <p className="mt-3 max-w-[48ch] text-sm leading-relaxed">
+              Not measured: {untested.map((a) => a.label.toLowerCase()).join(', ')} ({untested.reduce((n, a) => n + a.weight, 0)}% of the score).
+              {score.areas.ux == null && (isScan ? ' No journey ran' : ' The journey did not reach a confirmed outcome') + ', so this score cannot say whether people can sign up or use the product.'}
+            </p>
+          )}
           <p className="mt-3 max-w-[48ch] text-sm leading-relaxed text-muted">
             Only what this {isScan ? 'scan' : 'test'} measured counts. An area that was not measured is left out and its weight goes to the others. Ignored findings still count.
           </p>
