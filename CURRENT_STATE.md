@@ -1,6 +1,196 @@
 # Current State
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-12_
+
+## Google Cloud VM deployment preparation (2026-10-12)
+
+- The founder selected Google Cloud Compute Engine for the current backend. [Current VM runbook](docs/google-cloud-vm.md) covers the instance, locked installation, private environment, baseline migration review, separate API/worker services, `api.trywalkthru.com`, HTTPS, acceptance and rollback. The older Render guide now points here.
+- Initial pilot: Standard E2 small, 2 GB RAM, Ubuntu 24.04 LTS, 20 GB balanced disk, one API process and one worker. Use Sydney if Supabase is still in its recorded Sydney region; check the dashboard and current console quote before creation. Capacity is not yet measured on Linux or under hosted concurrency.
+- Git inspection: local `main` and fetched `origin/main` initially matched at `ea058af`, but 80 changed/new files from the preceding work were unpublished. Publication includes that work plus the deployment documentation, using the founder's Git identity. Use the verified published SHA for the VM checkout.
+- Fresh offline API verification: **1,185 passed, 19 skipped**, one dependency deprecation warning; Ruff passed. Network connections from Python tests were restricted to loopback and PostgreSQL fixtures were disposable local clusters. Web: **52 passed**, lint, TypeScript and production build passed, with existing bundle-size/dynamic-import warnings.
+- Extension: **177 passed, one opt-in skip** using bundled Node 24.19.0 and the Vitest thread pool; lint, TypeScript and the WXT production build passed. The system Node 22.18.0 is below the installed jsdom engine requirement. Sandbox temporary-file errors and stalled worker starts occurred before this successful verification; no dependency or source changes were made for those retries.
+- Proposed receipt/reservation/admission migrations 0004 through 0006 and paid controller activation remain inactive. The runbook explicitly reviews migration status and applies only reviewed pending baseline migrations 0001 through 0003 when necessary.
+- **Not performed:** VM creation, live billing/credit verification, DNS changes, production credentials, hosted migrations, Linux installation, TLS issuance, deployed restart/extension acceptance or production capacity measurement. The next follow-along step is VM creation. Hostinger email records remain in place.
+
+## End-to-end test on tripverse-0.vercel.app and fixes (2026-10-07, Claude Code)
+
+- **Fixed (deterministic, tested):**
+  - robots.txt and sitemap.xml that return the app's HTML page now count as missing (`fetch.text_file`, judged by body);
+  - new soft-404 check (`seo.check_missing_page`, one read-only GET);
+  - the keyword map skips JavaScript-only pages, so no title-only briefs;
+  - score label "on what was checked" plus a note naming unmeasured areas;
+  - Bing sitemap fix only when a real sitemap exists;
+  - robots.txt parsed with `urllib.robotparser`: a `Disallow: /` for one named bot was reported as blocking all crawlers;
+  - alt-text finding has one title, so pages merge (it was six separate mediums and drove competitor SEO to 0);
+  - AI-answers brand from deploy-suffixed hosts (`tripverse-0` gave "Tripverse 0"), and no generic "tools like this" prompts;
+  - first impressions say "this site", since competitor comparisons said "Your site".
+- **Verified live:** TripVerse scan now reports no robots.txt or sitemap and the soft 404. Wanderlog rescan: SEO 0 → 56, overall 46 → 58, false robots finding gone.
+- **Tests:** offline API 1,183 passed / 19 skips (`evals/results/tripverse-e2e/api-full-2.log`); web 52 passed, with tsc and lint.
+- **Open, not fixed:**
+  - every signed-in endpoint takes 2–6 s locally: 350–700 ms per sequential Supabase query from this PC (`/me/plan` makes 4);
+  - the "Supabase key in the page" finding is informational but scored and given a fix check;
+  - analytics-cookie HttpOnly finding rated medium;
+  - Groq web-search answers capture 0 source URLs, so citations stay unmeasured;
+  - memory answers that invent a brand's features count as "Named you" with no accuracy warning;
+  - suggested category prompts come from taglines ("best 3d travel universe").
+- **Not tested here:** an extension journey of the TripVerse planner. The existing journey was "Sign up" while already signed in to TripVerse, so it ended unconfirmed.
+
+## Truthful visual evidence R-S19 completed locally (2026-10-07, Claude Code)
+
+- [Contract](docs/evidence-regions.md). **Boxes.** When a step's screenshot is taken, the content script (capture mode on, form values masked as before) measures the visible error messages in that same document. It uses the observation's own error selector (`snapshot.issueRegions`) and records boxes in fractions of the captured viewport: clipped, at most 10, off-screen, hidden and empty elements left out, no text. They travel in `StepEvidence.regions`. The API accepts only boxes inside the frame and refuses extra fields such as a text label. Evidence without boxes is stored exactly as before (defaults left out).
+- **Web.** `EvidenceTimeline` draws them over the unchanged frame with an SVG whose viewBox is the captured size and `meet` matches object-contain, on screen and in print. There is a "Show error locations" toggle, a count, and "measured in this frame just before capture and drawn over it, not into it". The replay and print say the frames are "not a continuous recording", and each frame shows its offset from the first. No suggested fix is drawn; before/after stays with the R-S13 matched rerun.
+- **Retention.** The purge strips the whole evidence record, boxes included. Expired frames draw no boxes. No new storage, permission, dependency or migration.
+- **Verification:**
+  - extension `tests/regions.test.ts` 3 passed; full extension 177 passed/1 opt-in skip, with tsc, lint and the WXT build;
+  - API round trip, refusal of out-of-frame boxes and text labels, and purge, plus the unchanged evidence round trip;
+  - real-layout pixel check: the extension's own `issueRegions()` in Edge on a scrolled page, with viewport screenshots at 1280×800 @1× and @2× and 390×844 @3×, every box covering the error's pixels and off-screen errors left out;
+  - actual `EvidenceTimeline` in isolated Edge 14/14, no console errors, boxes within 1.5 px of the measured spot on screen, in print and at 320/768 px;
+  - web 52 passed, with tsc, build and lint;
+  - full offline API (closed-proxy guard) **1,175 passed, 19 existing PostgREST skips**, exit 0 in 468 s (`evals/results/evidence-regions/api-full.log`).
+- **Split to later:** clip or video export (needs a media dependency or permission review), highlighting the acted-on element (needs a before-action frame), other issue kinds, and an installed-extension live inspection.
+- **24 planned slices, eighteen complete.** Every remaining slice needs a founder input: R-S12 authorization (then R-S15), R-S16 a Search Console connection, R-S17/R-S17a measured modes data, and R-S20 an installed-browser and deployed release check. No dependency, paid call, deployment, commit or push.
+
+## Authority and backlinks R-S17a, advisory mode (2026-10-07, Claude Code)
+
+- [Contract](docs/authority-plan.md). `app/scans/authority.py` builds `report.authority` from the R-S17 page map. There is no fetch, link index, mention search, model call or outreach. It covers twelve tactics in fixed order:
+  - **advisory briefs** quoting audited pages: a free tool from the shallowest page's main topic, and an infographic and a video from a page with three or more sections, each with prerequisites, effort and a 90-day measurement that promises no rank change;
+  - **needs input** for eight tactics (lost links, unlinked mentions, listicles, competitor links, broken links, outdated guides, statistics, reporter requests), naming the exact evidence needed with no target, source or brief invented;
+  - **not applicable** when the material is missing;
+  - **link exchanges: not recommended**, citing Google's link spam policy, with paid placements marked `rel="sponsored"`.
+- **Kept separate:** rules (nothing sent, posted, registered or placed; drafts need a factual and rights review; links do not guarantee citations or rank) and a block separating backlinks, GEO readiness and AI citations. A mention or memory answer is not a citation, and a failed sample is not zero visibility.
+- **Where it appears:** the Authority and backlinks chapter shows "Advisory, no link data" (Python and TypeScript parity through the new `authority-advisory` fixture case) and the new web `AuthorityPlan` cards. `fix-prompt?section=authority` returns an owner plan, never a send or publish task, and MCP `get_report(section="authority")` returns the same text. Legacy reports stay "Not measured". The shared report fixtures gained `"authority": null`.
+- **Verification:**
+  - `tests/test_authority.py` 9 passed; contract/chapter/assertion/opportunity/MCP suites 82 passed;
+  - web 52 passed, with tsc, Vite build and lint;
+  - actual `ReportView` with a real plan in isolated Edge 12/12, no console errors;
+  - Ruff clean;
+  - full offline API (closed-proxy guard) **1,173 passed, 19 existing PostgREST skips**, exit 0 in 700 s (`evals/results/authority-plan/api-full.log`).
+- **Note:** the `evals/results/keyword-map/` and `controller-candidates/` artifacts were removed outside this session when disk space was freed. The R-S17a harness was rebuilt in `evals/results/authority-plan/`.
+- **Still partial:** supplied or licensed link and mention data (so tactics can become supported), verifying other sites' pages, and drafts. Outreach is excluded by design. **R-S19 is next** (annotated evidence). R-S12 awaits authorization and R-S16 a Search Console connection. No dependency, paid call, deployment, commit or push.
+
+## Saved suites R-S14 completed locally (2026-10-07, Claude Code)
+
+- [Contract and example](docs/saved-suites.md).
+  - **Suites.** The side panel saves the current setup as a scenario: start page, goal, test user, signed-in choice, step cap, optional count check. A suite holds up to 6 scenarios on one site (max 20 suites, in `chrome.storage.local`, this browser only, no migration). `lib/suite.ts` runs the scenarios in order. Each is an ordinary run with its own quote, credit, reservation and step cap.
+  - **Progress.** Saved before and after every scenario:
+    - stop leaves "Stopped by you", resumable;
+    - a closed panel leaves "Interrupted", resumable;
+    - a refused quote stops the suite and keeps the rest pending;
+    - a step cap or Walkthru loss is never silently rerun;
+    - an edited suite starts afresh;
+    - another account's progress is dropped and nothing more is recorded.
+  - **Sign-in.** Signed-in scenarios wait for the owner to sign in themselves before any quote is requested.
+  - **Coverage.** Lists tested, blocked and not tested scenarios. Declared checks link to their reports for the verdict, and visited pages are listed separately as "not a promise it was checked".
+- **Nothing unattended.** New API tests: `POST /runs` needs an executed browser observation (422), MCP has no journey entry point, and watch checks are scans that never invoke the agent.
+- **Verification:**
+  - extension `tests/suite.test.ts` 10 passed; full extension 174 passed/1 opt-in skip with tsc, lint and the WXT build;
+  - API `tests/test_unattended.py` 3 passed, with outbound HTTP pointed at a closed local proxy;
+  - actual `SuitePanel` in isolated Edge 15/15, no console errors;
+  - full offline API with outbound HTTP pointed at a closed proxy: 1,162 passed, 19 existing skips, 2 failed (`evals/results/saved-suites/api-full-final.log`, 25 min on a nearly full disk). Both are fixed and the two suites rerun (13 passed): a transient local fixture-server timeout, and the pre-existing `test_mcp` owner-scan test, which had the same `monkeypatch.undo()` leak (read-only `run_blocks` lookups) and is now scoped.
+- **Incidents found by the closed-proxy guard (fixed):**
+  - **Watch test draft.** A first draft of the watch test sent one `PATCH sites?id=eq.w1` to the configured Supabase. It was rejected with 400 (not a UUID), so nothing changed. The test now fakes the sites table.
+  - **R-S10 quote test and an older MCP test.** `test_expired_tampered_or_foreign_quotes_are_refused` called `monkeypatch.undo()`, which also removed the shared offline database fakes. In the earlier R-S10/R-S11/R-S13 full runs, its last lines therefore made read-only plan and run-count lookups for the fake test user against the configured Supabase. The 409 refusal comes before any insert, so nothing was written. The pre-existing `test_owner_scans_add_https_and_run_owner_checks_on_verified_hosts` had the same pattern (read-only `run_blocks` lookups). Both patches are now scoped with `monkeypatch.context()`.
+  - **Disk full.** Overlapping suite runs left about 6 GB of disposable PostgreSQL clusters in ignored `evals/results/*/tmp*` and filled the already nearly full C: drive. They were removed (about 6 GB free afterwards), and each run now deletes its temp folder.
+- **Limits:**
+  - no real signed-in suite run, so no capacity or latency evidence;
+  - suites are per browser (a server table would need a migration);
+  - schedules excluded by design.
+
+  **24 planned slices, seventeen complete. R-S17a is next.** R-S12 awaits founder authorization; R-S16 needs a Search Console connection (the `gsc` MCP server failed to connect this session). No dependency, paid call, deployment, commit or push.
+
+## Targeted recheck R-S13 completed locally (2026-10-07, Claude Code)
+
+- [Contract and reproducible example](docs/targeted-recheck.md). A paid rerun's comparison now carries `comparison.assertion`: the R-S6 count check against its previous result, like for like.
+  - Verdicts: fixed, still failing, regressed, still passing, first result, not re-checked and not comparable.
+  - Fixed only for failed-then-passed under identical declared conditions: path/filter/label, expected count, tolerance, dataset, maximum age, test user and signed-in pages. A fresh dataset time is expected, not a change.
+  - Inconclusive, blocked or undeclared reruns are not re-checked.
+- **Finding comparison:** UX findings that vanished from a journey that did not finish are now not re-checked rather than fixed, and duplicate findings count once. Callers without a status and old comparisons are unchanged.
+- **Prefill:** `GET /me/recheck?site=<origin>` returns the owner's latest declaration on a site without its dataset time. The side panel's "Recheck my last count check" button prefills goal, test user, signed-in choice and the check. The run goes through the normal quote and reservation.
+- **Web:** "Since your last run" shows a count-check block (verdict, identity, reason, before/now counts). The not-re-checked note now covers journey steps too.
+- **Verification:**
+  - `tests/test_recheck.py` 20 passed, including the real report job;
+  - neighbouring compare/assertion/contract/chapter/funnel/MCP/ownership suites 126 passed;
+  - web 52 passed with tsc, build and lint;
+  - actual `RerunComparison` in isolated Edge 9/9, no console errors, 320/768;
+  - extension 164 passed/1 opt-in skip with tsc and lint;
+  - Ruff clean;
+  - full offline API **1,161 passed, 19 existing PostgREST skips**, exit 0 in 294 s (`evals/results/targeted-recheck/api-full.log`).
+- **Limits:**
+  - viewport is not recorded, so a different window size goes undetected;
+  - only the latest declaration in the latest 20 test runs can be prefilled;
+  - no live owner-authorized rerun on a deployed site;
+  - the side panel button is not visually checked in a loaded extension;
+  - MCP does not print the verdict.
+
+  **24 planned slices, sixteen complete; R-S14 is next** (saved suites and honest coverage). R-S12 still awaits founder authorization. No migration, dependency, paid call, deployment, commit or push.
+
+## Controller candidates R-S11 completed locally, disabled (2026-10-07, Claude Code)
+
+- [Candidate contract](docs/controller-candidates.md). `app/agent/candidates.py` adds two controller candidates. Both refuse refused, truncated or out-of-schema answers rather than parsing them, and capture R-S7 receipts.
+  - **Claude Sonnet 5.5 on Google Cloud:** native `output_config.format` json_schema (bounds moved to descriptions, Pydantic enforces them), adaptive thinking, explicit `CANDIDATE_EFFORT` (default medium). No temperature, forced tool or thinking budget, per the current migration guide.
+  - **GLM 5.3 over httpx:** thinking on, `reasoning_effort` (default low), JSON mode with the schema in the prompt, text only.
+- **Off by default.** `CONTROLLER_CANDIDATE=sonnet|glm` refuses to start without its credentials, `RESERVATIONS=postgres` and per-run maximums above 0 for every paid plan. Unset is exactly the previous behaviour.
+- **Routing and provenance.** The candidate decides paid-plan persona steps only; the planner and report writer keep their routes. `runtime.CandidateController` stamps each step with who answered, or `fallback_from` plus the reason when the free pool answered. The report and quote label names both routes.
+- **Found on the way:** the direct Haiku-on-Vertex adapter passed `temperature=0`, which the installed anthropic 1.6.0 rejects (TypeError). It now sends it in `extra_body`, verified through the real SDK. `CLAUDE_MODEL`/`PAID_MODEL` refuse non-Haiku names.
+- **Verification:**
+  - `tests/test_candidates.py`, 21 passed, offline through the real SDK/httpx with mock transports;
+  - affected runtime/persona/goal/receipt/provider/Jev/quote suites 145 passed;
+  - Ruff clean;
+  - full offline API **1,141 passed, 19 existing PostgREST skips**, exit 0 in 337 s (`evals/results/controller-candidates/api-full.log`; a first run whose temp parent folder was missing errored in setup only and is discarded).
+
+  No live provider request, key, price or plan change.
+- **Limits and R-S12 prerequisites:**
+  - GLM receipts fail closed under `PROVIDER_USAGE=postgres` until a proposed migration accepts `glm`;
+  - candidate token prices are unpriced in receipts;
+  - Sonnet shares the Vertex project with the Haiku planning/report route;
+  - no image handoff or prompt caching.
+
+  R-S12 needs founder approval for a capped comparison (plan: $10), partner-model access on Google Cloud, a Z.AI metered key and the ledger activated. **24 planned slices, fifteen complete. R-S13 is next** (targeted recheck), since R-S12 awaits authorization. No dependency, paid call, deployment, commit or push.
+
+## Run quotes, hard caps and usage history R-S10 completed locally (2026-10-07, Claude Code)
+
+- [Quote contract](docs/run-quotes.md). `app/quotes.py`: `POST /runs/quote` returns a stateless HMAC-signed quote (10 min). It pins:
+  - scope: origin, public/signed-in pages, test users, count check;
+  - step cap clamped to the plan, and the 4-minute time cap;
+  - plan window and credits;
+  - R-S8 price version and per-run maximum;
+  - model route and ledger mode.
+
+  It also returns a plain summary and four cap rules: stop at caps with a partial report; no automatic top-up or per-run charge; fixed route; partial evidence kept.
+- `POST /runs` with `quote` refuses with 409 a quote that is:
+  - expired, tampered or from another account;
+  - wider than the request it was issued for;
+  - stale against the server's current terms.
+
+  The run is clamped to the quoted step cap. Old clients without a quote still work unless `RUN_QUOTES=required` (428). No migration.
+- **Side panel.** It fetches the quote for exactly the form (debounced), shows the summary and the "What happens at the cap" rules, starts only with a quote, and refreshes one about to expire.
+- **Usage.** `GET /me/usage` and owner-only `GET /runs/{id}/usage` explain each reservation in plain language:
+  - used;
+  - returned (released reserve);
+  - not counted;
+  - in progress;
+  - refunded;
+
+  each with its cost line. With `RESERVATIONS=off` they return a note. Web Billing gets a "Usage history" section and a finished test run's Report gets a "Usage" note (not printed). MCP adds `get_run_quote` (with the extension prerequisite) and `get_usage`.
+- **Verification:**
+  - quotes 15 passed;
+  - ownership matrix and MCP tool list updated (70 passed);
+  - extension 163 passed/1 opt-in skip, tsc and lint;
+  - web 51 passed, tsc, Vite build and lint;
+  - actual `UsageHistory`/`RunUsage` in isolated headless Edge 11/11, no console errors (active/off/empty/error/loading, no-print, no em dash, 320/768);
+  - whole API Ruff clean.
+
+  The first full API run caught the two new routes and tools missing from the ownership and MCP matrices; fixed. Final full offline API **1,120 passed, 19 existing PostgREST skips**, exit 0 in 365 s (`evals/results/run-quotes/api-full-c.log`; an overlapping earlier run whose temp directory was removed mid-run is discarded). Ignored artifacts: `evals/results/run-quotes/`.
+- **Limits:**
+  - customer-terms wording is a draft awaiting founder approval;
+  - paid per-run maximums are still 0;
+  - resume means a new run;
+  - the route is pinned at acceptance only;
+  - the side panel quote box was not visually checked in a loaded extension;
+  - usage shows the latest 50 rows;
+  - set `QUOTE_SIGNING_KEY` in production.
+
+  **24 planned slices, fourteen complete; R-S11 is next** (stronger-model adapters, disabled by default). No dependency, paid call, pricing, deployment, commit or push.
 
 ## GitHub publication (2026-10-07)
 

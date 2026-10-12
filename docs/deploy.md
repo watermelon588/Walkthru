@@ -1,5 +1,7 @@
 # Deploying the v0.5 friends beta
 
+**2026-10-12:** use [the current Google Cloud VM runbook](google-cloud-vm.md) for the founder-selected backend. It covers the current API/worker split, reviewed baseline migrations, DNS, HTTPS and deployed acceptance. The Render steps below remain historical.
+
 **2026-10-03 update:** the founder's domain is `trywalkthru.com`. Follow the
 [domain, email and deployment walkthrough](trywalkthru-domain-and-deployment.md)
 for the current sequence. Vercel Hobby excludes commercial use; the free-web recommendation below

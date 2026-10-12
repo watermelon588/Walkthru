@@ -3,6 +3,8 @@
 Prepared 2026-10-03. This is a follow-along plan, not a record of a completed deployment.
 The founder confirmed **trywalkthru.com**, purchased at Hostinger. This supersedes the earlier domain spelling in chat.
 
+**2026-10-12 follow-along:** the founder selected the Google Cloud VM for the current backend. Follow [the current VM runbook](google-cloud-vm.md), starting with VM creation. Old account screenshots and cost projections below are historical; check the console's current credit, expiry and resource estimate. No VM or DNS change has been performed by this chat.
+
 ## Production architecture discussion update, 2026-10-04
 
 **Latest direction:** founder accepts the Cloudflare/frontend plus production-server direction and asks for a reliable Google Cloud backend. Target Compute Engine for the current Python API and background worker design; exact resources/region depend on budget and measured requirements. Supplied Google Cloud screenshots now confirm **₹28,797 of unused general trial credit**, **90 days remaining**, ending **3 January 2027**, and show project **Walkthru** on the Compute Engine API enablement screen. This supersedes the earlier ambiguous $5 discussion. No API enablement, VM creation or paid billing upgrade has been performed by this agent.
