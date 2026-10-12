@@ -5,10 +5,10 @@ import type { AgentState } from "../../lib/agent-bird";
 import { captureStepEvidence, evidenceFailureMessage, shouldCaptureEvidence } from "../../lib/evidence";
 import type { ExecResult, Step } from "../../lib/execute";
 import { MAX_MINUTES, sameOrigin } from "../../lib/safety";
-import type { Observation } from "../../lib/snapshot";
+import type { EvidenceRegion, Observation } from "../../lib/snapshot";
 import { assertConnection, connectionId, getSession, SESSION_CHANGED } from "../../lib/session";
 
-export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean; connection?: string; assertion?: FilterCountAssertion };
+export type RunOptions = { site: string; goal: string; persona: string; group_id?: string; logged_in: boolean; max_steps: number; signal: AbortSignal; verified?: boolean; sentOnce?: boolean; connection?: string; assertion?: FilterCountAssertion; quote?: string };
 export type Progress = {
   phase: "idle" | "starting" | "running" | "finished" | "error";
   steps: Step[];
@@ -96,11 +96,12 @@ async function setAgentStatus(tabId: number, state: AgentState, activity: string
   }
 }
 
-async function setEvidenceCapture(tabId: number, active: boolean) {
+async function setEvidenceCapture(tabId: number, active: boolean): Promise<EvidenceRegion[]> {
   try {
-    await send(tabId, { type: "evidence_capture", active });
+    const reply = await send(tabId, { type: "evidence_capture", active }) as { regions?: EvidenceRegion[] } | undefined;
+    return Array.isArray(reply?.regions) ? reply.regions.slice(0, 10) : [];
   } catch {
-    // Navigation can replace the page between capture steps.
+    return []; // Navigation can replace the page between capture steps.
   }
 }
 
@@ -171,7 +172,7 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
     if (opts.signal.aborted) throw new Error("The site owner pressed Stop.");
     let reply = await startRun({ site: opts.site, goal: opts.goal, persona: opts.persona,
       ...(opts.group_id ? { group_id: opts.group_id } : {}), logged_in: opts.logged_in,
-      ...(opts.assertion ? { assertion: opts.assertion } : {}),
+      ...(opts.assertion ? { assertion: opts.assertion } : {}), ...(opts.quote ? { quote: opts.quote } : {}),
       max_steps: opts.max_steps, observation: obs }, undefined, connection);
     runId = reply.run_id;
     if (reply.plan) emit({ plan: reply.plan });
@@ -243,9 +244,9 @@ export async function runTest(opts: RunOptions, onProgress: (p: Progress) => voi
       let evidence: StepEvidence | undefined;
       if (shouldCaptureEvidence(step, obs, stepIndex, capturedCount)) {
         const latestTab = await chrome.tabs.get(tabId);
-        await setEvidenceCapture(tabId, true);
+        const regions = await setEvidenceCapture(tabId, true);
         try {
-          evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note, connection);
+          evidence = await captureStepEvidence(runId, stepIndex, latestTab, obs.url, note, connection, regions);
           capturedCount += 1;
         } catch (error) {
           // Evidence should enrich a journey, never stop it.

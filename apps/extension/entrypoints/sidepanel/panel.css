@@ -94,3 +94,29 @@ fieldset.people .hint a { color: var(--ink); }
 .results { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
 .results li { display: flex; justify-content: space-between; gap: 12px; }
 .results li span { color: var(--muted); }
+/* R-S10: the run's quote, shown before Start. */
+.quote { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 12px; color: var(--muted); display: grid; gap: 6px; }
+.quote p { margin: 0; color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; }
+.quote summary { cursor: pointer; color: var(--ink); }
+.quote ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; line-height: 1.45; }
+.recheck { display: grid; gap: 6px; justify-items: start; }
+/* R-S14 saved suites */
+.suites { display: grid; gap: 10px; min-width: 0; }
+.suites h2 { font-size: 14px; font-weight: 500; margin: 0; }
+.suites h3 { font-size: 13px; font-weight: 500; margin: 0; }
+.suites h4 { font-size: 12px; font-weight: 500; margin: 6px 0 2px; color: var(--ink); }
+.suite-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.suite-list > li { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; min-width: 0; }
+.suite-list summary { cursor: pointer; font-size: 13px; }
+.suite-list ol { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+.suite-list ol li span { overflow-wrap: anywhere; }
+.suite-add { display: flex; flex-direction: column; gap: 10px; min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0; }
+.suite-add legend { padding: 0 4px; color: var(--ink); font-size: 12px; }
+button.link { background: none; border: 0; padding: 0 4px; min-height: 0; color: var(--muted); text-decoration: underline; font-size: 12px; cursor: pointer; }
+.handoff { background: var(--surface); border-radius: 12px; padding: 10px 12px; font-size: 13px; display: grid; gap: 8px; }
+.handoff p { margin: 0; }
+.coverage { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 12px; color: var(--muted); }
+.coverage ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.coverage li { overflow-wrap: anywhere; }
+.coverage a { color: var(--ink); }
+.coverage .routes { font-family: ui-monospace, monospace; }

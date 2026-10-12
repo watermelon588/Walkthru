@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { getPlan, getSession, getTestUsers, WEB_URL, type FilterCountAssertion, type GoalPlan, type PlanSummary, type TestUser } from "../../lib/api";
+import { getPlan, getQuote, getRecheck, getSession, getTestUsers, WEB_URL, type FilterCountAssertion, type GoalPlan, type PlanSummary, type RunQuote, type TestUser } from "../../lib/api";
 import { CountAssertionFields } from "./CountAssertionFields";
+import { SuitePanel } from "./SuitePanel";
+import { matches, newRun, runSuite, saveRun, type Scenario, type Suite, type SuiteRun } from "../../lib/suite";
 import type { AgentState } from "../../lib/agent-bird";
 import { AgentStatus } from "./AgentStatus";
 import { suggestGoals } from "../../lib/goals";
@@ -40,7 +42,10 @@ export function App() {
   const [current, setCurrent] = useState<{ index: number; total: number; label: string } | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkCount, setCheckCount] = useState(false);
-  const [assertion, setAssertion] = useState<FilterCountAssertion>({ path: "/dashboard.html", filter_value: "Active", count_label: "Filtered records", expected_count: null, dataset_id: null, dataset_at: null, max_age_seconds: 3600, tolerance: 0 });
+  const [recheckNote, setRecheckNote] = useState<string | null>(null);
+  const [suiteRun, setSuiteRun] = useState<SuiteRun | null>(null);
+  const [handoff, setHandoff] = useState<{ scenario: Scenario; resolve: (ok: boolean) => void } | null>(null);
+  const [assertion, setAssertion] = useState<FilterCountAssertion>({ path: "", filter_value: "", count_label: "Filtered records", expected_count: null, dataset_id: null, dataset_at: null, max_age_seconds: 3600, tolerance: 0 });
   const [progress, setProgress] = useState<Progress>({ phase: "idle", steps: [] });
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [plan, setPlan] = useState<PlanSummary | null>(null);
@@ -109,9 +114,24 @@ export function App() {
   }, [site]);
 
   const running = current !== null || progress.phase === "running" || progress.phase === "starting";
+  // R-S10: the server's quote for exactly this request, refreshed as the form changes and after every run. Start accepts it.
+  const [quote, setQuote] = useState<RunQuote | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const quoteBody = JSON.stringify({ site, personas: people, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, assertion: checkCount });
+  useEffect(() => {
+    setQuote(null);
+    setQuoteError(null);
+    if (!signedIn || running || !/^https?:\/\//.test(site) || people.length === 0) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      getQuote(JSON.parse(quoteBody)).then((q) => { if (active) setQuote(q); })
+        .catch((e: Error) => { if (active) setQuoteError(e.message); });
+    }, 300);
+    return () => { active = false; clearTimeout(timer); };
+  }, [quoteBody, signedIn, running, finished, sessionVersion]);
   const outOfRuns = plan?.runs_left === 0;
   const tooMany = !!plan && people.length > plan.runs_left;
-  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true && !outOfRuns && people.length > 0 && !tooMany;
+  const canStart = /^https?:\/\//.test(site) && goal.trim().length > 0 && !running && signedIn === true && !outOfRuns && people.length > 0 && !tooMany && !!quote;
   // Say why Start is disabled instead of leaving a dead button.
   const blocked = running || canStart
     ? null
@@ -127,7 +147,7 @@ export function App() {
               ? "Pick at least one test user."
               : tooMany
                 ? `Each test user uses one run, and ${plan?.runs_left} are left. Pick fewer test users.`
-                : null;
+                : quoteError ?? (quote ? null : "Getting this run's terms…");
   const agentState: AgentState = progress.phase === "error"
     ? "stopped"
     : progress.phase === "finished"
@@ -146,9 +166,32 @@ export function App() {
           ? "The run needs attention"
           : "Ready to test this tab";
 
+  // R-S13: repeat the last declared count check like for like, so the report can say fixed, still failing or not comparable.
+  async function prefillRecheck() {
+    setRecheckNote("Looking for your last count check on this site…");
+    try {
+      const last = await getRecheck(site);
+      if (!last.run_id || !last.assertion) { setRecheckNote("No earlier count check on this site."); return; }
+      if (last.goal) setGoal(last.goal);
+      if (last.persona && options.some(([v]) => v === last.persona)) { setPersona(last.persona as typeof persona); setChosen([last.persona]); }
+      setLoggedIn(!!last.logged_in);
+      setAssertion(last.assertion);
+      setCheckCount(true);
+      const when = last.created_at ? new Date(last.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "earlier";
+      setRecheckNote(`Same goal, test user and check as your run on ${when} (${last.status}). Enter the dataset time the page shows now. Changing anything else makes the result not comparable.`
+        + (last.logged_in && !canLogIn ? " That run used signed-in pages, which your plan does not include now." : ""));
+    } catch (error) {
+      setRecheckNote(error instanceof Error ? error.message : "Could not load your last count check.");
+    }
+  }
+
   async function start(e: React.FormEvent) {
     e.preventDefault();
     if (!canStart) return;
+    if (checkCount && (!assertion.path.startsWith("/") || !assertion.filter_value.trim())) {
+      setProgress({ phase: "error", steps: [], message: "The count check is on but has no dashboard path or filter. Fill them in, or untick it to test your goal." });
+      return;
+    }
     abort.current = new AbortController();
     const signal = abort.current.signal;
     const pinned = connection.current;
@@ -159,13 +202,19 @@ export function App() {
     // Several test users on one goal share a group id, so each report shows them side by side.
     const group_id = people.length > 1 ? crypto.randomUUID() : undefined;
     const done: Result[] = [];
+    // A quote is valid for 10 minutes; refresh it first rather than send terms the server would refuse as expired.
+    let accepted = quote;
+    if (!accepted || accepted.terms.exp * 1000 - Date.now() < 60_000) {
+      try { accepted = await getQuote(JSON.parse(quoteBody)); setQuote(accepted); }
+      catch (err) { setQuoteError(err instanceof Error ? err.message : "Could not get this run's terms."); return; }
+    }
     try {
       for (const [index, who] of people.entries()) {
         if (signal.aborted) break;
         setCurrent({ index, total: people.length, label: labelOf(who) });
         if (index > 0) await openStart(startUrl, signal, pinned);
         let last: Progress = { phase: "idle", steps: [] };
-        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal, connection: pinned, ...(checkCount ? { assertion: structuredClone(assertion) } : {}) };
+        const opts: RunOptions = { site: startUrl, goal: goal.trim(), persona: who, group_id, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, signal, connection: pinned, quote: accepted.token, ...(checkCount ? { assertion: structuredClone(assertion) } : {}) };
         await runTest(opts, (p) => {
           last = p;
           if (connection.current !== pinned) return;
@@ -181,6 +230,49 @@ export function App() {
       if (connection.current === pinned) setProgress({ phase: "error", steps: [], message: SESSION_CHANGED });
     } finally {
       if (connection.current === pinned) setCurrent(null);
+    }
+  }
+
+  // R-S14: run or resume a saved suite. Each scenario gets its own quote and step cap, opens its own start page and
+  // is saved before and after it runs (lib/suite.ts). Signed-in scenarios wait for the owner to sign in themselves.
+  async function runSavedSuite(suite: Suite, resume: SuiteRun | null) {
+    const pinned = connection.current;
+    if (!pinned || running) return;
+    abort.current = new AbortController();
+    const signal = abort.current.signal;
+    setResults([]); setUnderstood(null);
+    const begin = matches(suite, resume) && resume.connection === pinned ? resume : newRun(suite, pinned);
+    setSuiteRun(begin);
+    await saveRun(begin);
+    try {
+      await runSuite(suite, begin, {
+        signal,
+        connectionOk: () => connection.current === pinned,
+        handoff: (scenario) => new Promise<boolean>((resolve) => setHandoff({ scenario, resolve: (ok) => { setHandoff(null); resolve(ok); } })),
+        quote: (s) => getQuote({ site: s.start_url, personas: [s.persona], logged_in: s.logged_in, max_steps: s.max_steps, assertion: !!s.assertion }),
+        run: async (s, token) => {
+          setCurrent({ index: suite.scenarios.indexOf(s), total: suite.scenarios.length, label: s.name });
+          let last: Progress = { phase: "idle", steps: [] };
+          try {
+            await openStart(s.start_url, signal, pinned);
+            await runTest({ site: s.start_url, goal: s.goal, persona: s.persona, logged_in: s.logged_in, max_steps: s.max_steps, signal, connection: pinned, quote: token,
+              ...(s.assertion ? { assertion: structuredClone(s.assertion) } : {}) }, (p) => {
+              last = p;
+              if (connection.current !== pinned) return;
+              if (p.plan) setUnderstood(p.plan);
+              setProgress(p);
+            });
+          } catch (error) {
+            return { error: error instanceof Error ? error.message : "The browser could not open this scenario.", urls: [] };
+          }
+          const urls = last.steps.map((step) => (step as { url?: string }).url ?? "").filter(Boolean);
+          return { status: last.status, runId: last.runId, error: last.phase === "error" ? last.message : undefined, urls };
+        },
+        save: async (r) => { if (connection.current === pinned) { setSuiteRun(r); await saveRun(r); } },
+      });
+    } finally {
+      if (connection.current === pinned) setCurrent(null);
+      setHandoff(null);
     }
   }
 
@@ -257,11 +349,26 @@ export function App() {
         </label>
         {plan && !canLogIn && <p className="hint">Logged-in pages need a paid plan. Free runs test public pages.</p>}
         {canLogIn && loggedIn && <p className="hint">Logged-in tests run only on a domain you verified in Settings.</p>}
-        {plan && (
+        {quote ? (
+          <div className="quote" role="status" aria-label="This run's terms">
+            <p>{quote.summary}</p>
+            <details>
+              <summary>What happens at the cap</summary>
+              <ul>{quote.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+            </details>
+          </div>
+        ) : plan && (
           <p className="hint" role="status">
             {plan.runs_left} of {plan.runs_allowed} test runs left {plan.plan === "free" ? "this month" : "in your pass"}, up to {plan.max_steps} steps each.
           </p>
         )}
+        <div className="recheck">
+          <button type="button" onClick={() => void prefillRecheck()} disabled={running || !signedIn || !/^https?:\/\//.test(site)}>Recheck my last count check</button>
+          {recheckNote && <p className="hint" role="status">{recheckNote}</p>}
+        </div>
+        <SuitePanel site={site} connection={sessionVersion} disabled={running || signedIn !== true} live={suiteRun} handoff={handoff?.scenario ?? null}
+          draft={() => (/^https?:\/\//.test(site) && goal.trim() ? { start_url: site, goal: goal.trim(), persona: people[0] ?? persona, logged_in: loggedIn && canLogIn, max_steps: plan?.max_steps ?? 12, ...(checkCount ? { assertion: structuredClone(assertion) } : {}) } : null)}
+          onRun={(suite, resume) => void runSavedSuite(suite, resume)} onHandoff={(ok) => handoff?.resolve(ok)} />
         <CountAssertionFields enabled={checkCount} onEnable={setCheckCount} value={assertion} onChange={setAssertion} disabled={running} />
         <p className="hint">Sends redacted text snapshots and saves up to 8 evidence frames, deleted after 30 days. Form values are masked before capture.</p>
         <div className="actions">

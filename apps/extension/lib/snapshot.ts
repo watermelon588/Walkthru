@@ -244,8 +244,33 @@ function labelFor(input: HTMLInputElement, memo?: WeakMap<globalThis.Element, bo
   return el ? safeText(el, memo) : null;
 }
 
+const ERROR_SELECTOR = '[role="alert"], [aria-invalid="true"], [aria-live="assertive"], .error, [class*="error"], [class*="invalid"]';
+
+/** R-S19: where visible error messages sit in the current viewport, as fractions of it, measured just before a
+ *  screenshot of this same document. Boxes only, no text, so a shared report never gains page content from them. */
+export type EvidenceRegion = { kind: "error"; x: number; y: number; w: number; h: number };
+export function issueRegions(doc: Document = document): EvidenceRegion[] {
+  const win = doc.defaultView;
+  if (!win || win.innerWidth <= 0 || win.innerHeight <= 0) return [];
+  const round = (n: number) => Math.round(n * 10000) / 10000;
+  const out: EvidenceRegion[] = [];
+  const seen = new Set<string>();
+  for (const el of doc.querySelectorAll(ERROR_SELECTOR)) {
+    if (!visible(el, true) || !safeText(el)) continue;
+    const r = el.getBoundingClientRect();
+    const left = Math.max(0, r.left), top = Math.max(0, r.top);
+    const right = Math.min(win.innerWidth, r.right), bottom = Math.min(win.innerHeight, r.bottom);
+    if (right <= left || bottom <= top) continue; // off screen: not in this frame
+    const box = { kind: "error" as const, x: round(left / win.innerWidth), y: round(top / win.innerHeight), w: round((right - left) / win.innerWidth), h: round((bottom - top) / win.innerHeight) };
+    const key = `${box.x},${box.y},${box.w},${box.h}`;
+    if (box.w > 0 && box.h > 0 && !seen.has(key)) { seen.add(key); out.push(box); }
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 function errors(doc: Document, geometry: boolean): string[] {
-  const sel = '[role="alert"], [aria-invalid="true"], [aria-live="assertive"], .error, [class*="error"], [class*="invalid"]';
+  const sel = ERROR_SELECTOR;
   const out = new Set<string>();
   for (const el of doc.querySelectorAll(sel)) {
     if (!visible(el, geometry)) continue;

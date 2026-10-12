@@ -1,6 +1,6 @@
 import { uploadEvidenceImage, type StepEvidence } from "./api";
 import type { Step } from "./execute";
-import type { Observation } from "./snapshot";
+import type { EvidenceRegion, Observation } from "./snapshot";
 
 export const MAX_SCREENSHOTS = 8;
 
@@ -34,6 +34,7 @@ export async function captureStepEvidence(
   resultUrl: string,
   note?: string,
   connection?: string,
+  regions: EvidenceRegion[] = [],
 ): Promise<StepEvidence> {
   const screenshotPath = evidencePath(runId, stepIndex);
   const image = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 72 });
@@ -45,5 +46,6 @@ export async function captureStepEvidence(
     width: tab.width ?? 1,
     height: tab.height ?? 1,
     ...(note ? { note: note.slice(0, 300) } : {}),
+    ...(regions.length ? { regions } : {}),
   };
 }

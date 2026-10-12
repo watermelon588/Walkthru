@@ -2,7 +2,7 @@
  *  An unlisted script rather than a content script so the manifest carries no host_permissions;
  *  access is requested per site when a test starts. */
 
-import { settle, snapshot } from "../lib/snapshot";
+import { issueRegions, settle, snapshot } from "../lib/snapshot";
 import { executeAsync, type ExecOptions, type Step } from "../lib/execute";
 import { AGENT_BIRD, AGENT_TONE, type AgentState } from "../lib/agent-bird";
 import gsap from "gsap";
@@ -69,7 +69,7 @@ export default defineUnlistedScript(() => {
         reply({ ok: true });
       } else if (msg.type === "evidence_capture") {
         await agent.setCaptureMode(msg.active);
-        reply({ ok: true });
+        reply({ ok: true, ...(msg.active ? { regions: issueRegions(document) } : {}) });
       }
     }).catch(() => reply({ ok: false, note: 'stale target: the browser operation could not complete. Stop and restart the test' }));
     return true;

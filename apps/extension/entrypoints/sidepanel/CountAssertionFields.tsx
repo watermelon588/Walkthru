@@ -7,9 +7,10 @@ export function CountAssertionFields({ enabled, onEnable, value, onChange, disab
     <legend>Optional outcome check</legend>
     <label className="row" htmlFor="count-enabled"><input id="count-enabled" type="checkbox" checked={enabled} onChange={(e) => onEnable(e.target.checked)} />Check a synthetic filtered count</label>
     {enabled && <>
+      <p className="hint"><strong>This replaces your goal's plan:</strong> the test user only opens this page and applies this filter. Leave it off to test the goal you typed.</p>
       <p className="hint">This run checks the declared filter state on your verified site. Sign in to the site yourself first if needed. Use synthetic data. Missing or stale expectations produce an inconclusive result.</p>
-      <label htmlFor="count-path">Dashboard path<input type="text" id="count-path" value={value.path} onChange={(e) => onChange({ ...value, path: e.target.value })} required pattern="/[A-Za-z0-9/_.-]*" maxLength={200} /></label>
-      <label htmlFor="count-filter">Filter value<input type="text" id="count-filter" value={value.filter_value} onChange={(e) => onChange({ ...value, filter_value: e.target.value })} required pattern="[A-Za-z0-9 _.-]+" maxLength={80} /></label>
+      <label htmlFor="count-path">Dashboard path<input type="text" id="count-path" placeholder="/dashboard" value={value.path} onChange={(e) => onChange({ ...value, path: e.target.value })} required pattern="/[A-Za-z0-9/_.-]*" maxLength={200} /></label>
+      <label htmlFor="count-filter">Filter value<input type="text" id="count-filter" placeholder="Active" value={value.filter_value} onChange={(e) => onChange({ ...value, filter_value: e.target.value })} required pattern="[A-Za-z0-9 _.-]+" maxLength={80} /></label>
       <label htmlFor="count-label">Visible count label<input type="text" id="count-label" value={value.count_label} onChange={(e) => onChange({ ...value, count_label: e.target.value })} required pattern="[A-Za-z][A-Za-z0-9 _-]*" maxLength={80} /></label>
       <label htmlFor="count-expected">Expected count<input id="count-expected" type="number" min={0} max={100000} step={1} value={value.expected_count ?? ''} onChange={(e) => onChange({ ...value, expected_count: e.target.value === '' ? null : e.target.valueAsNumber })} /></label>
       <label htmlFor="count-dataset">Synthetic dataset ID<input type="text" id="count-dataset" value={value.dataset_id ?? ''} onChange={(e) => onChange({ ...value, dataset_id: e.target.value || null })} pattern="[A-Za-z0-9_.-]+" maxLength={80} /></label>

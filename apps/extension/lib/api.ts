@@ -19,6 +19,7 @@ export type StepEvidence = {
   width: number;
   height: number;
   note?: string;
+  regions?: { kind: "error"; x: number; y: number; w: number; h: number }[]; // R-S19: visible error boxes in this frame
 };
 
 export type RunReply =
@@ -51,6 +52,15 @@ export type StartBody = {
   max_steps: number;
   observation: Observation;
   assertion?: FilterCountAssertion;
+  quote?: string; // R-S10: the accepted quote token; the server refuses stale or different terms
+};
+
+/** R-S10: the terms runs would start under, signed by the server (apps/api/app/quotes.py). Shown before Start. */
+export type RunQuote = {
+  token: string;
+  summary: string;
+  rules: string[];
+  terms: { site: string; max_steps: number; max_minutes: number; runs: number; runs_left_before: number; plan: string; price_version: string; max_cost_microusd_per_run: number; model_route: string; exp: number };
 };
 
 /** One read-only check against an owner-supplied synthetic dataset. Missing expectations stay unknown. */
@@ -203,6 +213,9 @@ export async function uploadEvidenceImage(path: string, dataUrl: string, expecte
 
 export const getPlan = () => call<PlanSummary>("/me/plan");
 export const getTestUsers = () => call<TestUser[]>("/me/test-users");
+/** R-S13: the latest count check declared on this site, to repeat it like for like. Its dataset time is always null. */
+export type RecheckTerms = { run_id: string | null; created_at?: string; goal?: string; persona?: string; logged_in?: boolean; status?: string; assertion?: FilterCountAssertion };
+export const getRecheck = (site: string) => call<RecheckTerms>(`/me/recheck?site=${encodeURIComponent(new URL(site).origin)}`); // origin only: tab URLs can carry tokens
 /** Are test runs on for this account right now (kill switches, automatic suspension)? The API enforces it anyway. */
 export async function getRunPolicy() {
   runRetriesSupported = false;
@@ -210,6 +223,8 @@ export async function getRunPolicy() {
   runRetriesSupported = policy.idempotency === "v1";
   return policy;
 }
+export const getQuote = (body: { site: string; personas: string[]; logged_in: boolean; max_steps: number; assertion: boolean }) =>
+  call<RunQuote>("/runs/quote", body);
 export const startRun = (body: StartBody, requestKey = crypto.randomUUID(), connection?: string) => call<RunReply>("/runs", body, requestKey, connection);
 export const observe = (runId: string, observation: Observation, evidence?: StepEvidence, actionId?: string, requestKey = crypto.randomUUID(), connection?: string) =>
   call<RunReply>(`/runs/${runId}/observe`, { observation, ...(evidence ? { evidence } : {}), ...(actionId ? { action_id: actionId } : {}) }, requestKey, connection);
