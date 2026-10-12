@@ -30,7 +30,7 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 | Evals and tracing | LangSmith | Keys set, project `Walkthru` |
 | Email | Resend (`app/deliver.py`, REST, no SDK) | Built; needs `RESEND_API_KEY` |
 | Payments | Dodo Payments (test mode first) | Built, awaiting founder keys (docs/billing.md) |
-| Hosting | Vercel (web), Render free (beta API), then a Google Cloud VM paid by UPI prepay (API and worker; Oracle needs a card) | Beta config done |
+| Hosting | Frontend hosted separately; Google Cloud VM (API and worker), Supabase (database/auth/storage), Hostinger (inbox) | VM preparation, not deployed; [current runbook](docs/google-cloud-vm.md) |
 
 ## Key decisions
 1. **Browser runs on the user's machine, brain on our server.** No Chromium on our server, hosting stays $0-5, logged-in pages work without sharing passwords.
@@ -263,7 +263,7 @@ Build rules and phases: ROADMAP.md. Licences: docs/decisions.md 2026-09-25. Ever
 - **`stack-detect` + `recipes`** (`app/scans/stack.py`, `app/agent/recipes.json`): `{rule: {stack: {file, snippet, check, risk}}}` with a generic fallback. `fix_prompt.py` renders batches with a "stop and verify" step after each.
 - **`agent-readiness`:** computed in `report.py` from axe results, the journey outcome, CAPTCHA stops, control stability across reruns and schema; shown next to the GEO score.
 - **`github-app`** (`app/github.py`): the App's private key lives in the API env; an installation token is minted per job (valid one hour) and never stored. Table `repos(user_id, site, installation_id, repo_full_name)`.
-- **`worker`:** a second process on the VM polling a `jobs` table (`kind`, `run_id`, `status`, `started_at`), one job at a time. Code scan: shallow clone into `tempfile.TemporaryDirectory`, run gitleaks, osv-scanner and OpenGrep (with Walkthru rules in `apps/api/rules/`) as subprocesses with timeouts, parse JSON, mask secrets, delete the directory in `finally`, attach `kind="code"` findings with `path:line` to the run's report. Nuclei: fixed argument list with an allow-list of tags and `-etags intrusive,dos,fuzz`, verified domains only. Render free cannot host it (memory), so it arrives with the Google Cloud VM (V11b): e2-micro (1 GB) with swap first, e2-small (2 GB) only if measured memory needs it.
+- **`worker`:** a second process on the VM polling a `jobs` table (`kind`, `run_id`, `status`, `started_at`), one job at a time. Code scan: shallow clone into `tempfile.TemporaryDirectory`, run gitleaks, osv-scanner and OpenGrep (with Walkthru rules in `apps/api/rules/`) as subprocesses with timeouts, parse JSON, mask secrets, delete the directory in `finally`, attach `kind="code"` findings with `path:line` to the run's report. Nuclei: fixed argument list with an allow-list of tags and `-etags intrusive,dos,fuzz`, verified domains only. Initial VM preparation now targets e2-small (2 GB), one API process and one worker; this is a pilot configuration to measure, not verified production capacity. See [the current VM runbook](docs/google-cloud-vm.md).
 - **`search-data`:** Google OAuth with the `webmasters.readonly` scope, refresh token stored encrypted server-side; Search Analytics and URL Inspection (2,000 a day per property). Bing Webmaster with the user's own API key.
 - **`citation-tracking`:** `citation_sites`, `citation_prompts`, `citation_checks` and `citation_quota`. Groq web search and Gemini memory answers use existing free quotas. Deterministic `citation_evidence.py` verifies answer-to-source references; unresolved and memory-only samples are excluded from citation rates. Saved provenance freezes historical labels and tracked-brand context. A dedicated minute worker uses atomic admission, per-engine attempt quotas and fenced ten-minute leases. Consumer Google AI surfaces, ChatGPT, Perplexity and Claude are unmeasured. See [citation measurement v2](docs/citation-measurement.md) for evidence rules, retries, migration and validation. P3.3 claim accuracy remains unbuilt.
 
@@ -364,6 +364,32 @@ See [.env.example](.env.example). Web reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_
 
 Every other model/data entry point reserves in the same ledger through `reserve_work` (proposed migration 0006): anonymous Instant Scans (one platform-wide daily pool), MCP scans and finding checks, comparisons (one unit per site), watch checks (weekly, manual, deploy hook), AI answer batches (one unit per answer) and Scout (per workspace). Each operation has its own allowance per owner and UTC day; all share the funded platform budget. `reservations.work()` releases work that never dispatched, settles finished work with its credit and failed work without it. Reused scans and stored-report sends reserve nothing. [Inventory and contract](docs/work-admission.md).
 
+## Run quotes and usage (R-S10)
+
+`app/quotes.py` issues a stateless HMAC-signed quote (`POST /runs/quote`). It pins the run's scope, its step and time caps, credits, price version, per-run maximum and model route for 10 minutes. `POST /runs` with the quote refuses with 409 anything stale or wider, and clamps the run to the quoted step cap. `RUN_QUOTES=required` makes a quote mandatory. `GET /me/usage` and `GET /runs/{id}/usage` explain each reservation's credit and cost in plain language. They appear in the side panel, Billing, the Report and MCP. A quote is terms, not a credit: the reservation still admits the work. [Quote contract](docs/run-quotes.md).
+
+## Controller candidates (R-S11, disabled)
+
+`app/agent/candidates.py` holds two candidates: Claude Sonnet 5.5 on Google Cloud (native structured output, adaptive thinking) and GLM 5.3 over httpx. They follow the providers' current documented request shapes. `CONTROLLER_CANDIDATE` is unset by default; an opt-in fails at startup without credentials, the reservation ledger and per-run maximums above 0. A candidate decides persona steps only: the planner and report writer keep their routes. `runtime.CandidateController` records per step whether the candidate or the free fallback answered. The legacy Haiku adapters refuse other model names. [Candidate contract](docs/controller-candidates.md).
+
+## Targeted recheck (R-S13)
+
+`compare.recheck_assertion` adds `comparison.assertion` to a paid rerun. It compares the declared count check like for like and returns one of: fixed, still failing, regressed, still passing, first result, not re-checked or not comparable. Changed declared conditions or missing coverage never read as fixed. The finding comparison skips UX findings from unfinished journeys and de-duplicates findings. `GET /me/recheck` gives the side panel the latest declaration to repeat, without its dataset time. [Recheck contract](docs/targeted-recheck.md).
+
+## Saved suites (R-S14)
+
+`apps/extension/lib/suite.ts` stores suites in `chrome.storage.local`: up to 6 scenarios per site, 20 suites, this browser only. It runs them in order through the normal quote, run and reservation path. Progress is saved per scenario, so a suite can stop, resume, survive a closed panel and stop on an account change. Coverage separates tested, blocked and not tested scenarios, declared checks, and visited pages. No server schema. Journeys stay owner-browser only: there is no scheduled or MCP journey. [Suite contract](docs/saved-suites.md).
+
 ## Keyword direction, advisory mode (R-S17)
 
 `app/scans/opportunities.py` turns the crawled public pages into `report.opportunities`: quoted intent hypotheses, proposals from the page's own words, gaps, internal links and a measurement plan, with no demand numbers and no findings or score effect. The Keywords chapter, `section=keywords` content brief and MCP share it. `app/scans/seo_guidance.py` marks title/description length and heading-count checks as advisory against current Google guidance. [Contract](docs/keyword-opportunities.md).
+
+
+## Authority and backlinks, advisory mode (R-S17a)
+
+`app/scans/authority.py` turns the R-S17 page map into `report.authority`: twelve link tactics, each an advisory brief from an audited page, "needs input" (the exact export, mention or request required), not applicable, or not recommended (link exchanges, citing Google's policy). It uses no link data, fetches nothing and sends nothing. The Authority chapter, the `section=authority` owner plan and MCP `get_report(section="authority")` share one text. Backlinks, GEO readiness and AI citations stay distinct. [Authority contract](docs/authority-plan.md).
+
+
+## Evidence regions (R-S19)
+
+At each capture the extension measures the visible error messages in the same document (`snapshot.issueRegions`) as boxes in viewport fractions, with no text, and stores them in `StepEvidence.regions`. The API accepts only boxes inside the frame. The web draws them over the unchanged frame with an SVG matched to object-contain, on screen and in print, and labels the replay as timed frames, not a recording. Retention drops the boxes with the frame. [Evidence contract](docs/evidence-regions.md).

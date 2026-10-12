@@ -2,7 +2,7 @@
 
 Date: 2026-10-04. Source of product direction: [root plan](../plan.md). This is an implementation workflow in the existing project, not a request to create separate chats, scheduled jobs or deployments.
 
-**R-S1, R-S2, R-S3, R-S4, R-S5, R-S5a, R-S6, R-S7, R-S7a, R-S8, R-S9, R-S14a and R-S18 completed locally; R-S10 is next.** The completed scope includes bounded reporting, current browser context, stale-target protection, bounded navigation, evidence-based task completion and slim paged owner history with exact count reads. Additive report v2 and legacy consumers are complete. Chaptered reports with prompt/MCP parity are complete. The full mission engine and financial wallet remain later work. Later sessions remain proposals until their work is started and verified.
+**R-S1, R-S2, R-S3, R-S4, R-S5, R-S5a, R-S6, R-S7, R-S7a, R-S8, R-S9, R-S10, R-S11, R-S13, R-S14, R-S14a and R-S18 completed locally; R-S17 and R-S17a are partial (advisory mode). R-S19 completed locally. Every remaining slice needs a founder input: R-S12 authorization (then R-S15), R-S16 a Search Console connection, R-S17/R-S17a measured modes data, and R-S20 an installed-browser and deployed release check.** The completed scope includes bounded reporting, current browser context, stale-target protection, bounded navigation, evidence-based task completion and slim paged owner history with exact count reads. Additive report v2 and legacy consumers are complete. Chaptered reports with prompt/MCP parity are complete. The full mission engine and financial wallet remain later work. Later sessions remain proposals until their work is started and verified.
 
 **Scope extension (2026-10-04):** founder requests cache/cost efficiency, database pagination/index verification, practical keywords/backlinks and clearly separated report chapters. The [audited extension](seo-geo-report-expansion.md) is the detailed contract, including all twelve backlink tactics and the Distribb review. Preserve the original twenty IDs; add four suffix slices, R-S5a/R-S7a/R-S14a/R-S17a. There are now **24 planned slices, thirteen complete**; R-S5a, R-S7a and R-S14a are complete and R-S17a remains pending. Optional provider integrations and outreach are not activated by the plan.
 
@@ -277,7 +277,7 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Verification:** disposable PostgreSQL 10 new (16-way public scan race admits 4, 4-way multi-unit comparison race admits 3, per-operation allowance with one shared budget, run credits unaffected by same-window scans, released re-admission, settled replay, roles, rollback/reapply) plus R-S8 13 and R-S7 7; offline wiring 21 (also with the database address unreachable). Full results in CURRENT_STATE.md.
 
-**Limits and next handoff:** migration/flag/caps not activated; a comparison retried after its final save failed re-runs its parts under one reservation; a refused Instant Scan holds its page's coalescing claim up to 60 s; per-owner and budget locks serialize admission. **R-S10 is next**: quote, cap and settlement UI.
+**Limits and next handoff:** migration/flag/caps not activated; a comparison retried after its final save failed re-runs its parts under one reservation; a refused Instant Scan holds its page's coalescing claim up to 60 s; per-owner and budget locks serialize admission. R-S10 (quote, cap and settlement UI) is done; **R-S11 is next**.
 
 ## R-S10: customers see scope and the hard cap
 
@@ -287,11 +287,45 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Quote pins scope/price version/maximum, and acceptance binds the run to that quote rather than a stale client estimate.
-- [ ] Cap/stop/resume displays remaining scope and partial evidence; no silent overage, automatic top-up or unqualified cheaper-model replacement.
-- [ ] API/MCP receives the same quote semantics and clear connected-browser prerequisites; settlement history explains released unused reserve.
+- [x] Quote pins scope/price version/maximum, and acceptance binds the run to that quote rather than a stale client estimate.
+- [x] Cap/stop/resume displays remaining scope and partial evidence; no silent overage, automatic top-up or unqualified cheaper-model replacement. Resume is a new run; see limits.
+- [x] API/MCP receives the same quote semantics and clear connected-browser prerequisites; settlement history explains released unused reserve.
 
 **Verification:** stale quote, declined acceptance, cap/stop, timeout uncertainty and narrow-screen flows. **Dependency:** R-S5/R-S9. **Handoff:** quote UX/API contract and decisions still pending on customer terms.
+
+**Completed locally 2026-10-07 ([contract](run-quotes.md)):**
+
+- **Quotes.** Stateless HMAC-signed quotes (`POST /runs/quote`, no migration) pin:
+  - scope;
+  - step and time caps;
+  - plan window and credits;
+  - price version and per-run maximum;
+  - model route and ledger mode.
+- **Acceptance.** `POST /runs` with a quote refuses with 409 anything:
+  - expired, tampered or from another account;
+  - wider than the quote;
+  - quoted on terms that have since changed.
+
+  It clamps the run to the quoted step cap. Quotes are optional until `RUN_QUOTES=required`.
+- **Side panel.** It shows the quote and the four cap rules, and starts only with a quote.
+- **Usage.** `GET /me/usage` and `GET /runs/{id}/usage` explain each credit and reserved cost, including released reserve. They appear in the Billing "Usage history" and the Report "Usage" note.
+- **MCP.** `get_run_quote` and `get_usage` give the same text, with the extension prerequisite.
+
+Verification:
+
+- quotes 15 passed;
+- ownership/MCP matrices updated;
+- extension 3 new tests;
+- web Edge 11/11 (states, 320/768);
+- full offline API 1,120 passed, 19 existing skips.
+
+**Limits:**
+
+- customer-terms wording awaits founder approval;
+- resume is a new run;
+- the route is pinned at acceptance only;
+- the side panel quote box was not visually checked in a loaded extension;
+- usage history shows the latest 50 rows.
 
 **Checkpoint B:** the wallet/reservation/entry-point/quote path passes storage races and recovery checks with fake providers. No actual paid model or price is activated by passing it.
 
@@ -303,11 +337,20 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Candidate structured output/tool/effort/thinking/image behavior matches actual provider support; no model-name-only swap of incompatible Haiku requests.
-- [ ] Mocked usage/parse/fallback/error cases satisfy R-S7 and the admission hooks; credentials remain private and absent-default candidates cannot run.
-- [ ] Free defaults remain unchanged; controller and report routing/provenance are separate. No hidden paid fallback.
+- [x] Candidate structured output/tool/effort/thinking/image behavior matches actual provider support; no model-name-only swap of incompatible Haiku requests.
+- [x] Mocked usage/parse/fallback/error cases satisfy R-S7 and the admission hooks; credentials remain private and absent-default candidates cannot run.
+- [x] Free defaults remain unchanged; controller and report routing/provenance are separate. No hidden paid fallback.
 
 **Verification:** offline mocked transport/parse/caching/circuit tests and package compatibility; do not use live provider requests as an adapter unit test. **Dependency:** R-S4/R-S7. **Handoff:** disabled configuration contract, supported modality differences and exact authorization/budget required by R-S12.
+
+**Completed locally 2026-10-07 ([contract](controller-candidates.md)):**
+
+- **Adapters.** Sonnet 5.5 on Google Cloud (native json_schema output, adaptive thinking, explicit effort; no sampling or forced tool) and GLM 5.3 over httpx (thinking on, JSON mode, schema in prompt). Both use `candidates.py` and refuse, never parse, refused, truncated or invalid answers.
+- **Gate.** `CONTROLLER_CANDIDATE` is unset by default. An opt-in refuses to start without credentials, `RESERVATIONS=postgres` and per-run maximums above 0.
+- **Routing.** The candidate drives persona decisions only. Each step records who answered, and any free fallback is named. The label names both routes.
+- **Legacy Haiku.** The adapter's `temperature` TypeError under anthropic 1.6.0 is fixed, and name-only swaps to stronger models are refused.
+- **Verification.** 21 offline tests through the real SDK/httpx with mock transports; affected suites 145 passed; full offline API 1,141 passed, 19 existing skips.
+- **Limits.** GLM receipts fail closed until a proposed migration accepts `glm`. No image handoff, no prompt caching, no live request.
 
 ## R-S12: measure model quality under a cap
 
@@ -331,11 +374,26 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Targeted recheck preserves declared environment/data/viewport assumptions and evidence; materially changed conditions invalidate a direct comparison.
-- [ ] Missing coverage never means fixed; clean/failed assertions are distinct from absent findings or renamed UX titles.
-- [ ] Existing compare/fix prompts remain compatible and recheck cost uses the shared quote/reservation path.
+- [x] Targeted recheck preserves declared environment/data/viewport assumptions and evidence; materially changed conditions invalidate a direct comparison. Viewport is not recorded yet; see limits.
+- [x] Missing coverage never means fixed; clean/failed assertions are distinct from absent findings or renamed UX titles.
+- [x] Existing compare/fix prompts remain compatible and recheck cost uses the shared quote/reservation path.
 
 **Verification:** same-condition fix, partial coverage, changed fixture and duplicate-finding cases; one owner-local/manual fix and rerun if authorized. **Dependency:** R-S6/R-S10. **Handoff:** a complete example a developer can independently reproduce, repair and recheck.
+
+**Completed locally 2026-10-07 ([contract and example](targeted-recheck.md)):**
+
+- **Count check comparison.** The run comparison now compares the declared count check like for like. Verdicts: fixed, still failing, regressed, still passing, first result, not re-checked and not comparable. Only a failed-then-passed pair under identical declared conditions (path, filter, label, expected count, tolerance, dataset, maximum age, test user, signed-in pages) says Fixed.
+- **Finding comparison.** UX findings that vanished from an unfinished journey are not re-checked, and duplicate findings count once.
+- **Prefill.** `GET /me/recheck` (origin only, no dataset time) feeds the side panel's "Recheck my last count check" button. The recheck is an ordinary quoted and reserved run.
+- **Verification:**
+  - API 20 new tests, neighbouring suites 126, full offline API 1,161 passed (19 existing skips);
+  - web 52 tests, Edge 9/9;
+  - extension 164.
+- **Limits:**
+  - viewport not recorded;
+  - latest declaration only;
+  - no live owner rerun;
+  - MCP does not print the verdict.
 
 ## R-S14: saved suites and coverage
 
@@ -345,11 +403,27 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Scenario/assertion scope, per-phase budgets and auth handoffs survive stop/resume and worker recovery.
-- [ ] Coverage lists tested, blocked and not-tested states; discovered routes are separate from promised assertions.
-- [ ] Schedule/API cannot invent an authenticated browser session; owner-local work waits for connection and public watch remains server scanning.
+- [x] Scenario/assertion scope, per-phase budgets and auth handoffs survive stop/resume and worker recovery.
+- [x] Coverage lists tested, blocked and not-tested states; discovered routes are separate from promised assertions.
+- [x] Schedule/API cannot invent an authenticated browser session; owner-local work waits for connection and public watch remains server scanning.
 
 **Verification:** multi-scenario budget stop/resume, account/session change, absent browser and partial coverage. **Dependency:** R-S13. **Handoff:** bounded suite example, capacity/latency evidence and unattended-runner exclusions.
+
+**Completed locally 2026-10-07 ([contract and example](saved-suites.md)):**
+
+- **Suites.** Up to 6 scenarios on one site, saved in this browser (no migration). Each scenario is an ordinary quoted, reserved run with its own step cap.
+- **Progress.** Saved before and after every scenario, so a stop, a closed panel, a refused quote, a declined sign-in, an account change or an edited suite each leave an exact, resumable record. Step-cap and Walkthru-loss outcomes are never silently rerun.
+- **Sign-in.** Signed-in scenarios wait for the owner to sign in before any quote.
+- **Coverage.** Tested, blocked and not tested, plus declared checks (verdict in each report) apart from visited pages.
+- **Nothing unattended.** No schedule, MCP or API path starts a journey, and watch stays server scanning; tests enforce both.
+- **Verification:**
+  - extension 10 new tests, 174 total, WXT build;
+  - API 3 new tests; full offline API 1,162 passed, with 2 environment and test-isolation failures fixed and rerun;
+  - Edge 15/15.
+- **Limits:**
+  - no real-run capacity/latency evidence;
+  - suites are per browser;
+  - no schedule by design.
 
 ## R-S14a: database reads stay bounded as history grows
 
@@ -437,6 +511,25 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Verification:** history/no-history exports, real versus invented mentions, unsupported sources, nonapplicable tactics, exchange-policy fixtures and cited/mentioned/unmeasured examples; prompt/MCP parity. Sources stay within owner-verification policy or authorized supplied/licensed data. **Dependency:** R-S5a/R-S17; R-S9 for new research. **Handoff:** actionable authority/citation example, source/rights gaps and deferred publishing/outreach work.
 
+**Advisory mode completed locally 2026-10-07 ([contract](authority-plan.md)); the slice stays partial:**
+
+- **Plan.** `report.authority` covers all twelve tactics from the R-S17 page map:
+  - advisory briefs quoting audited pages (free tool, infographic, video);
+  - "needs input" naming the exact missing evidence (eight tactics), with no invented publishers, mentions, lists, links or statistics;
+  - not applicable when the material is missing;
+  - link exchanges not recommended, citing Google's policy and the sponsored note.
+- **Kept distinct.** Backlinks, GEO readiness and AI citations stay separate: a mention or memory answer is not a citation, and a failed sample is not zero visibility.
+- **Where it appears.** The Authority chapter ("Advisory, no link data", web and API parity), the `section=authority` owner plan (never send, publish or place) and MCP `get_report(section="authority")` all use the same text.
+- **Verification:**
+  - API 9 tests, related suites 82, full offline API 1,173 passed;
+  - web 52;
+  - Edge 12/12.
+- **Pending:**
+  - supplied or licensed link and mention data, so tactics can become supported;
+  - verifying other sites' pages (needs R-S9 admission and policy);
+  - drafts and media briefs;
+  - outreach, which is excluded by design.
+
 ## R-S18: performance diagnosis with attribution
 
 **Objective:** enrich existing real measurements with the actual resource/element and test conditions instead of generic compression advice.
@@ -465,11 +558,28 @@ The new slice suffixes preserve history, not strict calendar order. R-S14a query
 
 **Acceptance:**
 
-- [ ] Highlight regions refer to the actual frame/viewport and redaction remains intact; suggested treatments are labelled, while verified before/after requires a matched rerun.
-- [ ] Clips use actual frames/events and timestamps; eight screenshots are not sold as continuous recording.
-- [ ] Shared/private access, deletion, output size, retention/egress charge and accessible playback/reduced motion are tested. No hidden tab capture or personal inbox access.
+- [x] Highlight regions refer to the actual frame/viewport and redaction remains intact; suggested treatments are labelled, while verified before/after requires a matched rerun.
+- [x] Clips use actual frames/events and timestamps; eight screenshots are not sold as continuous recording. No clip file is exported yet (split, see limits).
+- [x] Shared/private access, deletion, output size, retention/egress charge and accessible playback/reduced motion are tested. No hidden tab capture or personal inbox access.
 
 **Verification:** masking, expired evidence, narrow viewport, share/RLS and export tests plus real artifact inspection. **Dependency:** R-S5/R-S9/R-S13; licence/permission review for new media capability. **Handoff:** inspected sample, cost/storage limits and continuous-recording exclusions.
+
+**Completed locally 2026-10-07 ([contract](evidence-regions.md)):**
+
+- **Boxes.** At capture, the content script measures visible error messages in the same document as viewport fractions, clipped, at most 10, with no text. The API refuses boxes outside the frame and any extra fields.
+- **Overlay.** The web draws them over the unchanged frame: an SVG with a viewBox of the captured size and `meet` matches object-contain. There is a toggle and a count; print shows the same boxes.
+- **Labels.** The replay and print say the frames are not a continuous recording, with offsets from the first frame.
+- **Retention.** The purge drops the boxes together with the frame.
+- **Verification:**
+  - extension 3 new tests, 177 total, build;
+  - API round trip, refusal and purge; full offline API 1,175 passed;
+  - a real-layout pixel check at @1×, @2× and @3×;
+  - Edge 14/14 (alignment within 1.5 px on screen, in print and at 320/768 px).
+- **Split:**
+  - clip or video export (needs a dependency or permission review);
+  - acted-element highlight (needs a before-action frame);
+  - other issue kinds;
+  - an installed-extension live inspection.
 
 ## R-S20: prove the adopted release path
 

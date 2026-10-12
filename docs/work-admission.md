@@ -107,4 +107,4 @@ The existing quota, concurrency and stop rules still run first and give the quic
 - **A refused Instant Scan holds the page's coalescing claim** (R-S7a) for up to 60 s, so other visitors of the same page wait, then get 503. That is the existing behavior for any scan that fails before saving.
 - **An AI answer batch whose last answer never finishes** stays open and counted at its maximum until reconciliation.
 - **Admission is serialized per owner and platform-wide on the budget rows**, as in R-S8, and so are anonymous scans under one owner. That is fine at V1 volume.
-- **Customer paid adoption stays off.** The inventory above is complete for 2026-10-07. A new model, data or media route must add a row here and a reservation before it ships. R-S10 (quote and cap UI) is next.
+- **Customer paid adoption stays off.** The inventory above is complete for 2026-10-07. A new model, data or media route must add a row here and a reservation before it ships. R-S10 (quote and cap UI) is done: [run quotes](run-quotes.md).
