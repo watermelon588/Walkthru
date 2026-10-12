@@ -24,7 +24,7 @@ COUNTS = (
     "image_input_tokens", "image_output_tokens", "audio_input_tokens", "audio_output_tokens", "tool_input_tokens", "tool_requests",
 )
 MONEY = ("reported_cost_microunits", "reported_tool_cost_microusd")
-PROVIDERS = {"groq", "gemini", "openrouter", "anthropic", "claude_vertex", "typesafe"}
+PROVIDERS = {"groq", "gemini", "openrouter", "anthropic", "claude_vertex", "typesafe", "glm"}  # glm: R-S11; storage 0004 does not accept it yet, so its receipts fail closed
 STAGES = {"goal_plan", "persona_decision", "first_impression", "synthesis", "citation_web", "citation_memory", "scout", "other"}
 _scope: ContextVar[dict | None] = ContextVar("provider_operation", default=None)
 _stage: ContextVar[dict | None] = ContextVar("provider_stage", default=None)

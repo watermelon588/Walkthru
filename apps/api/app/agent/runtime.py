@@ -18,6 +18,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel
 
 from app import provider_usage, providers
+from app.agent import candidates
 from app.agent.persona import build_graph
 from app.agent.schema import PersonaStep
 from app.agent.typesafe import DEFAULT_MODEL as DEFAULT_JEV_MODEL
@@ -41,6 +42,9 @@ class HybridPersonaModel:
         try:
             return self.primary.decide(state)
         except JevFallback as error:
+            if hasattr(self.fallback, "decide"):  # an R-S11 candidate controller keeps its own provenance
+                decision = self.fallback.decide(state, messages)
+                return JevDecision(step=decision.step, tokens=decision.tokens, metadata=decision.metadata | {"jev_fallback_reason": str(error)})
             step, tokens = unwrap(self.fallback.invoke(messages))
             return JevDecision(
                 step=step,
@@ -98,8 +102,17 @@ def claude_enabled() -> bool:
 
 
 def model_label(paid: bool) -> str:
-    """Said in every report, so the Claude selling point stays honest."""
-    return f"{CLAUDE_LABEL}, with free models as backup" if paid and claude_enabled() else "Free models (gpt-oss-120b and backups)"
+    """Said in every report and pinned in run quotes, so the Claude selling point stays honest."""
+    writer = f"{CLAUDE_LABEL}, with free models as backup" if paid and claude_enabled() else "Free models (gpt-oss-120b and backups)"
+    name = candidates.active() if paid else None
+    return f"{candidates.LABELS[name]} for test decisions (free models as backup); planning and the report: {writer}" if name else writer
+
+
+def _haiku_only(model: str) -> str:
+    """The legacy adapters send temperature 0 and a forced tool, which Sonnet 5.5 rejects: no name-only swaps."""
+    if not model.startswith("claude-haiku-4-5"):
+        raise RuntimeError(f"{model} is not Claude Haiku 4.5; stronger models go through CONTROLLER_CANDIDATE (docs/controller-candidates.md)")
+    return model
 
 
 def claude(schema: type[BaseModel], timeout: float = 30):
@@ -107,29 +120,22 @@ def claude(schema: type[BaseModel], timeout: float = 30):
     from anthropic import AnthropicVertex
     from langchain_core.runnables import RunnableLambda
 
+    model = _haiku_only(CLAUDE_MODEL)
     client = AnthropicVertex(project_id=os.environ["CLAUDE_VERTEX_PROJECT"], region=os.environ.get("CLAUDE_VERTEX_REGION", "global"),
                              timeout=timeout, max_retries=0)
     tool = {"name": "answer", "description": "Return the answer.", "input_schema": schema.model_json_schema()}
 
     def run(messages: list) -> dict:
-        system = "\n\n".join(text for role, text in messages if role == "system")
-        chat: list[dict] = []
-        for role, text in messages:
-            if role == "system":
-                continue
-            role = "user" if role == "human" else "assistant"
-            if chat and chat[-1]["role"] == role:  # the API wants turns to alternate
-                chat[-1]["content"] += "\n\n" + text
-            else:
-                chat.append({"role": role, "content": text})
-        msg = client.messages.create(model=CLAUDE_MODEL, max_tokens=2048, temperature=0, system=system, messages=chat,
+        system, chat = candidates.turns(messages)
+        # anthropic 1.6.0 no longer takes temperature as an argument (TypeError); Haiku 4.5 still accepts it in the body.
+        msg = client.messages.create(model=model, max_tokens=2048, system=system, messages=chat, extra_body={"temperature": 0},
                                      tools=[tool], tool_choice={"type": "tool", "name": "answer"})
         provider_usage.capture(msg.usage.model_dump(), "anthropic", msg.id)
         block = next(b for b in msg.content if b.type == "tool_use")
         raw = SimpleNamespace(usage_metadata={"total_tokens": msg.usage.input_tokens + msg.usage.output_tokens})
         return {"raw": raw, "parsed": schema.model_validate(block.input), "parsing_error": None}
 
-    return RunnableLambda(run, name=f"claude:{CLAUDE_MODEL}")
+    return RunnableLambda(run, name=f"claude:{model}")
 
 
 def guarded(provider: str, model, *, model_name: str = "unknown"):
@@ -186,13 +192,34 @@ def make_model(tier: str):
     return HybridPersonaModel(client, fallback)
 
 
+class CandidateController:
+    """R-S11: a stronger controller candidate decides persona steps; on any failure the free pool answers that step
+    instead. Each step records which one answered and why, so a fallback never counts as a candidate decision."""
+
+    def __init__(self, name: str, primary: Any, fallback: Any):
+        self.name, self.primary, self.fallback = name, primary, fallback
+
+    def decide(self, state: dict, messages: list) -> JevDecision:
+        try:
+            step, tokens = unwrap(self.primary.invoke(messages))
+            return JevDecision(step=step, tokens=tokens, metadata={"provider": self.name, "model": candidates.MODELS[self.name]})
+        except Exception as error:  # noqa: BLE001 - any candidate failure hands this step to the free pool, recorded
+            step, tokens = unwrap(self.fallback.invoke(messages))
+            reason = f"{type(error).__name__}: {error}"[:200]
+            return JevDecision(step=step, tokens=tokens, metadata={"provider": "llm", "fallback_from": self.name, "fallback_reason": reason})
+
+
 def _llm_model(tier: str):
+    name = candidates.active() if tier == "paid" else None
+    if name:
+        primary = guarded(candidates.PROVIDERS[name], candidates.ADAPTERS[name](PersonaStep), model_name=candidates.MODELS[name])
+        return CandidateController(name, primary, free_pool(PersonaStep))
     if tier == "paid" and claude_enabled():
         return free_pool(PersonaStep, paid=True)
     if tier == "paid" and os.environ.get("ANTHROPIC_API_KEY"):
         from langchain_anthropic import ChatAnthropic
 
-        model = ChatAnthropic(model=PAID_MODEL, max_tokens=1024, temperature=0, timeout=30, max_retries=0).with_structured_output(PersonaStep, include_raw=True)
+        model = ChatAnthropic(model=_haiku_only(PAID_MODEL), max_tokens=1024, temperature=0, timeout=30, max_retries=0).with_structured_output(PersonaStep, include_raw=True)
         return guarded("anthropic", model, model_name=PAID_MODEL).with_fallbacks([free_pool(PersonaStep)])
     return free_pool(PersonaStep)  # ponytail: paid tier rides the free pool until an Anthropic key exists
 

@@ -380,3 +380,41 @@ def test_type_without_text_uses_the_test_identity(monkeypatch):
     form = page("https://fixture.test/signup", [{"id": 4, "tag": "input", "type": "email", "state": "empty", "text": "Email"}])
     r = start(TestClient(app), form)
     assert r["action"]["text"].startswith("walkthru.tester+") and r["action"]["text"].endswith("@example.com")
+
+
+def test_evidence_regions_are_kept_with_their_frame_and_refused_outside_it(monkeypatch):
+    """R-S19: visible error boxes travel with the frame they were measured in; boxes outside it are refused."""
+    use([PersonaStep(thought="Open signup", action="click", target_id=2, confusion=1),
+         PersonaStep(thought="Signup is open", action="done", confusion=0)], monkeypatch)
+    client = TestClient(app)
+    first = start(client, page("https://fixture.test/", [{"id": 2, "tag": "a", "text": "Sign up"}]))
+    evidence = {"screenshot_path": f"{first['run_id']}/step-01.jpg", "captured_at": "2026-09-20T10:15:30Z",
+                "result_url": "https://fixture.test/signup", "width": 1440, "height": 900,
+                "regions": [{"kind": "error", "x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}
+    outside = evidence | {"regions": [{"kind": "error", "x": 0.9, "y": 0.2, "w": 0.3, "h": 0.05}]}
+    assert observe(client, first["run_id"], page("https://fixture.test/signup", []), outside).status_code == 422
+    texty = evidence | {"regions": [{"kind": "error", "x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "label": "Email is required"}]}
+    assert observe(client, first["run_id"], page("https://fixture.test/signup", []), texty).status_code == 422  # boxes only, no page text
+    result = observe(client, first["run_id"], page("https://fixture.test/signup", []), evidence).json()
+    assert result["steps"][0]["evidence"] == evidence
+
+
+def test_retyping_a_rejected_value_stops_at_the_first_repeat(monkeypatch):
+    """TripVerse rejected the test email; the model saw '"[email]" is invalid' and retyped it four times. One repeat is enough."""
+    monkeypatch.setattr(main, "_verified", lambda site, user_id: True)
+    email = "walkthru.tester@example.com"
+    use([PersonaStep(thought="email", action="type", target_id=2, text=email, confusion=0)] * 4, monkeypatch)
+    c = TestClient(app)
+    form = page("https://fixture.test/signup", [{"id": 2, "tag": "input", "type": "email", "state": "empty", "text": "Email"}])
+    rejected = form | {"errors": ['Email address "[email]" is invalid'], "elements": [{"id": 2, "tag": "input", "type": "email", "state": "filled", "text": "Email"}]}
+    r = start(c, form)
+    r = observe(c, r["run_id"], rejected).json()
+    assert r["status"] == "running"
+    r = observe(c, r["run_id"], rejected).json()
+    assert r["status"] == "stuck" and len(r["steps"]) == 2
+
+
+def test_the_prompt_explains_masked_values():
+    from app.agent.persona import system_prompt
+    text = system_prompt({"run_id": "r", "goal": "sign up", "persona": "first_timer", "site": "https://x.test"})
+    assert "an error quoting [email] is about the email you typed" in text and "do not retype it" in text

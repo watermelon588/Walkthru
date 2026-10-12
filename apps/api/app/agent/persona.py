@@ -97,6 +97,9 @@ def system_prompt(state: SessionState) -> str:
         "move to the next [empty] field. When the fields you need are filled, press the button that submits the form "
         "(it may sit away from the fields; read the button labels).\n"
         f"If a form asks for identity, use this test identity: {identity}\n"
+        "Values you typed appear masked in page text, as [email] or [name]: an error quoting [email] is about the email you "
+        "typed, not a placeholder in the field. If the site rejects the test identity, do not retype it; give_up and say "
+        "which value the site rejected.\n"
         "Never click anything that pays, deletes or cancels. If the goal is to send a message, press the send button; "
         "Walkthru decides whether it is safe to actually send."
         + ("" if state.get("verified") else
@@ -344,6 +347,11 @@ def build_graph(model: Any, checkpointer: Any):
             return {"status": "done", **progress}
         if len(steps) >= state.get("max_steps", MAX_STEPS):
             return {"status": "budget", **progress}
+        # Retyping the same value into the same field after the site rejected it cannot succeed (a site that refuses the
+        # test email); stop at the first repeat instead of after LOOP_LIMIT identical steps.
+        if (len(steps) >= 2 and last["action"] == "type" and steps[-2]["action"] == "type" and steps[-2].get("errors_after")
+                and (steps[-2].get("target_id"), steps[-2].get("text")) == (last.get("target_id"), last.get("text"))):
+            return {"status": "stuck", **progress}
         tail = steps[-LOOP_LIMIT:]
         if len(tail) == LOOP_LIMIT and all(s.get("executor_result", {}).get("status") in {"no_progress", "timeout"} for s in tail):
             return {"status": "agent_lost"}  # bounded controller exhaustion, never proof that the website failed
