@@ -5,6 +5,7 @@ _Last updated: 2026-11-01_
 ## Desktop sidebar scrolling (2026-11-01)
 
 - Added only `overflow-y-auto` to the desktop AppShell sidebar so Account and Sign out remain reachable on short viewports. Mobile drawer markup and behavior are unchanged.
+- Follow-up: hid only the desktop sidebar scrollbar using standard scrollbar-width and the WebKit scrollbar pseudo-element. Edge confirmed both hidden styles, continued wheel scrolling to account controls, and unchanged mobile scrolling. Web build/lint passed with the same existing build warnings. Evidence: `hidden.json` and screenshots in the ignored directory below.
 - Isolated Edge verification of the actual AppShell reproduced the desktop failure before the fix and confirmed wheel scrolling afterwards at 1280x500, no overflow at 1280x900, and continued mobile drawer scrolling at 390x500, with no page errors. Evidence: ignored `evals/results/sidebar-scroll-20261101/`. Web build, lint and all 55 tests passed; existing bundle-size/dynamic-import build warnings remain.
 
 ## Release review and publication preparation (2026-11-01)
