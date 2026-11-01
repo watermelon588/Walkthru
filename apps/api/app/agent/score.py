@@ -4,11 +4,42 @@ Plain code over the stored report, never a model. Ignored findings still count, 
 gamed by ignoring problems; they only stop repeating in lists.
 """
 
+from app.agent.report_contract import ReportContractError, ensure_supported
+from app.agent.schema import ReportAssessment
+
 WEIGHTS = {"ux": 30, "security": 20, "geo": 20, "seo": 15, "speed": 15}
 PENALTY = {"high": 25, "medium": 10, "low": 3}
-# Journey outcomes that say something about the site. Walkthru's own stops (the owner's Stop, a loop guard,
-# a CAPTCHA) and unfinished runs measure nothing, so UX is left out rather than marked down.
-JOURNEY = {"done": 100, "safe_stop": 100, "gave_up": 50, "stuck": 50, "budget": 50}
+
+
+def _journey(report: dict, status: str) -> tuple[bool, list[dict], int]:
+    """Only a matching, supported assessment can establish completion or observed journey defects.
+
+    Legacy stop labels contain no completion proof. Keep their static measurements, but do not infer a journey
+    outcome. An interrupted run may still retain a genuine earlier browser-observed UX issue.
+    """
+    if status == "scan" or report.get("version") != 2:
+        return False, [], 0
+    try:
+        ensure_supported(report)
+    except ReportContractError:
+        return False, [], 0
+    assessment = ReportAssessment.model_validate(report["assessment"])
+    if assessment.stop_reason != status:
+        return False, [], 0
+    findings = report.get("findings") or []
+    observed = [findings[i.finding_index] for i in assessment.issues
+                if i.observation_type == "browser_observation" and findings[i.finding_index]["kind"] == "ux"]
+    records = {e.id: e for e in assessment.evidence_index}
+    completed = assessment.outcome == "completed" and status == "done"
+    if completed:
+        for checkpoint in assessment.checkpoints:
+            milestone = records[checkpoint.evidence_refs[0]]
+            step = records.get(f"step:{milestone.step}")
+            matches = " ".join(milestone.observed.casefold().split()) == " ".join(checkpoint.expected_result.casefold().split())
+            if not matches or not step or step.source != "step" or not milestone.url or step.url != milestone.url:
+                completed = False
+                break
+    return completed, observed, assessment.coverage.actions_with_outcomes
 
 
 def _penalised(findings: list[dict], kinds: set[str], base: int = 100) -> int:
@@ -18,10 +49,11 @@ def _penalised(findings: list[dict], kinds: set[str], base: int = 100) -> int:
 def launch_ready(report: dict, status: str) -> dict:
     """{"score": 0-100 or None, "areas": {area: 0-100 or None}}. None means not measured."""
     findings, checks = report.get("findings") or [], report.get("checks") or {}
+    completed, observed, _ = _journey(report, status)
     done = lambda *names: any(checks.get(n) == "complete" for n in names)
     geo = report.get("geo") or {}
     areas = {
-        "ux": _penalised(findings, {"ux"}, JOURNEY[status]) if status in JOURNEY else None,
+        "ux": _penalised(observed, {"ux"}, 100 if completed else 50) if completed or observed else None,
         "security": _penalised(findings, {"security"}) if done("security") else None,
         "geo": geo.get("score") if done("geo") and geo.get("score") is not None else None,
         "seo": _penalised(findings, {"seo"}) if done("seo") else None,
@@ -35,8 +67,6 @@ def launch_ready(report: dict, status: str) -> dict:
 # Agent readiness (P1.7): can an AI agent (a browsing assistant, Operator-style tools, a WebMCP client) use the site?
 AGENT_NAME_RULES = {"label", "button-name", "link-name", "input-button-name", "aria-input-field-name", "select-name", "aria-command-name",
                     "aria-toggle-field-name", "aria-tooltip-name", "summary-name"}
-REACHED = {"done", "safe_stop"}
-MISSED = {"gave_up", "stuck", "budget", "looping"}
 
 
 def _name_problems(report: dict, steps: list[dict]) -> int:
@@ -54,23 +84,22 @@ def agent_ready(report: dict, status: str, steps: list[dict] | None = None, prev
     steps = steps or []
     checks = report.get("checks") or {}
     signals = (report.get("geo") or {}).get("agent") or {}
+    completed, observed, actions = _journey(report, status)
     parts: list[dict] = []
 
     def part(pid: str, label: str, earned: float, most: int, note: str) -> None:
         parts.append({"id": pid, "label": label, "earned": round(earned), "max": most, "note": note})
 
-    if status in REACHED:
-        part("goal", "The test user reached the goal", 25, 25, "An agent following the same path can finish the task.")
-    elif status in MISSED:
-        part("goal", "The test user reached the goal", 5 if status == "budget" else 0, 25, "The journey did not finish; an agent would likely stop at the same point.")
-    elif status == "captcha":
-        part("goal", "The test user reached the goal", 0, 25, "A CAPTCHA stopped the journey.")
+    if completed:
+        part("goal", "The test user reached the goal", 25, 25, "The declared UI checkpoints have matching recorded evidence; backend behavior is not verified.")
+    elif observed:
+        part("goal", "The test user reached the goal", 0, 25, "Completion is unconfirmed; the recorded journey contains an observed site UX issue.")
 
-    if status == "captcha":
-        part("captcha", "No CAPTCHA before the value", 0, 15, "A CAPTCHA appeared during the journey; agents cannot pass it.")
-    elif status in REACHED | MISSED:
-        part("captcha", "No CAPTCHA before the value", 15, 15, "No CAPTCHA appeared during the journey.")
-    elif signals:
+    if status in {"captcha", "bot_wall"}:
+        part("captcha", "No CAPTCHA before the value", 0, 15, "A human check or bot wall stopped the journey; Walkthru does not bypass it.")
+    elif completed:
+        part("captcha", "No CAPTCHA before the value", 15, 15, "No CAPTCHA stopped the confirmed UI journey.")
+    elif "captcha" in signals:
         part("captcha", "No CAPTCHA before the value", 0 if signals.get("captcha") else 15, 15,
              "A CAPTCHA widget loads on the homepage." if signals.get("captcha") else "No CAPTCHA widget on the homepage.")
 
@@ -89,12 +118,12 @@ def agent_ready(report: dict, status: str, steps: list[dict] | None = None, prev
         part("search", "Site search declared (SearchAction)", 10 if signals.get("search_action") else 0, 10,
              "The homepage declares a WebSite SearchAction." if signals.get("search_action") else "No WebSite SearchAction in the structured data.")
 
-    if previous is not None and status in REACHED | MISSED:
-        before_status = previous.get("status")
-        before, now = len(previous.get("steps") or []), len(steps)
-        stable = before_status in REACHED and status in REACHED and abs(before - now) <= max(2, round(0.3 * max(before, now)))
-        part("stable", "Works the same on a rerun", 10 if stable else 3 if status in REACHED else 0, 10,
-             f"The last run of this goal took {before} steps, this one {now}." if stable else "The journey changed between runs; agents rely on a stable path.")
+    if previous is not None and completed:
+        prior_completed, _, before = _journey(previous.get("report") or {}, previous.get("status", ""))
+        if prior_completed:
+            stable = abs(before - actions) <= max(2, round(0.3 * max(before, actions)))
+            part("stable", "Works the same on a rerun", 10 if stable else 3, 10,
+                 f"Both runs confirmed their UI checkpoints; the last recorded {before} actions, this one {actions}.")
 
     total = sum(p["max"] for p in parts)
     return {"score": round(100 * sum(p["earned"] for p in parts) / total) if total else None, "parts": parts}

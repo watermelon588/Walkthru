@@ -4,6 +4,7 @@ import os
 
 from app.agent import score
 from app.scans import agent_signals
+from tests.test_score_evidence import COMPLETED_STEPS, FAILED_STEPS, UX_FAILURE, assessed_report
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "..", "..", "..", "evals", "fixtures")
 
@@ -27,15 +28,17 @@ def test_labels_webmcp_and_captcha_are_read_from_html():
     assert (s["forms"], s["fields"], s["named_fields"], s["webmcp"], s["captcha"]) == (1, 3, 3, True, True)
 
 
-def _report(site: str, findings: list[dict], status: str) -> tuple[dict, str]:
+def _report(site: str, findings: list[dict], status: str, steps: list[dict]) -> tuple[dict, str]:
     checks = {"accessibility": "complete", "geo": "complete"}
-    return {"findings": findings, "checks": checks, "geo": {"score": 80, "agent": agent_signals.homepage(_html(site))}}, status
+    return assessed_report(status, steps=steps, findings=findings, code_findings=[f for f in findings if f["kind"] != "ux"],
+                           checks=checks, geo={"score": 80, "agent": agent_signals.homepage(_html(site))}), status
 
 
 def test_showcase_and_hard_fixtures_score_differently_for_the_stated_reasons():
-    good = score.agent_ready(*_report("showcase", [], "done"), steps=[{"action": "click"}] * 5)
-    unnamed = {"kind": "accessibility", "severity": "high", "title": "Form control has no accessible name", "rule": "a11y.control.name_missing"}
-    bad = score.agent_ready(*_report("hard", [unnamed], "gave_up"), steps=[{"action": "click"}] * 12)
+    good = score.agent_ready(*_report("showcase", [], "done", COMPLETED_STEPS))
+    unnamed = {"kind": "accessibility", "severity": "high", "title": "Form control has no accessible name", "rule": "a11y.control.name_missing",
+               "detail": "An input has no label.", "fix": "Label the input.", "evidence": "input has no accessible name"}
+    bad = score.agent_ready(*_report("hard", [unnamed, UX_FAILURE], "gave_up", FAILED_STEPS), steps=FAILED_STEPS)
     assert good["score"] >= 90 and bad["score"] <= 45, (good, bad)
     why = {p["id"]: p for p in bad["parts"]}
     assert why["goal"]["earned"] == 0 and why["names"]["earned"] < 25 and why["forms"]["earned"] < 12 and why["search"]["earned"] == 0
@@ -44,10 +47,17 @@ def test_showcase_and_hard_fixtures_score_differently_for_the_stated_reasons():
 
 def test_captcha_and_rerun_stability():
     stopped = score.agent_ready({"findings": [], "checks": {}}, "captcha", [])
-    assert stopped["score"] == 0 and {p["id"] for p in stopped["parts"]} == {"goal", "captcha"}
-    steps = [{"action": "click"}] * 6
-    same = score.agent_ready({"findings": [], "checks": {}}, "done", steps, previous={"status": "done", "steps": steps[:5]})
-    changed = score.agent_ready({"findings": [], "checks": {}}, "done", steps, previous={"status": "gave_up", "steps": steps * 3})
+    assert stopped["score"] == 0 and {p["id"] for p in stopped["parts"]} == {"captcha"}
+
+    def completed(count):
+        steps = [{"action": "click", "result_url": "https://example.test/"} for _ in range(count - 1)]
+        last = COMPLETED_STEPS[0]
+        steps.append(last | {"checkpoint_evidence": last["checkpoint_evidence"] | {"step": count}})
+        return assessed_report("done", steps=steps)
+
+    current = completed(6)
+    same = score.agent_ready(current, "done", previous={"status": "done", "report": completed(5)})
+    changed = score.agent_ready(current, "done", previous={"status": "done", "report": completed(2)})
     assert next(p for p in same["parts"] if p["id"] == "stable")["earned"] == 10
     assert next(p for p in changed["parts"] if p["id"] == "stable")["earned"] == 3
 

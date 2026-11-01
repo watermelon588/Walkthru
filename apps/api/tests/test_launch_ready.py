@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from app import db
 from app.agent import score
 from app.main import app
+from tests.test_score_evidence import COMPLETED_STEPS, assessed_report
 
 ALL = {"accessibility": "complete", "performance": "complete", "seo": "complete", "security": "complete", "geo": "complete"}
 
@@ -14,9 +15,11 @@ def finding(kind, severity="medium"):
 
 
 def test_clean_run_scores_100_and_findings_cost_points_by_severity():
-    clean = score.launch_ready({"findings": [], "checks": ALL, "geo": {"score": 100}}, "done")
+    clean = score.launch_ready(assessed_report("done", steps=COMPLETED_STEPS, checks=ALL, geo={"score": 100}), "done")
     assert clean["score"] == 100 and clean["areas"]["ux"] == 100
-    hurt = score.launch_ready({"findings": [finding("security", "high"), finding("seo", "low")], "checks": ALL, "geo": {"score": 100}}, "done")
+    findings = [finding("security", "high"), finding("seo", "low")]
+    hurt = score.launch_ready(assessed_report("done", steps=COMPLETED_STEPS, findings=findings, code_findings=findings,
+                                            checks=ALL, geo={"score": 100}), "done")
     assert hurt["areas"]["security"] == 75 and hurt["areas"]["seo"] == 97
     assert hurt["score"] == round((30 * 100 + 20 * 75 + 20 * 100 + 15 * 97 + 15 * 100) / 100)
 
@@ -29,9 +32,8 @@ def test_unmeasured_areas_leave_the_score_and_share_their_weight():
 
 
 def test_walkthrus_own_stops_never_count_against_the_site():
-    for status in ("stopped", "looping", "captcha"):
+    for status in ("stopped", "looping", "captcha", "safe_stop", "budget", "agent_lost", "gave_up", "stuck"):
         assert score.launch_ready({"findings": [], "checks": ALL, "geo": {"score": 80}}, status)["areas"]["ux"] is None
-    assert score.launch_ready({"findings": [], "checks": ALL, "geo": {"score": 80}}, "gave_up")["areas"]["ux"] == 50
     assert score.launch_ready({"findings": [], "checks": {}}, "scan")["score"] is None  # nothing measured, no number
 
 

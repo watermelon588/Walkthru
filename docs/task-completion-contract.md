@@ -43,6 +43,16 @@ Initial observed safety/bot/stale boundaries stop before a decision call. Safety
 
 Decision history has a 6,000-character cap: confirmed milestones, selected earlier failed/refused alternatives with omission counts, and eight recent factual actions/outcomes. Typed values and model narration are not resent. The current checklist still lists all unresolved work. Report synthesis receives sanitized milestone evidence separately from its trimmed narration context; the existing saved report JSON and legacy consumers remain compatible.
 
+## Readiness scoring, F1 correction (2026-10-31)
+
+New scores use a validated version 2 assessment whose stop reason matches the run. Full UX and goal credit require `completed`, `done` and every declared checkpoint's matching milestone text, compared without case or whitespace differences. Each milestone must link to executed-step evidence on the same recorded URL. This confirms only the declared UI result, not backend persistence or delivery.
+
+A safety stop, budget, loop, lost agent, owner stop or unsupported legacy `done` label cannot establish success or a site failure. Without grounded journey evidence, UX and goal components stay unmeasured; independent static checks retain their existing weights. A genuine browser-observed UX finding remains scored even if the run later stops for an internal or safety reason. CAPTCHA and bot-wall boundaries have their own blocker component, without inventing a failed goal.
+
+Rerun stability requires proven completion in both assessments and compares their validated counts of actions with recorded outcomes. Missing or unproved prior completion leaves stability unmeasured. This replaces the former inference from terminal labels and raw step-list length.
+
+Saved score fields are not rewritten on read or migrated by this correction. Regenerate an older report or run a new journey to obtain corrected stored scores. The public badge fallback uses the corrected scorer only when it needs to calculate a score; a previously stored score can still appear until the report is regenerated. This change does not upgrade historical evidence into proof.
+
 ## Verification and remaining limits
 
 `tests/test_completion.py` provides 49 offline scripted cases, including unrelated redirects/toasts, same-URL success, delayed wait, persona conflict, false progress/done, ambiguous goals, conflicting/negated/pre-existing messages, missing expectations, same-origin/route markers, observed site blocks, stale/safety/bot stops, budgets, forged provider metadata, confirmation reuse and compact factual history. The final focused controller/report/safety suite passed 256 tests. Related goal, persona, Jev, navigation, report and stop regressions remain in the existing suites. The real PostgreSQL restart drill declares guide navigation and confirms the recovered action's milestone without another model call.
