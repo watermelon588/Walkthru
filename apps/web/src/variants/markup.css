@@ -1,5 +1,4 @@
 /* Variant 3, Markup: a reviewer's proof sheet. Blueprint grid, navy ink, one lime highlighter, hand-drawn notes. Scoped to .mk. See docs/home-variants/markup.md */
-@import url("https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..900&family=IBM+Plex+Mono:wght@400;500&family=Caveat:wght@500;700&display=swap");
 
 .mk {
   --mk-paper: #f5f6f1;
