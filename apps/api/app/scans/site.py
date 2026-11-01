@@ -44,6 +44,7 @@ class SiteAudit:
     geo: geo.GeoResult | None = None
     pages: list[tuple[str, str, list[str]]] = field(default_factory=list)  # (kind, title, every affected page)
     opportunities: dict | None = None  # R-S17 advisory keyword/content map (app/scans/opportunities.py)
+    backend_context: dict = field(default_factory=dict)  # informational discovery, never a scored finding
 
 
 def _normal_url(raw: str, page_url: str, base: str) -> str | None:
@@ -285,8 +286,9 @@ def audit(
             security_records.extend((finding, root_url) for finding in run())
         except Exception:
             logging.getLogger("walkthru").warning("security check failed for %s", root_url, exc_info=True)
-    try:  # Supabase or Firebase from the browser: explained on every plan, probed read-only on verified domains (P1.1)
-        security_records.extend((finding, root_url) for finding in backend.check(root.text, root_url, client, verified=verified))
+    backend_context = {}
+    try:  # Public Supabase config is stack context; backend probes still require a verified domain (P1.1).
+        security_records.extend((finding, root_url) for finding in backend.check(root.text, root_url, client, verified=verified, context=backend_context))
     except Exception:
         logging.getLogger("walkthru").warning("backend exposure check failed for %s", root_url, exc_info=True)
 
@@ -335,4 +337,4 @@ def audit(
         logging.getLogger("walkthru").warning("opportunity map failed for %s", root_url, exc_info=True)
         advice = None
     return SiteAudit(_aggregate(seo_records, len(pages), page_map), _aggregate(security_records, len(pages), page_map), coverage,
-                     production_like, readiness, page_map + readiness.pages, advice)
+                     production_like, readiness, page_map + readiness.pages, advice, backend_context)

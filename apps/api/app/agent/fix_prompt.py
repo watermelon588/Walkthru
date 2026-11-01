@@ -128,6 +128,7 @@ def step(finding: dict, stack: dict | None) -> dict | None:
 def _places(run: dict, report: dict) -> dict:
     parts = urlsplit(run.get("site") or "")
     evidence = " ".join(str(f.get("evidence") or "") for f in report.get("findings", []))
+    evidence += " " + str(((report.get("stack") or {}).get("evidence") or {}).get("backend") or "")
     supabase = re.search(r"https://[a-z0-9]+\.supabase\.co", evidence)
     return {"url": run.get("site") or "", "origin": f"{parts.scheme}://{parts.netloc}", "host": parts.hostname or "",
             "supabase_url": supabase.group(0) if supabase else "https://<project>.supabase.co"}

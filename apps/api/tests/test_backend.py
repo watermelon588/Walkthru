@@ -59,15 +59,15 @@ def test_verified_probe_counts_rows_without_reading_them(monkeypatch):
     assert found["1 database function is callable with the public key"].evidence == "admin_reset"
     assert found["Anyone can list the files in 1 storage bucket"].evidence == "avatars"
     assert found["Anyone can read your Firebase database"].severity == "high"
-    assert "Your site reads Supabase straight from the browser" in found
+    assert "Your site reads Supabase straight from the browser" not in found
     assert not any("/rpc/" in call for call in calls)  # functions are listed, never called
     assert not any(call.startswith(("PATCH", "DELETE", "PUT")) for call in calls)  # never writes
     assert all(call.startswith("HEAD") for call in calls if "/rest/v1/profiles" in call or "/rest/v1/notes" in call)  # counts only
 
 
-def test_unverified_domains_get_the_explanation_but_no_probe(monkeypatch):
+def test_unverified_domains_do_not_turn_public_config_into_a_finding_or_probe(monkeypatch):
     found, calls = run("", False, monkeypatch)
-    assert set(found) == {"Your site reads Supabase straight from the browser"}
+    assert found == {}
     assert not any("supabase.co" in call or "firebaseio" in call for call in calls)
 
 

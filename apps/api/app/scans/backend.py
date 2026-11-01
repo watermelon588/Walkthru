@@ -122,8 +122,8 @@ def probe_supabase(project: str, key: str, c: httpx.Client, deadline: float, nam
     return out
 
 
-def check(html: str, page_url: str, c: httpx.Client, *, verified: bool) -> list[Finding]:
-    """Findings for the site's Supabase or Firebase backend. Probes run only on verified domains."""
+def check(html: str, page_url: str, c: httpx.Client, *, verified: bool, context: dict | None = None) -> list[Finding]:
+    """Findings for the backend; optional public stack context contains no keys. Probes require verification."""
     cfg = find_config(sources(html, page_url, c))
     out: list[Finding] = []
     if cfg["secret_key"]:
@@ -131,11 +131,10 @@ def check(html: str, page_url: str, c: httpx.Client, *, verified: bool) -> list[
                       "A service-role or secret key is in the page's code. It skips every security rule, so anyone can read, change or delete all of your data.",
                       "Rotate the secret key in Supabase now, then use only the publishable (anon) key in the browser and keep the secret key server-side.",
                       f"{cfg['secret_key'][:12]}..."))
-    if cfg["supabase"] and cfg["anon_key"]:
-        out.append(_f("low", "Your site reads Supabase straight from the browser",
-                      "The Supabase URL and public key are in the page, which is normal. It means every table's safety depends on row-level security: anyone can use the same key.",
-                      "Keep row-level security on for every table and storage bucket, and verify your domain so Walkthru can check what the public key can read.",
-                      cfg["supabase"]))
+    if cfg["supabase"] and cfg["anon_key"] and context is not None:
+        context.update({"backend": "supabase", "evidence": {"backend":
+            f"Supabase project {cfg['supabase']} and public client key in the page or its own scripts. This is normal public configuration; "
+            "it does not establish a security issue or prove that access rules are correct."}})
     if cfg["firebase_db"] or cfg["firebase_key"]:
         out.append(_f("low", "Your site talks to Firebase from the browser",
                       "The Firebase config is in the page, which is normal. Your data is protected only by Firebase security rules.",

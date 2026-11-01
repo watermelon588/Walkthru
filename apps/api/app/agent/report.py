@@ -53,6 +53,7 @@ class ReportState(TypedDict, total=False):
     production_like: bool
     final_controls: list[str]  # labels of the buttons, links and fields on the page where the journey ended
     stack: dict  # hosting, framework and backend (app/scans/stack.py), for the fix plan's recipes
+    backend_context: dict  # public configuration discovery, kept out of findings and model repair tasks
     synthesis: dict
     tokens: Annotated[int, operator.add]
     notes: Annotated[list[str], operator.add]  # non-fatal problems, e.g. a scan that could not fetch
@@ -157,6 +158,7 @@ def site_scan(state: ReportState) -> dict:
             "security_measured": result.coverage.pages_scanned > 0,
             "production_like": result.production_like,
             "opportunities": result.opportunities,
+            "backend_context": result.backend_context,
             "site_audit": {
                 "pages_scanned": result.coverage.pages_scanned,
                 "page_limit": result.coverage.page_limit,
@@ -613,7 +615,7 @@ def synthesize(state: ReportState) -> dict:
         geo=state.get("geo_summary") or None,
         model=runtime.model_label(state.get("paid", False)),
         pages=state.get("finding_pages") or {},
-        stack=_with_backend(state.get("stack"), code_findings),
+        stack=_with_backend(state.get("stack"), code_findings, state.get("backend_context")),
     )
     report.assessment = build_assessment(state, [f.model_dump() for f in findings], [f.model_dump() for f in code_findings], report.checks)
     report.version = 2
@@ -622,8 +624,11 @@ def synthesize(state: ReportState) -> dict:
     return {"synthesis": report.model_dump(), "tokens": used}
 
 
-def _with_backend(found: dict | None, findings: list[Finding]) -> dict | None:
-    """Backend exposure findings name the backend even when the homepage HTML does not."""
+def _with_backend(found: dict | None, findings: list[Finding], context: dict | None = None) -> dict | None:
+    """Retain public bundle discovery separately from actionable backend exposure findings."""
+    if context and (not found or not found.get("backend") or found["backend"] == context["backend"]):
+        found = {**(found or {}), "backend": context["backend"],
+                 "evidence": {**(found or {}).get("evidence", {}), **context["evidence"]}}
     if not found or found.get("backend"):
         return found
     rules = {f.rule or "" for f in findings}
