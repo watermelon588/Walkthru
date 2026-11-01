@@ -67,13 +67,8 @@
       "check": "curl -sI -H 'Origin: https://evil.example' {url} | grep -i access-control-allow"
     },
     "sec.cookie.flags_missing": {
-      "why": "Cookies without HttpOnly can be read by any injected script, and without Secure and SameSite they travel over plain http and in cross-site requests.",
-      "steps": {
-        "nextjs": {"file": "where the cookie is set (route handler, server action or middleware)", "snippet": "cookies().set('session', value, { httpOnly: true, secure: true, sameSite: 'lax', path: '/' })", "note": "Only cookies that browser JavaScript must read may skip httpOnly."},
-        "supabase": {"file": "your Supabase client setup", "snippet": "// With @supabase/ssr the auth cookies are set by the library: pass cookieOptions\ncreateServerClient(url, key, { cookies, cookieOptions: { secure: true, sameSite: 'lax' } })", "note": "Check which cookie the report names; third-party cookies are set by that provider."},
-        "*": {"file": "where the cookie is set on the server", "snippet": "Set-Cookie: session=...; HttpOnly; Secure; SameSite=Lax; Path=/", "note": "Only cookies that browser JavaScript must read may skip HttpOnly."}
-      },
-      "risk": "Code that reads the cookie from JavaScript (document.cookie) stops seeing it once HttpOnly is set.",
+      "why": "Cookie attributes serve different purposes. Secure restricts transport; SameSite controls cross-site sending; HttpOnly prevents JavaScript access. A name alone does not establish authentication or sensitivity, and analytics, CSRF or browser-managed auth cookies may need JavaScript access.",
+      "risk": "Apply only the report's cookie-specific change after confirming who sets and reads that cookie. Adding HttpOnly can break JavaScript consumers; changing SameSite can break sign-in, embedded or cross-site flows. Prefix requirements apply regardless of purpose.",
       "check": "curl -sI {url} | grep -i set-cookie"
     },
     "sec.mixed_content": {

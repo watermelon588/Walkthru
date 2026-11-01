@@ -159,20 +159,47 @@ def _hsts(value: str | None, url: str) -> list[Finding]:
 def _cookie(raw: str, https: bool) -> list[Finding]:
     name = raw.split("=", 1)[0].strip()
     attrs = {a.strip().split("=", 1)[0].lower(): (a.split("=", 1)[1].strip() if "=" in a else "") for a in raw.split(";")[1:]}
+    stem = name.removeprefix("__Host-").removeprefix("__Secure-").casefold()
+    # A familiar name is only a session heuristic. CSRF, analytics and browser-managed auth cookies may need JS.
+    session = stem in {"session", "sessionid", "sid", "jsessionid", "phpsessid", "asp.net_sessionid", "connect.sid", "__session"} or bool(
+        re.fullmatch(r"(?:next-auth|authjs)\.session-token(?:\.\d+)?", stem))
+    purpose = ("The name suggests a session/authentication cookie, but its purpose and need for JavaScript access are unconfirmed."
+               if session else "The cookie's purpose is unknown from this response; it may need browser JavaScript access.")
+    same_site = attrs.get("samesite", "").casefold()
+    evidence = (f"{name}=[hidden]" + ("; " + raw.partition(";")[2].strip() if ";" in raw else ""))[:300]
     out = []
-    missing = [f for f, present in (("Secure", "secure" in attrs or not https), ("HttpOnly", "httponly" in attrs), ("SameSite", "samesite" in attrs)) if not present]
+    missing = [f for f, present in (("Secure", "secure" in attrs or (not https and same_site != "none")),
+                                   ("HttpOnly", "httponly" in attrs or not session),
+                                   ("SameSite", same_site in {"lax", "strict", "none"})) if not present]
     if missing:
-        out.append(_f("medium", f'Cookie "{name}" is missing {", ".join(missing)}', "Cookies without these flags can be read by scripts or sent over plain http.", "Set Secure, HttpOnly and SameSite=Lax (or Strict) on session cookies.", raw[:80]))
-    # Cookie prefixes are enforced by browsers: a __Host- or __Secure- cookie that breaks the rules is silently dropped.
+        advice = []
+        if "Secure" in missing:
+            advice.append("Set Secure when the cookie is served over HTTPS.")
+        if "HttpOnly" in missing:
+            advice.append("Confirm this is a server-only session cookie before adding HttpOnly; preserve JavaScript access when the auth design requires it.")
+        if "SameSite" in missing:
+            advice.append("Choose SameSite=Lax or Strict for same-site flows, or None with Secure only when cross-site use is needed.")
+        invalid_cross_site = same_site == "none" and "secure" not in attrs
+        detail = f"{purpose} Missing or invalid attributes: {', '.join(missing)}."
+        if invalid_cross_site:
+            detail += " Browsers require Secure with SameSite=None."
+        elif "SameSite" in missing:
+            detail += " Many browsers default to Lax when SameSite is omitted; choose an explicit policy for the actual flow."
+        out.append(_f("medium" if session or invalid_cross_site else "low", f'Cookie "{name}" is missing {", ".join(missing)}',
+                      detail, " ".join(advice), evidence))
+    # Prefix attribute constraints apply independently of the cookie's application purpose.
     broken = []
-    if name.startswith(("__Host-", "__Secure-")) and "secure" not in attrs:
+    if name.startswith(("__Host-", "__Secure-", "__Http-")) and "secure" not in attrs:
         broken.append("Secure")
+    if name.startswith(("__Http-", "__Host-Http-")) and "httponly" not in attrs:
+        broken.append("HttpOnly")
     if name.startswith("__Host-") and ("domain" in attrs or attrs.get("path", "") != "/"):
         broken.append("Path=/ and no Domain")
     if broken:
-        prefix = "__Host-" if name.startswith("__Host-") else "__Secure-"
-        out.append(_f("medium", f'Cookie "{name}" breaks its {prefix} prefix rules', f"Browsers refuse to store a {prefix} cookie without {' and '.join(broken)}, so this cookie never reaches visitors and whatever depends on it fails.",
-                      f"Set it with {'Secure; Path=/ and no Domain' if prefix == '__Host-' else 'Secure'}.", raw[:80]))
+        prefix = next(p for p in ("__Host-Http-", "__Host-", "__Http-", "__Secure-") if name.startswith(p))
+        out.append(_f("medium", f'Cookie "{name}" breaks its {prefix} prefix rules',
+                      f"Supporting browsers reject this {prefix} cookie without {' and '.join(broken)}; this is an attribute constraint, not evidence of its application purpose.",
+                      f"Set the required attributes: {'; '.join(broken)}.", evidence))
     return out
 
 
