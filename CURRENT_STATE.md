@@ -2,6 +2,11 @@
 
 _Last updated: 2026-11-01_
 
+## Desktop sidebar scrolling (2026-11-01)
+
+- Added only `overflow-y-auto` to the desktop AppShell sidebar so Account and Sign out remain reachable on short viewports. Mobile drawer markup and behavior are unchanged.
+- Isolated Edge verification of the actual AppShell reproduced the desktop failure before the fix and confirmed wheel scrolling afterwards at 1280x500, no overflow at 1280x900, and continued mobile drawer scrolling at 390x500, with no page errors. Evidence: ignored `evals/results/sidebar-scroll-20261101/`. Web build, lint and all 55 tests passed; existing bundle-size/dynamic-import build warnings remain.
+
 ## Release review and publication preparation (2026-11-01)
 
 - Founder requested committing and pushing all pending work for the VM deployment. Reviewed F1-F6 source/tests, dependency lock changes, feature/live audits and deployment documentation; grouped changes into focused commits using the configured founder identity. Initial fetch confirmed local `main` and `origin/main` both at `2725be4`; no remote divergence or force push needed. Secret-pattern review found only an explicitly synthetic test key; environment files, evidence outputs and build artifacts remain excluded.

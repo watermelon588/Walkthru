@@ -54,7 +54,7 @@ export function AppShell({ children, title, plainTitle = false }: { children: Re
       {title && <title>{plainTitle ? title : `${title} · ${brand.name}`}</title>}
       <SkipLink />
 
-      <aside className="no-print sticky top-0 hidden h-[100dvh] flex-col border-r border-line px-4 py-6 lg:flex">
+      <aside className="no-print sticky top-0 hidden h-[100dvh] flex-col overflow-y-auto border-r border-line px-4 py-6 lg:flex">
         <Logo className="px-3" />
         <SidebarNav />
       </aside>
