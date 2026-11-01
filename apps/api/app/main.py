@@ -190,6 +190,20 @@ def health() -> dict[str, str] | JSONResponse:
     return {"status": "ok"}
 
 
+@app.get("/ready", response_model=None)
+def ready() -> JSONResponse:
+    """Data API read access and queue readiness; not a model, checkpoint-write or whole-application check."""
+    try:
+        late = db.readiness(JOBS_STALLED_S)
+    except Exception:  # noqa: BLE001 - readiness must fail closed without exposing database internals
+        return JSONResponse(status_code=503, content={"status": "not_ready", "detail": "Database readiness check failed."},
+                            headers={"Cache-Control": "no-store"})
+    if late:
+        return JSONResponse(status_code=503, content={"status": "not_ready", "detail": "The job queue is stalled."},
+                            headers={"Cache-Control": "no-store"})
+    return JSONResponse(content={"status": "ready"}, headers={"Cache-Control": "no-store"})
+
+
 # ---------- persona test runs (extension) ----------
 
 

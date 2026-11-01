@@ -42,7 +42,7 @@ ROUTES: dict[tuple[str, str], str] = {
         ("POST", "/account/delete"), ("POST", "/me/test-users"), ("POST", "/me/branding"),
     ]},
 }
-EXEMPT = {("GET", "/health")}  # the uptime monitor and load balancer must never depend on the database
+EXEMPT = {("GET", "/health"), ("GET", "/ready")}  # monitoring must not write rate-limit counters or inherit their retries
 
 
 def hit(key: str, count: int, seconds: int, message: str) -> None:

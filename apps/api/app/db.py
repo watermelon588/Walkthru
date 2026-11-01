@@ -1047,6 +1047,21 @@ def finish_job(job_id: int, lease: str, values: dict) -> None:
              prefer="return=minimal")
 
 
+def readiness(seconds: int) -> dict | None:
+    """Read access to runs and the queue, with short per-phase timeouts and no retry or row-content fetch."""
+    timeout = httpx.Timeout(2.0, connect=1.0)
+    response = client().head("/rest/v1/runs", params={"select": "id", "limit": "0"}, timeout=timeout)
+    response.raise_for_status()
+    before = (datetime.now(UTC) - timedelta(seconds=seconds)).isoformat()
+    response = client().get("/rest/v1/jobs", params={"status": "eq.queued", "run_after": f"lt.{before}",
+                           "select": "id,kind,run_after", "order": "run_after.asc", "limit": "1"}, timeout=timeout)
+    response.raise_for_status()
+    rows = response.json()
+    if not isinstance(rows, list) or any(not isinstance(row, dict) or not {"id", "kind", "run_after"} <= row.keys() for row in rows):
+        raise DatabaseUnavailable("Database readiness returned an invalid queue response")
+    return rows[0] if rows else None
+
+
 def oldest_waiting_job(seconds: int) -> dict | None:
     """The oldest queued job that has been due for over `seconds`. None means the workers are keeping up."""
     before = (datetime.now(UTC) - timedelta(seconds=seconds)).isoformat()

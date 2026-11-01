@@ -24,6 +24,7 @@ MSG = {"body": "hi"}
 # foreign id in the request. Otherwise: (path with user A's ids, JSON body) and the answer must be 403 or 404.
 ROUTES: dict[str, str | tuple[str, dict | None]] = {
     "GET /health": "public",
+    "GET /ready": "public",  # generic operational status only; no user/job data
     "POST /scans": "public",
     "GET /badge/{run_id}.svg": "public",
     "GET /badge/{run_id}": "public",
