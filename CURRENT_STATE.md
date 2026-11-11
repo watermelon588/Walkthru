@@ -1,6 +1,13 @@
 # Current State
 
-_Last updated: 2026-11-01_
+_Last updated: 2026-11-11_
+
+## In-app live runs planned (2026-11-11)
+
+- Founder decision: keep the extension (Chrome Web Store, logged-in and localhost journeys) and add an in-app live run so launch does not wait on the store listing. The user enters a URL and goal in the web app; a server-side headless Chromium runs the same `inject.js` journey and the page replays one frame per step with an animated cursor.
+- [Plan with Swarm reference research, architecture decisions, 17 tasks and open questions](docs/in-app-runner-plan.md). It builds the ARCHITECTURE.md `cloud-runner` from `evals/e2e_extension.py`. `tasks/plan.md` and `tasks/todo.md` belong to other work and were not changed.
+- **Nothing built.** No source, schema, dependency, deployment or policy change. Open founder decisions: which plans get it, unverified-site runs in visitor mode, frame retention, feature name, concurrency, plan-editing step. Privacy, Terms, Security and Bot pages must be rewritten before it is switched on (task T14).
+- Reference research used the founder's Swarm account: all free Swarm test runs are now used.
 
 ## Desktop sidebar scrolling (2026-11-01)
 
