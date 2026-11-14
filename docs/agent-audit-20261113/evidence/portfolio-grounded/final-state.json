@@ -1,0 +1,1039 @@
+{
+  "run_id": "df76f76f5ab4435cbd29375459d577f9",
+  "site": "https://portfolio2-mu-inky.vercel.app/",
+  "goal": "Find the projects section and open one project detail on this website.",
+  "persona": "first_timer",
+  "logged_in": false,
+  "verified": false,
+  "mode": "visitor",
+  "max_steps": 20,
+  "observation": {
+    "url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+    "title": "Projects \u2014 Rohit Maity",
+    "elements": [
+      {
+        "id": 1,
+        "tag": "a",
+        "text": "01.Index",
+        "type": null,
+        "state": null,
+        "region": "nav: Pages",
+        "row": "01.Index",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 2,
+        "tag": "a",
+        "text": "02.Projects",
+        "type": null,
+        "state": null,
+        "region": "nav: Pages",
+        "row": "02.Projects",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 3,
+        "tag": "a",
+        "text": "03.About",
+        "type": null,
+        "state": null,
+        "region": "nav: Pages",
+        "row": "03.About",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 4,
+        "tag": "a",
+        "text": "Contact",
+        "type": null,
+        "state": null,
+        "region": "nav: Pages",
+        "row": "Contact",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 5,
+        "tag": "button",
+        "text": "All projects10",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "All projects10",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 6,
+        "tag": "button",
+        "text": "AI6",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "AI6",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 7,
+        "tag": "button",
+        "text": "ML & search1",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "ML & search1",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 8,
+        "tag": "button",
+        "text": "Full-stack5",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "Full-stack5",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 9,
+        "tag": "button",
+        "text": "Backend7",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "Backend7",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 10,
+        "tag": "a",
+        "text": "01Paper",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "01Paper",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 11,
+        "tag": "a",
+        "text": "02Ledger",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "02Ledger",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 12,
+        "tag": "a",
+        "text": "03Signal",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "03Signal",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 13,
+        "tag": "a",
+        "text": "Walkthru",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "01 / 2026 AI \u00b7 Backend Walkthru AI agent platform A LangGraph browser agent that drives real user journeys in your own Chrome, backed by a stateless FastAPI API",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 14,
+        "tag": "a",
+        "text": "04Blueprint",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "04Blueprint",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 15,
+        "tag": "a",
+        "text": "05Dial",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "05Dial",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 16,
+        "tag": "button",
+        "text": "Theme 02 / 05",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "Theme 02 / 05",
+        "in_view": true,
+        "occluded": false,
+        "scroll_container_id": null
+      },
+      {
+        "id": 17,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "01 / 2026 AI \u00b7 Backend Walkthru AI agent platform A LangGraph browser agent that drives real user journeys in your own Chrome, backed by a stateless FastAPI API",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 18,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "01 / 2026 AI \u00b7 Backend Walkthru AI agent platform A LangGraph browser agent that drives real user journeys in your own Chrome, backed by a stateless FastAPI API",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 19,
+        "tag": "a",
+        "text": "TripVerse",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "02 / 2026 Full-stack \u00b7 Backend TripVerse Agentic planner Two LangGraph planning graphs writing into one normalized trip document. Budget, routing cost and day c",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 20,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "02 / 2026 Full-stack \u00b7 Backend TripVerse Agentic planner Two LangGraph planning graphs writing into one normalized trip document. Budget, routing cost and day c",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 21,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "02 / 2026 Full-stack \u00b7 Backend TripVerse Agentic planner Two LangGraph planning graphs writing into one normalized trip document. Budget, routing cost and day c",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 22,
+        "tag": "a",
+        "text": "SkyGuide AI",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "03 / 2026 AI SkyGuide AI Distributed realtime system React, an Express 5 gateway and a private FastAPI astronomy engine. Vectorised scoring of 13,311 deep-sky o",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 23,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "03 / 2026 AI SkyGuide AI Distributed realtime system React, an Express 5 gateway and a private FastAPI astronomy engine. Vectorised scoring of 13,311 deep-sky o",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 24,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "03 / 2026 AI SkyGuide AI Distributed realtime system React, an Express 5 gateway and a private FastAPI astronomy engine. Vectorised scoring of 13,311 deep-sky o",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 25,
+        "tag": "a",
+        "text": "Neuron",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "04 / 2026 AI \u00b7 ML & search Neuron Multimodal retrieval & RAG Text, image and audio fused into one CLIP query vector, re-ranked by a weighted blend of BM25, dens",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 26,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "04 / 2026 AI \u00b7 ML & search Neuron Multimodal retrieval & RAG Text, image and audio fused into one CLIP query vector, re-ranked by a weighted blend of BM25, dens",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 27,
+        "tag": "a",
+        "text": "Claimwise",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "05 / 2026 AI \u00b7 Full-stack \u00b7 Backend Claimwise AI-assisted claims workflow A health insurance claims prototype that reads documents, prepares a reviewable claim ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 28,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "05 / 2026 AI \u00b7 Full-stack \u00b7 Backend Claimwise AI-assisted claims workflow A health insurance claims prototype that reads documents, prepares a reviewable claim ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 29,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "05 / 2026 AI \u00b7 Full-stack \u00b7 Backend Claimwise AI-assisted claims workflow A health insurance claims prototype that reads documents, prepares a reviewable claim ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 30,
+        "tag": "a",
+        "text": "Yap Chat",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "06 / 2025 Full-stack \u00b7 Backend Yap Chat Realtime messaging & WebRTC Room-scoped realtime chat and 8-way peer-to-peer video: JWT-verified Socket.IO identity, a g",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 31,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "06 / 2025 Full-stack \u00b7 Backend Yap Chat Realtime messaging & WebRTC Room-scoped realtime chat and 8-way peer-to-peer video: JWT-verified Socket.IO identity, a g",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 32,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "06 / 2025 Full-stack \u00b7 Backend Yap Chat Realtime messaging & WebRTC Room-scoped realtime chat and 8-way peer-to-peer video: JWT-verified Socket.IO identity, a g",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 33,
+        "tag": "a",
+        "text": "Scribb",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "07 / 2026 AI \u00b7 Full-stack \u00b7 Backend Scribb Creative platform & journal AI A deployed [key] and journal platform with tactile page turns, public creator pro",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 34,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "07 / 2026 AI \u00b7 Full-stack \u00b7 Backend Scribb Creative platform & journal AI A deployed [key] and journal platform with tactile page turns, public creator pro",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 35,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "07 / 2026 AI \u00b7 Full-stack \u00b7 Backend Scribb Creative platform & journal AI A deployed [key] and journal platform with tactile page turns, public creator pro",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 36,
+        "tag": "a",
+        "text": "KOE (\u58f0)",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "08 / 2026 AI \u00b7 Backend KOE (\u58f0) Voice agent & workspace Gemini Live voice calls, chat and voice notes over one FastAPI tool registry. GitHub, Calendar, Docs, She",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 37,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "08 / 2026 AI \u00b7 Backend KOE (\u58f0) Voice agent & workspace Gemini Live voice calls, chat and voice notes over one FastAPI tool registry. GitHub, Calendar, Docs, She",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 38,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "08 / 2026 AI \u00b7 Backend KOE (\u58f0) Voice agent & workspace Gemini Live voice calls, chat and voice notes over one FastAPI tool registry. GitHub, Calendar, Docs, She",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 39,
+        "tag": "a",
+        "text": "Shiori",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "09 / 2026 Backend Shiori Go server hardening A security-hardened fork of a Go/Echo media server: audited ~300 routes, closed a critical unauthenticated network ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 40,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "09 / 2026 Backend Shiori Go server hardening A security-hardened fork of a Go/Echo media server: audited ~300 routes, closed a critical unauthenticated network ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 41,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "09 / 2026 Backend Shiori Go server hardening A security-hardened fork of a Go/Echo media server: audited ~300 routes, closed a critical unauthenticated network ",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 42,
+        "tag": "a",
+        "text": "Forcaster",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "10 / 2025 Full-stack Forcaster Weather interface A minimal weather client: OpenWeather data through a thin Axios layer, 5-day and 24-hour forecasts in expandabl",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 43,
+        "tag": "a",
+        "text": "Read case study \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "10 / 2025 Full-stack Forcaster Weather interface A minimal weather client: OpenWeather data through a thin Axios layer, 5-day and 24-hour forecasts in expandabl",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 44,
+        "tag": "a",
+        "text": "Live site \u2197",
+        "type": null,
+        "state": null,
+        "region": "section: Projects.",
+        "row": "10 / 2025 Full-stack Forcaster Weather interface A minimal weather client: OpenWeather data through a thin Axios layer, 5-day and 24-hour forecasts in expandabl",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 45,
+        "tag": "a",
+        "text": "Let's talk\u2197",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "Let's talk\u2197",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 46,
+        "tag": "a",
+        "text": "[email]",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "[email]",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 47,
+        "tag": "a",
+        "text": "GitHub",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "GitHub",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 48,
+        "tag": "a",
+        "text": "Write a message",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "Write a message",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 49,
+        "tag": "a",
+        "text": "LinkedIn",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "LinkedIn",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 50,
+        "tag": "a",
+        "text": "R\u00e9sum\u00e9",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "R\u00e9sum\u00e9",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 51,
+        "tag": "a",
+        "text": "X",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "X",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 52,
+        "tag": "a",
+        "text": "Hashnode",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": "Hashnode",
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      },
+      {
+        "id": 53,
+        "tag": "a",
+        "text": "Back to top",
+        "type": null,
+        "state": null,
+        "region": null,
+        "row": null,
+        "in_view": false,
+        "occluded": null,
+        "scroll_container_id": null
+      }
+    ],
+    "text": "01.Index 02.Projects 03.About Contact The complete collection / 10 Projects. From AI agents and retrieval to realtime services and full-stack applications. Explore the work, the engineering decisions, and the products you can try. All projects10 AI6 ML & search1 Full-stack5 Backend7 10 of 10 projects 01 / 2026 AI \u00b7 Backend Walkthru AI agent platform A LangGraph browser agent that drives real user journeys in your own Chrome, backed by a stateless FastAPI API, a durable Postgres job queue, 18 deterministic scanners and a 24-tool remote MCP server. 711 API tests. Python / FastAPI / LangGraph / LangSmith / PostgreSQL Read case study \u2197Live site \u2197 02 / 2026 Full-stack \u00b7 Backend TripVerse Agentic planner Two LangGraph planning graphs writing into one normalized trip document. Budget, routing cost and day capacity are deterministic code; models only propose. Streamed over FastAPI with a Groq \u2192 Groq \u2192 Gemini fallback chain and 188 backend tests. LangGraph / FastAPI / PostgreSQL / SQLAlchemy / asyncpg Read case study \u2197Live site \u2197 03 / 2026 AI SkyGuide AI Distributed realtime system React, an Express 5 gateway and a private FastAPI astronomy engine. Vectorised scoring of 13,311 deep-sky objects for your exact telescope and sky, and live telescope guidance over a 20 Hz WebSocket stream with a hysteresis state machine. FastAPI / Astropy / Skyfield / NumPy / Express 5 Read case study \u2197Live site \u2197 04 / 2026 AI \u00b7 ML & search Neuron Multimodal retrieval & RAG Text, image and audio fused into one CLIP query vector, re-ranked by a weighted blend of BM25, dense and visual similarity, with location-aware RAG that cites the exact page and line \u2014 and degrades gracefully when a model is missing. Python / FastAPI / CLIP / Whisper / BLIP Read case study \u2197 05 / 2026 AI \u00b7 Full-stack \u00b7 Backend Claimwise AI-assisted claims workflow A health insurance claims prototype that reads documents, prepares a reviewable claim pack, and tracks the outcome. Gemini extracts facts; FastAPI and LangGraph keep approvals, mock submissions, and payment checks tied to the case. React / Vite / Python / FastAPI / LangGraph Read case study \u2197Live site \u2197 06 / 2025 Full-stack \u00b7 Backend Yap Chat Realtime messaging & WebRTC Room-scoped realtime chat and 8-way peer-to-peer video: JWT-verified Socket.IO identity, a glare-free WebRTC mesh where media never touches the server, and 35/35 tests passing against a live server. Node.js / Express 5 / Socket.IO / WebRTC / MongoDB Read case study \u2197Live site \u2197 07 / 2026 AI \u00b7 Full-stack \u00b7 Backend Scribb Creative platform & journal AI A deployed sketchbook and journal platform with tactile page turns, public creator profiles and a private-journal AI companion. React, Express and FastAPI share a Postgres data model with versioned saves and owner-scoped retrieval. React / TypeScript / Express / PostgreSQL / Neon / Python Read case study \u2197Live site \u2197 08 / 2026 AI \u00b7 Backend KOE (\u58f0) Voice agent & workspace Gemini Live voice calls, chat and voice notes over one FastAPI tool registry. GitHub, Calendar, Docs, Sheets and Notion workflows share a persisted approval gate; an exclusive audio coordinator keeps Spotify and conversations from competing. Python / FastAPI / Gemini Live / PostgreSQL / Neon / React Read case study \u2197Live site \u2197 09 / 2026 Backend Shiori Go server hardening A security-hardened fork of a Go/Echo media server: audited ~300 routes, closed a critical unauthenticated network exposure, added per-IP rate limiting, lockout and a strict CSP, and runs sandboxed JavaScript providers with automatic failover. 23/23 attack probes pass. Go / Echo / GORM / SQLite / WebSockets Read case study \u2197Live site \u2197 10 / 2025 Full-stack Forcaster Weather interface A minimal weather client: OpenWeather data through a thin Axios layer, 5-day and 24-hour forecasts in expandable views, and a backdrop that follows the conditions. React / Vite / Tailwind / OpenWeather / Axios Read case study \u2197Live site \u2197 Let's talk\u2197 [email] Write a message R\u00e9sum\u00e9 ElsewhereGitHub LinkedIn X Hashnode How to reach meFastest way to reach me is email. LinkedIn works too \u2014 I check it daily. Hiring for backend, platform or AI engineering? I reply within a day. LocalKolkata, India \u00b7 15:25 Open to backend, AI and platform engineering internships and full-time roles \u2014 remote or on-site. \u00a9 2026 Rohit Maity 01Paper 02Ledger 03Signal 04Blueprint 05Dial 7 visitors \u00b7 8 visits Theme 02 / 05",
+    "errors": [],
+    "notices": [
+      "10 of 10 projects"
+    ],
+    "note": null,
+    "diagnostics": {
+      "captured_at": "2026-11-13T09:55:54.129000Z",
+      "accessibility": {
+        "status": "complete",
+        "total": 1,
+        "issues": [
+          {
+            "rule": "color-contrast",
+            "severity": "high",
+            "message": "Elements must meet minimum color contrast ratio thresholds",
+            "target": "p:nth-child(3) > .dim"
+          }
+        ]
+      },
+      "web_vitals": {
+        "lcp_ms": 944,
+        "cls": null,
+        "inp_ms": null
+      }
+    },
+    "scroll_pct": 0,
+    "at_end": false,
+    "revision": "dbfab1e0-47c6-45ed-a954-8c031cfa6c6d",
+    "elements_truncated": false,
+    "candidate_limit_reached": false,
+    "omitted_elements": 0,
+    "context_truncated": true,
+    "navigation_version": 3,
+    "scroll_containers": [
+      {
+        "top": 0.0,
+        "left": 0.0,
+        "id": 0,
+        "label": "Page",
+        "scroll_height": 5189.0,
+        "client_height": 804.0,
+        "scroll_width": 1247.0,
+        "client_width": 1262.0,
+        "in_view": true,
+        "occluded": false,
+        "at_start": true,
+        "at_end": false,
+        "can_up": false,
+        "can_down": true,
+        "can_left": false,
+        "can_right": false
+      }
+    ],
+    "scroll_containers_truncated": false,
+    "executor_result": null
+  },
+  "first_text": "01.Index 02.Projects 03.About Contact (Kolkata, India) A. Backend & AI Engineer Backend engineer first. I design the parts that keep a product standing \u2014 service boundaries, queues, caches, rate limits, auth \u2014 and I build AI into those systems, not around them. I've shipped a three-service distributed system with a 20 Hz realtime loop, a WebRTC mesh verified against a live server, hybrid multimodal retrieval with cited answers, and LangGraph agents with checkpointed state, durable Postgres queues, circuit-broken model chains and LangSmith evals. Computer Science (IoT, Cybersecurity & Blockchain) at Heritage Institute of Technology, CGPA 9.02. Smart India Hackathon 2025 national finalist. Download r\u00e9sum\u00e9 More about me \u2197 Currently going deep on (2026) AI agent platform (2026) Agentic planner (2026) Distributed realtime system (2026) Multimodal retrieval & RAG (2026) AI-assisted claims workflow View all 10 projects Let's talk\u2197 [email] Write a message R\u00e9sum\u00e9 ElsewhereGitHub LinkedIn X Hashnode How to reach meFastest way to reach me is email. LinkedIn works too \u2014 I check it daily. Hiring for backend, platform or AI engineering? I reply within a day. LocalKolkata, India \u00b7 15:24 Open to backend, AI and platform engineering internships and full-time roles \u2014 remote or on-site. \u00a9 2026 Rohit Maity Theme 02 / 05",
+  "steps": [
+    {
+      "provider": "llm",
+      "thought": "I need to go to the Projects page, so I'll click the '02.Projects' link in the navigation.",
+      "action": "click",
+      "target_id": 2,
+      "text": null,
+      "scroll_container_id": null,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "url_changed",
+      "wait_timeout_ms": 2000,
+      "confusion": 0,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/",
+      "scroll_pct": 0,
+      "observation_revision": "fc4c2008-be84-48b8-a3a9-f7eec1f592ad",
+      "target_label": "02.Projects",
+      "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "notices_after": [
+        "10 of 10 projects"
+      ],
+      "evidence": {
+        "screenshot_path": "df76f76f5ab4435cbd29375459d577f9/step-01.jpg",
+        "captured_at": "2026-11-13T09:55:09.925395Z",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+        "width": 1262,
+        "height": 804,
+        "aim_path": "df76f76f5ab4435cbd29375459d577f9/step-01-aim.jpg",
+        "pointer": {
+          "x": 0.6452493561806656,
+          "y": 0.028228000621890546
+        },
+        "label": "Clicked \"02.Projects\""
+      },
+      "diagnostics": {
+        "captured_at": "2026-11-13T09:55:08.447000Z",
+        "accessibility": {
+          "status": "complete",
+          "total": 1,
+          "issues": [
+            {
+              "rule": "color-contrast",
+              "severity": "high",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "target": "p:nth-child(3) > .dim"
+            }
+          ]
+        },
+        "web_vitals": {
+          "lcp_ms": 976,
+          "cls": null,
+          "inp_ms": null
+        }
+      }
+    },
+    {
+      "provider": "llm",
+      "thought": "I\u2019ll open the first project detail by clicking the link for project 01 / 2026 AI \u00b7 Backend Walkthru.",
+      "action": "click",
+      "target_id": 10,
+      "text": null,
+      "scroll_container_id": 0,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "url_changed",
+      "wait_timeout_ms": 2000,
+      "confusion": 0,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "scroll_pct": 0,
+      "observation_revision": "80d63159-76a4-4d2e-8c29-e22abc059fb1",
+      "target_label": "Walkthru",
+      "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+      "evidence": {
+        "screenshot_path": "df76f76f5ab4435cbd29375459d577f9/step-02.jpg",
+        "captured_at": "2026-11-13T09:55:20.818373Z",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+        "width": 1262,
+        "height": 804,
+        "aim_path": "df76f76f5ab4435cbd29375459d577f9/step-02-aim.jpg",
+        "pointer": {
+          "x": 0.0821488708399366,
+          "y": 0.4994169776119403
+        },
+        "label": "Clicked \"Walkthru\""
+      },
+      "diagnostics": {
+        "captured_at": "2026-11-13T09:55:19.476000Z",
+        "accessibility": {
+          "status": "complete",
+          "total": 1,
+          "issues": [
+            {
+              "rule": "color-contrast",
+              "severity": "high",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "target": ".panel-in > .dim"
+            }
+          ]
+        },
+        "web_vitals": {
+          "lcp_ms": null,
+          "cls": 0.028,
+          "inp_ms": null
+        }
+      }
+    },
+    {
+      "provider": "llm",
+      "thought": "Need to see project links; scroll down.",
+      "action": "scroll",
+      "target_id": null,
+      "text": null,
+      "scroll_container_id": 0,
+      "scroll_direction": "down",
+      "scroll_distance": 500,
+      "wait_condition": "settled",
+      "wait_timeout_ms": 1000,
+      "confusion": 0,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+      "scroll_pct": 0,
+      "observation_revision": "7e56b333-3e19-437a-b1a6-efa05fad6d32",
+      "scroll_position": {
+        "top": 0.0,
+        "left": 0.0
+      },
+      "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+      "executor_result": {
+        "action": "scroll",
+        "status": "moved",
+        "container_id": 0,
+        "before": {
+          "top": 0.0,
+          "left": 0.0
+        },
+        "after": {
+          "top": 500.0,
+          "left": 0.0
+        },
+        "elapsed_ms": 1
+      },
+      "evidence": {
+        "screenshot_path": "df76f76f5ab4435cbd29375459d577f9/step-03.jpg",
+        "captured_at": "2026-11-13T09:55:28.095153Z",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+        "width": 1262,
+        "height": 804,
+        "label": "Scrolled down"
+      },
+      "diagnostics": {
+        "captured_at": "2026-11-13T09:55:27.109000Z",
+        "accessibility": {
+          "status": "complete",
+          "total": 1,
+          "issues": [
+            {
+              "rule": "color-contrast",
+              "severity": "high",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "target": ".panel-in > .dim"
+            }
+          ]
+        },
+        "web_vitals": {
+          "lcp_ms": 5324,
+          "cls": 0.028,
+          "inp_ms": null
+        }
+      }
+    },
+    {
+      "provider": "llm",
+      "thought": "We need a project detail page whose URL contains '/dial/work.html'. The current page is a work page but under '/ledger/'. Let's go back to the Projects list and pick another project that likely uses the expected path.",
+      "action": "click",
+      "target_id": 2,
+      "text": null,
+      "scroll_container_id": null,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "url_changed",
+      "wait_timeout_ms": 2000,
+      "confusion": 0,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru",
+      "scroll_pct": 11,
+      "observation_revision": "7a2ac92e-9201-4395-93b2-26efc26a52de",
+      "target_label": "02.Projects",
+      "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "notices_after": [
+        "10 of 10 projects"
+      ],
+      "evidence": {
+        "screenshot_path": "df76f76f5ab4435cbd29375459d577f9/step-04.jpg",
+        "captured_at": "2026-11-13T09:55:37.648708Z",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+        "width": 1262,
+        "height": 804,
+        "aim_path": "df76f76f5ab4435cbd29375459d577f9/step-04-aim.jpg",
+        "pointer": {
+          "x": 0.6452493561806656,
+          "y": 0.028228000621890546
+        },
+        "label": "Clicked \"02.Projects\""
+      },
+      "diagnostics": {
+        "captured_at": "2026-11-13T09:55:36.748000Z",
+        "accessibility": {
+          "status": "complete",
+          "total": 1,
+          "issues": [
+            {
+              "rule": "color-contrast",
+              "severity": "high",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "target": "p:nth-child(3) > .dim"
+            }
+          ]
+        },
+        "web_vitals": {
+          "lcp_ms": 944,
+          "cls": null,
+          "inp_ms": null
+        }
+      }
+    },
+    {
+      "provider": "llm",
+      "thought": "The previous URL path /ledger/ didn't match the required dial theme. Let's switch themes using the Theme button.",
+      "action": "click",
+      "target_id": 11,
+      "text": null,
+      "scroll_container_id": null,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "settled",
+      "wait_timeout_ms": 1000,
+      "confusion": 0,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "scroll_pct": 0,
+      "observation_revision": "0ef40a0c-a120-41c6-bbff-02e8e5ef680b",
+      "target_label": "Theme 02 / 05",
+      "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "notices_after": [
+        "10 of 10 projects"
+      ],
+      "evidence": {
+        "screenshot_path": "df76f76f5ab4435cbd29375459d577f9/step-05.jpg",
+        "captured_at": "2026-11-13T09:55:55.316517Z",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+        "width": 1262,
+        "height": 804,
+        "aim_path": "df76f76f5ab4435cbd29375459d577f9/step-05-aim.jpg",
+        "pointer": {
+          "x": 0.9282884310618067,
+          "y": 0.9598880597014925
+        },
+        "label": "Clicked \"Theme 02 / 05\""
+      },
+      "diagnostics": {
+        "captured_at": "2026-11-13T09:55:54.129000Z",
+        "accessibility": {
+          "status": "complete",
+          "total": 1,
+          "issues": [
+            {
+              "rule": "color-contrast",
+              "severity": "high",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "target": "p:nth-child(3) > .dim"
+            }
+          ]
+        },
+        "web_vitals": {
+          "lcp_ms": 944,
+          "cls": null,
+          "inp_ms": null
+        }
+      }
+    },
+    {
+      "provider": "llm",
+      "thought": "I am on the projects page and need to open a project detail page. I will click the 'Read case study' link for the first project to fulfill the objective. (Walkthru target unavailable in the current viewport.)",
+      "action": "give_up",
+      "target_id": null,
+      "text": null,
+      "scroll_container_id": null,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "settled",
+      "wait_timeout_ms": 1000,
+      "confusion": 2,
+      "progress": 0,
+      "url": "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+      "scroll_pct": 0,
+      "code": "agent_lost",
+      "unresolved_checkpoints": [
+        "Open the Projects page.",
+        "Open a project detail page."
+      ],
+      "observation_revision": null
+    }
+  ],
+  "status": "agent_lost",
+  "tokens": 34976,
+  "plan": {
+    "intent": "Find the projects section and open one project detail on this website.",
+    "feasible": true,
+    "refusal": null,
+    "checkpoints": [
+      {
+        "description": "Open the Projects page.",
+        "kind": "navigation",
+        "url_contains": "/dial/projects.html",
+        "text_contains": null
+      },
+      {
+        "description": "Open a project detail page.",
+        "kind": "navigation",
+        "url_contains": "/dial/work.html",
+        "text_contains": null
+      }
+    ]
+  },
+  "plan_done": 0,
+  "checkpoint_evidence": [],
+  "start_url": "https://portfolio2-mu-inky.vercel.app/ledger/",
+  "assertion": null
+}

@@ -49,6 +49,25 @@
       "port": 8010
     },
     {
+      "name": "pages-emu",
+      "runtimeExecutable": "C:/Users/Rohit Maity/Desktop/coding/Webdev/project/trustdraft/apps/api/.venv/Scripts/python",
+      "runtimeArgs": [
+        "C:/Users/ROHITM~1/AppData/Local/Temp/claude/942c07a55266590d/f3e7b9c8-0b42-40ce-81a4-4ff1571f3b21/scratchpad/pages_emu.py",
+        "apps/web/dist",
+        "8120"
+      ],
+      "port": 8120
+    },
+    {
+      "name": "runner",
+      "runtimeExecutable": "C:/Users/Rohit Maity/Desktop/coding/Webdev/project/trustdraft/apps/api/.venv/Scripts/python",
+      "runtimeArgs": [
+        "-m",
+        "app.runner"
+      ],
+      "cwd": "apps/api"
+    },
+    {
       "name": "fixtures",
       "runtimeExecutable": "apps/api/.venv/Scripts/python",
       "runtimeArgs": [

@@ -1,0 +1,1927 @@
+{
+  "id": "6cf033c601a74461ab9bad048bb07d07",
+  "site": "https://www.scribb.xyz/",
+  "goal": "Find what Scribb offers and open its pricing or plans page.",
+  "persona": "first_timer",
+  "tier": "paid",
+  "logged_in": false,
+  "status": "agent_lost",
+  "steps": [
+    {
+      "url": "https://www.scribb.xyz/",
+      "text": null,
+      "action": "click",
+      "thought": "I'm impatient, just click the Explore button to see what Scribb offers.",
+      "evidence": {
+        "label": "Clicked \"Explore\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.4500173335974643,
+          "y": 0.05907960199004975
+        },
+        "aim_path": "6cf033c601a74461ab9bad048bb07d07/step-01-aim.jpg",
+        "result_url": "https://www.scribb.xyz/explore",
+        "captured_at": "2026-11-13T09:03:59.153491Z",
+        "screenshot_path": "6cf033c601a74461ab9bad048bb07d07/step-01.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 4,
+      "result_url": "https://www.scribb.xyz/explore",
+      "scroll_pct": 100,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 0.126,
+          "inp_ms": null,
+          "lcp_ms": 5356
+        },
+        "captured_at": "2026-11-13T09:03:58.019000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Explore",
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "checkpoint_evidence": {
+        "url": "https://www.scribb.xyz/explore",
+        "step": 1,
+        "signal": "navigation",
+        "matched": "/explore",
+        "checkpoint": 1
+      },
+      "scroll_container_id": null,
+      "observation_revision": "36b0fa80-86b7-4d78-8a28-fe19328c8398"
+    },
+    {
+      "url": "https://www.scribb.xyz/explore",
+      "text": null,
+      "action": "scroll",
+      "thought": "I need to find a pricing or plans link; it's probably lower on the page or in the footer, so I'll scroll down.",
+      "evidence": {
+        "label": "Scrolled down",
+        "width": 1262,
+        "height": 804,
+        "result_url": "https://www.scribb.xyz/explore",
+        "captured_at": "2026-11-13T09:04:04.207853Z",
+        "screenshot_path": "6cf033c601a74461ab9bad048bb07d07/step-02.jpg"
+      },
+      "progress": 1,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 0,
+      "result_url": "https://www.scribb.xyz/explore",
+      "scroll_pct": 0,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 0.126,
+          "inp_ms": null,
+          "lcp_ms": 5356
+        },
+        "captured_at": "2026-11-13T09:04:03.095000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "wait_condition": "settled",
+      "executor_result": {
+        "after": {
+          "top": 600.0,
+          "left": 0.0
+        },
+        "action": "scroll",
+        "before": {
+          "top": 0.0,
+          "left": 0.0
+        },
+        "status": "moved",
+        "elapsed_ms": 2,
+        "container_id": 0
+      },
+      "scroll_distance": 600,
+      "scroll_position": {
+        "top": 0.0,
+        "left": 0.0
+      },
+      "wait_timeout_ms": 1000,
+      "scroll_direction": "down",
+      "scroll_container_id": 0,
+      "observation_revision": "716d19c6-aea2-4de2-9d05-221669697702"
+    },
+    {
+      "url": "https://www.scribb.xyz/explore",
+      "code": "agent_lost",
+      "text": null,
+      "action": "give_up",
+      "thought": "I need to get to the pricing page. The Explore page doesn't show a pricing link, so I'll try the About page first. (Walkthru target unavailable in the current viewport.)",
+      "evidence": {
+        "label": "Stopped here",
+        "width": 1262,
+        "height": 804,
+        "result_url": "https://www.scribb.xyz/explore",
+        "captured_at": "2026-11-13T09:04:09.395414Z",
+        "screenshot_path": "6cf033c601a74461ab9bad048bb07d07/step-03.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 2,
+      "target_id": null,
+      "scroll_pct": 91,
+      "wait_condition": "settled",
+      "scroll_distance": null,
+      "wait_timeout_ms": 1000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": null,
+      "unresolved_checkpoints": [
+        "Open the pricing or plans page."
+      ]
+    }
+  ],
+  "created_at": "2026-11-13T09:03:39.327952+00:00",
+  "updated_at": "2026-11-13T09:04:32.219398+00:00",
+  "kind": "test",
+  "report": {
+    "geo": {
+      "band": "excellent",
+      "agent": {
+        "forms": 0,
+        "fields": 0,
+        "webmcp": false,
+        "captcha": false,
+        "named_fields": 0,
+        "search_action": false
+      },
+      "fixes": [
+        {
+          "id": "indexnow",
+          "code": "8215e37bda0444e8a8d9d3f3e04b69a8\n",
+          "file": "public/8215e37bda0444e8a8d9d3f3e04b69a8.txt",
+          "note": "Publish at https://www.scribb.xyz/8215e37bda0444e8a8d9d3f3e04b69a8.txt. Keep this key for future URL submissions. IndexNow announces changes to supporting search engines; it does not guarantee indexing.",
+          "title": "Optional: add an IndexNow key file"
+        },
+        {
+          "id": "bing",
+          "code": "https://www.scribb.xyz/sitemap.xml",
+          "file": "Bing Webmaster Tools",
+          "note": "Verify this site in Bing Webmaster Tools, then submit the sitemap URL above. This is a manual owner step, not an automatic submission.",
+          "title": "Optional: submit the sitemap to Bing Webmaster Tools"
+        }
+      ],
+      "notes": [
+        "robots.txt blocks AI training crawlers (GPTBot, Google-Extended, CCBot, anthropic-ai). That is a choice and does not affect AI search answers.",
+        "Not blocked for an AI search user agent. Edge networks verify real crawlers by IP, so this cannot prove access.",
+        "No wikidata entity with this domain was found. This is an advisory identity signal, not a ranking requirement."
+      ],
+      "score": 95,
+      "trust": {
+        "identity": true,
+        "social_proof": false,
+        "external_sources": false,
+        "name_consistency": true
+      },
+      "ai_view": "Scribb: sketchbooks and journals you can turn the pages of Scribb is a free home for sketchbooks and journals. Fill a tactile digital book with your drawings, paintings and words, choose its cover and binding, then keep it private or publish it so anyone can turn its pages. What you can make Sketchbooks with up to 40 artworks, on single",
+      "ai_words": 162,
+      "entities": {
+        "wikidata": {
+          "status": "no_match"
+        }
+      },
+      "discovery": {
+        "/llms-full.txt": false,
+        "/.well-known/ai.txt": false
+      },
+      "categories": [
+        {
+          "id": "access",
+          "max": 25,
+          "label": "AI crawler access",
+          "earned": 25
+        },
+        {
+          "id": "content",
+          "max": 20,
+          "label": "Content before JavaScript",
+          "earned": 20
+        },
+        {
+          "id": "schema",
+          "max": 15,
+          "label": "Structured data",
+          "earned": 15
+        },
+        {
+          "id": "answers",
+          "max": 15,
+          "label": "Easy to quote",
+          "earned": 14
+        },
+        {
+          "id": "entity",
+          "max": 10,
+          "label": "Name and trust",
+          "earned": 8
+        },
+        {
+          "id": "meta",
+          "max": 10,
+          "label": "Title and description",
+          "earned": 10
+        },
+        {
+          "id": "llms",
+          "max": 3,
+          "label": "llms.txt",
+          "earned": 3
+        },
+        {
+          "id": "discovery",
+          "max": 2,
+          "label": "AI discovery files (low impact)",
+          "earned": 0
+        }
+      ],
+      "citability": [
+        {
+          "rag": {
+            "answer_first": false,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": null
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/explore",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        },
+        {
+          "rag": {
+            "answer_first": false,
+            "question_headings": true,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/about/",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-03"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@zaxx",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@ravidayama596",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-06"
+        },
+        {
+          "rag": {
+            "answer_first": true,
+            "question_headings": false,
+            "standalone_sections": true
+          },
+          "url": "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c",
+          "score": 25,
+          "signals": {
+            "definition": true,
+            "attributed_quote": false,
+            "comparison_table": false,
+            "statistics_with_sources": false
+          },
+          "last_updated": "2026-11-11"
+        }
+      ],
+      "fixes_total": 2
+    },
+    "model": "Free models (gpt-oss-120b and backups)",
+    "pages": {
+      "seo:seo.thin_content": [
+        "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+        "https://www.scribb.xyz/@ravidayama596"
+      ],
+      "seo:seo.image.alt_missing": [
+        "https://www.scribb.xyz/about/"
+      ],
+      "security:sec.no_caa_record": [
+        "https://www.scribb.xyz/"
+      ],
+      "seo:seo.page_title_is_too_long": [
+        "https://www.scribb.xyz/@ravidayama596"
+      ],
+      "geo:geo.no_plain_answer_near_the_top": [
+        "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97"
+      ],
+      "seo:seo.meta_description_is_too_short": [
+        "https://www.scribb.xyz/@ravidayama596"
+      ],
+      "security:sec.csp_does_not_restrict_scripts": [
+        "https://www.scribb.xyz/",
+        "https://www.scribb.xyz/explore",
+        "https://www.scribb.xyz/about/",
+        "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+        "https://www.scribb.xyz/@zaxx",
+        "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+        "https://www.scribb.xyz/@ravidayama596",
+        "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+        "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+      ],
+      "geo:geo.sections_lack_an_answer_near_the_heading": [
+        "https://www.scribb.xyz/about/"
+      ],
+      "seo:seo.webapplication_rich_result_fields_are_incomplete": [
+        "https://www.scribb.xyz/"
+      ]
+    },
+    "stack": {
+      "backend": null,
+      "hosting": "vercel",
+      "evidence": {
+        "hosting": "x-vercel-id header",
+        "framework": "Vite build (/assets/index-*.js)"
+      },
+      "framework": "vite"
+    },
+    "checks": {
+      "geo": "complete",
+      "seo": "complete",
+      "security": "complete",
+      "performance": "complete",
+      "accessibility": "complete"
+    },
+    "funnel": {
+      "safe_stops": 0,
+      "errors_seen": 0,
+      "fields_typed": 0,
+      "steps_to_goal": null,
+      "first_useful_step": 2,
+      "seconds_to_first_useful": 5
+    },
+    "tokens": 10867,
+    "summary": "The journey stopped early with 2 browser actions with recorded outcomes. Journey completion was not confirmed, and no observed journey failure was established. Automated checks produced 15 findings; review their evidence and coverage separately.",
+    "version": 2,
+    "findings": [
+      {
+        "fix": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+        "kind": "performance",
+        "rule": "perf.largest_contentful_paint_is_slow",
+        "title": "Largest Contentful Paint is slow",
+        "detail": "A single browser visit observed LCP at 5356 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+        "evidence": "step 1: https://www.scribb.xyz/",
+        "severity": "high"
+      },
+      {
+        "fix": "Reserve space for images, embeds and dynamic content before they load.",
+        "kind": "performance",
+        "rule": "perf.layout_shifts_exceed_the_core_web_vitals_target",
+        "title": "Layout shifts exceed the Core Web Vitals target",
+        "detail": "A single browser visit observed CLS at 0.126; the good threshold is 0.1 . This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+        "evidence": "step 1: https://www.scribb.xyz/",
+        "severity": "medium"
+      },
+      {
+        "fix": "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.",
+        "kind": "seo",
+        "rule": "seo.image.alt_missing",
+        "title": "Images have no alt text",
+        "detail": "1 of 1 images on https://www.scribb.xyz/about/ have no alt text. Images without alt text are invisible to search engines and screen readers.",
+        "evidence": "/brand/scribb-mark.png",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add script-src 'self' (plus the hosts you load scripts from), or default-src 'self'.",
+        "kind": "security",
+        "rule": "sec.csp_does_not_restrict_scripts",
+        "title": "CSP does not restrict scripts",
+        "detail": "The policy has neither script-src nor default-src, so an injected script runs as if there were no CSP. Found on 9 of 9 audited pages.",
+        "evidence": "9 pages: https://www.scribb.xyz/, https://www.scribb.xyz/explore, https://www.scribb.xyz/about/ +6 more",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add one TXT record to the domain listing your email provider, for example v=spf1 include:_spf.google.com ~all (use your provider's value).",
+        "kind": "security",
+        "rule": "sec.no_spf_record",
+        "title": "No SPF record",
+        "detail": "scribb.xyz does not say which servers may send its email, so signup, verification and password-reset emails are more likely to land in spam or be rejected.",
+        "evidence": "TXT scribb.xyz",
+        "severity": "medium"
+      },
+      {
+        "fix": "Put the most important words first. Shortening is optional.",
+        "kind": "seo",
+        "rule": "seo.page_title_is_too_long",
+        "title": "Page title is too long",
+        "detail": "The title is 67 characters. Advisory: there is no length limit, but long titles are shortened in search results to fit the screen.",
+        "evidence": "ravidayama596 (@ravidayama596) \u00b7 Sketchbooks and journals on Scribb",
+        "severity": "low"
+      },
+      {
+        "fix": "Say what the page offers and why to visit. There is no required length.",
+        "kind": "seo",
+        "rule": "seo.meta_description_is_too_short",
+        "title": "Meta description is too short",
+        "detail": "49 characters. Advisory: a very short description is often replaced with text from the page.",
+        "evidence": "Anhedonia 0 sketchbooks \u00b7 1 journal \u00b7 1 follower.",
+        "severity": "low"
+      },
+      {
+        "fix": "Add useful content, merge the page into a stronger one, or mark it noindex.",
+        "kind": "seo",
+        "rule": "seo.thin_content",
+        "title": "Thin content",
+        "detail": "About 95 words of text before JavaScript runs. Pages this short rarely rank. Found on 2 of 9 audited pages.",
+        "evidence": "2 pages: https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97, https://www.scribb.xyz/@ravidayama596",
+        "severity": "low"
+      },
+      {
+        "fix": "Add the missing properties with values that match the visible page, then use Google's Rich Results Test.",
+        "kind": "seo",
+        "rule": "seo.webapplication_rich_result_fields_are_incomplete",
+        "title": "WebApplication rich-result fields are incomplete",
+        "detail": "The JSON-LD omits Google's required properties: review or aggregateRating. This may prevent the rich result.",
+        "evidence": "https://www.scribb.xyz/",
+        "severity": "low"
+      },
+      {
+        "fix": "Open with a 25 to 50 word paragraph that says what it is, who it is for and one concrete number.",
+        "kind": "geo",
+        "rule": "geo.no_plain_answer_near_the_top",
+        "title": "No plain answer near the top",
+        "detail": "None of the first paragraphs is a full sentence or two about what the page offers. Assistants quote early, self-contained paragraphs.",
+        "evidence": "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_well_known_ai_txt",
+        "title": "No /.well-known/ai.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://www.scribb.xyz/.well-known/ai.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_llms_full_txt",
+        "title": "No /llms-full.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://www.scribb.xyz/llms-full.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Start important sections with a 15 to 100 word paragraph that answers the heading.",
+        "kind": "geo",
+        "rule": "geo.sections_lack_an_answer_near_the_heading",
+        "title": "Sections lack an answer near the heading",
+        "detail": "Long sections do not open with a self-contained answer.",
+        "evidence": "https://www.scribb.xyz/about/",
+        "severity": "low"
+      },
+      {
+        "fix": "Add a CAA record for the authority you use, for example: 0 issue \"letsencrypt.org\".",
+        "kind": "security",
+        "rule": "sec.no_caa_record",
+        "title": "No CAA record",
+        "detail": "scribb.xyz does not name which certificate authorities may issue certificates for it, so a mistake or attack at any authority can produce a valid certificate.",
+        "evidence": "CAA scribb.xyz",
+        "severity": "low"
+      },
+      {
+        "fix": "Add MX records for your email provider, or send from an address on a domain that receives mail.",
+        "kind": "security",
+        "rule": "sec.domain_has_no_mx_record",
+        "title": "Domain has no MX record",
+        "detail": "scribb.xyz cannot receive email, so replies to your signup and support emails bounce.",
+        "evidence": "MX scribb.xyz",
+        "severity": "low"
+      }
+    ],
+    "verified": false,
+    "authority": {
+      "mode": "prelaunch_advisory",
+      "basis": "Built from the audited public pages' own copy. No backlink index, mention search, publisher list or outreach was used, and none is invented.",
+      "rules": [
+        "Nothing here sends email, posts, registers profiles or places links. Every step is yours to take, or to scope separately.",
+        "Drafts and media briefs need a factual and rights review before use. Building a tool or producing a video is separate work.",
+        "Backlinks, GEO readiness and AI citations are different things. Links do not guarantee an AI citation or a higher rank."
+      ],
+      "tactics": [
+        {
+          "id": "lost_links",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Recover lost links",
+          "effort": "low",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A backlink history export with source URL, target URL and the date each link was last seen."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A backlink history export with source URL, target URL and the date each link was last seen."
+          ],
+          "reader_benefit": "Readers who follow an old link reach a working page instead of an error."
+        },
+        {
+          "id": "unlinked_mentions",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Unlinked mentions",
+          "effort": "low",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A dated page on another site that names your product without linking to it."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A dated page on another site that names your product without linking to it."
+          ],
+          "reader_benefit": "Readers of that page can reach the thing it already mentions. An AI answer that mentions you is not such a page."
+        },
+        {
+          "id": "free_tool",
+          "brief": "A small free tool that does one step of \"Scribb: sketchbooks and journals you can turn the pages of\" in the browser, on its own page linked from https://www.scribb.xyz/.",
+          "state": "advisory",
+          "title": "Free tools",
+          "effort": "high",
+          "policy": null,
+          "source": {
+            "url": "https://www.scribb.xyz/",
+            "kind": "audited_page",
+            "observed": "audited in this report"
+          },
+          "target": "https://www.scribb.xyz/",
+          "missing": [
+            "Which job to build for, and whether you can maintain it."
+          ],
+          "measurement": "Tool uses and referring pages to the tool page 90 days after launch. No rank change is promised.",
+          "prerequisites": [
+            "A job your audience repeats that a small checker, generator or converter can do.",
+            "A scope you can build and maintain.",
+            "Examples of pages where it would help readers."
+          ],
+          "reader_benefit": "Readers can try the job before signing up, and other sites gain a useful resource to point to."
+        },
+        {
+          "id": "listicle_outreach",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Listicle outreach",
+          "effort": "medium",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A real, current list of tools in your category, with its selection criteria.",
+            "True product facts that meet those criteria."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A real, current list of tools in your category, with its selection criteria.",
+            "True product facts that meet those criteria."
+          ],
+          "reader_benefit": "Readers comparing options see an accurate entry for your product."
+        },
+        {
+          "id": "competitor_links",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Competitor links",
+          "effort": "medium",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "Authorized link data for named competitors: a licensed provider or your own export.",
+            "Editorial reasons those sources would also value your product."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "Authorized link data for named competitors: a licensed provider or your own export.",
+            "Editorial reasons those sources would also value your product."
+          ],
+          "reader_benefit": "Readers of those editorial sources find another relevant option. Links are never transferred or guaranteed."
+        },
+        {
+          "id": "broken_link_building",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Broken link building",
+          "effort": "medium",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A verified dead link on a relevant page.",
+            "A working page of yours that replaces what it pointed to."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A verified dead link on a relevant page.",
+            "A working page of yours that replaces what it pointed to."
+          ],
+          "reader_benefit": "Readers who hit the dead link get a working, relevant page."
+        },
+        {
+          "id": "outdated_guides",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Fix outdated guides",
+          "effort": "medium",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A dated guide with a passage that is now wrong.",
+            "Primary evidence for the correction."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A dated guide with a passage that is now wrong.",
+            "Primary evidence for the correction."
+          ],
+          "reader_benefit": "Readers of the guide get correct, current information."
+        },
+        {
+          "id": "statistics_page",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Statistics page",
+          "effort": "high",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "Original data you own and may publish, with its method, sample size and collection dates."
+          ],
+          "measurement": "Referring pages citing the statistics page 90 days after it ships. No rank change is promised.",
+          "prerequisites": [
+            "Original data you own and may publish, with its method, sample size and collection dates."
+          ],
+          "reader_benefit": "Writers and readers get numbers they can check and cite. Walkthru never supplies or estimates the statistics."
+        },
+        {
+          "id": "reporter_outreach",
+          "brief": null,
+          "state": "prerequisite_missing",
+          "title": "Reporter outreach",
+          "effort": "medium",
+          "policy": null,
+          "source": null,
+          "target": null,
+          "missing": [
+            "A genuine open request from a writer, with its deadline.",
+            "Your consent and a factual, attributable quote."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "A genuine open request from a writer, with its deadline.",
+            "Your consent and a factual, attributable quote."
+          ],
+          "reader_benefit": "The writer's readers get an expert, attributable answer."
+        },
+        {
+          "id": "infographics",
+          "brief": "A visual summary of https://www.scribb.xyz/, one panel per section: \"What you can make\"; \"How it works\"; \"Explore\".",
+          "state": "advisory",
+          "title": "Infographics",
+          "effort": "medium",
+          "policy": null,
+          "source": {
+            "url": "https://www.scribb.xyz/",
+            "kind": "audited_page",
+            "observed": "audited in this report"
+          },
+          "target": "https://www.scribb.xyz/",
+          "missing": [
+            "A rights and accuracy review of the page's content."
+          ],
+          "measurement": "Count new referring pages to the target page 90 days after it ships, from your own analytics or a link export. No rank change is promised.",
+          "prerequisites": [
+            "Rights to every figure, logo and screenshot used.",
+            "A source for every number shown.",
+            "A text alternative that says the same thing."
+          ],
+          "reader_benefit": "Readers grasp the page's sections at a glance; other writers can reuse it with credit."
+        },
+        {
+          "id": "article_to_video",
+          "brief": "A short explainer video from https://www.scribb.xyz/, one scene per section: \"What you can make\"; \"How it works\"; \"Explore\".",
+          "state": "advisory",
+          "title": "Article to video",
+          "effort": "high",
+          "policy": null,
+          "source": {
+            "url": "https://www.scribb.xyz/",
+            "kind": "audited_page",
+            "observed": "audited in this report"
+          },
+          "target": "https://www.scribb.xyz/",
+          "missing": [
+            "Whether your audience watches video, and a production budget."
+          ],
+          "measurement": "Views, and visits from the video to the page, 90 days after publishing. No rank change is promised.",
+          "prerequisites": [
+            "Permission for anything shown or said.",
+            "An accuracy review of the script against the page.",
+            "Evidence your audience watches video."
+          ],
+          "reader_benefit": "Readers who prefer watching get the same explanation, with a link back to the page."
+        },
+        {
+          "id": "link_exchanges",
+          "brief": null,
+          "state": "not_recommended",
+          "title": "Link exchanges",
+          "effort": null,
+          "policy": "Excessive or reciprocal and three-way exchanges, automated link creation and links bought to rank are link spam under Google's policy. Paid placements must be marked rel=\"sponsored\".",
+          "source": null,
+          "target": null,
+          "missing": [],
+          "measurement": null,
+          "prerequisites": [],
+          "reader_benefit": "Link only where a page genuinely helps the reader, for its own editorial reason."
+        }
+      ],
+      "separate": {
+        "backlinks": "No link data was read for this report, so nothing here measures links you have or lost.",
+        "ai_citations": "AI citations are sampled separately with engine, prompt, date, sources and sample size. A brand mention or an answer from memory is not a citation, and a failed or missing sample is not zero visibility.",
+        "geo_readiness": "GEO readiness (its own chapter) checks whether AI crawlers can read and understand your pages."
+      },
+      "link_data": "none",
+      "policy_source": "https://developers.google.com/search/docs/essentials/spam-policies#link-spam"
+    },
+    "top_fixes": [
+      "Reduce render-blocking work and optimize the largest above-the-fold element.",
+      "Reserve space for images, embeds and dynamic content before they load.",
+      "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.",
+      "Add script-src 'self' (plus the hosts you load scripts from), or default-src 'self'.",
+      "Add one TXT record to the domain listing your email provider, for example v=spf1 include:_spf.google.com ~all (use your provider's value)."
+    ],
+    "assessment": {
+      "issues": [
+        {
+          "id": "perf.largest_contentful_paint_is_slow",
+          "actual_result": "step 1: https://www.scribb.xyz/",
+          "evidence_refs": [
+            "scanner:0"
+          ],
+          "finding_index": 0,
+          "interpretation": "A single browser visit observed LCP at 5356 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+          "observed_facts": [
+            "step 1: https://www.scribb.xyz/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same performance check (perf.largest_contentful_paint_is_slow) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "perf.layout_shifts_exceed_the_core_web_vitals_target",
+          "actual_result": "step 1: https://www.scribb.xyz/",
+          "evidence_refs": [
+            "scanner:1"
+          ],
+          "finding_index": 1,
+          "interpretation": "A single browser visit observed CLS at 0.126; the good threshold is 0.1 . This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+          "observed_facts": [
+            "step 1: https://www.scribb.xyz/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Reserve space for images, embeds and dynamic content before they load.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same performance check (perf.layo[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.image.alt_missing",
+          "actual_result": "/brand/scribb-mark.png",
+          "evidence_refs": [
+            "scanner:2"
+          ],
+          "finding_index": 2,
+          "interpretation": "1 of 1 images on https://www.scribb.xyz/about/ have no alt text. Images without alt text are invisible to search engines and screen readers.",
+          "observed_facts": [
+            "/brand/scribb-mark.png"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.image.alt_missing) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.csp_does_not_restrict_scripts",
+          "actual_result": "9 pages: https://www.scribb.xyz/, https://www.scribb.xyz/explore, https://www.scribb.xyz/about/ +6 more",
+          "evidence_refs": [
+            "scanner:3"
+          ],
+          "finding_index": 3,
+          "interpretation": "The policy has neither script-src nor default-src, so an injected script runs as if there were no CSP. Found on 9 of 9 audited pages.",
+          "observed_facts": [
+            "9 pages: https://www.scribb.xyz/, https://www.scribb.xyz/explore, https://www.scribb.xyz/about/ +6 more"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add script-src 'self' (plus the hosts you load scripts from), or default-src 'self'.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.csp_does_not_restrict_scripts) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_spf_record",
+          "actual_result": "TXT scribb.xyz",
+          "evidence_refs": [
+            "scanner:4"
+          ],
+          "finding_index": 4,
+          "interpretation": "scribb.xyz does not say which servers may send its email, so signup, verification and password-reset emails are more likely to land in spam or be rejected.",
+          "observed_facts": [
+            "TXT scribb.xyz"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add one TXT record to the domain listing your email provider, for example v=spf1 include:_spf.google.com ~all (use your provider's value).",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_spf_record) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.page_title_is_too_long",
+          "actual_result": "ravidayama596 (@ravidayama596) \u00b7 Sketchbooks and journals on Scribb",
+          "evidence_refs": [
+            "scanner:5"
+          ],
+          "finding_index": 5,
+          "interpretation": "The title is 67 characters. Advisory: there is no length limit, but long titles are shortened in search results to fit the screen.",
+          "observed_facts": [
+            "ravidayama596 (@ravidayama596) \u00b7 Sketchbooks and journals on Scribb"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Put the most important words first. Shortening is optional.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.page_title_is_too_long) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.meta_description_is_too_short",
+          "actual_result": "Anhedonia 0 sketchbooks \u00b7 1 journal \u00b7 1 follower.",
+          "evidence_refs": [
+            "scanner:6"
+          ],
+          "finding_index": 6,
+          "interpretation": "49 characters. Advisory: a very short description is often replaced with text from the page.",
+          "observed_facts": [
+            "Anhedonia 0 sketchbooks \u00b7 1 journal \u00b7 1 follower."
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Say what the page offers and why to visit. There is no required length.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.meta_description_is_too_short) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.thin_content",
+          "actual_result": "2 pages: https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97, https://www.scribb.xyz/@ravidayama596",
+          "evidence_refs": [
+            "scanner:7"
+          ],
+          "finding_index": 7,
+          "interpretation": "About 95 words of text before JavaScript runs. Pages this short rarely rank. Found on 2 of 9 audited pages.",
+          "observed_facts": [
+            "2 pages: https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97, https://www.scribb.xyz/@ravidayama596"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add useful content, merge the page into a stronger one, or mark it noindex.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.thin_content) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.webapplication_rich_result_fields_are_incomplete",
+          "actual_result": "https://www.scribb.xyz/",
+          "evidence_refs": [
+            "scanner:8"
+          ],
+          "finding_index": 8,
+          "interpretation": "The JSON-LD omits Google's required properties: review or aggregateRating. This may prevent the rich result.",
+          "observed_facts": [
+            "https://www.scribb.xyz/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add the missing properties with values that match the visible page, then use Google's Rich Results Test.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.weba[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_plain_answer_near_the_top",
+          "actual_result": "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+          "evidence_refs": [
+            "scanner:9"
+          ],
+          "finding_index": 9,
+          "interpretation": "None of the first paragraphs is a full sentence or two about what the page offers. Assistants quote early, self-contained paragraphs.",
+          "observed_facts": [
+            "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Open with a 25 to 50 word paragraph that says what it is, who it is for and one concrete number.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_plain_answer_near_the_top) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_well_known_ai_txt",
+          "actual_result": "https://www.scribb.xyz/.well-known/ai.txt",
+          "evidence_refs": [
+            "scanner:10"
+          ],
+          "finding_index": 10,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://www.scribb.xyz/.well-known/ai.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_well_known_ai_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_llms_full_txt",
+          "actual_result": "https://www.scribb.xyz/llms-full.txt",
+          "evidence_refs": [
+            "scanner:11"
+          ],
+          "finding_index": 11,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://www.scribb.xyz/llms-full.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_llms_full_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.sections_lack_an_answer_near_the_heading",
+          "actual_result": "https://www.scribb.xyz/about/",
+          "evidence_refs": [
+            "scanner:12"
+          ],
+          "finding_index": 12,
+          "interpretation": "Long sections do not open with a self-contained answer.",
+          "observed_facts": [
+            "https://www.scribb.xyz/about/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Start important sections with a 15 to 100 word paragraph that answers the heading.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.sect[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_caa_record",
+          "actual_result": "CAA scribb.xyz",
+          "evidence_refs": [
+            "scanner:13"
+          ],
+          "finding_index": 13,
+          "interpretation": "scribb.xyz does not name which certificate authorities may issue certificates for it, so a mistake or attack at any authority can produce a valid certificate.",
+          "observed_facts": [
+            "CAA scribb.xyz"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add a CAA record for the authority you use, for example: 0 issue \"letsencrypt.org\".",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_caa_record) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.domain_has_no_mx_record",
+          "actual_result": "MX scribb.xyz",
+          "evidence_refs": [
+            "scanner:14"
+          ],
+          "finding_index": 14,
+          "interpretation": "scribb.xyz cannot receive email, so replies to your signup and support emails bounce.",
+          "observed_facts": [
+            "MX scribb.xyz"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add MX records for your email provider, or send from an address on a domain that receives mail.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.domain_has_no_mx_record) on the recorded page/scope."
+          ]
+        }
+      ],
+      "outcome": "unconfirmed",
+      "coverage": {
+        "checks": {
+          "geo": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "performance": "complete",
+          "accessibility": "complete"
+        },
+        "audited_urls": [
+          "https://www.scribb.xyz/",
+          "https://www.scribb.xyz/explore",
+          "https://www.scribb.xyz/about/",
+          "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+          "https://www.scribb.xyz/@zaxx",
+          "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+          "https://www.scribb.xyz/@ravidayama596",
+          "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+          "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+        ],
+        "crawl_truncated": false,
+        "declared_checkpoints": 2,
+        "actions_with_outcomes": 2,
+        "confirmed_checkpoints": 1
+      },
+      "objective": "Find what Scribb offers and open its pricing or plans page.",
+      "assertions": [],
+      "checkpoints": [
+        {
+          "status": "passed",
+          "description": "Open the Explore section to view Scribb's offerings.",
+          "actual_result": "/explore",
+          "evidence_refs": [
+            "milestone:1"
+          ],
+          "expected_result": "/explore"
+        },
+        {
+          "status": "unconfirmed",
+          "description": "Open the pricing or plans page.",
+          "actual_result": null,
+          "evidence_refs": [],
+          "expected_result": "/pricing"
+        }
+      ],
+      "limitations": [
+        "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior."
+      ],
+      "stop_reason": "agent_lost",
+      "evidence_index": [
+        {
+          "id": "step:1",
+          "url": "https://www.scribb.xyz/explore",
+          "step": 1,
+          "source": "step",
+          "observed": "Step 1: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:2",
+          "url": "https://www.scribb.xyz/explore",
+          "step": 2,
+          "source": "step",
+          "observed": "Step 2: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "milestone:1",
+          "url": "https://www.scribb.xyz/explore",
+          "step": 1,
+          "source": "milestone",
+          "observed": "/explore",
+          "finding_index": null
+        },
+        {
+          "id": "scanner:0",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1: https://www.scribb.xyz/",
+          "finding_index": 0
+        },
+        {
+          "id": "scanner:1",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1: https://www.scribb.xyz/",
+          "finding_index": 1
+        },
+        {
+          "id": "scanner:2",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "/brand/scribb-mark.png",
+          "finding_index": 2
+        },
+        {
+          "id": "scanner:3",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "9 pages: https://www.scribb.xyz/, https://www.scribb.xyz/explore, https://www.scribb.xyz/about/ +6 more",
+          "finding_index": 3
+        },
+        {
+          "id": "scanner:4",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "TXT scribb.xyz",
+          "finding_index": 4
+        },
+        {
+          "id": "scanner:5",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "ravidayama596 (@ravidayama596) \u00b7 Sketchbooks and journals on Scribb",
+          "finding_index": 5
+        },
+        {
+          "id": "scanner:6",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "Anhedonia 0 sketchbooks \u00b7 1 journal \u00b7 1 follower.",
+          "finding_index": 6
+        },
+        {
+          "id": "scanner:7",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "2 pages: https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97, https://www.scribb.xyz/@ravidayama596",
+          "finding_index": 7
+        },
+        {
+          "id": "scanner:8",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://www.scribb.xyz/",
+          "finding_index": 8
+        },
+        {
+          "id": "scanner:9",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+          "finding_index": 9
+        },
+        {
+          "id": "scanner:10",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://www.scribb.xyz/.well-known/ai.txt",
+          "finding_index": 10
+        },
+        {
+          "id": "scanner:11",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://www.scribb.xyz/llms-full.txt",
+          "finding_index": 11
+        },
+        {
+          "id": "scanner:12",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://www.scribb.xyz/about/",
+          "finding_index": 12
+        },
+        {
+          "id": "scanner:13",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "CAA scribb.xyz",
+          "finding_index": 13
+        },
+        {
+          "id": "scanner:14",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "MX scribb.xyz",
+          "finding_index": 14
+        }
+      ]
+    },
+    "comparison": null,
+    "site_audit": {
+      "urls": [
+        "https://www.scribb.xyz/",
+        "https://www.scribb.xyz/explore",
+        "https://www.scribb.xyz/about/",
+        "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+        "https://www.scribb.xyz/@zaxx",
+        "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+        "https://www.scribb.xyz/@ravidayama596",
+        "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+        "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+      ],
+      "truncated": false,
+      "page_limit": 50,
+      "duration_ms": 10104,
+      "mobile_vitals": [],
+      "pages_scanned": 9,
+      "robots_respected": true
+    },
+    "agent_ready": {
+      "parts": [
+        {
+          "id": "captcha",
+          "max": 15,
+          "note": "No CAPTCHA widget on the homepage.",
+          "label": "No CAPTCHA before the value",
+          "earned": 15
+        },
+        {
+          "id": "names",
+          "max": 25,
+          "note": "Every control checked has an accessible name.",
+          "label": "Buttons, links and fields have names",
+          "earned": 25
+        },
+        {
+          "id": "search",
+          "max": 10,
+          "note": "No WebSite SearchAction in the structured data.",
+          "label": "Site search declared (SearchAction)",
+          "earned": 0
+        }
+      ],
+      "score": 80
+    },
+    "launch_ready": {
+      "areas": {
+        "ux": null,
+        "geo": 95,
+        "seo": 78,
+        "speed": 65,
+        "security": 74
+      },
+      "score": 79
+    },
+    "scan_version": null,
+    "check_reasons": {},
+    "opportunities": {
+      "mode": "prelaunch_advisory",
+      "basis": "Built from the audited public pages' own copy. No search volume, keyword difficulty, rank or traffic data was used or estimated; intents are hypotheses to confirm against what customers actually search.",
+      "pages": [
+        {
+          "url": "https://www.scribb.xyz/",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Scribb: sketchbooks and journals you can turn the pages of"
+            ],
+            "title": "Scribb \u2014 Free digital sketchbooks and journals",
+            "description": "Scribb is a free home for sketchbooks and journals. Fill tactile digital books with your art and words, keep them private or publish them, and turn a page."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Scribb: sketchbooks and journals you can turn the pages of",
+              "What you can make",
+              "How it works",
+              "Explore"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "What you can make",
+              "source": "h2"
+            },
+            {
+              "text": "How it works",
+              "source": "h2"
+            },
+            {
+              "text": "Explore",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Keep this page as the answer for \"Scribb: sketchbooks and journals you can turn the pages of\" and measure it once search data exists.",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/about/",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+              "https://www.scribb.xyz/@ravidayama596",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": []
+          },
+          "primary_intent": {
+            "text": "Scribb: sketchbooks and journals you can turn the pages of",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/explore",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Explore sketchbooks and journals"
+            ],
+            "title": "Explore sketchbooks and journals \u00b7 Scribb",
+            "description": "Explore the newest public sketchbooks and journals on Scribb: 4 books made by hand and shared by artists and writers. Open a book to turn its pages, or visit a\u2026"
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Explore sketchbooks and journals",
+              "Newest books",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Newest books",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Keep this page as the answer for \"Explore sketchbooks and journals\" and measure it once search data exists.",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/",
+              "https://www.scribb.xyz/about/",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+              "https://www.scribb.xyz/@ravidayama596",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": []
+          },
+          "primary_intent": {
+            "text": "Explore sketchbooks and journals",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/about/",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "About Scribb"
+            ],
+            "title": "About Scribb \u2014 free digital sketchbooks and journals",
+            "description": "Scribb is a free home for digital sketchbooks and journals. What it is, who it is for, what it costs and how your work stays private."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "About Scribb",
+              "Who it is for",
+              "What you can make",
+              "How it works",
+              "Privacy and your work",
+              "Frequently asked questions",
+              "Contact"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Who it is for",
+              "source": "h2"
+            },
+            {
+              "text": "What you can make",
+              "source": "h2"
+            },
+            {
+              "text": "How it works",
+              "source": "h2"
+            },
+            {
+              "text": "Privacy and your work",
+              "source": "h2"
+            },
+            {
+              "text": "Frequently asked questions",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Keep this page as the answer for \"About Scribb\" and measure it once search data exists.",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/",
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+              "https://www.scribb.xyz/@ravidayama596",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": []
+          },
+          "primary_intent": {
+            "text": "About Scribb",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Watercolor"
+            ],
+            "title": "Watercolor \u2014 a sketchbook by zaxx \u00b7 Scribb",
+            "description": "Watercolor is a sketchbook by zaxx on Scribb, filed under Watercolor, with 5 artworks. Flows like water !"
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Watercolor",
+              "Artworks",
+              "More from zaxx",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Artworks",
+              "source": "h2"
+            },
+            {
+              "text": "More from zaxx",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"Watercolor\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/"
+            ]
+          },
+          "primary_intent": {
+            "text": "Watercolor",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@zaxx",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "zaxx"
+            ],
+            "title": "zaxx (@zaxx) \u00b7 Sketchbooks and journals on Scribb",
+            "description": "i am the guy 2 sketchbooks \u00b7 1 journal \u00b7 2 followers."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "zaxx",
+              "Sketchbooks and journals",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Sketchbooks and journals",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"zaxx\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/"
+            ]
+          },
+          "primary_intent": {
+            "text": "zaxx",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Great days"
+            ],
+            "title": "Great days \u2014 a journal by ravidayama596 \u00b7 Scribb",
+            "description": "Great days is a journal by ravidayama596 on Scribb, with 1 entry. Open it to turn the pages ravidayama596 has filled by hand."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Great days",
+              "Entries",
+              "More from ravidayama596",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Entries",
+              "source": "h2"
+            },
+            {
+              "text": "More from ravidayama596",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"Great days\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@ravidayama596"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/"
+            ]
+          },
+          "primary_intent": {
+            "text": "Great days",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@ravidayama596",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "ravidayama596"
+            ],
+            "title": "ravidayama596 (@ravidayama596) \u00b7 Sketchbooks and journals on Scribb",
+            "description": "Anhedonia 0 sketchbooks \u00b7 1 journal \u00b7 1 follower."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "ravidayama596",
+              "Sketchbooks and journals",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Sketchbooks and journals",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"ravidayama596\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@ravidayama596/16bb1d90-3c8c-4e5c-9078-1bf03c22ce97"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/"
+            ]
+          },
+          "primary_intent": {
+            "text": "ravidayama596",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Demo Journal"
+            ],
+            "title": "Demo Journal \u2014 a journal by zaxx \u00b7 Scribb",
+            "description": "Demo Journal is a journal by zaxx on Scribb, with 2 entries. Just a demo public Journal for showcase."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Demo Journal",
+              "Entries",
+              "More from zaxx",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Entries",
+              "source": "h2"
+            },
+            {
+              "text": "More from zaxx",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"Demo Journal\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/"
+            ]
+          },
+          "primary_intent": {
+            "text": "Demo Journal",
+            "source": "h1"
+          }
+        },
+        {
+          "url": "https://www.scribb.xyz/@zaxx/14b57668-168c-4c96-8bef-3e170e2b479c",
+          "gaps": [],
+          "effort": "low",
+          "current": {
+            "h1": [
+              "Digital Sketchbook"
+            ],
+            "title": "Digital Sketchbook \u2014 a sketchbook by zaxx \u00b7 Scribb",
+            "description": "Digital Sketchbook is a sketchbook by zaxx on Scribb, filed under Illustration, with 5 artworks. Open it to turn the pages zaxx has filled by hand."
+          },
+          "proposed": {
+            "basis": "Rearranged from this page's own title, headings and first paragraph; confirm it describes the page accurately.",
+            "title": null,
+            "outline": [
+              "Digital Sketchbook",
+              "Artworks",
+              "More from zaxx",
+              "About Scribb"
+            ],
+            "description": null
+          },
+          "supporting": [
+            {
+              "text": "Artworks",
+              "source": "h2"
+            },
+            {
+              "text": "More from zaxx",
+              "source": "h2"
+            },
+            {
+              "text": "About Scribb",
+              "source": "h2"
+            }
+          ],
+          "next_action": "Link to this page from https://www.scribb.xyz/ with words from its heading, \"Digital Sketchbook\".",
+          "internal_links": {
+            "inbound_from": [
+              "https://www.scribb.xyz/explore",
+              "https://www.scribb.xyz/@zaxx/113eaaff-d911-4a88-aa1c-047c853156e1",
+              "https://www.scribb.xyz/@zaxx",
+              "https://www.scribb.xyz/@zaxx/159f03a9-eb7f-4d83-894a-40a2572f2e25"
+            ],
+            "suggested_from": [
+              "https://www.scribb.xyz/",
+              "https://www.scribb.xyz/about/"
+            ]
+          },
+          "primary_intent": {
+            "text": "Digital Sketchbook",
+            "source": "h1"
+          }
+        }
+      ],
+      "overlaps": [],
+      "demand_data": "none",
+      "measurement": "After a change ships, compare clicks and impressions for that page over the 28 days before and after, once Search Console is connected. Until then, check that the page is indexed and its snippet reads well.",
+      "excluded_noindex": [],
+      "pages_considered": 9
+    },
+    "first_impression": {
+      "who": "Individuals looking for a private or public place to showcase thoughts and work.",
+      "what": "A personal space where you can create and share a portfolio or journal.",
+      "trust": [
+        "Privacy link"
+      ],
+      "clarity": 1,
+      "first_click": "Sign in, to see what the personal space offers"
+    }
+  },
+  "public": false,
+  "tokens": 10867,
+  "evidence_purged_at": null,
+  "group_id": null
+}

@@ -1,0 +1,42 @@
+{
+  "checks": [
+    {
+      "run_id": "6cf033c601a74461ab9bad048bb07d07",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "agent_lost"
+    },
+    {
+      "run_id": "82b4b12715f84cee95a3644d83a59c95",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "looping"
+    },
+    {
+      "run_id": "18012b2c8f0f46b08eed68c14226dd57",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "stuck"
+    },
+    {
+      "run_id": "df76f76f5ab4435cbd29375459d577f9",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "agent_lost"
+    },
+    {
+      "run_id": "25544b01979342a7af25dbd701845ec0",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "agent_lost"
+    },
+    {
+      "run_id": "7f4bfdcb6ad84e2f8565b2d421564cb6",
+      "correct_owner": true,
+      "report_saved": true,
+      "status": "done"
+    }
+  ],
+  "active_plan": "pro",
+  "runs_left": 26
+}

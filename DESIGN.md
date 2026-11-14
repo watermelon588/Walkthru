@@ -106,6 +106,12 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 - State colours reuse the core palette: ink for ready or acting, accent for observing or complete, danger for stopped or failed. Changes fade rather than snap.
 - GSAP Observe is the single motion language: slow body attention, a small connected tail counter-shift and an occasional blink. State text fades between actions. All motion stops under `prefers-reduced-motion`.
 
+## Live runs (2026-11-13)
+- One column, never a side-by-side split (founder). `/app/live`: centred hero over a faint orb, then one form card with numbered sections (01 Where, 02 Goal, 03 Who), the run cost and Start in its footer, then a hairline grid of what a live run does.
+- Each built-in test user keeps one orb motion everywhere (`PERSONA_ORB` in `lib/live.ts`): first-time visitor breathing, phone user connecting, buyer shaping, skeptic searching; saved test users composing. Selected or running orbs move at full speed, the rest idle slowly.
+- `/app/live/:id`: header with the current test user's orb, a status pill and the site link; test users as pills; then `SessionPlayer`.
+- `SessionPlayer` (live and reports): a browser-window frame (address bar, then the view at its captured ratio), then the test user's words under the view with its orb and the confusion meter, then the controls.
+
 ## Competitor comparison
 - Interactive horizontal bars use a fixed 0 to 100 score scale. Finding severity uses a shared count scale. Numeric labels and a detailed table carry the same information without relying on color.
 - Your site uses ink; competitors and medium-severity findings use a muted stripe pattern. No new palette or chart dependency. Missing/failed measurements stay explicit rather than becoming zero.
@@ -115,3 +121,9 @@ Chosen from four explored variants (A Porcelain, B Mist, C Silver, D Graphite) o
 ## Launch Ready badge
 - A 20px pill for other people's sites: "Walkthru" on ink, "Launch Ready NN" on accent (85 and up), muted (60 to 84) or danger (under 60). Verdana, because Geist is not available on the sites that embed it. The SVG carries hex copies of the tokens for the same reason.
 - The owner's report shows it with copy buttons; strangers on the public report see only the score.
+
+## Scouts rebuild (2026-11-13, founder request)
+- A one-shot reveal, not a loop: a crew of small cursors ("scouts", `packages/assemble`) redraws a picture of a page block by block, then leaves it exactly as it was. Used on the landing hero's dashboard picture (once, when first on screen, with a quiet Replay button) and on the live-run stage (once per new page address).
+- Colour exception: the scouts use the component's own multi-colour set so they read as separate hands. Outlines and badges use `ink`. Nothing else on the page takes those colours.
+- It is presentation. The test user's cursor in a live run still moves only to measured points, and exported videos show only that cursor.
+- `prefers-reduced-motion`: it does not play.

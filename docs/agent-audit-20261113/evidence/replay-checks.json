@@ -1,0 +1,211 @@
+[
+  {
+    "test": "portfolio recorded transition 1",
+    "baseline_checkpoint": {
+      "description": "Click the \"Projects\" link in the main navigation to reveal the projects section.",
+      "kind": "navigation",
+      "url_contains": null,
+      "text_contains": null
+    },
+    "baseline_proof": null,
+    "hypothetical_checkpoint": {
+      "description": "Click the \"Projects\" link in the main navigation to reveal the projects section.",
+      "kind": "navigation",
+      "url_contains": "/dial/projects.html",
+      "text_contains": null
+    },
+    "replay_proof": {
+      "url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+      "signal": "navigation",
+      "matched": "/dial/projects.html"
+    }
+  },
+  {
+    "test": "portfolio recorded transition 2",
+    "baseline_checkpoint": {
+      "description": "Click the \"Projects\" link in the main navigation to reveal the projects section.",
+      "kind": "navigation",
+      "url_contains": null,
+      "text_contains": null
+    },
+    "baseline_proof": null,
+    "hypothetical_checkpoint": {
+      "description": "Click the \"Projects\" link in the main navigation to reveal the projects section.",
+      "kind": "navigation",
+      "url_contains": "/dial/work.html",
+      "text_contains": null
+    },
+    "replay_proof": {
+      "url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+      "signal": "navigation",
+      "matched": "/dial/work.html"
+    }
+  },
+  {
+    "test": "scribb offscreen selection",
+    "selected_element": {
+      "id": 22,
+      "tag": "a",
+      "text": "About",
+      "type": null,
+      "state": null,
+      "region": "nav: Information",
+      "row": "About",
+      "in_view": false,
+      "occluded": null,
+      "scroll_container_id": null
+    },
+    "model_choice": {
+      "thought": "I need to get to the pricing page. The Explore page doesn't show a pricing link, so I'll try the About page first.",
+      "action": "click",
+      "target_id": 22,
+      "text": null,
+      "scroll_container_id": 0,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "url_changed",
+      "wait_timeout_ms": 2000,
+      "confusion": 0,
+      "progress": 1
+    },
+    "enforced_action": {
+      "thought": "I need to get to the pricing page. The Explore page doesn't show a pricing link, so I'll try the About page first. (Walkthru target unavailable in the current viewport.)",
+      "action": "give_up",
+      "target_id": null,
+      "text": null,
+      "scroll_container_id": null,
+      "scroll_direction": "down",
+      "scroll_distance": null,
+      "wait_condition": "settled",
+      "wait_timeout_ms": 1000,
+      "confusion": 2,
+      "progress": 0
+    },
+    "stop_code": "agent_lost"
+  },
+  {
+    "test": "tripverse loop signature",
+    "steps": [
+      {
+        "step": 1,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 0,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 2,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 3,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": 0,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 4,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 5,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": 0,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 6,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 7,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": 0,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 8,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 9,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      },
+      {
+        "step": 10,
+        "action": "click",
+        "target_id": 5,
+        "target_label": "Destinations",
+        "url": "https://tripverse-0.vercel.app/",
+        "scroll_pct": 59,
+        "scroll_container_id": null,
+        "scroll_direction": "down",
+        "scroll_position": null,
+        "wait_condition": "url_changed"
+      }
+    ]
+  }
+]

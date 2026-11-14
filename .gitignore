@@ -39,3 +39,6 @@ apps/web/design/launch-video-panic/snapshots/
 apps/web/design/launch-video-panic/renders/
 apps/web/design/launch-video-panic/*.log
 apps/web/design/doodle-posters/walkthru-poster-pack.zip
+
+# Scratch logs from local harness checks
+/tmp/

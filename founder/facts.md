@@ -10,3 +10,4 @@
 - 2026-10-04 (validate-idea): Founder is dissatisfied with report depth, feature value and actual findings, and requests an honest viability review and detailed product/architecture plan.
 - 2026-10-04 (pricing-strategy): Founder proposes subscription access plus pay-as-you-go usage instead of fixed subscription run/scan counts, with safeguards for connector-triggered costs; no new prices were selected in the request.
 - 2026-10-04 (mvp-scope): Founder wants deeper signup-to-dashboard journeys, complex navigation/forms, live-data checks, stronger model judgment and visual evidence, with possible video and more actionable SEO/GEO guidance.
+- 2026-11-13 (competitor-matrix): Founder is dissatisfied with AI answers and requests rigorous competitor/web research, industry-relevant use cases, a defensible citation calculation that does not oversell isolated mentions, and exact implementation/upfront-cost options.

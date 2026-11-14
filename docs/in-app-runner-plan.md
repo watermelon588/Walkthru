@@ -84,37 +84,49 @@ Sizes: S = 1 to 2 files, M = 3 to 5 files. Every task keeps build, lint and test
 
 ### Phase 0: Spike (fail fast)
 
-- [ ] **T0. Chromium next to the live services, memory and bot walls.** Run `evals/e2e_extension.py` under a 2 GB memory limit with an API and a worker process running beside it (locally first, then once on the VM with the founder's go-ahead), against the easy fixture, TripVerse and the founder's portfolio. Record peak memory of each process, time per step, and whether Vercel or Cloudflare blocks the headless browser.
+- [x] **T0. Chromium next to the live services, memory and bot walls.** Run `evals/e2e_extension.py` under a 2 GB memory limit with an API and a worker process running beside it (locally first, then once on the VM with the founder's go-ahead), against the easy fixture, TripVerse and the founder's portfolio. Record peak memory of each process, time per step, and whether Vercel or Cloudflare blocks the headless browser.
   - Acceptance: a written result in `docs/decisions.md` with peak RSS, the `MemoryMax` value for the runner unit, and whether a swap file is needed. Concurrency stays 1 regardless.
   - Verify: the three runs end with a report or an honest `bot_wall`.
   - Size: S. Depends on: none.
 
 ### Phase 1: Runner core (API)
 
-- [ ] **T1. Move the CDP driver into the app.** Extract `Tab`, Chrome launch and the screenshot helper from `evals/e2e_extension.py` into `apps/api/app/runner/cdp.py`; the eval script imports it.
+- [x] **T1. Move the CDP driver into the app.** Extract `Tab`, Chrome launch and the screenshot helper from `evals/e2e_extension.py` into `apps/api/app/runner/cdp.py`; the eval script imports it.
   - Acceptance: eval script behaves as before; Chromium path comes from `CHROME_PATH`; launch flags include a fresh profile, no downloads, sandbox on.
   - Verify: `pytest -q`, `ruff check .`, one eval run on fixture :8101.
   - Size: S. Depends on: T0.
-- [ ] **T2. Callable run service.** Make the bodies of `POST /runs`, `/observe` and `/stop` callable in-process with a user id (thin functions the routes also call).
+- [x] **T2. Callable run service.** Make the bodies of `POST /runs`, `/observe` and `/stop` callable in-process with a user id (thin functions the routes also call).
   - Acceptance: routes unchanged for the extension; quote, reservation and idempotency behaviour identical; no HTTP hop needed by the runner.
   - Verify: full API suite, with the existing run tests untouched and passing.
   - Size: M. Depends on: none.
-- [ ] **T3. Network guard.** CDP `Fetch` interception that applies the `app/scans/fetch.py` address check to every browser request, including redirects and subresources.
+- [x] **T3. Network guard.** CDP `Fetch` interception that applies the `app/scans/fetch.py` address check to every browser request, including redirects and subresources.
   - Acceptance: requests to 127.0.0.1, 10.0.0.0/8, 169.254.169.254, `file:` and `chrome:` are refused; a public page loads normally; a page that redirects to a private address is stopped and the run ends as blocked with a plain reason.
   - Verify: new `tests/test_runner_guard.py` against local fixtures.
   - Size: M. Depends on: T1.
-- [ ] **T4. Runner service and queue.** Migration for `cloud_runs` and `claim_cloud_run`; `python -m app.runner` loop that claims one row, launches Chromium, loads the site, and runs the snapshot, act, observe loop from T1 and T2 with the same 4-minute wall-clock limit as the extension, a lease heartbeat, origin check and browser kill in `finally`. It enqueues `finish_run` at the end.
+- [x] **T4. Runner service and queue.** Migration for `cloud_runs` and `claim_cloud_run`; `python -m app.runner` loop that claims one row, launches Chromium, loads the site, and runs the snapshot, act, observe loop from T1 and T2 with the same 4-minute wall-clock limit as the extension, a lease heartbeat, origin check and browser kill in `finally`. It enqueues `finish_run` at the end.
   - Acceptance: a queued row becomes a finished run with a report; two runner processes never claim the same row; a second queued row starts only after the first ends; a killed runner leaves the row failed as "interrupted" with the reservation released and no replay; the general worker's jobs are never delayed by a journey.
   - Verify: `tests/test_cloud_run.py` on the easy fixture with a scripted model; migration `status` clean, `.down.sql` present.
   - Size: M. Depends on: T2, T3.
-- [ ] **T5. Per-step frames, pointer and label.** `execute.ts` returns the acted element's centre; `StepEvidence` accepts `pointer` and `label`; the cloud runner captures a masked frame every step (using the existing `evidence_capture` message so form values are hidden).
+- [x] **T5. Per-step frames, pointer and label.** `execute.ts` returns the acted element's centre; `StepEvidence` accepts `pointer` and `label`; the cloud runner captures a masked frame every step (using the existing `evidence_capture` message so form values are hidden).
   - Acceptance: every cloud step has a frame; click and type steps carry a pointer inside 0 to 1; typed text and form values are not readable in any frame; extension runs still validate.
   - Verify: extension `npm test`, `npx tsc --noEmit`, `npm run lint`; API schema tests; one fixture run inspected by eye.
   - Size: M. Depends on: T4.
-- [ ] **T6. Endpoints.** `POST /cloud-runs`, `GET /cloud-runs/{group_id}`, `POST /cloud-runs/{group_id}/stop`, with rate limits in `limits.py`, the plan allowance in `plans.py` and the `CLOUD_RUNNER` flag.
+- [x] **T6. Endpoints.** `POST /cloud-runs`, `GET /cloud-runs/{group_id}`, `POST /cloud-runs/{group_id}/stop`, with rate limits in `limits.py`, the plan allowance in `plans.py` and the `CLOUD_RUNNER` flag.
   - Acceptance: owner-only access; flag off returns a clear 403; no domain verification required; at most 3 queued or running test users per user (clear 429 beyond that); `GET` returns statuses, queue position, steps and one-hour signed frame URLs; stop ends queued and running personas.
   - Verify: API tests for auth, flag, limits and stop.
   - Size: M. Depends on: T4, T5.
+
+### Phase 1 result (2026-11-12, branch `feat/in-app-live-runs`, not committed)
+
+- **T0, measured locally on Windows (the VM measurement is part of T15):** no bot wall on the portfolio, TripVerse or trywalkthru.com. Default headless Chrome used about 0.9 GB of private memory on TripVerse (WebGL); with `--disable-gpu`, one renderer, no site isolation and a 256 MB JavaScript heap it used about 0.34 to 0.43 GB. Those flags are now the default in `app/runner/cdp.py`. One browser at a time stays the rule.
+- **T1:** `app/runner/cdp.py` (driver, process-tree kill, throwaway profile); `evals/e2e_extension.py` now imports it.
+- **T2:** no refactor was needed. `main._start_run`, `_observe` and `_stop_run` already take a user and are called in-process by the runner.
+- **T3:** `app/runner/guard.py`; 20 tests, two of them in a real browser.
+- **T4:** migration `0007_cloud_runs` (not applied anywhere), `python -m app.runner`, `app/runner/journey.py`. Five SQL tests on a throwaway Postgres prove one browser at a time under 8 simultaneous claims and that a dead runner's run is closed, not replayed.
+- **T5 changed shape:** a click or typing step stores two frames. The executor's new `prepare` mode scrolls the target into view and reports its centre; that view is saved as `step-NN-aim.jpg` with the pointer, then the action runs and `step-NN.jpg` is saved. Without the aim frame the cursor would often point at the wrong place, because the executor centres the element before clicking. `StepEvidence` gained `aim_path`, `pointer` and `label`.
+- **T6:** `app/cloud.py`, off unless `CLOUD_RUNNER=on`. Several test users on one goal and custom test users follow today's Plus rule until the founder decides the allowance.
+- **Real run:** one 8-step journey on the founder's portfolio with the real model and the test account took 101 s; every step has a frame, and the recorded pointers sit on the clicked "Work" link and "NEURON" row. It bypassed the queue table, which does not exist in the database yet.
+- **Live sends:** nobody is present to approve a real message, so a live run never sends one, even on a verified domain. The test user is told to use the extension for that.
 
 ### Checkpoint A: runner works without UI
 
@@ -126,22 +138,31 @@ Sizes: S = 1 to 2 files, M = 3 to 5 files. Every task keeps build, lint and test
 
 Design per DESIGN.md tokens; load the design skills before building. Honour `prefers-reduced-motion` (no glide, frames cut instantly). Every state has loading, empty and error forms.
 
-- [ ] **T7. Start a live run.** New page `/app/live`: URL, goal, test user picker (the four built-ins plus saved custom test users), Start. Links to the extension for logged-in or localhost sites.
+- [x] **T7. Start a live run.** New page `/app/live`: URL, goal, test user picker (the four built-ins plus saved custom test users), Start. Links to the extension for logged-in or localhost sites.
   - Acceptance: labelled inputs; validation for non-public URLs; quote shown before start (reuse the quote box logic); navigates to the run page.
   - Verify: web tests, `npm run build`, `npm run lint`.
   - Size: M. Depends on: T6.
-- [ ] **T8. Session cards and polling.** `/app/live/:groupId`: header (goal, site, status, Stop), one card per test user with status, step count and elapsed time, polling every 1.5 s until all finish, with backoff on errors.
+- [x] **T8. Session cards and polling.** `/app/live/:groupId`: header (goal, site, status, Stop), one card per test user with status, step count and elapsed time, polling every 1.5 s until all finish, with backoff on errors.
   - Acceptance: queued (with "N ahead of you"), running, finished, blocked, stopped and failed states all render; a finished test user's session is watchable while later ones are still queued; polling stops when done or when the tab is hidden.
   - Verify: component tests with mocked responses; preview check in the browser.
   - Size: M. Depends on: T6.
-- [ ] **T9. Step player.** One `SessionPlayer` component: stage (frame in a browser-style frame with the page URL), step label, thought column, scrubber with a dot per step, play and speed. Cursor layer animates to each step's pointer with a click ripple; an action pill shows between frames; the evidence region boxes from R-S19 still draw.
+- [x] **T9. Step player.** One `SessionPlayer` component: stage (frame in a browser-style frame with the page URL), step label, thought column, scrubber with a dot per step, play and speed. Cursor layer animates to each step's pointer with a click ripple; an action pill shows between frames; the evidence region boxes from R-S19 still draw.
   - Acceptance: follows the newest step while live, pauses following when the user scrubs; keyboard reachable (arrow keys step, space plays); reduced motion respected; a missing frame shows a placeholder, not a broken image.
   - Verify: component tests for stepping and follow mode; screenshot proof at desktop and mobile widths.
   - Size: M. Depends on: T8.
-- [ ] **T10. Finish, progress and report.** When every test user finishes, show a short checklist driven by real states (runs finished, pages checked, report written), then open the existing report. Add a "Sessions" tab to `Report.tsx` that reuses `SessionPlayer` for any run with frames.
+- [x] **T10. Finish, progress and report.** When every test user finishes, show a short checklist driven by real states (runs finished, pages checked, report written), then open the existing report. Add a "Sessions" tab to `Report.tsx` that reuses `SessionPlayer` for any run with frames.
   - Acceptance: no timer-driven fake steps; partial results when one persona is blocked; old reports without pointers still replay.
   - Verify: web tests; one full run watched end to end in the preview.
   - Size: M. Depends on: T9.
+
+### Phase 2 result (2026-11-12, same branch, not committed)
+
+- **T7:** `/app/live` (`pages/Live.tsx`): address, goal, test user choice from the plan, and a plain list of what a live run does. It shows "Uses N of your M runs left" instead of the signed quote box; add the quote if `RUN_QUOTES=required` is ever turned on for live runs.
+- **T8:** `/app/live/:groupId` (`pages/LiveRun.tsx`): one card per test user with its real state and queue position, polling every 1.5 s, paused in a hidden tab, slower after errors, and a Stop button.
+- **T9:** `components/SessionPlayer.tsx`: stage sized to the captured viewport, aim frame then result frame, a cursor that glides to the measured point with a click ring, an action pill, error boxes, thought column, step dots, play, 1x/2x/4x, arrow keys and space, "Follow live". Cursor, ring and fades are CSS in `index.css` under `prefers-reduced-motion`. The cursor is a plain ink arrow with the test user's name; the founder plans to restyle it.
+- **T10:** the finish list on the live page shows only server-reported states (journey finished, report written) with an "Open report" link per test user. Reports of live runs gain a "Watch the visit again" player above the existing journey replay.
+- **Checked:** web build, TypeScript, lint (0 warnings) and 61 tests including 6 new ones. In the browser, the player was driven on the real recorded run: step order, aim and result frames, cursor positions, pill text and click ring all matched the stored data. The start form loads the plan, validates, and shows the "not switched on" message. The live page was driven with a mocked poll response built from the real run's steps, because the `cloud_runs` table does not exist yet.
+- **Not checked:** the look of the pages by eye. The browser pane was hidden during this session, so animations and layout were verified through the page structure only. The live page has not run against the real queue. Phone-width layout was not viewed.
 
 ### Checkpoint B: one persona, end to end, in the app
 
