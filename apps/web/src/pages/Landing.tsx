@@ -81,7 +81,7 @@ export default function Landing() {
 
         {/* Full-bleed band: breaks the run of split sections. The photo fades into the page on the left for the quote. */}
         <section className="relative isolate overflow-hidden border-y border-line bg-surface">
-          <img src="/assets/reading.jpg" alt="" loading="lazy" className="absolute inset-y-0 right-0 -z-10 h-full w-full object-cover object-[70%_40%] md:w-3/5" />
+          <img src="/assets/reading.jpg" alt="" width={1200} height={1200} loading="lazy" className="absolute inset-y-0 right-0 -z-10 h-full w-full object-cover object-[70%_40%] md:w-3/5" />
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-surface via-surface/95 to-surface/10 md:via-surface/80" />
           <figure className="reveal mx-auto max-w-7xl px-5 py-32 md:px-10 md:py-40">
             <blockquote className="max-w-[18ch] text-3xl leading-snug font-extralight tracking-tight md:text-5xl">&ldquo;{run[3].thought}&rdquo;</blockquote>

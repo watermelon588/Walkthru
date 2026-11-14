@@ -135,4 +135,63 @@ def test_editor_summary_uses_mentions_and_measurable_denominators():
             "engines": [], "not_measured": [], "share_of_voice": [{"name": "Acme", "you": True, "share": 50,
             "mentions": 1, "answers": 3, "citations": 0, "citation_answers": 0}]}
     text = _answers(view)
-    assert "named in 1 of 3 answers" in text and "citations not measured" in text
+    assert "name matched in 1 of 3 answers" in text and "citations not measured" in text
+
+
+# Identity (AI citation research 2026-11-13, Phase A): a matching name is a lexical mention, not proof it is this business.
+
+def _you(answer, sources=(), status="not_applicable", domain="tripverse-0.vercel.app"):
+    return analyze(answer, list(sources), "TripVerse", domain, [], citation_status=status)["brands"][0]
+
+
+def test_a_shared_name_about_another_business_is_not_credited_as_you():
+    retrieved = [{"url": "https://tripverse.app/", "domain": "tripverse.app", "cited": False, "evidence": []}]
+    you = _you("TripVerse is an iOS travel app by another publisher.", retrieved, "measured")
+    assert you["mentioned"] is True and you["entity_status"] == "other"
+    assert you["entity_evidence"] == {"kind": "same_name_domain", "host": "tripverse.app"}
+
+
+def test_a_bare_name_with_no_domain_evidence_stays_ambiguous():
+    you = _you("TripVerse is an iOS travel app by another publisher.")
+    assert you["mentioned"] is True and you["entity_status"] == "ambiguous" and you["entity_evidence"] is None
+
+
+def test_the_owned_domain_in_the_answer_or_a_citation_confirms_identity():
+    assert _you("Try TripVerse (tripverse-0.vercel.app).")["entity_status"] == "verified"
+    cited = [{"url": "https://tripverse-0.vercel.app/", "domain": "tripverse-0.vercel.app", "cited": True, "evidence": []},
+             {"url": "https://tripverse.app/", "domain": "tripverse.app", "cited": False, "evidence": []}]
+    you = _you("TripVerse plans trips on a globe.", cited, "measured")
+    assert you["entity_status"] == "verified" and you["entity_evidence"] == {"kind": "owned_domain_cited", "host": "tripverse-0.vercel.app"}
+    # A retrieved-only owned page is retrieval, not identity.
+    retrieved = [dict(cited[0], cited=False)]
+    assert _you("TripVerse plans trips on a globe.", retrieved, "measured")["entity_status"] == "ambiguous"
+
+
+def test_no_match_is_absent():
+    assert _you("Use Wanderlog.")["entity_status"] == "absent"
+
+
+def test_source_rank_follows_citation_order_in_the_answer_not_retrieval_order():
+    answer = "Choose [B](https://b.example/), then [A](https://a.example/)."
+    sources, status = groq_sources(message(answer, [{"url": "https://a.example/"}, {"url": "https://b.example/"}]))
+    a, b = analyze(answer, sources, "A", "a.example", [{"name": "B", "domain": "b.example"}], citation_status=status)["brands"]
+    assert (a["source_rank"], b["source_rank"]) == (2, 1) and a["cited"] and b["cited"]
+    # Without answer positions the order is unknown: cited stays proven, rank is not invented.
+    plain = [{"domain": "a.example", "cited": True}, {"domain": "b.example", "cited": True}]
+    a, b = analyze("A and B.", plain, "A", "a.example", [{"name": "B", "domain": "b.example"}], citation_status="measured")["brands"]
+    assert a["cited"] is True and a["source_rank"] is None and b["source_rank"] is None
+
+
+def test_saved_v2_answers_gain_identity_without_losing_citation_verdicts():
+    sources = [{"url": "https://tripverse.app/", "title": "", "domain": "tripverse.app", "attribution": "url", "cited": False, "evidence": []}]
+    check = {"engine": "web", "status": "done", "answer": "TripVerse is an iOS app.", "sources": sources,
+             "result": {"measurement_version": 2, "citation_status": "measured", "citation_eligible": True, "prompt_group": "branded",
+                        "provenance": {"label": "Groq web search", "mode": "search"}, "sources": 1,
+                        "brands": [{"name": "TripVerse", "domain": "tripverse-0.vercel.app", "you": True, "mentioned": True,
+                                    "mention_rank": 1, "cited": False, "source_rank": None}]}}
+    original = deepcopy(check)
+    seen = citations.observed(check)
+    assert check == original
+    you = seen["result"]["brands"][0]
+    assert you["entity_status"] == "other" and you["cited"] is False
+    assert seen["result"]["citation_eligible"] is True and seen["result"]["prompt_group"] == "branded" and seen["result"]["provenance"]["mode"] == "search"

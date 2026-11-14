@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "walkthru": {
+      "url": "https://api.trywalkthru.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_WALKTHRU_API_KEY"
+      }
+    }
+  }
+}

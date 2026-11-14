@@ -56,24 +56,24 @@ def check_html(html: str, url: str) -> list[Finding]:
         out.append(_f("high", "Page is set to noindex", "A robots meta tag tells search engines not to index this page.", "Remove noindex from the robots meta tag if the page should rank.", robots_meta.attributes.get("content")))
 
     imgs = tree.css("img")
-    missing_alt = [i for i in imgs if i.attributes.get("alt") is None]
+    missing_alt = [i for i in imgs if "alt" not in i.attributes]  # alt="" (decorative) reads as None in selectolax
     if missing_alt:
         srcs = ", ".join((i.attributes.get("src") or "?")[:40] for i in missing_alt[:3])
         # One title on every page, so a crawl merges them into one finding; the count lives in the detail.
-        out.append(_f("medium", "Images have no alt text", f"{len(missing_alt)} of {len(imgs)} images on {url} have no alt text. Images without alt text are invisible to search engines and screen readers.", "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.", srcs))
+        out.append(_f("medium", "Images have no alt text", f"{len(missing_alt)} of {len(imgs)} images on {url} have no alt attribute. Meaningful images may lack a useful text alternative; image indexing and assistive-technology behavior were not tested.", "Describe each meaningful image in its alt attribute; use alt=\"\" for decorative ones.", srcs))
 
     if not tree.css_first('meta[property="og:title"]'):
-        out.append(_f("low", "No Open Graph tags", "Links shared on social apps will show no preview title or image.", "Add og:title, og:description and og:image meta tags.", url))
+        out.append(_f("low", "No Open Graph tags", "No og:title was found in the fetched HTML. Social previews may use other page metadata; an actual shared preview was not tested.", "Add og:title, og:description and og:image meta tags.", url))
     return out
 
 
 def check_robots(text: str | None) -> list[Finding]:
     if text is None:
-        return [_f("low", "No robots.txt", "Crawlers fall back to defaults and cannot find your sitemap.", "Add /robots.txt with a Sitemap line.")]
+        return [_f("low", "No robots.txt", "No robots.txt was available at the checked location. Sitemap discovery can use other sources; discovery and indexing were not measured.", "Add /robots.txt with a Sitemap line.")]
     rules = RobotFileParser()
     rules.parse(text.splitlines())  # groups are respected: a Disallow: / for one named bot does not block everyone
     if not rules.can_fetch("*", "/"):
-        return [_f("high", "robots.txt blocks all crawlers", "User-agent: * with Disallow: / hides the whole site from search engines.", "Remove the blanket Disallow or limit it to private paths.", "Disallow: /")]
+        return [_f("high", "robots.txt blocks all crawlers", "The wildcard robots policy disallows fetching the root path. This records crawl instructions, not whether URLs are indexed or shown in search.", "Remove the blanket Disallow or limit it to private paths.", "Disallow: /")]
     return []
 
 

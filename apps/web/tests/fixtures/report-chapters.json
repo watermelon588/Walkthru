@@ -5,6 +5,7 @@
       "kind": "scan",
       "status": "done",
       "report": {
+        "harness_worklog": [],
         "version": 2,
         "assessment": {
           "objective": "",
@@ -696,6 +697,7 @@
       "kind": "test",
       "status": "done",
       "report": {
+        "harness_worklog": [],
         "version": 2,
         "assessment": {
           "objective": "Filter Active records",

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { CitationAnswer, CitationView } from '../lib/runs'
-import { citationLabel, citationMetrics } from '../lib/citationMetrics'
+import type { CitationAnswer, CitationBrand, CitationView } from '../lib/runs'
+import { citationLabel, citationMetrics, identity } from '../lib/citationMetrics'
 import { Working } from './Loading'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -12,12 +12,17 @@ const coverageReason: Record<string, string> = {
 }
 
 export function CitationResults({ view }: { view: CitationView }) {
-  const [engine, setEngine] = useState('all')
-  const [group, setGroup] = useState('all')
-  const labels = [...new Set(view.answers.map(citationLabel))]
-  const selected = view.answers.filter((a) => (engine === 'all' || citationLabel(a) === engine) && (group === 'all' || a.result?.prompt_group === group))
+  const [engine, setEngine] = useState('')
+  const [group, setGroup] = useState('')
+  // Unanswered checks carry no saved mode, so they take their engine's current label and stay in that engine's coverage.
+  const labelOf = (a: CitationAnswer) => a.result?.provenance?.label ?? (a.status !== 'done' ? view.engines.find((e) => e.engine === a.engine)?.label : undefined) ?? citationLabel(a)
+  const labels = [...new Set(view.answers.map(labelOf))]
+  // One surface at a time, never a blend; start on a web-search surface and on questions that do not name the brand.
+  const searchLabel = labels.find((l) => view.answers.some((a) => labelOf(a) === l && a.status === 'done' && a.result?.citation_status !== 'not_applicable'))
+  const engineValue = labels.includes(engine) ? engine : searchLabel ?? labels[0] ?? ''
+  const groupValue = group || (view.answers.some((a) => a.result?.prompt_group === 'unbranded') ? 'unbranded' : 'all')
+  const selected = view.answers.filter((a) => labelOf(a) === engineValue && (groupValue === 'all' || a.result?.prompt_group === groupValue))
   const stats = citationMetrics(selected)
-  const mine = stats.voice.find((b) => b.you)
   return <div className="mt-8 grid gap-8">
     <section aria-label="Engine coverage" className="rounded-2xl border border-line p-5">
       <h3 className="text-sm font-medium">What is measured</h3>
@@ -38,25 +43,31 @@ export function CitationResults({ view }: { view: CitationView }) {
       : <p className="text-sm text-muted">No answers yet. Check now, or wait for the scheduled check.</p> : <>
       <div className="flex flex-wrap gap-5">
         <label className="grid max-w-full gap-2 text-xs text-muted">Answer engine
-          <select value={engine} onChange={(e) => setEngine(e.target.value)} className="max-w-full rounded-xl border border-line bg-bg px-3 py-2 text-ink">
-            <option value="all">All sampled engines</option>{labels.map((l) => <option key={l}>{l}</option>)}
+          <select value={engineValue} onChange={(e) => setEngine(e.target.value)} className="max-w-full rounded-xl border border-line bg-bg px-3 py-2 text-ink">
+            {labels.map((l) => <option key={l}>{l}</option>)}
           </select>
         </label>
         <label className="grid gap-2 text-xs text-muted">Prompt type
-          <select value={group} onChange={(e) => setGroup(e.target.value)} className="rounded-xl border border-line bg-bg px-3 py-2 text-ink">
+          <select value={groupValue} onChange={(e) => setGroup(e.target.value)} className="rounded-xl border border-line bg-bg px-3 py-2 text-ink">
             <option value="all">All prompts</option><option value="unbranded">Does not name your brand</option><option value="branded">Names your brand</option>
           </select>
         </label>
       </div>
       <section aria-label="Sample summary" className="grid gap-px overflow-hidden rounded-2xl bg-line sm:grid-cols-4">
-        <Stat label="Named you" value={stats.done.length ? `${stats.named} of ${stats.done.length}` : 'N/A'} note="completed answers in this selection" />
-        <Stat label="Cited you" value={stats.citationAnswers ? `${stats.cited} of ${stats.citationAnswers}` : 'N/A'} note="answers with resolved citation evidence" />
-        <Stat label="Share of mentions" value={stats.hasMentions ? `${mine?.share ?? 0}%` : 'N/A'} note="your mentions among tracked brands" />
+        <Stat label="Cited your site" value={stats.citationAnswers ? `${stats.cited} of ${stats.citationAnswers}` : 'N/A'}
+          note={stats.citationSlots ? `answers where a citation could be checked; ${stats.citationAnswers} of ${stats.citationSlots} checkable${stats.unknown ? `, ${stats.unknown} unknown` : ''}` : 'this engine answers from memory and cites nothing'} />
+        <Stat label="Confirmed as you" value={stats.done.length ? `${stats.identified} of ${stats.done.length}` : 'N/A'} note="your domain written or cited in the answer" />
+        <Stat label="Name only" value={stats.done.length ? `${stats.nameOnly + stats.otherEntity}` : 'N/A'}
+          note={stats.otherEntity ? `not confirmed as you; ${stats.otherEntity} point to a same-name site` : 'your name appeared, but nothing tied it to your site'} />
         <Stat label="Batch progress" value={`${view.status.done} complete`} note={`${view.status.queued} queued · ${view.status.failed} failed`} />
       </section>
-      <p className="text-xs leading-relaxed text-muted">{stats.done.length - stats.citationAnswers} completed answers in this selection are excluded from citation measurement. Prompts naming your brand can raise mention rates. Mention order and source order are not search rankings.</p>
+      <p className="text-xs leading-relaxed text-muted">
+        {stats.bounds && stats.unknown > 0 ? `Counting the ${stats.unknown} unknown answers either way, between ${stats.bounds[0]}% and ${stats.bounds[1]}% of all ${stats.citationSlots} could have cited you. Unknown answers are never counted as misses. ` : ''}
+        A name in an answer is text, not proof it is your business. Prompts naming your brand can raise mention rates. Mention order and source order are not search rankings.
+      </p>
       {stats.voice.length > 1 && <section aria-labelledby="sov-heading">
-        <h3 id="sov-heading" className="text-xl font-light">Share of mentions</h3>
+        <h3 id="sov-heading" className="text-xl font-light">Share of name matches</h3>
+        <p className="mt-2 text-xs text-muted">Names found in the answers, not confirmed businesses.</p>
         <ul className="mt-4 grid gap-3">{stats.voice.map((b, i) => <li key={i} className="grid grid-cols-[minmax(5rem,1fr)_2fr_auto] items-center gap-3 text-sm">
           <span className="truncate">{b.name}{b.you ? ' (you)' : ''}</span>
           <span aria-hidden className="h-2 rounded-full bg-surface"><span className={`block h-2 rounded-full ${b.you ? 'bg-ink' : 'bg-muted/50'}`} style={{ width: `${b.share}%` }} /></span>
@@ -72,7 +83,7 @@ export function CitationResults({ view }: { view: CitationView }) {
         <h3 id="trend-heading" className="text-xl font-light">Batch history</h3>
         <p className="mt-2 text-xs text-muted">All engines and prompts in each batch. Changes in prompts, modes and completed samples can affect these counts.</p>
         <ol className="mt-4 grid gap-2 text-sm text-muted">{view.trend.map((t) => <li key={t.at}>
-          {day(t.at)}: named in {t.mentioned} of {t.answers}; {t.citation_answers ? `cited in ${t.cited} of ${t.citation_answers} measurable answers` : 'citations not measured'}
+          {day(t.at)}: confirmed as you in {t.identified ?? 0} of {t.answers}; {t.citation_answers ? `cited in ${t.cited} of ${t.citation_answers} measurable answers` : 'citations not measured'}
         </li>)}</ol>
         {view.history_limited && <p className="mt-2 text-xs text-muted">History is limited to the most recent 5,000 checks.</p>}
       </section>}
@@ -88,7 +99,7 @@ function Answer({ answer: a }: { answer: CitationAnswer }) {
   return <details className="group rounded-xl border border-line p-4">
     <summary className="cursor-pointer text-sm">
       <span className="block text-ink">{a.prompt}</span>
-      <span className="mt-2 block text-xs text-muted">{citationLabel(a)} · {a.status === 'done' ? `${you?.mentioned ? 'Named you' : 'Did not name you'} · ${you?.cited ? 'Cited your site' : status === 'measured' ? 'Not cited' : 'Citations N/A'}` : a.status === 'queued' ? 'Queued' : 'Failed'}</span>
+      <span className="mt-2 block text-xs text-muted">{citationLabel(a)} · {a.status === 'done' ? `${identityText(you)} · ${you?.cited ? 'Cited your site' : status === 'measured' ? 'Not cited' : 'Citations N/A'}` : a.status === 'queued' ? 'Queued' : 'Failed'}</span>
     </summary>
     <div className="mt-4 grid gap-4 border-t border-line pt-4">
       {a.status !== 'done' ? <p role="status" className="text-sm text-muted">{a.last_error || a.answer || 'Waiting for available provider capacity.'}{a.status === 'queued' && a.next_attempt_at ? ` Eligible to retry after ${new Date(a.next_attempt_at).toLocaleString()}.` : ''}</p> : <>
@@ -106,6 +117,12 @@ function Answer({ answer: a }: { answer: CitationAnswer }) {
       </>}
     </div>
   </details>
+}
+
+function identityText(you?: CitationBrand) {
+  const status = identity(you)
+  return status === 'verified' ? 'Confirmed as you' : status === 'other' ? `Named, but points to ${you?.entity_evidence?.host ?? 'a same-name site'}`
+    : status === 'ambiguous' ? 'Named, not confirmed as you' : 'Did not name you'
 }
 
 function safeLink(raw: string) {

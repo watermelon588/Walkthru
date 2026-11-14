@@ -1,0 +1,74 @@
+[
+  {
+    "site": "https://portfolio2-mu-inky.vercel.app/",
+    "slug": "portfolio",
+    "goal": "Find the projects section and open one project detail on this website.",
+    "run_id": "82b4b12715f84cee95a3644d83a59c95",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 85.59,
+    "status": "looping",
+    "steps": 5,
+    "report_ready": true
+  },
+  {
+    "site": "https://www.scribb.xyz/",
+    "slug": "scribb",
+    "goal": "Find what Scribb offers and open its pricing or plans page.",
+    "run_id": "6cf033c601a74461ab9bad048bb07d07",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 60.43,
+    "status": "agent_lost",
+    "steps": 3,
+    "report_ready": true
+  },
+  {
+    "site": "https://tripverse-0.vercel.app/",
+    "slug": "tripverse",
+    "goal": "Find the destinations or trips listing and open one destination or trip detail.",
+    "run_id": "18012b2c8f0f46b08eed68c14226dd57",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 165.33,
+    "status": "stuck",
+    "steps": 10,
+    "report_ready": true
+  },
+  {
+    "site": "https://portfolio2-mu-inky.vercel.app/",
+    "slug": "portfolio-grounded",
+    "goal": "Find the projects section and open one project detail on this website.",
+    "run_id": "df76f76f5ab4435cbd29375459d577f9",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 103.62,
+    "status": "agent_lost",
+    "steps": 6,
+    "report_ready": true
+  },
+  {
+    "site": "https://www.scribb.xyz/",
+    "slug": "scribb-supported",
+    "goal": "Open Explore and open the Demo Journal.",
+    "run_id": "25544b01979342a7af25dbd701845ec0",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 66.44,
+    "status": "agent_lost",
+    "steps": 6,
+    "report_ready": true
+  },
+  {
+    "site": "https://portfolio2-mu-inky.vercel.app/dial/",
+    "slug": "portfolio-fixed-route",
+    "goal": "Find the projects section and open one project detail on this website.",
+    "run_id": "7f4bfdcb6ad84e2f8565b2d421564cb6",
+    "runner_status": "finished",
+    "error": null,
+    "journey_seconds": 35.57,
+    "status": "done",
+    "steps": 2,
+    "report_ready": true
+  }
+]

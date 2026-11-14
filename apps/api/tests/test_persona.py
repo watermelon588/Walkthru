@@ -249,6 +249,11 @@ def test_step_budget(monkeypatch):
 
 
 def test_stuck_loop(monkeypatch):
+    from app.agent import goal
+    # A well-defined unmet outcome exercises repetition. An unknown outcome now exhausts
+    # the separate contract-discovery budget before a third browser action is proposed.
+    monkeypatch.setattr(goal, "plan", lambda *a, **k: {"contract_version": 2, "intent": "Finish signup", "checkpoints": [
+        {"description": "Signup completed", "kind": "outcome", "text_contains": "Signup completed"}]})
     use([PersonaStep(thought="click it", action="click", target_id=1, confusion=2)] * 4, monkeypatch)
     c = TestClient(app)
     obs = page("https://fixture.test/", [{"id": 1, "tag": "button", "text": "Go"}])

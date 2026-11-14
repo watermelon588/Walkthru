@@ -1,0 +1,16 @@
+{
+  "name": "assemble",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "A crew of cursors rebuilds a page in place. Dependency-free.",
+  "main": "dist/assemble.js",
+  "scripts": {
+    "//": "ponytail: borrows vite, typescript and oxlint from apps/web so the repo has one node_modules; give this package its own devDependencies when it moves to its own repo",
+    "build": "node ../../apps/web/node_modules/vite/bin/vite.js build",
+    "typecheck": "node ../../apps/web/node_modules/typescript/bin/tsc -p . --noEmit",
+    "lint": "node ../../apps/web/node_modules/oxlint/bin/oxlint src test",
+    "test": "node --test test/sim.test.ts test/regions.test.ts",
+    "test:browser": "node test/browser.mjs"
+  }
+}

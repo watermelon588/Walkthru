@@ -25,7 +25,13 @@ def _records(c: httpx.Client, name: str, kind: str) -> list[str]:
     r = c.get(RESOLVER, params={"name": name, "type": kind}, headers={"accept": "application/dns-json"}, timeout=5)
     r.raise_for_status()
     wanted = {"TXT": 16, "MX": 15}[kind]
-    return [a["data"].strip('"').replace('" "', "") for a in r.json().get("Answer", []) if a.get("type") == wanted]
+    body = r.json()
+    if not isinstance(body, dict) or type(body.get("Status")) is not int or body["Status"] not in (0, 3):
+        raise ValueError("DNS response did not establish record presence or absence")
+    answers = body.get("Answer", [])
+    if not isinstance(answers, list) or any(not isinstance(a, dict) or not isinstance(a.get("data"), str) for a in answers):
+        raise ValueError("Malformed DNS answers")
+    return [a["data"].strip('"').replace('" "', "") for a in answers if a.get("type") == wanted]
 
 
 def domain_of(url: str) -> str | None:
@@ -55,12 +61,12 @@ def check(url: str, c: httpx.Client, *, full: bool) -> tuple[list[Finding], str 
     findings = []
     if not any(r.lower().startswith("v=spf1") for r in txt):
         findings.append(_f("medium", "No SPF record",
-                           f"{domain} does not say which servers may send its email, so signup, verification and password-reset emails are more likely to land in spam or be rejected.",
+                           f"No SPF record was returned for {domain}. The actual envelope-sender domain, sender authentication and email delivery were not tested.",
                            "Add one TXT record to the domain listing your email provider, for example v=spf1 include:_spf.google.com ~all (use your provider's value).",
                            f"TXT {domain}"))
     if not dmarc:
         findings.append(_f("medium", "No DMARC policy",
-                           f"{domain} has no DMARC record. Mailbox providers trust its email less, and anyone can send email pretending to be {domain}.",
+                           f"No DMARC record was returned at _dmarc.{domain}. Organizational-domain fallback, message alignment, receiver policy and spoofing resistance were not tested.",
                            "Add a TXT record at _dmarc with v=DMARC1; p=none; rua=mailto:you@yourdomain, then move to p=quarantine once reports look clean.",
                            f"TXT _dmarc.{domain}"))
     elif "p=none" in dmarc[0].lower().replace(" ", ""):
@@ -70,7 +76,7 @@ def check(url: str, c: httpx.Client, *, full: bool) -> tuple[list[Finding], str 
                            f"TXT _dmarc.{domain}: {dmarc[0][:120]}"))
     if mx is not None and not mx:
         findings.append(_f("low", "Domain has no MX record",
-                           f"{domain} cannot receive email, so replies to your signup and support emails bounce.",
+                           f"No MX record was returned for {domain}. SMTP fallback, the actual reply address and delivery were not tested; this does not establish that replies bounce.",
                            "Add MX records for your email provider, or send from an address on a domain that receives mail.",
                            f"MX {domain}"))
     return findings, None

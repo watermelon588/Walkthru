@@ -18,9 +18,18 @@ export const lead = 'mt-5 max-w-[58ch] leading-relaxed text-muted'
  * get a small radius matching the mock window corners and a soft ink-tinted shadow.
  * Until a file exists it renders a labelled slot so layout stays true.
  */
+/** Intrinsic sizes, so the browser reserves space before a lazy image loads. Update when an asset is replaced. */
+const SIZES: Record<string, [number, number]> = {
+  'agent-eye.jpg': [735, 471], 'workspace.jpg': [735, 980],
+  'persona-buyer.jpg': [926, 1124], 'persona-owner.jpg': [900, 1200], 'persona-phone.jpg': [736, 981],
+  'persona-returning.jpg': [897, 1024], 'persona-signup.jpg': [750, 750],
+  'report.png': [1872, 653], 'security.png': [1872, 653], 'seo.png': [1872, 892], 'stuck-closeup.webp': [1872, 1440],
+}
+
 export function Asset({ name, label, ratio, className = '', quiet = false, eager = false }: { name: string; label: string; ratio?: string; className?: string; quiet?: boolean; eager?: boolean }) {
   const [missing, setMissing] = useState(false)
-  const shot = name.endsWith('.png')
+  const shot = !name.endsWith('.jpg')
+  const [width, height] = SIZES[name] ?? []
   if (missing)
     return (
       <div style={{ aspectRatio: ratio ?? '16 / 10' }} className={`grid place-items-center rounded-2xl border border-dashed border-line bg-surface p-6 text-center ${className}`}>
@@ -34,11 +43,13 @@ export function Asset({ name, label, ratio, className = '', quiet = false, eager
     <img
       src={`/assets/${name}`}
       alt={label}
+      width={width}
+      height={height}
       loading={eager ? 'eager' : 'lazy'}
       onError={() => setMissing(true)}
       onLoad={() => ScrollTrigger.refresh()}
       style={ratio ? { aspectRatio: ratio } : undefined}
-      className={`w-full ${shot ? 'h-auto rounded-lg shadow-[0_30px_70px_-40px_rgba(27,27,31,0.35)]' : 'rounded-2xl object-cover'} ${className}`}
+      className={`w-full h-auto ${shot ? 'rounded-lg shadow-[0_30px_70px_-40px_rgba(27,27,31,0.35)]' : 'rounded-2xl object-cover'} ${className}`}
     />
   )
 }

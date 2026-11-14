@@ -4,7 +4,22 @@ import { redact } from "./redact";
 import type { BrowserDiagnostics } from "./diagnostics";
 
 export type FieldState = "filled" | "empty" | "checked" | "unchecked";
-export type Element = { id: number; tag: string; text: string; type?: string; state?: FieldState; region?: string; row?: string; in_view?: boolean; occluded?: boolean; scroll_container_id?: number };
+export type Reveal = { container_id: number; direction: 'up' | 'down' | 'left' | 'right' };
+export type Section = { key: string; label: string; in_view?: boolean; occluded?: boolean; scroll_container_id?: number; reveal_direction?: Reveal['direction'] };
+export type Element = { id: number; tag: string; text: string; type?: string; state?: FieldState; region?: string; row?: string; in_view?: boolean; occluded?: boolean; scroll_container_id?: number; destination?: string; section_target?: string; reveal?: Reveal };
+
+/** Public same-site destinations only. Do not turn query-bearing links into a different route. */
+export function publicDestination(el: globalThis.Element): string | undefined {
+  if (el.tagName !== 'A' || !el.getAttribute('href')) return undefined;
+  try {
+    const url = new URL(el.getAttribute('href')!, el.ownerDocument.baseURI);
+    if (!['http:', 'https:'].includes(url.protocol) || url.origin !== el.ownerDocument.location.origin ||
+        url.username || url.password || url.search) return undefined;
+    const value = url.pathname + url.hash;
+    if (value.length > 240 || !/^\/(?!\/)[A-Za-z0-9/_~.-]*(?:#[A-Za-z][A-Za-z0-9_-]{0,79})?$/.test(value) || redact(value) !== value) return undefined;
+    return value;
+  } catch { return undefined; }
+}
 export type ScrollPosition = { top: number; left: number };
 export type ScrollContainer = ScrollPosition & { id: number; label: string; scroll_height: number; client_height: number; scroll_width: number; client_width: number; in_view?: boolean; occluded?: boolean; at_start: boolean; at_end: boolean; can_up: boolean; can_down: boolean; can_left: boolean; can_right: boolean };
 export type ExecutorResult = { action: 'scroll' | 'wait'; status: 'moved' | 'no_progress' | 'settled' | 'changed' | 'timeout' | 'aborted'; container_id?: number; before?: ScrollPosition; after?: ScrollPosition; elapsed_ms?: number };
@@ -20,6 +35,9 @@ export type Observation = {
   scroll_pct?: number; // how far down the page the viewport is, so scrolling reads as progress
   at_end?: boolean;
   revision?: string;
+  document_id?: string;
+  sections?: Section[];
+  sections_truncated?: boolean;
   elements_truncated?: boolean;
   candidate_limit_reached?: boolean;
   omitted_elements?: number; // lower bound when the candidate limit is reached
@@ -43,6 +61,15 @@ type CapturedScroll = { el: globalThis.Element; ancestors: globalThis.Element[];
 type Registry = { revision: string; url: string; geometry: boolean; targets: Map<number, Captured>; scrolls: Map<number, CapturedScroll>; state?: PublicState };
 // References and full raw semantics stay in this document's memory, never in an Observation.
 const registries = new WeakMap<Document, Registry>();
+const documentIds = (() => {
+  // Survive reinjection in the same content-script realm, while document replacement gets a fresh identity.
+  const key = Symbol.for('walkthru.document.identities.v1');
+  const host = globalThis as typeof globalThis & { [key: symbol]: unknown };
+  if (host[key] instanceof WeakMap) return host[key] as WeakMap<Document, string>;
+  const ids = new WeakMap<Document, string>();
+  Object.defineProperty(host, key, { value: ids });
+  return ids;
+})();
 const CONTEXT_LIMIT = 6000;
 const REGION = 'dialog, [role="dialog"], main, nav, aside, form, section, [role="region"], [role="main"], [role="navigation"]';
 const ROW = 'tr, [role="row"], li, [role="listitem"], article';
@@ -141,6 +168,66 @@ function geometryState(el: globalThis.Element, active: globalThis.Element | null
     hit = inner;
   }
   return { in_view, occluded: !hit || !within(hit, el) };
+}
+
+/** Only unique public IDs referenced by an actual control become section evidence. */
+function sectionTarget(el: globalThis.Element, ids: Map<string, globalThis.Element | null>): globalThis.Element | undefined {
+  let key = el.getAttribute('aria-controls') || '';
+  if (!key && el.tagName === 'A' && el.getAttribute('href')) {
+    try {
+      const url = new URL(el.getAttribute('href')!, el.ownerDocument.baseURI);
+      const current = new URL(el.ownerDocument.location.href);
+      if (url.origin === current.origin && url.pathname === current.pathname && url.search === current.search) key = url.hash.slice(1);
+    } catch { return undefined; }
+  }
+  if (!/^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(key) || redact(key) !== key) return undefined;
+  const target = ids.get(key);
+  const privateTarget = target && [target, ...ancestors(target)].some(node => node.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"]), script, style'));
+  return target && !privateTarget ? target : undefined;
+}
+
+/** A clipped section must have a visible, uncovered point; viewport intersection alone is insufficient. */
+function sectionGeometry(el: globalThis.Element, active: globalThis.Element | null) {
+  if (!visible(el, true)) return { in_view: false };
+  const doc = el.ownerDocument, win = doc.defaultView!;
+  const r = el.getBoundingClientRect();
+  let left = Math.max(0, r.left), right = Math.min(win.innerWidth, r.right);
+  let top = Math.max(0, r.top), bottom = Math.min(win.innerHeight, r.bottom);
+  for (const node of ancestors(el)) {
+    const style = win.getComputedStyle(node), bounds = node.getBoundingClientRect();
+    if (/auto|scroll|hidden|clip/.test(style.overflowX)) { left = Math.max(left, bounds.left); right = Math.min(right, bounds.right); }
+    if (/auto|scroll|hidden|clip/.test(style.overflowY)) { top = Math.max(top, bounds.top); bottom = Math.min(bottom, bounds.bottom); }
+  }
+  if (right <= left || bottom <= top) return { in_view: false };
+  if (active && !within(el, active)) return { in_view: true, occluded: true };
+  if (typeof doc.elementFromPoint !== 'function') return { in_view: true };
+  const hit = doc.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+  return { in_view: true, occluded: !hit || !within(hit, el) };
+}
+
+/** One axis, a known unobscured pane, and an available direction; never guess around an overlay. */
+function revealHint(el: globalThis.Element, panes: globalThis.Element[], active: globalThis.Element | null): Reveal | undefined {
+  if (!visible(el, true) || active) return undefined;
+  const doc = el.ownerDocument, win = doc.defaultView!;
+  const containing = ancestors(el).find(node => {
+    const s = win.getComputedStyle(node);
+    return (/auto|scroll/.test(s.overflowY) && node.scrollHeight > node.clientHeight) ||
+      (/auto|scroll/.test(s.overflowX) && node.scrollWidth > node.clientWidth);
+  });
+  const container_id = containing ? panes.indexOf(containing) : 0;
+  if (container_id < 0 || !panes[container_id]) return undefined;
+  if (container_id > 0) {
+    const state = geometryState(panes[container_id]!, active);
+    if (!state.in_view || state.occluded !== false) return undefined;
+  }
+  const viewport = container_id === 0 ? { top: 0, left: 0, bottom: win.innerHeight, right: win.innerWidth } : panes[container_id]!.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const vertical = r.bottom <= viewport.top ? 'up' : r.top >= viewport.bottom ? 'down' : null;
+  const horizontal = r.right <= viewport.left ? 'left' : r.left >= viewport.right ? 'right' : null;
+  if (!!vertical === !!horizontal) return undefined;
+  const direction = vertical || horizontal!;
+  const state = scrollState(panes[container_id]!, container_id === 0, doc);
+  return state[`can_${direction}`] ? { container_id, direction } : undefined;
 }
 
 /** Rechecks captured identity and observable semantics immediately before dispatch. */
@@ -312,6 +399,7 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
   const geometry = opts.geometry ?? true;
   for (const el of walk(doc)) if (el.hasAttribute(ID_ATTR)) el.removeAttribute(ID_ATTR);
   const revision = crypto.randomUUID();
+  if (!documentIds.has(doc)) documentIds.set(doc, crypto.randomUUID());
   const registry: Registry = { revision, url: doc.location.href, geometry, targets: new Map(), scrolls: new Map() };
   registries.set(doc, registry);
   const active = geometry ? modal(doc) : null;
@@ -322,6 +410,13 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
   const panes = scrollCandidates(doc, geometry, active, memo);
   const paneIds = new Map(panes.kept.map((el, index) => [el, index]).filter(([, index]) => index !== 0) as [globalThis.Element, number][]);
   const elements: Element[] = [];
+  const ids = new Map<string, globalThis.Element | null>();
+  let idNodes = 0, idsTruncated = false;
+  for (const node of walk(doc)) {
+    if (++idNodes > 2000) { ids.clear(); idsTruncated = true; break; }
+    if (node.id) ids.set(node.id, ids.has(node.id) ? null : node);
+  }
+  const sectionNodes = new Map<string, globalThis.Element>();
   for (const el of candidates.slice(0, MAX_ELEMENTS)) {
     const id = elements.length + 1;
     el.setAttribute(ID_ATTR, String(id));
@@ -329,7 +424,17 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     const type = el.tagName === "INPUT" ? (el as HTMLInputElement).type : undefined;
     const state = fieldState(el);
     const raw = context(el, memo);
-    const extra: { region?: string; row?: string } = {};
+    const extra: { region?: string; row?: string; destination?: string; section_target?: string; reveal?: Reveal } = {};
+    const destination = publicDestination(el);
+    if (destination && destination.length <= budget) { extra.destination = destination; budget -= destination.length; }
+    else if (destination) contextTruncated = true;
+    const section = sectionTarget(el, ids);
+    if (section && section.id.length <= budget) {
+      extra.section_target = section.id;
+      sectionNodes.set(section.id, section);
+      budget -= section.id.length;
+    } else if (section) contextTruncated = true;
+    if (geometry && !sectionGeometry(el, active).in_view) extra.reveal = revealHint(el, panes.kept, active);
     for (const key of ['region', 'row'] as const) {
       const masked = redact(raw[key]);
       const kept = masked.slice(0, Math.min(160, budget));
@@ -352,6 +457,20 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     return { id, label: kept, ...scrollState(el, id === 0, doc), ...(geometry ? (id === 0 ? { in_view: true, occluded: !!active } : geometryState(el, active)) : {}) };
   });
   const body = doc.body as HTMLElement | null;
+  const sections: Section[] = [];
+  let sectionsTruncated = idsTruncated || sectionNodes.size > 24;
+  for (const [key, node] of [...sectionNodes].slice(0, 24)) {
+    if (key.length > budget) { sectionsTruncated = true; continue; }
+    budget -= key.length;
+    const heading = node.querySelector('h1,h2,h3,h4,h5,h6');
+    const rawLabel = redact(node.getAttribute('aria-label') || labelledBy(node, memo) || (heading ? safeText(heading, memo) : ''));
+    const kept = rawLabel.slice(0, Math.min(160, budget));
+    budget -= kept.length;
+    if (kept.length < rawLabel.length) { contextTruncated = true; sectionsTruncated = true; }
+    const state = geometry ? sectionGeometry(node, active) : {};
+    const reveal = geometry && !('in_view' in state && state.in_view) ? revealHint(node, panes.kept, active) : undefined;
+    sections.push({ key, label: kept, ...state, ...(reveal ? { scroll_container_id: reveal.container_id, reveal_direction: reveal.direction } : {}) });
+  }
   const text = redact(body ? safeText(body, memo) : '').slice(0, MAX_TEXT);
   const obs: Observation = {
     url: doc.location?.href ?? "",
@@ -360,6 +479,9 @@ export function snapshot(doc: Document = document, opts: Opts = {}): Observation
     text,
     errors: errors(doc, geometry).map(redact),
     revision,
+    document_id: documentIds.get(doc),
+    sections,
+    sections_truncated: sectionsTruncated,
     elements_truncated: candidates.length > MAX_ELEMENTS,
     candidate_limit_reached: candidates.length >= SCAN_LIMIT,
     omitted_elements: Math.max(0, candidates.length - elements.length),

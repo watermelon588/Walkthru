@@ -1,0 +1,592 @@
+{
+  "evidence_type": "scripted graph fixture; no live site or account",
+  "scenarios": [
+    {
+      "scenario": "transient_target",
+      "status": "done",
+      "model_calls": 2,
+      "transitions": [
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "initial",
+            "text": "Create your workspace",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": false
+              }
+            ]
+          },
+          "pending_action": {
+            "thought": "Walkthru is refreshing the page state before choosing an available control.",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "https://fixture.invalid/",
+            "observation_revision": "initial",
+            "harness_recovery": true
+          },
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": null,
+            "last_proof_result": null,
+            "executable_target_ids": [],
+            "recoveries_used": 0
+          }
+        },
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "fresh",
+            "text": "Create your workspace",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "status": "running",
+          "confirmed": 0,
+          "pending_action": {
+            "provider": "scripted_fixture",
+            "thought": "Open the workspace",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "https://fixture.invalid/",
+            "scroll_pct": null,
+            "observation_revision": "fresh",
+            "target_label": "Create workspace"
+          },
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": null,
+            "last_proof_result": "wait_without_causal_action",
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 1
+          }
+        },
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "done",
+            "text": "Workspace created",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "status": "done",
+          "confirmed": 1,
+          "pending_action": null,
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": null,
+            "last_proof_result": "wait_without_causal_action",
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 1
+          }
+        }
+      ],
+      "steps": [
+        {
+          "thought": "Walkthru is refreshing the page state before choosing an available control.",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "https://fixture.invalid/",
+          "observation_revision": "initial",
+          "harness_recovery": true,
+          "result_url": "https://fixture.invalid/"
+        },
+        {
+          "provider": "scripted_fixture",
+          "thought": "Open the workspace",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "https://fixture.invalid/",
+          "scroll_pct": null,
+          "observation_revision": "fresh",
+          "target_label": "Create workspace",
+          "result_url": "https://fixture.invalid/",
+          "checkpoint_evidence": {
+            "url": "https://fixture.invalid/",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 2
+          }
+        }
+      ],
+      "harness_worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "guard",
+          "reason": "target_unavailable",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "recover",
+          "reason": "refresh_requested",
+          "action": "wait",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "wait_without_causal_action",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 6,
+          "step": 2,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "scenario": "missing_finish_condition",
+      "status": "stuck",
+      "model_calls": 3,
+      "transitions": [
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "initial",
+            "text": "Create your workspace",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "pending_action": {
+            "provider": "scripted_fixture",
+            "thought": "Open the workspace",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "https://fixture.invalid/",
+            "scroll_pct": null,
+            "observation_revision": "initial",
+            "target_label": "Create workspace"
+          },
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": "missing_outcome_expectation",
+            "last_proof_result": null,
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 0
+          }
+        },
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "after-0",
+            "text": "Workspace created",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "status": "running",
+          "confirmed": 0,
+          "pending_action": {
+            "provider": "scripted_fixture",
+            "thought": "Open the workspace",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "https://fixture.invalid/",
+            "scroll_pct": null,
+            "observation_revision": "after-0",
+            "target_label": "Create workspace"
+          },
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": "missing_outcome_expectation",
+            "last_proof_result": "missing_outcome_expectation",
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 0
+          }
+        },
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "after-1",
+            "text": "Workspace created",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "status": "running",
+          "confirmed": 0,
+          "pending_action": {
+            "provider": "scripted_fixture",
+            "thought": "Open the workspace",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "https://fixture.invalid/",
+            "scroll_pct": null,
+            "observation_revision": "after-1",
+            "target_label": "Create workspace"
+          },
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": "missing_outcome_expectation",
+            "last_proof_result": "missing_outcome_expectation",
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 0
+          }
+        },
+        {
+          "observation": {
+            "url": "https://fixture.invalid/",
+            "title": "Synthetic workspace fixture",
+            "navigation_version": 3,
+            "revision": "after-2",
+            "text": "Workspace created",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "in_view": true
+              }
+            ]
+          },
+          "status": "stuck",
+          "confirmed": 0,
+          "pending_action": null,
+          "context": {
+            "checkpoint": 1,
+            "predicate_problem": "missing_outcome_expectation",
+            "last_proof_result": "missing_outcome_expectation",
+            "executable_target_ids": [
+              1
+            ],
+            "recoveries_used": 0
+          }
+        }
+      ],
+      "steps": [
+        {
+          "provider": "scripted_fixture",
+          "thought": "Open the workspace",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "https://fixture.invalid/",
+          "scroll_pct": null,
+          "observation_revision": "initial",
+          "target_label": "Create workspace",
+          "result_url": "https://fixture.invalid/"
+        },
+        {
+          "provider": "scripted_fixture",
+          "thought": "Open the workspace",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "https://fixture.invalid/",
+          "scroll_pct": null,
+          "observation_revision": "after-0",
+          "target_label": "Create workspace",
+          "result_url": "https://fixture.invalid/",
+          "no_change": true
+        },
+        {
+          "provider": "scripted_fixture",
+          "thought": "Open the workspace",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "https://fixture.invalid/",
+          "scroll_pct": null,
+          "observation_revision": "after-1",
+          "target_label": "Create workspace",
+          "result_url": "https://fixture.invalid/",
+          "no_change": true
+        }
+      ],
+      "harness_worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 5,
+          "step": 2,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 9,
+          "step": 3,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 3,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 3,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 12,
+          "step": 3,
+          "node": "check",
+          "reason": "stuck",
+          "action": "click",
+          "progress": 0,
+          "status": "stuck"
+        }
+      ]
+    }
+  ]
+}

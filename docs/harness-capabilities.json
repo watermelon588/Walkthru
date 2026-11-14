@@ -1,0 +1,5214 @@
+{
+  "manifest": {
+    "version": 2,
+    "cases": [
+      {
+        "id": "development:route",
+        "split": "development",
+        "seed": 19,
+        "capability": "route",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-49adc2e077",
+        "expected": "done"
+      },
+      {
+        "id": "development:section",
+        "split": "development",
+        "seed": 19,
+        "capability": "section",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-270ec00a1a",
+        "expected": "done"
+      },
+      {
+        "id": "development:overlay",
+        "split": "development",
+        "seed": 19,
+        "capability": "overlay",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-ab005766a3",
+        "expected": "done"
+      },
+      {
+        "id": "development:delayed",
+        "split": "development",
+        "seed": 19,
+        "capability": "delayed",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-4bba2023cb",
+        "expected": "done"
+      },
+      {
+        "id": "development:functional",
+        "split": "development",
+        "seed": 19,
+        "capability": "functional",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-ba6399c5a3",
+        "expected": "done"
+      },
+      {
+        "id": "development:unknown_outcome",
+        "split": "development",
+        "seed": 19,
+        "capability": "unknown_outcome",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-ca0e42f48c",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "development:missing_feature",
+        "split": "development",
+        "seed": 19,
+        "capability": "missing_feature",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-3bbc6f2e91",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "development:ambiguous",
+        "split": "development",
+        "seed": 19,
+        "capability": "ambiguous",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-30356b4ee9",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "development:visitor",
+        "split": "development",
+        "seed": 19,
+        "capability": "visitor",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-0bd8de680d",
+        "expected": "safe_stop"
+      },
+      {
+        "id": "development:stale",
+        "split": "development",
+        "seed": 19,
+        "capability": "stale",
+        "label": "Details",
+        "section_id": "details",
+        "spacer_px": 1800,
+        "viewport": [
+          1280,
+          900
+        ],
+        "path": "/fixture-9c7e3c6430",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "held_out:route",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "route",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-faa5f5f467",
+        "expected": "done"
+      },
+      {
+        "id": "held_out:section",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "section",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-b2d7797bbd",
+        "expected": "done"
+      },
+      {
+        "id": "held_out:overlay",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "overlay",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-f768c87823",
+        "expected": "done"
+      },
+      {
+        "id": "held_out:delayed",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "delayed",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-73915805c6",
+        "expected": "done"
+      },
+      {
+        "id": "held_out:functional",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "functional",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-5288273f02",
+        "expected": "done"
+      },
+      {
+        "id": "held_out:unknown_outcome",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "unknown_outcome",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-c58c6aed5c",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "held_out:missing_feature",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "missing_feature",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-a22b94959d",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "held_out:ambiguous",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "ambiguous",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-223c527811",
+        "expected": "unconfirmed"
+      },
+      {
+        "id": "held_out:visitor",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "visitor",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-d024d85f4f",
+        "expected": "safe_stop"
+      },
+      {
+        "id": "held_out:stale",
+        "split": "held_out",
+        "seed": 811,
+        "capability": "stale",
+        "label": "Project overview",
+        "section_id": "project-overview",
+        "spacer_px": 2400,
+        "viewport": [
+          768,
+          900
+        ],
+        "path": "/fixture-cb14b99183",
+        "expected": "unconfirmed"
+      }
+    ],
+    "oracle": "Independent fixture state plus route/visibility/safety checks; never planner output",
+    "scope": "local synthetic fixtures, scripted controller by default"
+  },
+  "manifest_hash": "85eb38e4199a62bc6bdb4840588da4778f387f9b15d0334ec7c8bffadc7f0630",
+  "provider": "scripted",
+  "harness_variant": "contract-v2",
+  "environment": {
+    "python": "3.13.5",
+    "browser": "Chrome/157.0.8103.51"
+  },
+  "source_hashes": {
+    "apps\\api\\app\\agent\\persona.py": "0eccd5bb9cf23729a8e77de388b1bbe0f12be2d1cf68a2c5062bc41a76f96069",
+    "apps\\api\\app\\agent\\goal.py": "634308445ff67677274d371bb78d31b23843208eb04b4ddd6cd371796fc60f5c",
+    "apps\\extension\\.output\\chrome-mv3\\inject.js": "ca20cb5a4f9d5402d78c40ceaf356bc9b9c248a82758d0eeb4b818fb5495bcdd"
+  },
+  "trials": [
+    {
+      "case_id": "development:route",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 5464,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-49adc2e077",
+          "scroll_pct": 100,
+          "observation_revision": "72671b31-aad1-4673-b194-707fce92a694",
+          "document_id": "50565769-c613-4aa9-90bc-ffb9480a21a4",
+          "target_label": "Details",
+          "result_url": "http://127.0.0.1:59361/fixture-49adc2e077/details",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:22.655Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 112
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-49adc2e077/details",
+            "signal": "navigation",
+            "matched": "/fixture-49adc2e077/details",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "contract_revised",
+          "checkpoint": 1,
+          "progress": 0,
+          "before_kind": "navigation",
+          "after_kind": "navigation",
+          "contract_revision": 1,
+          "source": "observed_destination",
+          "before_target": "/invented",
+          "after_target": "/fixture-49adc2e077/details"
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-49adc2e077",
+            "scroll_pct": 100,
+            "observation_revision": "72671b31-aad1-4673-b194-707fce92a694",
+            "document_id": "50565769-c613-4aa9-90bc-ffb9480a21a4",
+            "target_label": "Details"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-49adc2e077/details",
+            "title": "Capability fixture",
+            "elements": [],
+            "text": "Details",
+            "errors": [],
+            "revision": "3a364152-73c1-4f6a-a011-c183b296eb41",
+            "document_id": "fd652321-50cf-40ef-a66b-db7f1a2a2662",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:22.655Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 112
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-route-0.jpg"
+    },
+    {
+      "case_id": "development:section",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2637,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-270ec00a1a",
+          "scroll_pct": 0,
+          "observation_revision": "a1f1e5d5-ddbf-4de4-8acb-545ed40f1cd9",
+          "document_id": "881323ab-da0a-49b6-8d1c-58a2fe73be41",
+          "target_label": "Details",
+          "section_target": "details",
+          "result_url": "http://127.0.0.1:59361/fixture-270ec00a1a#details",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:25.371Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 60
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-270ec00a1a#details",
+            "signal": "section_visibility",
+            "matched": "details",
+            "document_id": "881323ab-da0a-49b6-8d1c-58a2fe73be41",
+            "route": "http://127.0.0.1:59361/fixture-270ec00a1a",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "contract_revised",
+          "checkpoint": 1,
+          "progress": 0,
+          "before_kind": "navigation",
+          "after_kind": "section",
+          "contract_revision": 1,
+          "source": "observed_section",
+          "before_target": "/invented",
+          "after_target": "/#details"
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-270ec00a1a",
+            "scroll_pct": 0,
+            "observation_revision": "a1f1e5d5-ddbf-4de4-8acb-545ed40f1cd9",
+            "document_id": "881323ab-da0a-49b6-8d1c-58a2fe73be41",
+            "target_label": "Details",
+            "section_target": "details"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-270ec00a1a#details",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Inspect",
+                "region": "section: Details",
+                "row": "Inspect",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Details",
+                "destination": "/fixture-270ec00a1a#details",
+                "section_target": "details",
+                "reveal": {
+                  "container_id": 0,
+                  "direction": "up"
+                },
+                "row": "Details",
+                "in_view": false
+              }
+            ],
+            "text": "Details DetailsInspect",
+            "errors": [],
+            "revision": "5d1e7962-c675-4e94-a89f-f10d1d017a8f",
+            "document_id": "881323ab-da0a-49b6-8d1c-58a2fe73be41",
+            "sections": [
+              {
+                "key": "details",
+                "label": "Details",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 1328,
+                "left": 0,
+                "scroll_height": 2228,
+                "client_height": 900,
+                "scroll_width": 1265,
+                "client_width": 1280,
+                "at_start": false,
+                "at_end": true,
+                "can_up": true,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:25.371Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 60
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-section-0.jpg"
+    },
+    {
+      "case_id": "development:overlay",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": true,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 3575,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "thought": "Walkthru is refreshing the page state before choosing an available control.",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+          "observation_revision": "26f01ff3-9498-4197-8835-31b5a90c7cb8",
+          "harness_recovery": true,
+          "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944",
+          "result_url": "http://127.0.0.1:59361/fixture-ab005766a3",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 326
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:27.991Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 68
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+          "scroll_pct": 100,
+          "observation_revision": "e5f92565-0ec5-4e66-9bb9-c2d039813521",
+          "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-ab005766a3",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:28.976Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 2596
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 2
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "target_unavailable",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "recover",
+          "reason": "refresh_requested",
+          "action": "wait",
+          "target_id": 1,
+          "progress": 0,
+          "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944"
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "wait_without_causal_action",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "thought": "Walkthru is refreshing the page state before choosing an available control.",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+            "observation_revision": "26f01ff3-9498-4197-8835-31b5a90c7cb8",
+            "harness_recovery": true,
+            "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 326
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace",
+            "errors": [],
+            "revision": "e5f92565-0ec5-4e66-9bb9-c2d039813521",
+            "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:27.991Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 68
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 326
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+            "scroll_pct": 100,
+            "observation_revision": "e5f92565-0ec5-4e66-9bb9-c2d039813521",
+            "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-ab005766a3",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "b5cb274b-4c4e-4c5b-926e-c71ce6f6beb9",
+            "document_id": "5022428e-7af0-455f-82d7-9ef919b8f944",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:28.976Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 2596
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-overlay-0.jpg"
+    },
+    {
+      "case_id": "development:delayed",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2625,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-4bba2023cb",
+          "scroll_pct": 100,
+          "observation_revision": "99f4a7b3-e3b3-4db6-ac20-bc452183195c",
+          "document_id": "ba75ac19-aabf-4196-b6c2-986d9e8bd586",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-4bba2023cb",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:31.801Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 2036
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-4bba2023cb",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-4bba2023cb",
+            "scroll_pct": 100,
+            "observation_revision": "99f4a7b3-e3b3-4db6-ac20-bc452183195c",
+            "document_id": "ba75ac19-aabf-4196-b6c2-986d9e8bd586",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-4bba2023cb",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "f34c5d25-961d-4ff4-8108-7b93fcaca33c",
+            "document_id": "ba75ac19-aabf-4196-b6c2-986d9e8bd586",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:31.801Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 2036
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-delayed-0.jpg"
+    },
+    {
+      "case_id": "development:functional",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2281,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ba6399c5a3",
+          "scroll_pct": 100,
+          "observation_revision": "86d85f7e-9a52-453c-ae26-07f72bfee96e",
+          "document_id": "15d897ef-a296-4017-ab61-ef589613690e",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-ba6399c5a3",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:34.151Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1404
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-ba6399c5a3",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-ba6399c5a3",
+            "scroll_pct": 100,
+            "observation_revision": "86d85f7e-9a52-453c-ae26-07f72bfee96e",
+            "document_id": "15d897ef-a296-4017-ab61-ef589613690e",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-ba6399c5a3",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "f3832009-3a7e-4917-97ce-85a8d5f12600",
+            "document_id": "15d897ef-a296-4017-ab61-ef589613690e",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:34.151Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1404
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-functional-0.jpg"
+    },
+    {
+      "case_id": "development:unknown_outcome",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 3585,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+          "scroll_pct": 100,
+          "observation_revision": "f6da9d3a-cb64-49ee-958c-6ca8ce0464c4",
+          "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:36.482Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1400
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Observe the outcome",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+          "scroll_pct": 100,
+          "observation_revision": "32544597-18e1-42f2-b066-97f03c00d524",
+          "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689",
+          "result_url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 316
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:37.668Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1400
+            }
+          }
+        },
+        {
+          "thought": "Walkthru could not establish an observable task contract within its discovery budget. Completion remains unknown.",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Create workspace"
+          ],
+          "observation_revision": null,
+          "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 12,
+          "step": 2,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 13,
+          "step": 3,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 14,
+          "step": 3,
+          "node": "revise",
+          "reason": "contract_unresolved",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 15,
+          "step": 3,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 16,
+          "step": 3,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 17,
+          "step": 3,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+            "scroll_pct": 100,
+            "observation_revision": "f6da9d3a-cb64-49ee-958c-6ca8ce0464c4",
+            "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "32544597-18e1-42f2-b066-97f03c00d524",
+            "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:36.482Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1400
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Observe the outcome",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+            "scroll_pct": 100,
+            "observation_revision": "32544597-18e1-42f2-b066-97f03c00d524",
+            "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 316
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-ca0e42f48c",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "95d1b327-abfb-4eaa-9842-7cbb2b8f5000",
+            "document_id": "731bbb94-98e1-46b5-a5bf-28a776111689",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:37.668Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1400
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 316
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-unknown_outcome-0.jpg"
+    },
+    {
+      "case_id": "development:missing_feature",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 0,
+        "latency_ms": 2420,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "No supported target (Walkthru could not confirm the requested outcome; unresolved checkpoints remain.)",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 2,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-3bbc6f2e91",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Create workspace and show \"Workspace created\""
+          ],
+          "observation_revision": null,
+          "document_id": "6bce2166-3912-4937-96cf-1a16149c067b"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [],
+      "screenshot": "docs\\harness-capabilities\\development-missing_feature-0.jpg"
+    },
+    {
+      "case_id": "development:ambiguous",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 5120,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-30356b4ee9",
+          "scroll_pct": 100,
+          "observation_revision": "883533e2-3315-4abc-b9ec-17636326a92c",
+          "document_id": "76db6689-f1db-403a-a5e7-21d9142ae11e",
+          "target_label": "Details",
+          "result_url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:44.207Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 112
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Observe the outcome",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+          "scroll_pct": 100,
+          "observation_revision": "9031ea0a-4339-48e9-a20f-dd077adc6e9e",
+          "document_id": "7304cc7b-856c-4ca5-9302-59713c4d1cf9",
+          "result_url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 322
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:45.492Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 112
+            }
+          }
+        },
+        {
+          "thought": "Walkthru could not establish an observable task contract within its discovery budget. Completion remains unknown.",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Open Details"
+          ],
+          "observation_revision": null,
+          "document_id": "7304cc7b-856c-4ca5-9302-59713c4d1cf9"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "assess",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 12,
+          "step": 2,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 13,
+          "step": 3,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 14,
+          "step": 3,
+          "node": "revise",
+          "reason": "contract_unresolved",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 15,
+          "step": 3,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 16,
+          "step": 3,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 17,
+          "step": 3,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-30356b4ee9",
+            "scroll_pct": 100,
+            "observation_revision": "883533e2-3315-4abc-b9ec-17636326a92c",
+            "document_id": "76db6689-f1db-403a-a5e7-21d9142ae11e",
+            "target_label": "Details"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "a",
+                "text": "Details",
+                "destination": "/fixture-30356b4ee9/alpha",
+                "row": "Details",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Details",
+                "destination": "/fixture-30356b4ee9/beta",
+                "row": "Details",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "DetailsDetails",
+            "errors": [],
+            "revision": "9031ea0a-4339-48e9-a20f-dd077adc6e9e",
+            "document_id": "7304cc7b-856c-4ca5-9302-59713c4d1cf9",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:44.207Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 112
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Observe the outcome",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+            "scroll_pct": 100,
+            "observation_revision": "9031ea0a-4339-48e9-a20f-dd077adc6e9e",
+            "document_id": "7304cc7b-856c-4ca5-9302-59713c4d1cf9"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 322
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-30356b4ee9/alpha",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "a",
+                "text": "Details",
+                "destination": "/fixture-30356b4ee9/alpha",
+                "row": "Details",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Details",
+                "destination": "/fixture-30356b4ee9/beta",
+                "row": "Details",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "DetailsDetails",
+            "errors": [],
+            "revision": "e17b1433-bbb3-43d6-8f24-83434f443a33",
+            "document_id": "7304cc7b-856c-4ca5-9302-59713c4d1cf9",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:45.492Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 112
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 322
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-ambiguous-0.jpg"
+    },
+    {
+      "case_id": "development:visitor",
+      "repetition": 0,
+      "status": "safe_stop",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": true,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 0,
+        "latency_ms": 1877,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control (Walkthru stopped at the 'Email' field by design: in visitor mode it never fills in forms. Verify the domain in Settings to test forms and actions. Everything up to here worked.)",
+          "action": "done",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-0bd8de680d",
+          "scroll_pct": 100,
+          "code": "visitor_mode_limit",
+          "safe_stop": true,
+          "unresolved_checkpoints": [
+            "Enter Email"
+          ],
+          "observation_revision": null,
+          "document_id": "65713a9b-9f57-487b-af1d-1367923e5019"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "visitor_mode_limit",
+          "action": "type",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "safe_stop",
+          "action": "done",
+          "progress": 0,
+          "status": "safe_stop"
+        }
+      ],
+      "transitions": [],
+      "screenshot": "docs\\harness-capabilities\\development-visitor-0.jpg"
+    },
+    {
+      "case_id": "development:stale",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2684,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-9c7e3c6430",
+          "scroll_pct": 100,
+          "observation_revision": "54fdae21-3e96-4091-b2a5-4544399252a9",
+          "document_id": "25fc5445-335d-417c-940f-eb2004d1a234",
+          "target_label": "Create workspace",
+          "interrupted": true,
+          "code": "agent_lost",
+          "note_after": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "execution_refused",
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "click",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-9c7e3c6430",
+            "scroll_pct": 100,
+            "observation_revision": "54fdae21-3e96-4091-b2a5-4544399252a9",
+            "document_id": "25fc5445-335d-417c-940f-eb2004d1a234",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": false,
+            "note": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-9c7e3c6430",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace",
+            "errors": [],
+            "revision": "c9944352-f22a-4470-bef2-6899ef064cfa",
+            "document_id": "25fc5445-335d-417c-940f-eb2004d1a234",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 1280,
+                "client_width": 1280,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:50.184Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 80
+              }
+            },
+            "note": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\development-stale-0.jpg"
+    },
+    {
+      "case_id": "held_out:route",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 3284,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-faa5f5f467",
+          "scroll_pct": 100,
+          "observation_revision": "7813f9b0-3078-476e-852b-bf9b957d0c4c",
+          "document_id": "55ad107b-c6f5-4afb-9889-d687cd4a26cf",
+          "target_label": "Project overview",
+          "result_url": "http://127.0.0.1:59361/fixture-faa5f5f467/details",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:53.538Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 104
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-faa5f5f467/details",
+            "signal": "navigation",
+            "matched": "/fixture-faa5f5f467/details",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "contract_revised",
+          "checkpoint": 1,
+          "progress": 0,
+          "before_kind": "navigation",
+          "after_kind": "navigation",
+          "contract_revision": 1,
+          "source": "observed_destination",
+          "before_target": "/invented",
+          "after_target": "/fixture-faa5f5f467/details"
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-faa5f5f467",
+            "scroll_pct": 100,
+            "observation_revision": "7813f9b0-3078-476e-852b-bf9b957d0c4c",
+            "document_id": "55ad107b-c6f5-4afb-9889-d687cd4a26cf",
+            "target_label": "Project overview"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-faa5f5f467/details",
+            "title": "Capability fixture",
+            "elements": [],
+            "text": "Details",
+            "errors": [],
+            "revision": "697873a6-3e24-453e-a387-11851b265fbd",
+            "document_id": "b78621fe-2a19-4429-a18e-c895c4e6aad8",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:53.538Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 104
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-route-0.jpg"
+    },
+    {
+      "case_id": "held_out:section",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2652,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-b2d7797bbd",
+          "scroll_pct": 0,
+          "observation_revision": "a9411fbc-f746-47a0-bb32-443b5df32b05",
+          "document_id": "69909469-015d-4b72-b4f9-cd3c557541b4",
+          "target_label": "Project overview",
+          "section_target": "project-overview",
+          "result_url": "http://127.0.0.1:59361/fixture-b2d7797bbd#project-overview",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:56.281Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 68
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-b2d7797bbd#project-overview",
+            "signal": "section_visibility",
+            "matched": "project-overview",
+            "document_id": "69909469-015d-4b72-b4f9-cd3c557541b4",
+            "route": "http://127.0.0.1:59361/fixture-b2d7797bbd",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "contract_revised",
+          "checkpoint": 1,
+          "progress": 0,
+          "before_kind": "navigation",
+          "after_kind": "section",
+          "contract_revision": 1,
+          "source": "observed_section",
+          "before_target": "/invented",
+          "after_target": "/#project-overview"
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-b2d7797bbd",
+            "scroll_pct": 0,
+            "observation_revision": "a9411fbc-f746-47a0-bb32-443b5df32b05",
+            "document_id": "69909469-015d-4b72-b4f9-cd3c557541b4",
+            "target_label": "Project overview",
+            "section_target": "project-overview"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-b2d7797bbd#project-overview",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Inspect",
+                "region": "section: Project overview",
+                "row": "Inspect",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Project overview",
+                "destination": "/fixture-b2d7797bbd#project-overview",
+                "section_target": "project-overview",
+                "reveal": {
+                  "container_id": 0,
+                  "direction": "up"
+                },
+                "row": "Project overview",
+                "in_view": false
+              }
+            ],
+            "text": "Project overview Project overviewInspect",
+            "errors": [],
+            "revision": "2373a52e-0f52-4392-bced-8941b3bc1a30",
+            "document_id": "69909469-015d-4b72-b4f9-cd3c557541b4",
+            "sections": [
+              {
+                "key": "project-overview",
+                "label": "Project overview",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 1896,
+                "left": 0,
+                "scroll_height": 2796,
+                "client_height": 900,
+                "scroll_width": 753,
+                "client_width": 768,
+                "at_start": false,
+                "at_end": true,
+                "can_up": true,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:56.281Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 68
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-section-0.jpg"
+    },
+    {
+      "case_id": "held_out:overlay",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": true,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 3884,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "thought": "Walkthru is refreshing the page state before choosing an available control.",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-f768c87823",
+          "observation_revision": "3146a367-882d-4f09-bbd7-b57a699ebfde",
+          "harness_recovery": true,
+          "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872",
+          "result_url": "http://127.0.0.1:59361/fixture-f768c87823",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 321
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:05:59.316Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 84
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-f768c87823",
+          "scroll_pct": 100,
+          "observation_revision": "feab83e6-edda-45dd-97fe-66b48099e408",
+          "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-f768c87823",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:00.282Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 2992
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-f768c87823",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 2
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "target_unavailable",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "recover",
+          "reason": "refresh_requested",
+          "action": "wait",
+          "target_id": 1,
+          "progress": 0,
+          "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872"
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "wait_without_causal_action",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "thought": "Walkthru is refreshing the page state before choosing an available control.",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-f768c87823",
+            "observation_revision": "3146a367-882d-4f09-bbd7-b57a699ebfde",
+            "harness_recovery": true,
+            "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 321
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-f768c87823",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace",
+            "errors": [],
+            "revision": "feab83e6-edda-45dd-97fe-66b48099e408",
+            "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:05:59.316Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 84
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 321
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-f768c87823",
+            "scroll_pct": 100,
+            "observation_revision": "feab83e6-edda-45dd-97fe-66b48099e408",
+            "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-f768c87823",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "89457199-f976-48ed-8a5c-865f5547c8aa",
+            "document_id": "2fd4f09c-e1f5-4a21-b7e1-1e4536484872",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:00.282Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 2992
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-overlay-0.jpg"
+    },
+    {
+      "case_id": "held_out:delayed",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2250,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-73915805c6",
+          "scroll_pct": 100,
+          "observation_revision": "7111863c-9a94-47f7-a13f-40d4303dd94a",
+          "document_id": "a685ddf8-4da8-4d8f-bcb8-525348e6921d",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-73915805c6",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:02.567Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1636
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-73915805c6",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-73915805c6",
+            "scroll_pct": 100,
+            "observation_revision": "7111863c-9a94-47f7-a13f-40d4303dd94a",
+            "document_id": "a685ddf8-4da8-4d8f-bcb8-525348e6921d",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-73915805c6",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "4bb331ec-7ab3-4376-a7f4-f8af6d0ae3be",
+            "document_id": "a685ddf8-4da8-4d8f-bcb8-525348e6921d",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:02.567Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1636
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-delayed-0.jpg"
+    },
+    {
+      "case_id": "held_out:functional",
+      "repetition": 0,
+      "status": "done",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": true,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 2685,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-5288273f02",
+          "scroll_pct": 100,
+          "observation_revision": "553a5f9a-f880-47ea-9727-609980d85e1b",
+          "document_id": "53c6a68b-71c5-4602-a196-c48cdbf39b3a",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-5288273f02",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:05.350Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1820
+            }
+          },
+          "checkpoint_evidence": {
+            "url": "http://127.0.0.1:59361/fixture-5288273f02",
+            "signal": "public_text",
+            "matched": "Workspace created",
+            "checkpoint": 1,
+            "step": 1
+          }
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "checkpoint_confirmed",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "done",
+          "action": "click",
+          "progress": 1,
+          "status": "done"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-5288273f02",
+            "scroll_pct": 100,
+            "observation_revision": "553a5f9a-f880-47ea-9727-609980d85e1b",
+            "document_id": "53c6a68b-71c5-4602-a196-c48cdbf39b3a",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-5288273f02",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "102f6851-fadb-4689-9c8b-9269d91ad300",
+            "document_id": "53c6a68b-71c5-4602-a196-c48cdbf39b3a",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:05.350Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1820
+              }
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-functional-0.jpg"
+    },
+    {
+      "case_id": "held_out:unknown_outcome",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": true,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 3015,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+          "scroll_pct": 100,
+          "observation_revision": "7d8038cd-71f5-441e-a8fe-9e609a34db98",
+          "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53",
+          "target_label": "Create workspace",
+          "result_url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:07.245Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1028
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Observe the outcome",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+          "scroll_pct": 100,
+          "observation_revision": "12b9961c-8045-43c4-aabd-bbf760c5f3a1",
+          "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53",
+          "result_url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 317
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:08.398Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 1028
+            }
+          }
+        },
+        {
+          "thought": "Walkthru could not establish an observable task contract within its discovery budget. Completion remains unknown.",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Create workspace"
+          ],
+          "observation_revision": null,
+          "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "assess",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 12,
+          "step": 2,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 13,
+          "step": 3,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 14,
+          "step": 3,
+          "node": "revise",
+          "reason": "contract_unresolved",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 15,
+          "step": 3,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 16,
+          "step": 3,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 17,
+          "step": 3,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+            "scroll_pct": 100,
+            "observation_revision": "7d8038cd-71f5-441e-a8fe-9e609a34db98",
+            "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "12b9961c-8045-43c4-aabd-bbf760c5f3a1",
+            "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:07.245Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1028
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Observe the outcome",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+            "scroll_pct": 100,
+            "observation_revision": "12b9961c-8045-43c4-aabd-bbf760c5f3a1",
+            "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 317
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-c58c6aed5c",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace Workspace created",
+            "errors": [],
+            "revision": "667657cf-7fab-4798-a724-64eb9bb9649a",
+            "document_id": "44ef4259-a082-4cb2-bb73-97b1e23a9e53",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:08.398Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 1028
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 317
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-unknown_outcome-0.jpg"
+    },
+    {
+      "case_id": "held_out:missing_feature",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 0,
+        "latency_ms": 1045,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "No supported target (Walkthru could not confirm the requested outcome; unresolved checkpoints remain.)",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 2,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-a22b94959d",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Create workspace and show \"Workspace created\""
+          ],
+          "observation_revision": null,
+          "document_id": "ffc3f828-22b4-41e9-b09d-47e212c8f570"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [],
+      "screenshot": "docs\\harness-capabilities\\held_out-missing_feature-0.jpg"
+    },
+    {
+      "case_id": "held_out:ambiguous",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 2,
+        "latency_ms": 3166,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-223c527811",
+          "scroll_pct": 100,
+          "observation_revision": "c8838421-1256-4165-9d37-b113f1f91988",
+          "document_id": "512c02f0-ea2b-4ea3-853b-815f004d9a50",
+          "target_label": "Project overview",
+          "result_url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:11.526Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 36
+            }
+          }
+        },
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Observe the outcome",
+          "action": "wait",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+          "scroll_pct": 100,
+          "observation_revision": "807994d0-0bb8-4615-921b-6b20dc9fc17f",
+          "document_id": "3c5f3d65-66ff-4e72-b7f6-fd90ee64ad25",
+          "result_url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+          "executor_result": {
+            "action": "wait",
+            "status": "settled",
+            "elapsed_ms": 312
+          },
+          "diagnostics": {
+            "captured_at": "2026-11-14T17:06:12.696Z",
+            "accessibility": {
+              "status": "complete",
+              "total": 0,
+              "issues": []
+            },
+            "web_vitals": {
+              "lcp_ms": 36
+            }
+          }
+        },
+        {
+          "thought": "Walkthru could not establish an observable task contract within its discovery budget. Completion remains unknown.",
+          "action": "give_up",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+          "scroll_pct": 100,
+          "code": "agent_lost",
+          "unresolved_checkpoints": [
+            "Open Project overview"
+          ],
+          "observation_revision": null,
+          "document_id": "3c5f3d65-66ff-4e72-b7f6-fd90ee64ad25"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "assess",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 6,
+          "step": 1,
+          "node": "check",
+          "reason": "continue",
+          "action": "click",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 7,
+          "step": 2,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 8,
+          "step": 2,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 9,
+          "step": 2,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 10,
+          "step": 2,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 11,
+          "step": 2,
+          "node": "assess",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "action": "wait",
+          "progress": 0
+        },
+        {
+          "sequence": 12,
+          "step": 2,
+          "node": "check",
+          "reason": "continue",
+          "action": "wait",
+          "progress": 0,
+          "status": "running"
+        },
+        {
+          "sequence": 13,
+          "step": 3,
+          "node": "validate",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 14,
+          "step": 3,
+          "node": "revise",
+          "reason": "contract_unresolved",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 15,
+          "step": 3,
+          "node": "prepare",
+          "reason": "unobserved_navigation_target",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 16,
+          "step": 3,
+          "node": "guard",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0
+        },
+        {
+          "sequence": 17,
+          "step": 3,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "give_up",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-223c527811",
+            "scroll_pct": 100,
+            "observation_revision": "c8838421-1256-4165-9d37-b113f1f91988",
+            "document_id": "512c02f0-ea2b-4ea3-853b-815f004d9a50",
+            "target_label": "Project overview"
+          },
+          "executor": {
+            "ok": true,
+            "submits": false
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "a",
+                "text": "Project overview",
+                "destination": "/fixture-223c527811/alpha",
+                "row": "Project overview",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Project overview",
+                "destination": "/fixture-223c527811/beta",
+                "row": "Project overview",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Project overviewProject overview",
+            "errors": [],
+            "revision": "807994d0-0bb8-4615-921b-6b20dc9fc17f",
+            "document_id": "3c5f3d65-66ff-4e72-b7f6-fd90ee64ad25",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:11.526Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 36
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Observe the outcome",
+            "action": "wait",
+            "target_id": null,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+            "scroll_pct": 100,
+            "observation_revision": "807994d0-0bb8-4615-921b-6b20dc9fc17f",
+            "document_id": "3c5f3d65-66ff-4e72-b7f6-fd90ee64ad25"
+          },
+          "executor": {
+            "ok": true,
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 312
+            }
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-223c527811/alpha",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "a",
+                "text": "Project overview",
+                "destination": "/fixture-223c527811/alpha",
+                "row": "Project overview",
+                "in_view": true,
+                "occluded": false
+              },
+              {
+                "id": 2,
+                "tag": "a",
+                "text": "Project overview",
+                "destination": "/fixture-223c527811/beta",
+                "row": "Project overview",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Project overviewProject overview",
+            "errors": [],
+            "revision": "fffde81b-3aff-4700-865e-0ecf693b7626",
+            "document_id": "3c5f3d65-66ff-4e72-b7f6-fd90ee64ad25",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:12.696Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 36
+              }
+            },
+            "executor_result": {
+              "action": "wait",
+              "status": "settled",
+              "elapsed_ms": 312
+            }
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-ambiguous-0.jpg"
+    },
+    {
+      "case_id": "held_out:visitor",
+      "repetition": 0,
+      "status": "safe_stop",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": true,
+        "safety_violation": false,
+        "expected_unconfirmed": false,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 0,
+        "latency_ms": 1052,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control (Walkthru stopped at the 'Email' field by design: in visitor mode it never fills in forms. Verify the domain in Settings to test forms and actions. Everything up to here worked.)",
+          "action": "done",
+          "target_id": null,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-d024d85f4f",
+          "scroll_pct": 100,
+          "code": "visitor_mode_limit",
+          "safe_stop": true,
+          "unresolved_checkpoints": [
+            "Enter Email"
+          ],
+          "observation_revision": null,
+          "document_id": "bfd17912-abe9-4bd6-a716-66ee63b8571d"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "revise",
+          "reason": "discovery_pending",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "prepare",
+          "reason": "missing_outcome_expectation",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "guard",
+          "reason": "visitor_mode_limit",
+          "action": "type",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "safe_stop",
+          "action": "done",
+          "progress": 0,
+          "status": "safe_stop"
+        }
+      ],
+      "transitions": [],
+      "screenshot": "docs\\harness-capabilities\\held_out-visitor-0.jpg"
+    },
+    {
+      "case_id": "held_out:stale",
+      "repetition": 0,
+      "status": "agent_lost",
+      "oracle_reached": false,
+      "metrics": {
+        "correct_completion": false,
+        "false_done": false,
+        "false_failure": false,
+        "capability_miss": false,
+        "safe_refusal": false,
+        "safety_violation": false,
+        "expected_unconfirmed": true,
+        "recovery_success": false,
+        "repeated_actions": 0,
+        "browser_actions": 1,
+        "latency_ms": 1857,
+        "tokens": 0,
+        "cost_usd": 0,
+        "cost_provenance": "no provider calls"
+      },
+      "steps": [
+        {
+          "provider": "scripted_capability_fixture",
+          "thought": "Follow observed control",
+          "action": "click",
+          "target_id": 1,
+          "text": null,
+          "scroll_container_id": null,
+          "scroll_direction": "down",
+          "scroll_distance": null,
+          "wait_condition": "settled",
+          "wait_timeout_ms": 1000,
+          "confusion": 0,
+          "progress": 0,
+          "url": "http://127.0.0.1:59361/fixture-cb14b99183",
+          "scroll_pct": 100,
+          "observation_revision": "7142a24e-42ce-4454-b2e2-e86a1303626d",
+          "document_id": "ec8da851-f5ae-4679-b1b9-37f55fea86f0",
+          "target_label": "Create workspace",
+          "interrupted": true,
+          "code": "agent_lost",
+          "note_after": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+        }
+      ],
+      "worklog": [
+        {
+          "sequence": 1,
+          "step": 1,
+          "node": "validate",
+          "reason": "contract_grounded",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 2,
+          "step": 1,
+          "node": "prepare",
+          "reason": "observation_ready",
+          "checkpoint": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 3,
+          "step": 1,
+          "node": "guard",
+          "reason": "action_accepted",
+          "action": "click",
+          "target_id": 1,
+          "progress": 0
+        },
+        {
+          "sequence": 4,
+          "step": 1,
+          "node": "assess",
+          "reason": "execution_refused",
+          "action": "click",
+          "progress": 0
+        },
+        {
+          "sequence": 5,
+          "step": 1,
+          "node": "check",
+          "reason": "agent_lost",
+          "action": "click",
+          "progress": 0,
+          "status": "agent_lost"
+        }
+      ],
+      "transitions": [
+        {
+          "action": {
+            "provider": "scripted_capability_fixture",
+            "thought": "Follow observed control",
+            "action": "click",
+            "target_id": 1,
+            "text": null,
+            "scroll_container_id": null,
+            "scroll_direction": "down",
+            "scroll_distance": null,
+            "wait_condition": "settled",
+            "wait_timeout_ms": 1000,
+            "confusion": 0,
+            "progress": 0,
+            "url": "http://127.0.0.1:59361/fixture-cb14b99183",
+            "scroll_pct": 100,
+            "observation_revision": "7142a24e-42ce-4454-b2e2-e86a1303626d",
+            "document_id": "ec8da851-f5ae-4679-b1b9-37f55fea86f0",
+            "target_label": "Create workspace"
+          },
+          "executor": {
+            "ok": false,
+            "note": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+          },
+          "observation": {
+            "url": "http://127.0.0.1:59361/fixture-cb14b99183",
+            "title": "Capability fixture",
+            "elements": [
+              {
+                "id": 1,
+                "tag": "button",
+                "text": "Create workspace",
+                "row": "Create workspace",
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "text": "Create workspace",
+            "errors": [],
+            "revision": "8061a8af-f68a-4794-a8d5-b2092735bcd3",
+            "document_id": "ec8da851-f5ae-4679-b1b9-37f55fea86f0",
+            "sections": [],
+            "sections_truncated": false,
+            "elements_truncated": false,
+            "candidate_limit_reached": false,
+            "omitted_elements": 0,
+            "context_truncated": false,
+            "navigation_version": 3,
+            "scroll_containers": [
+              {
+                "id": 0,
+                "label": "Page",
+                "top": 0,
+                "left": 0,
+                "scroll_height": 900,
+                "client_height": 900,
+                "scroll_width": 768,
+                "client_width": 768,
+                "at_start": true,
+                "at_end": true,
+                "can_up": false,
+                "can_down": false,
+                "can_left": false,
+                "can_right": false,
+                "in_view": true,
+                "occluded": false
+              }
+            ],
+            "scroll_containers_truncated": false,
+            "scroll_pct": 100,
+            "at_end": true,
+            "diagnostics": {
+              "captured_at": "2026-11-14T17:06:15.716Z",
+              "accessibility": {
+                "status": "complete",
+                "total": 0,
+                "issues": []
+              },
+              "web_vitals": {
+                "lcp_ms": 44
+              }
+            },
+            "note": "stale target: the control or its context changed. Read the page again or update Walkthru and restart the test"
+          }
+        }
+      ],
+      "screenshot": "docs\\harness-capabilities\\held_out-stale-0.jpg"
+    }
+  ],
+  "comparison": null,
+  "limitations": [
+    "Synthetic local capability results are not live-site reliability.",
+    "Scripted mode tests harness behavior with a goal-aware fixture controller; it does not measure autonomous planning or model quality.",
+    "Held-out names denote reserved variant seeds/layouts, not unseen production tasks.",
+    "Contract v1 is an ablation of validation/revision in the current graph, not the historical full harness.",
+    "No old/current causal improvement claim without an identical pinned-provider baseline.",
+    "Provider pricing/receipts are unavailable unless separately supplied."
+  ]
+}

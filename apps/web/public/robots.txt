@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /app/
+Disallow: /shell
+Disallow: /login
+Disallow: /join
+Allow: /
+
+Sitemap: https://trywalkthru.com/sitemap.xml

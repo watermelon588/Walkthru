@@ -1,0 +1,1492 @@
+{
+  "id": "18012b2c8f0f46b08eed68c14226dd57",
+  "site": "https://tripverse-0.vercel.app/",
+  "goal": "Find the destinations or trips listing and open one destination or trip detail.",
+  "persona": "first_timer",
+  "tier": "paid",
+  "logged_in": false,
+  "status": "stuck",
+  "steps": [
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page, so I'll click the Destinations link in the primary navigation.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-01-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:08:54.929631Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-01.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 0,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:08:50.765000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "18a8aab9-4fc5-43c7-9afb-247c23b92b39"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation, so I'll click the Destinations link.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-02-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:09:09.941751Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-02.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:09:07.413000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "c7400799-7a9d-4a81-998c-92d83a838c75"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to go to the Destinations page. The Destinations link is element 5.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-03-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:09:23.293257Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-03.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:09:21.217000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": 0,
+      "observation_revision": "c0b4593c-6c4b-4b36-99d8-9fa1ef966e6c"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation, so I'll click the Destinations link.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-04-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:09:36.058828Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-04.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:09:34.092000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "2baa54b9-da20-4457-8758-97956453e133"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-05-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:09:48.745261Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-05.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:09:46.601000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": 0,
+      "observation_revision": "4c10ba78-250f-4f04-bad0-74da113bad70"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-06-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:10:03.336262Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-06.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:10:00.576000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "26cc1497-28df-4477-ad20-8a350091af2a"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to go to the Destinations page. The Destinations link is element 5.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-07-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:10:17.458974Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-07.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:10:15.296000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": 0,
+      "observation_revision": "5f34b634-6889-4663-a214-51ca538be528"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-08-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:10:31.592997Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-08.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:10:29.856000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "24d94b0b-dd10-4baf-a921-d57794748bd3"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to go to the Destinations page. The Destinations link is element 5.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-09-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:10:45.633509Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-09.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:10:43.599000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "42dd63da-f21b-4287-88da-80285eca6ab1"
+    },
+    {
+      "url": "https://tripverse-0.vercel.app/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to open the Destinations page from the main navigation.",
+      "evidence": {
+        "label": "Clicked \"Destinations\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.47178337955625993,
+          "y": 0.04228855721393035
+        },
+        "aim_path": "18012b2c8f0f46b08eed68c14226dd57/step-10-aim.jpg",
+        "result_url": "https://tripverse-0.vercel.app/",
+        "captured_at": "2026-11-13T09:10:58.773167Z",
+        "screenshot_path": "18012b2c8f0f46b08eed68c14226dd57/step-10.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 5,
+      "result_url": "https://tripverse-0.vercel.app/",
+      "scroll_pct": 59,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": 1.894,
+          "inp_ms": null,
+          "lcp_ms": 8268
+        },
+        "captured_at": "2026-11-13T09:10:56.560000Z",
+        "accessibility": {
+          "total": 0,
+          "issues": [],
+          "status": "complete"
+        }
+      },
+      "target_label": "Destinations",
+      "notices_after": [
+        "Six guides. Pick who plans your trip with you.",
+        "01 / 08 Somewhere, slower."
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "scroll_container_id": null,
+      "observation_revision": "409ec224-dc61-4ac9-9294-7da9a4947408"
+    }
+  ],
+  "created_at": "2026-11-13T09:08:35.249771+00:00",
+  "updated_at": "2026-11-13T09:11:20.11446+00:00",
+  "kind": "test",
+  "report": {
+    "geo": {
+      "band": "foundation",
+      "agent": {
+        "forms": 0,
+        "fields": 0,
+        "webmcp": false,
+        "captcha": false,
+        "named_fields": 0,
+        "search_action": false
+      },
+      "fixes": [
+        {
+          "id": "render",
+          "code": "<h1>TripVerse</h1>\n<p>Agentic 3D travel-planning universe that visualizes and dynamically replans your trip.</p>\n",
+          "file": "index.html (inside the root element)",
+          "note": "AI crawlers do not run JavaScript. Best: prerender or statically generate your pages (Vite single-page app supports it). Quick fix: put this inside the root element in index.html; your app replaces it when it loads.",
+          "title": "Put real content in the HTML (Vite single-page app)"
+        },
+        {
+          "id": "schema",
+          "code": "<script type=\"application/ld+json\">\n{\n  \"@context\": \"https://schema.org\",\n  \"@graph\": [\n    {\n      \"@type\": \"Organization\",\n      \"name\": \"TripVerse\",\n      \"url\": \"https://tripverse-0.vercel.app/\"\n    },\n    {\n      \"@type\": \"WebSite\",\n      \"name\": \"TripVerse\",\n      \"url\": \"https://tripverse-0.vercel.app/\"\n    },\n    {\n      \"@type\": \"SoftwareApplication\",\n      \"name\": \"TripVerse\",\n      \"description\": \"Agentic 3D travel-planning universe that visualizes and dynamically replans your trip.\",\n      \"url\": \"https://tripverse-0.vercel.app/\"\n    }\n  ]\n}\n</script>",
+          "file": "index.html <head>",
+          "note": "Add inside <head> on the homepage. Then add your logo URL and sameAs links to your public profiles.",
+          "title": "Tell AI search who you are (structured data)"
+        },
+        {
+          "id": "name",
+          "code": "<meta property=\"og:site_name\" content=\"TripVerse\">",
+          "file": "every page <head>",
+          "note": "Add inside <head> on every page.",
+          "title": "State your name for machines"
+        },
+        {
+          "id": "llms",
+          "code": "# TripVerse\n\n> Agentic 3D travel-planning universe that visualizes and dynamically replans your trip.\n\n## Pages\n- [TripVerse \u2014 3D Travel Universe](https://tripverse-0.vercel.app/)\n",
+          "file": "llms.txt",
+          "note": "Save as /llms.txt at your site root. Low measured impact today, so do it after the fixes above.",
+          "title": "Add an llms.txt map (low impact)"
+        },
+        {
+          "id": "indexnow",
+          "code": "bc6442da67e2ece678b7eaa5d08ce31b\n",
+          "file": "public/bc6442da67e2ece678b7eaa5d08ce31b.txt",
+          "note": "Publish at https://tripverse-0.vercel.app/bc6442da67e2ece678b7eaa5d08ce31b.txt. Keep this key for future URL submissions. IndexNow announces changes to supporting search engines; it does not guarantee indexing.",
+          "title": "Optional: add an IndexNow key file"
+        }
+      ],
+      "notes": [
+        "Not blocked for an AI search user agent. Edge networks verify real crawlers by IP, so this cannot prove access."
+      ],
+      "score": 42,
+      "trust": {
+        "identity": false,
+        "social_proof": false,
+        "external_sources": false,
+        "name_consistency": false
+      },
+      "ai_view": "",
+      "ai_words": 0,
+      "entities": {},
+      "discovery": {
+        "/llms-full.txt": false,
+        "/.well-known/ai.txt": false
+      },
+      "categories": [
+        {
+          "id": "access",
+          "max": 25,
+          "label": "AI crawler access",
+          "earned": 25
+        },
+        {
+          "id": "content",
+          "max": 15,
+          "label": "Content before JavaScript",
+          "earned": 0
+        },
+        {
+          "id": "schema",
+          "max": 15,
+          "label": "Structured data",
+          "earned": 0
+        },
+        {
+          "id": "llms",
+          "max": 3,
+          "label": "llms.txt",
+          "earned": 0
+        },
+        {
+          "id": "discovery",
+          "max": 2,
+          "label": "AI discovery files (low impact)",
+          "earned": 0
+        }
+      ],
+      "citability": [],
+      "fixes_total": 5
+    },
+    "model": "Free models (gpt-oss-120b and backups)",
+    "pages": {
+      "seo:seo.no_hn_heading": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "seo:seo.no_canonical_link": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "seo:seo.no_open_graph_tags": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "security:sec.no_referrer_policy": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "security:sec.page_can_be_framed": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "security:sec.no_x_content_type_options": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "security:sec.no_content_security_policy": [
+        "https://tripverse-0.vercel.app/"
+      ]
+    },
+    "stack": {
+      "backend": "supabase",
+      "hosting": "vercel",
+      "evidence": {
+        "backend": "Supabase project https://eidaueavbiodoavhiuzq.supabase.co and public client key in the page or its own scripts. This is normal public configuration; it does not establish a security issue or prove that access rules are correct.",
+        "hosting": "x-vercel-id header",
+        "framework": "Vite build (/assets/index-*.js)"
+      },
+      "framework": "vite"
+    },
+    "checks": {
+      "geo": "complete",
+      "seo": "complete",
+      "security": "complete",
+      "performance": "complete",
+      "accessibility": "complete"
+    },
+    "funnel": {
+      "safe_stops": 0,
+      "errors_seen": 0,
+      "fields_typed": 0,
+      "steps_to_goal": null,
+      "first_useful_step": null,
+      "seconds_to_first_useful": null
+    },
+    "tokens": 39560,
+    "summary": "The journey stopped early with 10 browser actions with recorded outcomes. Journey completion was not confirmed, and no observed journey failure was established. Automated checks produced 17 findings; review their evidence and coverage separately.",
+    "version": 2,
+    "findings": [
+      {
+        "fix": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+        "kind": "performance",
+        "rule": "perf.largest_contentful_paint_is_slow",
+        "title": "Largest Contentful Paint is slow",
+        "detail": "A single browser visit observed LCP at 8268 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+        "evidence": "step 1: https://tripverse-0.vercel.app/",
+        "severity": "high"
+      },
+      {
+        "fix": "Reserve space for images, embeds and dynamic content before they load.",
+        "kind": "performance",
+        "rule": "perf.layout_shifts_exceed_the_core_web_vitals_target",
+        "title": "Layout shifts exceed the Core Web Vitals target",
+        "detail": "A single browser visit observed CLS at 1.894; the good threshold is 0.1 . This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+        "evidence": "step 1: https://tripverse-0.vercel.app/",
+        "severity": "high"
+      },
+      {
+        "fix": "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
+        "kind": "geo",
+        "rule": "geo.homepage_content_only_appears_after_javascript_runs",
+        "title": "Homepage content only appears after JavaScript runs",
+        "detail": "The server sends 1536 bytes of HTML with 0 characters of visible text. Most AI crawlers do not run JavaScript, so ChatGPT, Claude and Perplexity see an empty page. Link previews on WhatsApp, LinkedIn and Slack do too. Google runs JavaScript but indexes it later.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "high"
+      },
+      {
+        "fix": "Return a 404 status for unknown paths: serve a real 404 page, and rewrite only your app's known routes to index.html.",
+        "kind": "seo",
+        "rule": "seo.missing_pages_return_n",
+        "title": "Missing pages return 200",
+        "detail": "A made-up address (/walkthru-missing-page-check) answered 200 with a page instead of 404. Search engines treat these as soft 404s, and broken links look like working pages to visitors and crawlers.",
+        "evidence": "https://tripverse-0.vercel.app/walkthru-missing-page-check",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product.",
+        "kind": "geo",
+        "rule": "geo.no_structured_data",
+        "title": "No structured data",
+        "detail": "Your pages have no JSON-LD. Structured data tells AI assistants exactly what your product is, who makes it and what it costs.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "medium"
+      },
+      {
+        "fix": "Start with default-src 'self' and add sources as needed; use report-only first.",
+        "kind": "security",
+        "rule": "sec.no_content_security_policy",
+        "title": "No Content-Security-Policy",
+        "detail": "Without a CSP, any injected script runs with full access to the page.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "medium"
+      },
+      {
+        "fix": "Send X-Frame-Options: DENY or a CSP frame-ancestors directive.",
+        "kind": "security",
+        "rule": "sec.page_can_be_framed",
+        "title": "Page can be framed",
+        "detail": "Another site can embed this page and trick users into clicking (clickjacking).",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add one main heading that states what the page is about.",
+        "kind": "seo",
+        "rule": "seo.no_hn_heading",
+        "title": "No h1 heading",
+        "detail": "In the HTML sent before JavaScript runs: The page has no top-level heading. Advisory: a clear main heading helps visitors and screen-reader users find the topic; search engines also read prominent headings.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "low"
+      },
+      {
+        "fix": "Add <link rel=\"canonical\" href=\"...\"> pointing at the preferred URL.",
+        "kind": "seo",
+        "rule": "seo.no_canonical_link",
+        "title": "No canonical link",
+        "detail": "In the HTML sent before JavaScript runs: Without a canonical URL, variants like ?utm= or trailing slashes can split ranking signals.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "low"
+      },
+      {
+        "fix": "Add og:title, og:description and og:image meta tags.",
+        "kind": "seo",
+        "rule": "seo.no_open_graph_tags",
+        "title": "No Open Graph tags",
+        "detail": "In the HTML sent before JavaScript runs: Links shared on social apps will show no preview title or image.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "low"
+      },
+      {
+        "fix": "Add /robots.txt with a Sitemap line.",
+        "kind": "seo",
+        "rule": "seo.no_robots_txt",
+        "title": "No robots.txt",
+        "detail": "Crawlers fall back to defaults and cannot find your sitemap.",
+        "evidence": null,
+        "severity": "low"
+      },
+      {
+        "fix": "Generate /sitemap.xml and reference it from robots.txt.",
+        "kind": "seo",
+        "rule": "seo.no_sitemap_xml",
+        "title": "No sitemap.xml",
+        "detail": "Search engines discover pages slower without a sitemap.",
+        "evidence": null,
+        "severity": "low"
+      },
+      {
+        "fix": "Add /llms.txt: an H1 with your name, a one-line > summary, then sections of links to your key pages.",
+        "kind": "geo",
+        "rule": "geo.no_llms_txt",
+        "title": "No llms.txt",
+        "detail": "llms.txt is a short Markdown map of your site for AI tools. It has low measured impact on AI search today, so fix the items above first.",
+        "evidence": "https://tripverse-0.vercel.app/llms.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_well_known_ai_txt",
+        "title": "No /.well-known/ai.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://tripverse-0.vercel.app/.well-known/ai.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_llms_full_txt",
+        "title": "No /llms-full.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://tripverse-0.vercel.app/llms-full.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Send X-Content-Type-Options: nosniff.",
+        "kind": "security",
+        "rule": "sec.no_x_content_type_options",
+        "title": "No X-Content-Type-Options",
+        "detail": "Browsers may sniff file types and run a text file as script.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "low"
+      },
+      {
+        "fix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+        "kind": "security",
+        "rule": "sec.no_referrer_policy",
+        "title": "No Referrer-Policy",
+        "detail": "Full URLs, including query strings, leak to every site you link to.",
+        "evidence": "https://tripverse-0.vercel.app/",
+        "severity": "low"
+      }
+    ],
+    "verified": true,
+    "authority": null,
+    "top_fixes": [
+      "Reduce render-blocking work and optimize the largest above-the-fold element.",
+      "Reserve space for images, embeds and dynamic content before they load.",
+      "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
+      "Return a 404 status for unknown paths: serve a real 404 page, and rewrite only your app's known routes to index.html.",
+      "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product."
+    ],
+    "assessment": {
+      "issues": [
+        {
+          "id": "perf.largest_contentful_paint_is_slow",
+          "actual_result": "step 1: https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:0"
+          ],
+          "finding_index": 0,
+          "interpretation": "A single browser visit observed LCP at 8268 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+          "observed_facts": [
+            "step 1: https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same performance check (perf.largest_contentful_paint_is_slow) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "perf.layout_shifts_exceed_the_core_web_vitals_target",
+          "actual_result": "step 1: https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:1"
+          ],
+          "finding_index": 1,
+          "interpretation": "A single browser visit observed CLS at 1.894; the good threshold is 0.1 . This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+          "observed_facts": [
+            "step 1: https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Reserve space for images, embeds and dynamic content before they load.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same performance check (perf.layo[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.homepage_content_only_appears_after_javascript_runs",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:2"
+          ],
+          "finding_index": 2,
+          "interpretation": "The server sends 1536 bytes of HTML with 0 characters of visible text. Most AI crawlers do not run JavaScript, so ChatGPT, Claude and Perplexity see an empty page. Link previews on WhatsApp, LinkedIn and Slack do too. Google runs JavaScript but indexes it later.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.home[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.missing_pages_return_n",
+          "actual_result": "https://tripverse-0.vercel.app/walkthru-missing-page-check",
+          "evidence_refs": [
+            "scanner:3"
+          ],
+          "finding_index": 3,
+          "interpretation": "A made-up address (/walkthru-missing-page-check) answered 200 with a page instead of 404. Search engines treat these as soft 404s, and broken links look like working pages to visitors and crawlers.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/walkthru-missing-page-check"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Return a 404 status for unknown paths: serve a real 404 page, and rewrite only your app's known routes to index.html.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.missing_pages_return_n) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_structured_data",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:4"
+          ],
+          "finding_index": 4,
+          "interpretation": "Your pages have no JSON-LD. Structured data tells AI assistants exactly what your product is, who makes it and what it costs.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_structured_data) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_content_security_policy",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:5"
+          ],
+          "finding_index": 5,
+          "interpretation": "Without a CSP, any injected script runs with full access to the page.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Start with default-src 'self' and add sources as needed; use report-only first.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_content_security_policy) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.page_can_be_framed",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:6"
+          ],
+          "finding_index": 6,
+          "interpretation": "Another site can embed this page and trick users into clicking (clickjacking).",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send X-Frame-Options: DENY or a CSP frame-ancestors directive.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.page_can_be_framed) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_hn_heading",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:7"
+          ],
+          "finding_index": 7,
+          "interpretation": "In the HTML sent before JavaScript runs: The page has no top-level heading. Advisory: a clear main heading helps visitors and screen-reader users find the topic; search engines also read prominent headings.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add one main heading that states what the page is about.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_hn_heading) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_canonical_link",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:8"
+          ],
+          "finding_index": 8,
+          "interpretation": "In the HTML sent before JavaScript runs: Without a canonical URL, variants like ?utm= or trailing slashes can split ranking signals.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add <link rel=\"canonical\" href=\"...\"> pointing at the preferred URL.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_canonical_link) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_open_graph_tags",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:9"
+          ],
+          "finding_index": 9,
+          "interpretation": "In the HTML sent before JavaScript runs: Links shared on social apps will show no preview title or image.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add og:title, og:description and og:image meta tags.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_open_graph_tags) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_robots_txt",
+          "actual_result": "The seo check reported rule seo.no_robots_txt.",
+          "evidence_refs": [
+            "scanner:10"
+          ],
+          "finding_index": 10,
+          "interpretation": "Crawlers fall back to defaults and cannot find your sitemap.",
+          "observed_facts": [
+            "The seo check reported rule seo.no_robots_txt."
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add /robots.txt with a Sitemap line.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_robots_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_sitemap_xml",
+          "actual_result": "The seo check reported rule seo.no_sitemap_xml.",
+          "evidence_refs": [
+            "scanner:11"
+          ],
+          "finding_index": 11,
+          "interpretation": "Search engines discover pages slower without a sitemap.",
+          "observed_facts": [
+            "The seo check reported rule seo.no_sitemap_xml."
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Generate /sitemap.xml and reference it from robots.txt.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_sitemap_xml) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_llms_txt",
+          "actual_result": "https://tripverse-0.vercel.app/llms.txt",
+          "evidence_refs": [
+            "scanner:12"
+          ],
+          "finding_index": 12,
+          "interpretation": "llms.txt is a short Markdown map of your site for AI tools. It has low measured impact on AI search today, so fix the items above first.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/llms.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add /llms.txt: an H1 with your name, a one-line > summary, then sections of links to your key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_llms_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_well_known_ai_txt",
+          "actual_result": "https://tripverse-0.vercel.app/.well-known/ai.txt",
+          "evidence_refs": [
+            "scanner:13"
+          ],
+          "finding_index": 13,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/.well-known/ai.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_well_known_ai_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_llms_full_txt",
+          "actual_result": "https://tripverse-0.vercel.app/llms-full.txt",
+          "evidence_refs": [
+            "scanner:14"
+          ],
+          "finding_index": 14,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/llms-full.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_llms_full_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_x_content_type_options",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:15"
+          ],
+          "finding_index": 15,
+          "interpretation": "Browsers may sniff file types and run a text file as script.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send X-Content-Type-Options: nosniff.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_x_content_type_options) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_referrer_policy",
+          "actual_result": "https://tripverse-0.vercel.app/",
+          "evidence_refs": [
+            "scanner:16"
+          ],
+          "finding_index": 16,
+          "interpretation": "Full URLs, including query strings, leak to every site you link to.",
+          "observed_facts": [
+            "https://tripverse-0.vercel.app/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_referrer_policy) on the recorded page/scope."
+          ]
+        }
+      ],
+      "outcome": "unconfirmed",
+      "coverage": {
+        "checks": {
+          "geo": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "performance": "complete",
+          "accessibility": "complete"
+        },
+        "audited_urls": [
+          "https://tripverse-0.vercel.app/"
+        ],
+        "crawl_truncated": false,
+        "declared_checkpoints": 2,
+        "actions_with_outcomes": 10,
+        "confirmed_checkpoints": 0
+      },
+      "objective": "Find the destinations or trips listing and open one destination or trip detail.",
+      "assertions": [],
+      "checkpoints": [
+        {
+          "status": "unconfirmed",
+          "description": "Open the Destinations page from the main navigation.",
+          "actual_result": null,
+          "evidence_refs": [],
+          "expected_result": "/destinations"
+        },
+        {
+          "status": "unconfirmed",
+          "description": "Select any destination or trip from the listing to view its detail page.",
+          "actual_result": null,
+          "evidence_refs": [],
+          "expected_result": "/destinations/"
+        }
+      ],
+      "limitations": [
+        "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior.",
+        "accessibility: page is rendered by JavaScript",
+        "Signup email records not checked: the site runs on a local address or a shared hosting domain it does not own."
+      ],
+      "stop_reason": "stuck",
+      "evidence_index": [
+        {
+          "id": "step:1",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 1,
+          "source": "step",
+          "observed": "Step 1: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:2",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 2,
+          "source": "step",
+          "observed": "Step 2: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:3",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 3,
+          "source": "step",
+          "observed": "Step 3: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:4",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 4,
+          "source": "step",
+          "observed": "Step 4: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:5",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 5,
+          "source": "step",
+          "observed": "Step 5: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:6",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 6,
+          "source": "step",
+          "observed": "Step 6: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:7",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 7,
+          "source": "step",
+          "observed": "Step 7: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:8",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 8,
+          "source": "step",
+          "observed": "Step 8: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:9",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 9,
+          "source": "step",
+          "observed": "Step 9: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:10",
+          "url": "https://tripverse-0.vercel.app/",
+          "step": 10,
+          "source": "step",
+          "observed": "Step 10: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "scanner:0",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1: https://tripverse-0.vercel.app/",
+          "finding_index": 0
+        },
+        {
+          "id": "scanner:1",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1: https://tripverse-0.vercel.app/",
+          "finding_index": 1
+        },
+        {
+          "id": "scanner:2",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 2
+        },
+        {
+          "id": "scanner:3",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/walkthru-missing-page-check",
+          "finding_index": 3
+        },
+        {
+          "id": "scanner:4",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 4
+        },
+        {
+          "id": "scanner:5",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 5
+        },
+        {
+          "id": "scanner:6",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 6
+        },
+        {
+          "id": "scanner:7",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 7
+        },
+        {
+          "id": "scanner:8",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 8
+        },
+        {
+          "id": "scanner:9",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 9
+        },
+        {
+          "id": "scanner:10",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "The seo check reported rule seo.no_robots_txt.",
+          "finding_index": 10
+        },
+        {
+          "id": "scanner:11",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "The seo check reported rule seo.no_sitemap_xml.",
+          "finding_index": 11
+        },
+        {
+          "id": "scanner:12",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/llms.txt",
+          "finding_index": 12
+        },
+        {
+          "id": "scanner:13",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/.well-known/ai.txt",
+          "finding_index": 13
+        },
+        {
+          "id": "scanner:14",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/llms-full.txt",
+          "finding_index": 14
+        },
+        {
+          "id": "scanner:15",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 15
+        },
+        {
+          "id": "scanner:16",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://tripverse-0.vercel.app/",
+          "finding_index": 16
+        }
+      ]
+    },
+    "comparison": null,
+    "site_audit": {
+      "urls": [
+        "https://tripverse-0.vercel.app/"
+      ],
+      "truncated": false,
+      "page_limit": 50,
+      "duration_ms": 9091,
+      "mobile_vitals": [],
+      "pages_scanned": 1,
+      "robots_respected": true
+    },
+    "agent_ready": {
+      "parts": [
+        {
+          "id": "captcha",
+          "max": 15,
+          "note": "No CAPTCHA widget on the homepage.",
+          "label": "No CAPTCHA before the value",
+          "earned": 15
+        },
+        {
+          "id": "names",
+          "max": 25,
+          "note": "Every control checked has an accessible name.",
+          "label": "Buttons, links and fields have names",
+          "earned": 25
+        },
+        {
+          "id": "search",
+          "max": 10,
+          "note": "No WebSite SearchAction in the structured data.",
+          "label": "Site search declared (SearchAction)",
+          "earned": 0
+        }
+      ],
+      "score": 80
+    },
+    "launch_ready": {
+      "areas": {
+        "ux": null,
+        "geo": 42,
+        "seo": 75,
+        "speed": 50,
+        "security": 74
+      },
+      "score": 60
+    },
+    "scan_version": null,
+    "check_reasons": {},
+    "opportunities": null,
+    "first_impression": {
+      "who": "Travelers who want a guided, interactive planning experience, especially those interested in detailed day\u2011by\u2011day schedules and visual maps.",
+      "what": "TripVerse helps you plan trips by creating a detailed, adjustable itinerary with budget tracking and visual tools.",
+      "trust": [
+        "Mentions of budget tracking and detailed cost breakdowns",
+        "Reference to multiple guides collaborating on the plan",
+        "Built with recognizable technologies (LangGraph, React Three Fiber, FastAPI)",
+        "\u00a9 2026 copyright indicating an established presence",
+        "Option to sign in or create an account for saved trips"
+      ],
+      "clarity": 1,
+      "first_click": "Click \u201cStart planning\u201d because it promises to begin the personalized trip\u2011planning process."
+    }
+  },
+  "public": false,
+  "tokens": 39560,
+  "evidence_purged_at": null,
+  "group_id": null
+}

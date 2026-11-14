@@ -19,6 +19,15 @@ Payments (V1): founder approves ─▶ private Dodo checkout ─▶ signed webho
 ```
 
 ## Components
+
+### Evidence-controlled persona harness (2026-11-14)
+
+The journey graph now separates `prepare -> decide -> guard -> act -> assess -> check -> journal`. A bounded `recover` branch refreshes an unavailable target; terminal proposals bypass execution. Journal loops running sessions to prepare. Code-owned context carries the current predicate problem, last proof rejection, executable control IDs and recovery count into both decision-provider interfaces. Only decide invokes the model. Ordered proof, safety and budgets still determine progress and termination.
+
+Run checkpoints retain a bounded `harness_worklog`; report jobs carry it and owner assertions into optional report JSON, including manual-stop paths. Shared reports show execution explanations without prompts or form values. See [state handoffs and trade-offs](docs/harness-rebuild-worklog.md) and [delivery plan](docs/harness-rebuild-plan.md). Grounded task discovery/revision is still planned; this change does not resolve unknown or invented planner predicates automatically.
+
+H4a adds optional same-site `Element.destination` hints, privacy-filtered in the extension and API and bounded by the shared context budget. Newly model-generated route predicates carry a code-owned observed-destination requirement, checked against each current snapshot before proof is credited. Explicit owner routes and legacy contracts retain previous semantics. Fragment destinations are identified but section visibility proof, document identity and controlled plan revision remain pending.
+
 | Part | Tech | Status |
 |---|---|---|
 | Web (landing, login, dashboard, report) | React 19, Vite, TypeScript, Tailwind v4, GSAP + @gsap/react, Phosphor icons, Geist | Landing, login, dashboard, private report, and public report built |

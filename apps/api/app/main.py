@@ -27,6 +27,7 @@ from app import (
     auth,
     billing,
     citations,
+    cloud,
     db,
     deliver,
     github,
@@ -45,13 +46,14 @@ from app import (
     teams,
     watch,
 )
-from app.agent import assertions, compare, fix_prompt, funnel, goal, policy, report, runtime, score
+from app.agent import assertions, compare, fix_prompt, funnel, goal, harness, policy, report, runtime, score
 from app.agent.report_contract import ReportContractError, ensure_supported
 from app.agent.safety import MAX_STEPS
 from app.agent.schema import AgentReady, Comparison, FilterCountAssertion, Observation, StepEvidence
 from app.auth import require_user
 from app.observability import RequestLog, configure_logging, request_context, support_headers
 from app.scans import fetch, security
+from app.scans import site as site_audit
 
 configure_logging()
 log = logging.getLogger("walkthru")
@@ -322,7 +324,7 @@ def _start_run(body: StartRun, user: dict, run_id: str) -> dict:
     abuse.record_start(run_id, user["id"], host, policy.mode(verified), body.goal)
     marks.append(("verify_domain_wait", time.monotonic()))
     state = body.model_dump(mode="json", exclude={"group_id"}) | {"persona": persona, **({"persona_prompt": persona_prompt} if persona_prompt else {}),
-                                                              "max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": 0,
+                                                              "max_steps": min(body.max_steps, plan.max_steps), "run_id": run_id, "steps": [], "status": "running", "tokens": goal_plan.get("planner_tokens", 0),
                                             "first_text": body.observation.text[:6000], "verified": verified, "mode": policy.mode(verified), "plan": goal_plan, "plan_done": 0, "start_url": body.observation.url}
     result = runtime.invoke(tier, state, _cfg(run_id))
     marks.append(("first_step", time.monotonic()))
@@ -376,7 +378,7 @@ def _observe(run_id: str, body: Observe, user: dict) -> dict:
     row = _owned(run_id, user)
     if row["status"] != "running":
         raise HTTPException(409, "run already finished")
-    if body.evidence and not body.evidence.screenshot_path.startswith(f"{run_id}/"):
+    if body.evidence and not all(path.startswith(f"{run_id}/") for path in (body.evidence.screenshot_path, body.evidence.aim_path) if path):
         raise HTTPException(422, "evidence path does not belong to this run")
     live = runtime.get_state(row["tier"], _cfg(run_id))
     if not live.next:
@@ -572,9 +574,16 @@ def stop_run(run_id: str, request: Request, body: StopRequest | None = None, use
 def _stop_run(run_id: str, body: StopRequest | None, user: dict) -> dict:
     """End an interrupted browser session and generate a truthful partial report."""
     row = _owned(run_id, user)
+    report_context = {}
+    if row["status"] in {"running", "stopped"} and not row.get("report"):
+        try:
+            saved = runtime.get_state(row["tier"], _cfg(run_id)).values
+            report_context = {k: saved[k] for k in ("first_text", "plan", "plan_done", "harness_worklog", "assertion", "assertion_outcome", "observation") if k in saved}
+        except Exception:  # noqa: BLE001 - old or missing checkpoints still produce a partial report
+            log.info("checkpoint unavailable while stopping run %s", run_id)
     if row["status"] == "stopped":
         if not row.get("report"):
-            _finish_later(run_id, row)
+            _finish_later(run_id, report_context | row)
         abuse.record_end(run_id, row.get("steps", []), "stopped", None)
         return {
             "run_id": run_id,
@@ -591,18 +600,12 @@ def _stop_run(run_id: str, body: StopRequest | None, user: dict) -> dict:
     if steps and body and body.reason:
         steps[-1] = steps[-1] | {"note_after": body.reason}
     tokens = row.get("tokens", 0)
-    first_text = ""
-    try:
-        first_text = runtime.get_state(row["tier"], _cfg(run_id)).values.get("first_text", "")
-    except Exception:  # noqa: BLE001 - old or missing checkpoints still produce a partial report
-        log.info("checkpoint unavailable while stopping run %s", run_id)
-
     if not db.mark_run_stopped(run_id, steps, tokens):
         refreshed = _owned(run_id, user)
         if refreshed["status"] != "stopped":
             raise HTTPException(409, "run already finished")
         if not refreshed.get("report"):
-            _finish_later(run_id, refreshed | {"first_text": first_text})
+            _finish_later(run_id, report_context | refreshed)
         abuse.record_end(run_id, refreshed.get("steps", []), "stopped", None)
         return {
             "run_id": run_id,
@@ -611,7 +614,7 @@ def _stop_run(run_id: str, body: StopRequest | None, user: dict) -> dict:
             "report_status": "ready" if refreshed.get("report") else "generating",
         }
 
-    values = {"status": "stopped", "steps": steps, "tokens": tokens, "first_text": first_text}
+    values = report_context | {"status": "stopped", "steps": steps, "tokens": tokens}
     _finish_later(run_id, values)
     abuse.record_end(run_id, steps, "stopped", None)
     return {"run_id": run_id, "status": "stopped", "steps": steps, "report_status": "generating"}
@@ -620,7 +623,9 @@ def _stop_run(run_id: str, body: StopRequest | None, user: dict) -> dict:
 def _finish_later(run_id: str, values: dict) -> None:
     """Queue the report (app/jobs.py). Only the state finish_run reads goes in the job; of the last page, only its controls."""
     last = {"elements": (values.get("observation") or {}).get("elements", [])}
-    keep = {k: values[k] for k in ("status", "steps", "tokens", "first_text", "plan") if k in values}
+    keep = {k: values[k] for k in ("status", "steps", "tokens", "first_text", "plan", "harness_worklog", "assertion", "assertion_outcome") if k in values}
+    if values.get("status") == "stopped" and keep.get("harness_worklog") and keep["harness_worklog"][-1].get("status") != "stopped":
+        keep["harness_worklog"] = harness.append_event(values, "check", "stopped", status="stopped")
     jobs.enqueue("finish_run", {"run_id": run_id, "values": keep | {"observation": last}}, key=f"report:{run_id}")
 
 
@@ -645,6 +650,7 @@ def finish_run(run_id: str, values: dict) -> None:
                 intent=(values.get("plan") or {}).get("intent", ""),
                 checkpoints=(values.get("plan") or {}).get("checkpoints", []),
                 assertion=values.get("assertion"), assertion_outcome=values.get("assertion_outcome"),
+                harness_worklog=values.get("harness_worklog"),
             )
         rep.tokens += values.get("tokens", 0)
         try:
@@ -769,6 +775,7 @@ app.router.routes.append(Route("/mcp", mcp_server.Endpoint(), methods=["GET", "P
 # ---------- Plus team workspaces: members, invitations, shared reports, triage, chat (app/teams.py) ----------
 
 app.include_router(teams.router)
+app.include_router(cloud.router)  # in-app live runs (app/cloud.py), off unless CLOUD_RUNNER=on
 
 
 # ---------- Plus: custom test users (P4.2) and report branding for the PDF (P4.3) ----------
@@ -936,6 +943,11 @@ def add_citation_site(body: CitationSite, user: dict = Depends(require_user)) ->
     html = resp.text if resp is not None and resp.status_code < 400 else ""
     own = citations.domain_of(origin)
     brand = body.brand.strip() or citations.brand_from(html, own)
+    # An app shell whose title is only the brand gives no category, so every question would name the brand. Read the
+    # rendered page instead (about 10 s), only then.
+    if html and fetch.is_js_shell(html) and all(brand.lower() in p.lower() for p in citations.suggest(html, brand, [])):
+        html = site_audit.rendered_html([origin], wait=0).get(origin) or html
+        brand = body.brand.strip() or citations.brand_from(html, own)
     competitors = _competitors(body.competitors, own)
     site = db.add_citation_site({"user_id": user["id"], "site": origin, "brand": brand, "competitors": competitors,
                                  "next_check_at": (datetime.now(UTC) + timedelta(minutes=1)).isoformat() if lim.weekly else None})

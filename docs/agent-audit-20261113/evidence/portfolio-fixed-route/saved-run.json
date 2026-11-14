@@ -1,0 +1,1539 @@
+{
+  "id": "7f4bfdcb6ad84e2f8565b2d421564cb6",
+  "site": "https://portfolio2-mu-inky.vercel.app/dial/",
+  "goal": "Find the projects section and open one project detail on this website.",
+  "persona": "first_timer",
+  "tier": "paid",
+  "logged_in": false,
+  "status": "done",
+  "steps": [
+    {
+      "url": "https://portfolio2-mu-inky.vercel.app/dial/",
+      "text": null,
+      "action": "click",
+      "thought": "I need to go to the Projects page, so I'll click the Projects link in the navigation.",
+      "evidence": {
+        "label": "Clicked \"Projects\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.8293816858161648,
+          "y": 0.04677782960199005
+        },
+        "aim_path": "7f4bfdcb6ad84e2f8565b2d421564cb6/step-01-aim.jpg",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "captured_at": "2026-11-13T10:01:50.621722Z",
+        "screenshot_path": "7f4bfdcb6ad84e2f8565b2d421564cb6/step-01.jpg"
+      },
+      "progress": 0,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 2,
+      "result_url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+      "scroll_pct": 0,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": null,
+          "inp_ms": null,
+          "lcp_ms": null
+        },
+        "captured_at": "2026-11-13T10:01:49.893000Z",
+        "accessibility": {
+          "total": 2,
+          "issues": [
+            {
+              "rule": "aria-prohibited-attr",
+              "target": ".say",
+              "message": "Elements must only use permitted ARIA attributes",
+              "severity": "high"
+            },
+            {
+              "rule": "color-contrast",
+              "target": "div:nth-child(1) > dt",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "severity": "high"
+            }
+          ],
+          "status": "complete"
+        }
+      },
+      "target_label": "Projects",
+      "notices_after": [
+        "10 of 10 projects"
+      ],
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "checkpoint_evidence": {
+        "url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "step": 1,
+        "signal": "navigation",
+        "matched": "/dial/projects.html",
+        "checkpoint": 1
+      },
+      "scroll_container_id": null,
+      "observation_revision": "ecc79f98-1edb-41b2-9204-020105a11062"
+    },
+    {
+      "url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+      "text": null,
+      "action": "click",
+      "thought": "I want to see a project detail, so I'll click the first project's title link.",
+      "evidence": {
+        "label": "Clicked \"Walkthru\"",
+        "width": 1262,
+        "height": 804,
+        "pointer": {
+          "x": 0.553498910459588,
+          "y": 0.4998833955223881
+        },
+        "aim_path": "7f4bfdcb6ad84e2f8565b2d421564cb6/step-02-aim.jpg",
+        "result_url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "captured_at": "2026-11-13T10:01:59.711161Z",
+        "screenshot_path": "7f4bfdcb6ad84e2f8565b2d421564cb6/step-02.jpg"
+      },
+      "progress": 1,
+      "provider": "llm",
+      "confusion": 0,
+      "target_id": 10,
+      "result_url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+      "scroll_pct": 0,
+      "diagnostics": {
+        "web_vitals": {
+          "cls": null,
+          "inp_ms": null,
+          "lcp_ms": 2884
+        },
+        "captured_at": "2026-11-13T10:01:59.007000Z",
+        "accessibility": {
+          "total": 2,
+          "issues": [
+            {
+              "rule": "aria-prohibited-attr",
+              "target": ".ptag",
+              "message": "Elements must only use permitted ARIA attributes",
+              "severity": "high"
+            },
+            {
+              "rule": "color-contrast",
+              "target": ".phero > .label.mono",
+              "message": "Elements must meet minimum color contrast ratio thresholds",
+              "severity": "high"
+            }
+          ],
+          "status": "complete"
+        }
+      },
+      "target_label": "Walkthru",
+      "wait_condition": "url_changed",
+      "scroll_distance": null,
+      "wait_timeout_ms": 2000,
+      "scroll_direction": "down",
+      "checkpoint_evidence": {
+        "url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "step": 2,
+        "signal": "navigation",
+        "matched": "/dial/work.html",
+        "checkpoint": 2
+      },
+      "scroll_container_id": null,
+      "observation_revision": "7cfca258-3d91-4ebd-bb30-7e4f9abf5e1f"
+    }
+  ],
+  "created_at": "2026-11-13T10:01:38.616302+00:00",
+  "updated_at": "2026-11-13T10:02:35.240582+00:00",
+  "kind": "test",
+  "report": {
+    "geo": {
+      "band": "foundation",
+      "agent": {
+        "forms": 0,
+        "fields": 0,
+        "webmcp": false,
+        "captcha": false,
+        "named_fields": 0,
+        "search_action": false
+      },
+      "fixes": [
+        {
+          "id": "render",
+          "code": "<h1>Rohit Maity</h1>\n<p>Backend and AI engineer building distributed services, realtime systems and LLM agents. Explore my projects and the engineering behind them.</p>\n",
+          "file": "index.html (inside the root element)",
+          "note": "AI crawlers do not run JavaScript. Best: prerender or statically generate your pages (Vite single-page app supports it). Quick fix: put this inside the root element in index.html; your app replaces it when it loads.",
+          "title": "Put real content in the HTML (Vite single-page app)"
+        },
+        {
+          "id": "schema",
+          "code": "<script type=\"application/ld+json\">\n{\n  \"@context\": \"https://schema.org\",\n  \"@graph\": [\n    {\n      \"@type\": \"Organization\",\n      \"name\": \"Rohit Maity\",\n      \"url\": \"https://portfolio2-mu-inky.vercel.app/\"\n    },\n    {\n      \"@type\": \"WebSite\",\n      \"name\": \"Rohit Maity\",\n      \"url\": \"https://portfolio2-mu-inky.vercel.app/\"\n    },\n    {\n      \"@type\": \"SoftwareApplication\",\n      \"name\": \"Rohit Maity\",\n      \"description\": \"Backend and AI engineer building distributed services, realtime systems and LLM agents. Explore my projects and the engineering behind them.\",\n      \"url\": \"https://portfolio2-mu-inky.vercel.app/\"\n    }\n  ]\n}\n</script>",
+          "file": "index.html <head>",
+          "note": "Add inside <head> on the homepage. Then add your logo URL and sameAs links to your public profiles.",
+          "title": "Tell AI search who you are (structured data)"
+        },
+        {
+          "id": "llms",
+          "code": "# Rohit Maity\n\n> Backend and AI engineer building distributed services, realtime systems and LLM agents. Explore my projects and the engineering behind them.\n\n## Pages\n- [Rohit Maity](https://portfolio2-mu-inky.vercel.app/dial/)\n- [Rohit Maity](https://portfolio2-mu-inky.vercel.app/dial/projects.html)\n- [Rohit Maity](https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru)\n",
+          "file": "llms.txt",
+          "note": "Save as /llms.txt at your site root. Low measured impact today, so do it after the fixes above.",
+          "title": "Add an llms.txt map (low impact)"
+        },
+        {
+          "id": "indexnow",
+          "code": "e5578d04886a82de1ad801845680f219\n",
+          "file": "public/e5578d04886a82de1ad801845680f219.txt",
+          "note": "Publish at https://portfolio2-mu-inky.vercel.app/e5578d04886a82de1ad801845680f219.txt. Keep this key for future URL submissions. IndexNow announces changes to supporting search engines; it does not guarantee indexing.",
+          "title": "Optional: add an IndexNow key file"
+        }
+      ],
+      "notes": [
+        "Not blocked for an AI search user agent. Edge networks verify real crawlers by IP, so this cannot prove access.",
+        "No wikidata entity with this domain was found. This is an advisory identity signal, not a ranking requirement."
+      ],
+      "score": 38,
+      "trust": {
+        "identity": true,
+        "social_proof": false,
+        "external_sources": false,
+        "name_consistency": true
+      },
+      "ai_view": "",
+      "ai_words": 0,
+      "entities": {
+        "wikidata": {
+          "status": "no_match"
+        }
+      },
+      "discovery": {
+        "/llms-full.txt": false,
+        "/.well-known/ai.txt": false
+      },
+      "categories": [
+        {
+          "id": "access",
+          "max": 25,
+          "label": "AI crawler access",
+          "earned": 25
+        },
+        {
+          "id": "content",
+          "max": 20,
+          "label": "Content before JavaScript",
+          "earned": 0
+        },
+        {
+          "id": "schema",
+          "max": 15,
+          "label": "Structured data",
+          "earned": 0
+        },
+        {
+          "id": "llms",
+          "max": 3,
+          "label": "llms.txt",
+          "earned": 0
+        },
+        {
+          "id": "discovery",
+          "max": 2,
+          "label": "AI discovery files (low impact)",
+          "earned": 0
+        }
+      ],
+      "citability": [],
+      "fixes_total": 4
+    },
+    "model": "Free models (gpt-oss-120b and backups)",
+    "pages": {
+      "seo:seo.no_hn_heading": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "seo:seo.duplicate_title": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "seo:seo.no_canonical_link": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "geo:geo.page.javascript_only": [
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "security:sec.no_referrer_policy": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "security:sec.page_can_be_framed": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "seo:seo.page_title_is_too_short": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "seo:seo.missing_meta_description": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "security:sec.no_x_content_type_options": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "security:sec.no_content_security_policy": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ]
+    },
+    "stack": {
+      "backend": null,
+      "hosting": "vercel",
+      "evidence": {
+        "hosting": "x-vercel-id header"
+      },
+      "framework": null
+    },
+    "checks": {
+      "geo": "complete",
+      "seo": "complete",
+      "security": "complete",
+      "performance": "complete",
+      "accessibility": "complete"
+    },
+    "funnel": {
+      "previous": {
+        "safe_stops": 0,
+        "errors_seen": 0,
+        "fields_typed": 0,
+        "steps_to_goal": null,
+        "first_useful_step": null,
+        "seconds_to_first_useful": null
+      },
+      "safe_stops": 0,
+      "errors_seen": 0,
+      "fields_typed": 0,
+      "steps_to_goal": 2,
+      "first_useful_step": 2,
+      "seconds_to_first_useful": 9
+    },
+    "tokens": 14004,
+    "summary": "The test user successfully navigated from the homepage to the projects page and opened a project detail. No journey errors or broken interactions were recorded. The primary risks are invisible to users: AI crawlers and link previews see empty pages because all content requires JavaScript, accessibility violations block screen readers, and security headers are missing.",
+    "version": 2,
+    "findings": [
+      {
+        "fix": "Fix each listed element so it passes the aria-prohibited-attr rule, then rerun this journey.",
+        "kind": "accessibility",
+        "rule": "a11y.axe.aria-prohibited-attr",
+        "title": "Elements must only use permitted ARIA attributes",
+        "detail": "The real-browser audit found the aria-prohibited-attr rule failing on 2 elements: .say, .ptag.",
+        "evidence": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+        "severity": "high"
+      },
+      {
+        "fix": "Fix each listed element so it passes the color-contrast rule, then rerun this journey.",
+        "kind": "accessibility",
+        "rule": "a11y.axe.color-contrast",
+        "title": "Elements must meet minimum color contrast ratio thresholds",
+        "detail": "The real-browser audit found the color-contrast rule failing on 2 elements: div:nth-child(1) > dt, .phero > .label.mono.",
+        "evidence": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+        "severity": "high"
+      },
+      {
+        "fix": "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
+        "kind": "geo",
+        "rule": "geo.homepage_content_only_appears_after_javascript_runs",
+        "title": "Homepage content only appears after JavaScript runs",
+        "detail": "The server sends 2772 bytes of HTML with 0 characters of visible text. Most AI crawlers do not run JavaScript, so ChatGPT, Claude and Perplexity see an empty page. Link previews on WhatsApp, LinkedIn and Slack do too. Google runs JavaScript but indexes it later.",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/dial/",
+        "severity": "high"
+      },
+      {
+        "fix": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+        "kind": "performance",
+        "rule": "perf.largest_contentful_paint_is_slow",
+        "title": "Largest Contentful Paint is slow",
+        "detail": "A single browser visit observed LCP at 2884 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+        "evidence": "step 2: https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add a short description of what this page offers and for whom. There is no required length.",
+        "kind": "seo",
+        "rule": "seo.missing_meta_description",
+        "title": "Missing meta description",
+        "detail": "In the HTML sent before JavaScript runs: No meta description. Advisory: search engines usually build snippets from page text, and link previews often show the description when it exists. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "medium"
+      },
+      {
+        "fix": "Prerender these routes too, starting with pricing, features and docs.",
+        "kind": "geo",
+        "rule": "geo.page.javascript_only",
+        "title": "2 more pages only render with JavaScript",
+        "detail": "AI crawlers see these pages as empty: https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "medium"
+      },
+      {
+        "fix": "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product.",
+        "kind": "geo",
+        "rule": "geo.no_structured_data",
+        "title": "No structured data",
+        "detail": "Your pages have no JSON-LD. Structured data tells AI assistants exactly what your product is, who makes it and what it costs.",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/dial/",
+        "severity": "medium"
+      },
+      {
+        "fix": "Start with default-src 'self' and add sources as needed; use report-only first.",
+        "kind": "security",
+        "rule": "sec.no_content_security_policy",
+        "title": "No Content-Security-Policy",
+        "detail": "Without a CSP, any injected script runs with full access to the page. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "medium"
+      },
+      {
+        "fix": "Send X-Frame-Options: DENY or a CSP frame-ancestors directive.",
+        "kind": "security",
+        "rule": "sec.page_can_be_framed",
+        "title": "Page can be framed",
+        "detail": "Another site can embed this page and trick users into clicking (clickjacking). Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "medium"
+      },
+      {
+        "fix": "Describe this page and the brand in the title. There is no required length.",
+        "kind": "seo",
+        "rule": "seo.page_title_is_too_short",
+        "title": "Page title is too short",
+        "detail": "In the HTML sent before JavaScript runs: The title is \"Rohit Maity\" (11 characters). Advisory: a very short title may say little about the page. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      },
+      {
+        "fix": "Add one main heading that states what the page is about.",
+        "kind": "seo",
+        "rule": "seo.no_hn_heading",
+        "title": "No h1 heading",
+        "detail": "In the HTML sent before JavaScript runs: The page has no top-level heading. Advisory: a clear main heading helps visitors and screen-reader users find the topic; search engines also read prominent headings. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      },
+      {
+        "fix": "Add <link rel=\"canonical\" href=\"...\"> pointing at the preferred URL.",
+        "kind": "seo",
+        "rule": "seo.no_canonical_link",
+        "title": "No canonical link",
+        "detail": "In the HTML sent before JavaScript runs: Without a canonical URL, variants like ?utm= or trailing slashes can split ranking signals. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      },
+      {
+        "fix": "Generate /sitemap.xml and reference it from robots.txt.",
+        "kind": "seo",
+        "rule": "seo.no_sitemap_xml",
+        "title": "No sitemap.xml",
+        "detail": "Search engines discover pages slower without a sitemap.",
+        "evidence": null,
+        "severity": "low"
+      },
+      {
+        "fix": "Give each page its own title; for true duplicates, pick one URL and point the others at it with rel=canonical or a redirect.",
+        "kind": "seo",
+        "rule": "seo.duplicate_title",
+        "title": "Duplicate title",
+        "detail": "Several pages share the same title, so search engines cannot tell them apart and may show only one. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      },
+      {
+        "fix": "Add /llms.txt: an H1 with your name, a one-line > summary, then sections of links to your key pages.",
+        "kind": "geo",
+        "rule": "geo.no_llms_txt",
+        "title": "No llms.txt",
+        "detail": "llms.txt is a short Markdown map of your site for AI tools. It has low measured impact on AI search today, so fix the items above first.",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/llms.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_well_known_ai_txt",
+        "title": "No /.well-known/ai.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/.well-known/ai.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+        "kind": "geo",
+        "rule": "geo.no_llms_full_txt",
+        "title": "No /llms-full.txt",
+        "detail": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+        "evidence": "https://portfolio2-mu-inky.vercel.app/llms-full.txt",
+        "severity": "low"
+      },
+      {
+        "fix": "Send X-Content-Type-Options: nosniff.",
+        "kind": "security",
+        "rule": "sec.no_x_content_type_options",
+        "title": "No X-Content-Type-Options",
+        "detail": "Browsers may sniff file types and run a text file as script. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      },
+      {
+        "fix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+        "kind": "security",
+        "rule": "sec.no_referrer_policy",
+        "title": "No Referrer-Policy",
+        "detail": "Full URLs, including query strings, leak to every site you link to. Found on 3 of 3 audited pages.",
+        "evidence": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru",
+        "severity": "low"
+      }
+    ],
+    "verified": false,
+    "authority": null,
+    "top_fixes": [
+      "Prerender the homepage, projects page, and project detail pages (static generation or server rendering) so AI crawlers and link previews see real content.",
+      "Remove or correct the prohibited ARIA attributes on the .say and .ptag elements to pass accessibility audits.",
+      "Add a Content-Security-Policy header starting with default-src 'self' in report-only mode, then enforce it.",
+      "Increase color contrast on the failing elements (div:nth-child(1) > dt and .phero > .label.mono) to meet WCAG AA.",
+      "Add unique meta descriptions to all three pages to improve search snippets and social previews."
+    ],
+    "assessment": {
+      "issues": [
+        {
+          "id": "a11y.axe.aria-prohibited-attr",
+          "actual_result": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+          "evidence_refs": [
+            "scanner:0"
+          ],
+          "finding_index": 0,
+          "interpretation": "The real-browser audit found the aria-prohibited-attr rule failing on 2 elements: .say, .ptag.",
+          "observed_facts": [
+            "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Fix each listed element so it passes the aria-prohibited-attr rule, then rerun this journey.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same accessibility check (a11y.axe.aria-prohibited-attr) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "a11y.axe.color-contrast",
+          "actual_result": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+          "evidence_refs": [
+            "scanner:1"
+          ],
+          "finding_index": 1,
+          "interpretation": "The real-browser audit found the color-contrast rule failing on 2 elements: div:nth-child(1) > dt, .phero > .label.mono.",
+          "observed_facts": [
+            "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Fix each listed element so it passes the color-contrast rule, then rerun this journey.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same accessibility check (a11y.axe.color-contrast) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.homepage_content_only_appears_after_javascript_runs",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/dial/",
+          "evidence_refs": [
+            "scanner:2"
+          ],
+          "finding_index": 2,
+          "interpretation": "The server sends 2772 bytes of HTML with 0 characters of visible text. Most AI crawlers do not run JavaScript, so ChatGPT, Claude and Perplexity see an empty page. Link previews on WhatsApp, LinkedIn and Slack do too. Google runs JavaScript but indexes it later.",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/dial/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.home[hidden]) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "perf.largest_contentful_paint_is_slow",
+          "actual_result": "step 2: https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+          "evidence_refs": [
+            "scanner:3"
+          ],
+          "finding_index": 3,
+          "interpretation": "A single browser visit observed LCP at 2884 ms; the good threshold is 2500 ms. This is not a Lighthouse lab run or population field p75. No resource attribution was captured.",
+          "observed_facts": [
+            "step 2: https://portfolio2-mu-inky.vercel.app/dial/projects.html"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Reduce render-blocking work and optimize the largest above-the-fold element.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same performance check (perf.largest_contentful_paint_is_slow) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.missing_meta_description",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:4"
+          ],
+          "finding_index": 4,
+          "interpretation": "In the HTML sent before JavaScript runs: No meta description. Advisory: search engines usually build snippets from page text, and link previews often show the description when it exists. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add a short description of what this page offers and for whom. There is no required length.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.missing_meta_description) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.page.javascript_only",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:5"
+          ],
+          "finding_index": 5,
+          "interpretation": "AI crawlers see these pages as empty: https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Prerender these routes too, starting with pricing, features and docs.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.page.javascript_only) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_structured_data",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/dial/",
+          "evidence_refs": [
+            "scanner:6"
+          ],
+          "finding_index": 6,
+          "interpretation": "Your pages have no JSON-LD. Structured data tells AI assistants exactly what your product is, who makes it and what it costs.",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/dial/"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_structured_data) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_content_security_policy",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:7"
+          ],
+          "finding_index": 7,
+          "interpretation": "Without a CSP, any injected script runs with full access to the page. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Start with default-src 'self' and add sources as needed; use report-only first.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_content_security_policy) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.page_can_be_framed",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:8"
+          ],
+          "finding_index": 8,
+          "interpretation": "Another site can embed this page and trick users into clicking (clickjacking). Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send X-Frame-Options: DENY or a CSP frame-ancestors directive.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.page_can_be_framed) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.page_title_is_too_short",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:9"
+          ],
+          "finding_index": 9,
+          "interpretation": "In the HTML sent before JavaScript runs: The title is \"Rohit Maity\" (11 characters). Advisory: a very short title may say little about the page. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Describe this page and the brand in the title. There is no required length.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.page_title_is_too_short) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_hn_heading",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:10"
+          ],
+          "finding_index": 10,
+          "interpretation": "In the HTML sent before JavaScript runs: The page has no top-level heading. Advisory: a clear main heading helps visitors and screen-reader users find the topic; search engines also read prominent headings. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add one main heading that states what the page is about.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_hn_heading) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_canonical_link",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:11"
+          ],
+          "finding_index": 11,
+          "interpretation": "In the HTML sent before JavaScript runs: Without a canonical URL, variants like ?utm= or trailing slashes can split ranking signals. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add <link rel=\"canonical\" href=\"...\"> pointing at the preferred URL.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_canonical_link) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.no_sitemap_xml",
+          "actual_result": "The seo check reported rule seo.no_sitemap_xml.",
+          "evidence_refs": [
+            "scanner:12"
+          ],
+          "finding_index": 12,
+          "interpretation": "Search engines discover pages slower without a sitemap.",
+          "observed_facts": [
+            "The seo check reported rule seo.no_sitemap_xml."
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Generate /sitemap.xml and reference it from robots.txt.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.no_sitemap_xml) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "seo.duplicate_title",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:13"
+          ],
+          "finding_index": 13,
+          "interpretation": "Several pages share the same title, so search engines cannot tell them apart and may show only one. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Give each page its own title; for true duplicates, pick one URL and point the others at it with rel=canonical or a redirect.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same seo check (seo.duplicate_title) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_llms_txt",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/llms.txt",
+          "evidence_refs": [
+            "scanner:14"
+          ],
+          "finding_index": 14,
+          "interpretation": "llms.txt is a short Markdown map of your site for AI tools. It has low measured impact on AI search today, so fix the items above first.",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/llms.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Add /llms.txt: an H1 with your name, a one-line > summary, then sections of links to your key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_llms_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_well_known_ai_txt",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/.well-known/ai.txt",
+          "evidence_refs": [
+            "scanner:15"
+          ],
+          "finding_index": 15,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/.well-known/ai.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /.well-known/ai.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_well_known_ai_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "geo.no_llms_full_txt",
+          "actual_result": "https://portfolio2-mu-inky.vercel.app/llms-full.txt",
+          "evidence_refs": [
+            "scanner:16"
+          ],
+          "finding_index": 16,
+          "interpretation": "This optional AI discovery file is absent or serves HTML. Its effect on AI search is not established; fix crawler access and content first.",
+          "observed_facts": [
+            "https://portfolio2-mu-inky.vercel.app/llms-full.txt"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Publish a plain-text /llms-full.txt describing the site and linking to its key pages.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same geo check (geo.no_llms_full_txt) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_x_content_type_options",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:17"
+          ],
+          "finding_index": 17,
+          "interpretation": "Browsers may sniff file types and run a text file as script. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send X-Content-Type-Options: nosniff.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_x_content_type_options) on the recorded page/scope."
+          ]
+        },
+        {
+          "id": "sec.no_referrer_policy",
+          "actual_result": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "evidence_refs": [
+            "scanner:18"
+          ],
+          "finding_index": 18,
+          "interpretation": "Full URLs, including query strings, leak to every site you link to. Found on 3 of 3 audited pages.",
+          "observed_facts": [
+            "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+          ],
+          "acceptance_test": "Repeat the recorded check within the same scope; inspect the original evidence and confirm this observation is resolved. Functional expectations remain unknown unless the owner declares them.",
+          "expected_result": null,
+          "proposed_change": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+          "cause_hypothesis": null,
+          "observation_type": "scanner",
+          "reproduction_steps": [
+            "Repeat the same security check (sec.no_referrer_policy) on the recorded page/scope."
+          ]
+        }
+      ],
+      "outcome": "completed",
+      "coverage": {
+        "checks": {
+          "geo": "complete",
+          "seo": "complete",
+          "security": "complete",
+          "performance": "complete",
+          "accessibility": "complete"
+        },
+        "audited_urls": [
+          "https://portfolio2-mu-inky.vercel.app/dial/",
+          "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+          "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]"
+        ],
+        "crawl_truncated": false,
+        "declared_checkpoints": 2,
+        "actions_with_outcomes": 2,
+        "confirmed_checkpoints": 2
+      },
+      "objective": "Find the projects section and open one project detail on this website.",
+      "assertions": [],
+      "checkpoints": [
+        {
+          "status": "passed",
+          "description": "Open the Projects page.",
+          "actual_result": "/dial/projects.html",
+          "evidence_refs": [
+            "milestone:1"
+          ],
+          "expected_result": "/dial/projects.html"
+        },
+        {
+          "status": "passed",
+          "description": "Open a project detail page.",
+          "actual_result": "/dial/work.html",
+          "evidence_refs": [
+            "milestone:2"
+          ],
+          "expected_result": "/dial/work.html"
+        }
+      ],
+      "limitations": [
+        "Public UI evidence does not verify backend persistence, email delivery, authorization or complete application behavior.",
+        "accessibility: page is rendered by JavaScript",
+        "Signup email records not checked: the site runs on a local address or a shared hosting domain it does not own."
+      ],
+      "stop_reason": "done",
+      "evidence_index": [
+        {
+          "id": "step:1",
+          "url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+          "step": 1,
+          "source": "step",
+          "observed": "Step 1: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "step:2",
+          "url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "step": 2,
+          "source": "step",
+          "observed": "Step 2: Browser action has a recorded public outcome.",
+          "finding_index": null
+        },
+        {
+          "id": "milestone:1",
+          "url": "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+          "step": 1,
+          "source": "milestone",
+          "observed": "/dial/projects.html",
+          "finding_index": null
+        },
+        {
+          "id": "milestone:2",
+          "url": "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "step": 2,
+          "source": "milestone",
+          "observed": "/dial/work.html",
+          "finding_index": null
+        },
+        {
+          "id": "scanner:0",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+          "finding_index": 0
+        },
+        {
+          "id": "scanner:1",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 1, 2: https://portfolio2-mu-inky.vercel.app/dial/",
+          "finding_index": 1
+        },
+        {
+          "id": "scanner:2",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/dial/",
+          "finding_index": 2
+        },
+        {
+          "id": "scanner:3",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "step 2: https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+          "finding_index": 3
+        },
+        {
+          "id": "scanner:4",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 4
+        },
+        {
+          "id": "scanner:5",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 5
+        },
+        {
+          "id": "scanner:6",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/dial/",
+          "finding_index": 6
+        },
+        {
+          "id": "scanner:7",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 7
+        },
+        {
+          "id": "scanner:8",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 8
+        },
+        {
+          "id": "scanner:9",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 9
+        },
+        {
+          "id": "scanner:10",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 10
+        },
+        {
+          "id": "scanner:11",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 11
+        },
+        {
+          "id": "scanner:12",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "The seo check reported rule seo.no_sitemap_xml.",
+          "finding_index": 12
+        },
+        {
+          "id": "scanner:13",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 13
+        },
+        {
+          "id": "scanner:14",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/llms.txt",
+          "finding_index": 14
+        },
+        {
+          "id": "scanner:15",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/.well-known/ai.txt",
+          "finding_index": 15
+        },
+        {
+          "id": "scanner:16",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "https://portfolio2-mu-inky.vercel.app/llms-full.txt",
+          "finding_index": 16
+        },
+        {
+          "id": "scanner:17",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 17
+        },
+        {
+          "id": "scanner:18",
+          "url": null,
+          "step": null,
+          "source": "scanner",
+          "observed": "3 pages: https://portfolio2-mu-inky.vercel.app/dial/, https://portfolio2-mu-inky.vercel.app/dial/projects.html, https://portfolio2-mu-inky.vercel.app/dial/work.html?p=[hidden]",
+          "finding_index": 18
+        }
+      ]
+    },
+    "comparison": {
+      "new": [
+        {
+          "kind": "accessibility",
+          "title": "Elements must only use permitted ARIA attributes",
+          "severity": "high",
+          "pages_new": [],
+          "fingerprint": "accessibility:a11y.axe.aria-prohibited-attr",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "geo",
+          "title": "Homepage content only appears after JavaScript runs",
+          "severity": "high",
+          "pages_new": [],
+          "fingerprint": "geo:geo.homepage_content_only_appears_after_javascript_runs",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        }
+      ],
+      "fixed": [
+        {
+          "kind": "geo",
+          "title": "The homepage says little before JavaScript runs",
+          "severity": "medium",
+          "pages_new": [],
+          "fingerprint": "geo:geo.the_homepage_says_little_before_javascript_runs",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "geo",
+          "title": "No about or contact link on the homepage",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.identity.both_link_missing",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        }
+      ],
+      "assertion": null,
+      "previous_at": "2026-11-13T09:54:56.180737+00:00",
+      "still_broken": [
+        {
+          "kind": "accessibility",
+          "title": "Elements must meet minimum color contrast ratio thresholds",
+          "severity": "high",
+          "pages_new": [],
+          "fingerprint": "accessibility:a11y.axe.color-contrast",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "performance",
+          "title": "Largest Contentful Paint is slow",
+          "severity": "medium",
+          "pages_new": [],
+          "fingerprint": "performance:perf.largest_contentful_paint_is_slow",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "seo",
+          "title": "Missing meta description",
+          "severity": "medium",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "seo:seo.missing_meta_description",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "geo",
+          "title": "2 more pages only render with JavaScript",
+          "severity": "medium",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "geo:geo.page.javascript_only",
+          "pages_fixed": [
+            "https://portfolio2-mu-inky.vercel.app/dial/"
+          ],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "geo",
+          "title": "No structured data",
+          "severity": "medium",
+          "pages_new": [],
+          "fingerprint": "geo:geo.no_structured_data",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "security",
+          "title": "No Content-Security-Policy",
+          "severity": "medium",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "security:sec.no_content_security_policy",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "security",
+          "title": "Page can be framed",
+          "severity": "medium",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "security:sec.page_can_be_framed",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "seo",
+          "title": "Page title is too short",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "seo:seo.page_title_is_too_short",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "seo",
+          "title": "No h1 heading",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "seo:seo.no_hn_heading",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "seo",
+          "title": "No canonical link",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "seo:seo.no_canonical_link",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "seo",
+          "title": "No sitemap.xml",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "seo:seo.no_sitemap_xml",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "seo",
+          "title": "Duplicate title",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "seo:seo.duplicate_title",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "geo",
+          "title": "No llms.txt",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.no_llms_txt",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "geo",
+          "title": "No /.well-known/ai.txt",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.no_well_known_ai_txt",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "geo",
+          "title": "No /llms-full.txt",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.no_llms_full_txt",
+          "pages_fixed": [],
+          "pages_unchecked": []
+        },
+        {
+          "kind": "security",
+          "title": "No X-Content-Type-Options",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "security:sec.no_x_content_type_options",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        },
+        {
+          "kind": "security",
+          "title": "No Referrer-Policy",
+          "severity": "low",
+          "pages_new": [
+            "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+          ],
+          "fingerprint": "security:sec.no_referrer_policy",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/",
+            "https://portfolio2-mu-inky.vercel.app/paper/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/",
+            "https://portfolio2-mu-inky.vercel.app/signal/",
+            "https://portfolio2-mu-inky.vercel.app/blueprint/",
+            "https://portfolio2-mu-inky.vercel.app/ledger/projects.html",
+            "https://portfolio2-mu-inky.vercel.app/ledger/work.html?p=walkthru"
+          ]
+        }
+      ],
+      "not_rechecked": [
+        {
+          "kind": "geo",
+          "title": "Few section headings",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.few_section_headings",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/"
+          ]
+        },
+        {
+          "kind": "geo",
+          "title": "No plain answer near the top",
+          "severity": "low",
+          "pages_new": [],
+          "fingerprint": "geo:geo.no_plain_answer_near_the_top",
+          "pages_fixed": [],
+          "pages_unchecked": [
+            "https://portfolio2-mu-inky.vercel.app/"
+          ]
+        }
+      ],
+      "previous_run_id": "df76f76f5ab4435cbd29375459d577f9"
+    },
+    "site_audit": {
+      "urls": [
+        "https://portfolio2-mu-inky.vercel.app/dial/",
+        "https://portfolio2-mu-inky.vercel.app/dial/projects.html",
+        "https://portfolio2-mu-inky.vercel.app/dial/work.html?p=walkthru"
+      ],
+      "truncated": false,
+      "page_limit": 50,
+      "duration_ms": 2906,
+      "mobile_vitals": [],
+      "pages_scanned": 3,
+      "robots_respected": true
+    },
+    "agent_ready": {
+      "parts": [
+        {
+          "id": "goal",
+          "max": 25,
+          "note": "The declared UI checkpoints have matching recorded evidence; backend behavior is not verified.",
+          "label": "The test user reached the goal",
+          "earned": 25
+        },
+        {
+          "id": "captcha",
+          "max": 15,
+          "note": "No CAPTCHA stopped the confirmed UI journey.",
+          "label": "No CAPTCHA before the value",
+          "earned": 15
+        },
+        {
+          "id": "names",
+          "max": 25,
+          "note": "Every control checked has an accessible name.",
+          "label": "Buttons, links and fields have names",
+          "earned": 25
+        },
+        {
+          "id": "search",
+          "max": 10,
+          "note": "No WebSite SearchAction in the structured data.",
+          "label": "Site search declared (SearchAction)",
+          "earned": 0
+        }
+      ],
+      "score": 87
+    },
+    "launch_ready": {
+      "areas": {
+        "ux": 100,
+        "geo": 38,
+        "seo": 75,
+        "speed": 40,
+        "security": 74
+      },
+      "score": 70
+    },
+    "scan_version": null,
+    "check_reasons": {},
+    "opportunities": null,
+    "first_impression": {
+      "who": "Employers, recruiters, or collaborators interested in backend, AI, or platform engineering talent.",
+      "what": "This site showcases Rohit Maity\u2019s projects, r\u00e9sum\u00e9, and contact information.",
+      "trust": [
+        "Email address provided",
+        "LinkedIn profile linked",
+        "GitHub link",
+        "Availability statement for internships and full\u2011time roles",
+        "Downloadable r\u00e9sum\u00e9"
+      ],
+      "clarity": 1,
+      "first_click": "View all 10 projects, because it promises to show the work the person has done."
+    }
+  },
+  "public": false,
+  "tokens": 14004,
+  "evidence_purged_at": null,
+  "group_id": null
+}

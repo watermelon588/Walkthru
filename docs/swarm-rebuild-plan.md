@@ -1,6 +1,6 @@
 # Implementation Plan: Assemble (multi-cursor page rebuild component)
 
-_Written 2026-11-11. Status: plan only, nothing built. Waiting for the founder's go-ahead. Working name "Assemble"; "Swarm" is avoided because it is both the reference extension's name and a competitor's._
+_Written 2026-11-11. Status: T0 to T9 built by 2026-11-13 (approach changed after T0, see "T0 spike result"); waiting on Checkpoint B. T10 to T14 and a Plus video export were added the same day. Left: T15 package README, and a real signed-in check of the live stage and the export. Working name "Assemble"; "Swarm" is avoided because it is both the reference extension's name and a competitor's._
 
 ## Overview
 
@@ -39,19 +39,38 @@ Sources: `swarm-rebuild.mp4` (53 s, 1898x866, reviewed at 1 fps plus full-size s
 
 The repo (`DhvanilPatel/swarm-cursors`) has **no licence**; its README says "None yet" and that large parts of the engine are adapted from Joel Califa's Swarm site, which is also unlicensed. AGENTS.md forbids copying code from unlicensed repos. So this is a **clean-room build**: we use the observed behaviour and the general technique described above, and write every line ourselves. No code, constants tables, names list or sound patches are copied. The visual vocabulary (selection handles, size badges, rulers) is generic design-tool language, but our cursor shape, palette, HUD and sounds are our own.
 
+## T0 spike result (2026-11-12): change of approach
+
+Run with `node packages/assemble/spike/run.mjs <outDir> <url...>` at 1440x900, reduced motion, on the portfolio (`portfolio-web-six-psi-43.vercel.app`) and the Walkthru landing (`localhost:5173`).
+
+| Approach | Site | Layers | Snapshot | Hero pixels wrong | Full page wrong |
+|---|---|---|---|---|---|
+| A. Styled clones in an overlay, curated property list | Portfolio | 195 | 304 ms | 14.9% | 7.8% |
+| A. Styled clones, every computed property | Portfolio | 307 | 837 ms | 2.3% | 1.6% |
+| A. Styled clones (either list) | Walkthru | 242 | 217 to 1,535 ms | 0.9% | 7.1% |
+| **B. Reveal the real elements in place** | Portfolio | 1,076 | **27 ms** | **0%** | same as page vs itself |
+| **B. Reveal the real elements in place** | Walkthru | 240 | **25 ms** | **0%** | **0%** |
+
+- **Approach A fails** both acceptance bars. Flattening loses everything an ancestor contributes: stacking order (the portfolio photo sits between two text layers), blend modes (the nav vanished), clipping, transforms. It is also 4 to 30 times over the 50 ms budget because of style copying.
+- **Approach B passes.** Nothing is cloned. One stylesheet hides tagged real elements with `visibility` (a revealed child inside a hidden parent shows, so every layer is independent), and the engine reveals them as cursors "build" them. Text is typed by clipping the real element to the caret position measured with a `Range`. The finished page is the real page, so it is right by construction; removing the attributes restores it exactly (0% difference after destroy). Canvas, video and iframes need no special case.
+- Found for T1: (1) an element that both paints a box and holds text (buttons, pills) has its background clipped while typing, so those need box-then-text handling; (2) headlines split into per-word spans must be merged into one text layer at the nearest block ancestor; (3) elements at `opacity: 0` are counted as layers and should be skipped until the page shows them.
+- Cost: hidden content leaves the accessibility tree for the few seconds of the rebuild. Reduced-motion users never get blanked, and the component is never used on load without a user action on the founder's sites.
+
+Decisions 3, 4 and 9 below are rewritten to match.
+
 ## Architecture decisions
 
 1. **Vanilla TypeScript, zero runtime dependencies, shipped as a custom element.** `<assemble-stage>` plus a programmatic `assemble(target, options)`. This is the only stack that drops into every site the founder has (React 19, plain HTML, anything else) with one script tag. A 15-line React wrapper lives in `apps/web`. Target size: under 25 KB gzipped.
 2. **Own fixed-step simulation loop, not GSAP.** GSAP timelines fit choreography known in advance. Here hundreds of tasks are scheduled at run time, can be interrupted by scroll, change speed live (1x/2x/3x) and must replay deterministically. One `requestAnimationFrame` loop stepping generator-based agent scripts does that in a few hundred lines and keeps the package dependency-free. GSAP stays in use for the rest of the site.
-3. **DOM clones for content, one canvas for chrome.** Content layers are positioned clones with computed styles inlined, so text stays crisp and uses the site's real fonts; reveal uses `opacity`, `clip-path` and text slicing only. Cursors, outlines, badges, guides and rulers are drawn on a single DPR-aware `<canvas>` (up to 48 moving cursors with trails is cheaper there than 48 DOM nodes plus hundreds of outline nodes).
-4. **Shadow root isolation.** All of it sits in a closed shadow root so host CSS cannot leak in or out.
+3. **Reveal the real page in place, one canvas for chrome.** (Changed after T0.) Content is never cloned: real elements are tagged with a `data-asm` attribute, hidden by one injected stylesheet, and revealed as they are built; text is typed with `clip-path` on the real element. The grey placeholder boxes, cursors, outlines, badges, guides and rulers are drawn on a single DPR-aware `<canvas>` above the page. Short-lived clones are allowed only for alt-drag duplicate ghosts and for typing labels inside painted elements.
+4. **Shadow root isolation for our own UI.** The canvas and HUD sit in a closed shadow root so host CSS cannot leak in or out. The only things added to the host page are the `data-asm` attributes, one `<style>` and a temporary inline `clip-path`, all removed on destroy.
 5. **Two blueprint sources behind one type.**
    - `fromDOM(element)`: walks a live element. Used on the founder's own sites.
    - `fromFrame({ image, boxes })`: a screenshot plus element rectangles. Used on the in-app run stage, where the page is a JPEG and the rectangles come from the snapshot `inject.js` already produces. Boxes are drawn the same way; content is revealed by clipping the image per box. No text typing in this mode (we do not have the text as text), boxes and image regions only.
 6. **Region or full page.** `target` can be `document.body` or any element, so it can wrap a hero mock, a report card or the stage.
 7. **Seeded randomness.** One seed drives every random choice, so tests are deterministic and a replay is identical.
-8. **Reduced motion and accessibility are in v1, not later.** Under `prefers-reduced-motion` the component does a 200 ms cross-fade and never blanks. The real DOM stays in the accessibility tree the whole time (the overlay is `aria-hidden`, the HUD is a labelled toolbar, Esc always exits, focus returns to where it was). Sound is off until the user turns it on.
-9. **Skip what the DOM cannot give back.** Canvas, video and cross-origin iframes are shown as a placeholder box that cross-fades to the live element at the end. No screenshot API in a plain page, and we do not add one.
+8. **Reduced motion and accessibility are in v1, not later.** Under `prefers-reduced-motion` the component does a 200 ms cross-fade and never blanks. During a rebuild the hidden content is out of the accessibility tree for a few seconds, so the canvas is `aria-hidden`, the HUD is a labelled toolbar that announces "Rebuilding page" and offers Skip, Esc always exits, and focus returns to where it was. Sound is off until the user turns it on.
+9. **Canvas, video and iframes are ordinary layers.** (Changed after T0.) Because the real element is revealed, they need no screenshot and no placeholder.
 10. **Lives in this repo as `packages/assemble/`**, built with Vite library mode (already installed) to one ESM file and one IIFE file. No npm publish until a second site needs a versioned copy; until then other sites load the built file.
 
 ## How it will look (design direction)
@@ -97,16 +116,29 @@ Sizes: S = 1 to 2 files, M = 3 to 5 files. Each task leaves `packages/assemble` 
 
 ### Phase 0: Spike (fail fast)
 
-- [ ] **T0. Clone fidelity spike.** A throwaway page that snapshots the portfolio hero and the Walkthru landing hero, hides the original and shows the clones.
-  - Accept: side-by-side screenshots differ by under 1% of pixels on both; web fonts, gradients, SVG icons and `object-fit` images hold; snapshot of a 200-layer page takes under 50 ms.
-  - If it fails on some element type, that type becomes a placeholder box (decision 9), not a reason to stop.
+- [x] **T0. Fidelity spike.** Done 2026-11-12, see "T0 spike result". Clone approach rejected, reveal-in-place adopted: 0% hero difference on both sites, snapshot 25 to 27 ms for 240 and 1,076 layers. Spike files in `packages/assemble/spike/` are throwaway and go when T1 lands.
 
 ### Phase 1: Engine core
 
-- [ ] **T1. Package and blueprint type.** `packages/assemble/` with Vite library build, `Blueprint` types, `fromDOM` (rects, text blocks, lines, media, skip rules, caps). M.
-  - Accept: unit tests on fixture HTML give the expected layers, order and parent links; hidden and zero-size nodes are skipped.
-- [ ] **T2. Stage and reveal.** Shadow-root overlay in the page background colour, mounted clones, per-layer reveal states (empty, box, content, text by character). M.
-  - Accept: stepping every layer to "content" by hand reproduces the page; destroy restores scroll, focus and the DOM exactly.
+**Phase 1 status (2026-11-12): T1 to T4 built, waiting on Checkpoint A.** `packages/assemble/` (`src/blueprint.ts`, `stage.ts`, `sim.ts`, `chrome.ts`, `index.ts`), 5.4 KB gzipped, no dependencies. Checks: `npm test` (6 scheduler tests), `npm run build && npm run test:browser -- <url...>` (headless Chrome: fixture layers, 0% pixel difference after a run on the fixture, the portfolio and the Walkthru landing, nothing left on the page, same seed gives the same event log, 2x speed gives 0.5x frames), `npm run typecheck`, `npm run lint`. Simulation cost is 0.4 to 2 ms per frame in headless Chrome; frame rate on a real screen has not been profiled yet. `node test/record.mjs <out.mp4> <url> [seconds] [speed]` records a frame-exact video. Differences from the task text below: the hide stylesheet and tags are applied once (no `MutationObserver` yet); boxes larger than half the viewport are shown at once instead of being drawn; the spike folder is deleted. Known rough edges: a visually hidden skip link flashes when it is "built"; a 900-layer page takes minutes at 1x until repeated groups (T6) and agent scaling (T8) land; reduced motion currently skips the effect entirely (the cross-fade is T10).
+
+**Phases 2 and 3 status (2026-11-13): T5 to T9 built, waiting on Checkpoint B.** Bundle is 9.6 KB gzipped. Added: pen lines for dividers and one-sided borders (T5); repeated siblings (3 or more alike in a row) built once then alt-dragged as copies, with only their text retyped (T6); edge rulers and up to three guides at shared left edges (T7); `scroll: 'follow' | 'tour' | 'none'`, more agents with a bigger backlog or faster scrolling, "scroll to keep building" hint (T8); HUD pill with agent avatars, counts, progress, Tour, speed, close, and an end state "Rebuilt by N agents in S s" with Replay and Done (T9). Tour pans continuously while nothing in view is waiting. Elements faded out below the fold (scroll reveals, including the opacity plus visibility pair GSAP uses) are now built instead of skipped. Checks: 8 unit tests; browser tests cover line and copy detection, follow-mode waiting, tour to the end, HUD summary, Replay, close mid-run, and 0% pixel difference on the fixture, portfolio and landing. Recordings: full landing (279 layers) in about 45 s at 1x, full portfolio (810 layers) in about 38 s at 2x. Differences from the task text: a copy in flight is an outline with a distance badge, not a picture of the original (no cloning); text does not visibly snap to guides; the shadow root is open so tests can reach the HUD; HUD has no sound button until T11. Not done: frame-rate profiling on a real screen, Firefox and Safari, phone widths, real mouse and keyboard use of the HUD (only scripted clicks were tested).
+
+**Live-run stage (2026-11-13): image mode built and hooked into `SessionPlayer`, ahead of T10 to T13 at the founder's request.** This is T12's screenshot source and T14, done differently from the plan: no element rectangles are needed from the runner. `regions.ts` finds the content blocks in the saved frame itself (background colour, then recursive cuts along the widest empty rows and columns; a coloured band is placed first and its contents found against its own colour; capped at 48 blocks). `assembleImage(host, src)` lays those blocks out as tiles over a blank layer inside the stage and runs the normal engine on them: sparse blocks are typed in line by line, solid ones are drawn as boxes, cursors stay inside the stage (`bounds`). When it ends the layer is removed and the player's own `<img>` is underneath, untouched. In `SessionPlayer` it plays once each time a frame for a new page address arrives (not on scrolls or later views of the same page), under the test user's cursor, which still moves only to measured points. Reduced motion skips it. If the frame's pixels cannot be read (no CORS header) it falls back to a 4 by 3 grid of tiles. `apps/web` imports the package source through a Vite alias (`assemble`), so there is still no new dependency. Checks: 4 region tests, an image-mode browser test (blocks found, nothing outside the stage touched, stage identical afterwards), web build, lint and 65 web tests. A recording of image mode on a landing-page screenshot takes about 4 s. Not done: it has not been watched on a real signed-in live run (the in-app browser is not signed in), and DESIGN.md has no entry for it yet (open question 3).
+
+**T10 to T13 and the video export (2026-11-13).** Bundle 12.5 KB gzipped.
+- Founder requests: cursors are 1.3 times larger (`cursorScale`); they are called "scouts" in the pill (`noun`).
+- T10: after the summary, on a whole-page run, the scouts return as a flock that follows the mouse until Done or Esc (steer to a spot round the pointer, keep apart from neighbours, arrows turn to face their heading). Reduced motion: the effect is skipped entirely; the planned cross-fade was dropped because the page is already on screen and there is nothing to fade between.
+- T11: `sound.ts`, synthesised with Web Audio (keystroke ticks, a low thump when something lands, a soft note for pen strokes, two notes at the end), panned by position, off until the pill's Sound button is pressed.
+- T12: `<assemble-stage>` custom element (`auto`, `src`, `speed`, `seed`, `sound` attributes, `.play()`), defined automatically when the bundle loads. Image mode was already done for the live stage.
+- T13: `apps/web/src/components/ScoutsRebuild.tsx` wraps a picture and plays image mode once when it is on screen, with a Replay button. Used on the landing hero's dashboard picture.
+- Video export (new, Plus): `lib/sessionVideo.ts` and `components/SessionVideoExport.tsx`. Under "Watch the visit again" in a report, Plus accounts get "Export video": the saved frames, the measured cursor and click ring, what the test user said, a "Tested with Walkthru" badge and the owner's brand name badge when report branding is set, drawn to a 1280x720 canvas and recorded with MediaRecorder. MP4 where the browser records it (current Chrome, Edge, Safari), WebM otherwise. Made in the browser, nothing uploaded, no dependency. It records in real time. Other plans see a line pointing to billing; signed-out share pages see nothing. The gate is in the page, not the API (the frames are the user's own either way).
+- Checks: package 12 unit tests plus browser tests for the flock, the Sound button and the custom element; web build, lint and 69 tests (4 new for the storyboard, wrapping, format choice and file name). Seen in the in-app browser: the landing hero rebuild, and a real 9.7 s MP4 produced by the exporter from sample frames. Not seen: the Export video button on a real Plus report (the in-app browser is not signed in), sound by ear, Firefox, Safari, phones.
+
+- [ ] **T1. Package and blueprint type.** `packages/assemble/` with Vite library build, `Blueprint` types, `fromDOM` (rects, text blocks merged at the nearest block ancestor, painted boxes, lines, media, skip rules for hidden, zero-size and `opacity: 0` nodes, caps). M.
+  - Accept: unit tests on fixture HTML give the expected layers, order and parent links; a per-word-span headline is one text layer; a button is a box layer plus a label.
+- [ ] **T2. Stage and reveal.** Hide stylesheet and `data-asm` tagging, per-layer reveal states (hidden, placeholder box on the canvas, shown, text by character via `clip-path`), label typing inside painted elements. M.
+  - Accept: revealing every layer by hand gives 0% pixel difference from the untouched page on both spike sites; destroy restores scroll, focus, attributes and inline styles exactly.
 - [ ] **T3. Simulation loop and scheduler.** Seeded RNG, fixed-step loop, task queue with top-down unlocking, parent-before-child, agent count scaling with backlog. S.
   - Accept: same seed gives the same event log in tests; no task starts before its parent; speed 2x halves wall time within 5%.
 - [ ] **T4. Cursors and two tools.** Canvas chrome layer, spring-driven cursor movement, `drawBox` (crosshair, outline, handles, size badge) and `typeText` (I-beam, caret, rhythm). M.
@@ -150,7 +182,8 @@ Sizes: S = 1 to 2 files, M = 3 to 5 files. Each task leaves `packages/assemble` 
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Clones do not match the page (pseudo-elements, complex CSS, web components) | High | T0 spike first; inline computed styles including `::before`/`::after`; anything unsupported becomes a placeholder that cross-fades to the real element at the end, so the final frame is always right |
+| The page re-renders or animates while it is being rebuilt (React updates, marquees, scroll reveals) | Medium | Layers are re-measured when they are picked up, not only at snapshot; tags are re-applied through one `MutationObserver`; a removed element just drops its task |
+| The host page already uses `visibility` or `clip-path` on a layer | Low | Previous inline values are saved and restored; our rule only matches our own attribute |
 | Jank on long pages | Medium | Only build layers near the viewport; one canvas for chrome; transform, opacity and clip-path only; layer and height caps |
 | Reads as a copy of the extension | Medium | Clean-room code, own cursor, palette, HUD, sounds and naming; no shared assets or text |
 | Decorative cursors in a product that sells honest evidence | Medium | In the live stage it plays once as a loading reveal, is visually distinct from the test user's cursor, and never appears in reports or replays of steps |

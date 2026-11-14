@@ -38,7 +38,7 @@ export default function Bot() {
   return (
     <DocLayout
       title="Walkthru bot"
-      lead={`How ${brand.name}'s scanner and test users behave on your site, and how to opt out.`}
+      lead={`How ${brand.name}'s scanner and test users behave on your site, and how to opt out. The scanner honours robots.txt, sends only ordinary read requests and never logs in, submits forms or sends attack payloads.`}
       updated="2026-09-26"
       sections={sections}
     />

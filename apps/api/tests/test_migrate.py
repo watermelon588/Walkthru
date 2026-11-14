@@ -70,32 +70,43 @@ def test_a_new_database_gets_every_migration_once(conn):
 
 
 def test_report_and_evidence_rls_follow_membership_removal_without_postgrest(conn):
-    """Real baseline policies; no remote accounts, credentials or workspace access grants."""
+    """Real policies; no remote accounts, credentials or workspace access grants. Since 0008/0009 a shared report opens
+    by id (read_run) but nobody can list other people's shared reports."""
     import psycopg
 
     migrate.up(conn)
-    owner, viewer, team = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    owner, viewer, team, group = uuid.uuid4(), uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
     conn.execute("insert into auth.users(id) values (%s), (%s)", (owner, viewer))
     for run, public in (("private", False), ("shared", False), ("public", True)):
-        conn.execute("insert into runs(id,user_id,site,goal,persona,public) values (%s,%s,'https://fixture.test','Read','first_timer',%s)", (run, owner, public))
+        conn.execute("insert into runs(id,user_id,site,goal,persona,public,group_id) values (%s,%s,'https://fixture.test','Read','first_timer',%s,%s)",
+                     (run, owner, public, group))
         conn.execute("insert into storage.objects(bucket_id,name) values ('run-evidence',%s)", (run + '/step-01.jpg',))
     conn.execute("insert into teams(id,name,owner_id) values (%s,'Local QA',%s)", (team, owner))
     conn.execute("insert into team_members(team_id,user_id,role) values (%s,%s,'viewer')", (team, viewer))
     conn.execute("insert into team_runs(team_id,run_id,shared_by) values (%s,'shared',%s)", (team, owner))
 
-    def visible(role, user=None):
+    def act_as(role, user=None):
         # Values are local constants. Claims mimic the auth.uid() input used by PostgREST.
         conn.execute("reset role")
         conn.execute("select set_config('request.jwt.claims', %s, false)", (json.dumps({'sub': str(user)} if user else {}),))
         conn.execute(f"set role {role}")
-        reports = {row[0] for row in conn.execute("select id from runs")}
+
+    def visible(role, user=None):
+        act_as(role, user)
+        reports = {run for run in ("private", "shared", "public") if conn.execute("select public.read_run(%s)", (run,)).fetchone()[0]}
         evidence = {row[0].split('/')[0] for row in conn.execute("select name from storage.objects")}
-        assert reports == evidence
+        group_runs = {row[0]["id"] for row in conn.execute("select public.read_group_runs(%s)", (group,))}
+        assert reports == evidence == group_runs
         return reports
 
     assert visible('anon') == {'public'}
+    with pytest.raises(psycopg.errors.InsufficientPrivilege):
+        conn.execute("select id from runs")  # the public key cannot list shared reports
+    act_as('anon')
+    assert "user_id" not in conn.execute("select public.read_run('public')").fetchone()[0]
     assert visible('authenticated', owner) == {'private', 'shared', 'public'}
     assert visible('authenticated', viewer) == {'shared', 'public'}
+    assert {row[0] for row in conn.execute("select id from runs")} == {'shared'}  # listing: team shares, not public runs
     assert conn.execute("select count(*) from teams").fetchone()[0] == 1
     with pytest.raises(psycopg.errors.InsufficientPrivilege):
         conn.execute("update team_members set role='owner' where user_id=%s", (viewer,))
@@ -149,3 +160,20 @@ def test_line_endings_do_not_change_a_checksum_and_numbers_must_be_unique(tmp_pa
     (tmp_path / "0002_c.sql").write_text("select 3;")
     with pytest.raises(SystemExit, match="share a number"):
         migrate.files(tmp_path)
+
+
+def test_link_only_reads_roll_back_cleanly(conn):
+    """0009 then 0008 down: anonymous listing returns, then the functions are gone and evidence still follows runs."""
+    migrate.up(conn)
+    owner = uuid.uuid4()
+    conn.execute("insert into auth.users(id) values (%s)", (owner,))
+    conn.execute("insert into runs(id,user_id,site,goal,persona,public) values ('pub',%s,'https://fixture.test','Read','first_timer',true)", (owner,))
+    conn.execute("insert into storage.objects(bucket_id,name) values ('run-evidence','pub/step-01.jpg')")
+    assert migrate.down(conn) == "0009"
+    assert migrate.down(conn) == "0008"
+    conn.execute("select set_config('request.jwt.claims', '{}', false)")
+    conn.execute("set role anon")
+    assert [r[0] for r in conn.execute("select id from runs")] == ["pub"]
+    assert [r[0] for r in conn.execute("select name from storage.objects")] == ["pub/step-01.jpg"]
+    conn.execute("reset role")
+    assert conn.execute("select to_regprocedure('public.read_run(text)')").fetchone()[0] is None

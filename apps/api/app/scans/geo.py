@@ -124,19 +124,19 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
         access.append((15 * (len(CITATION_BOTS) - len(blocked)) / len(CITATION_BOTS), 15))
         if blocked:
             findings.append(_f("high", "robots.txt blocks AI search assistants",
-                               f"Your robots.txt tells these assistants not to read your site: {', '.join(blocked)}. They cannot quote or link to pages they may not fetch.",
+                               f"Your robots.txt tells these assistants not to read your site: {', '.join(blocked)}. This records fetch instructions, not actual assistant access, citation behavior or search visibility.",
                                "Allow them in robots.txt (User-agent: <name> / Allow: /). To opt out of AI training only, block GPTBot, Google-Extended and CCBot instead.",
                                f"{urlsplit(root_url).scheme}://{urlsplit(root_url).netloc}/robots.txt"))
         training = _blocked_bots(robots_text, root_url, TRAINING_BOTS)
         if training:
-            notes.append(f"robots.txt blocks AI training crawlers ({', '.join(training)}). That is a choice and does not affect AI search answers.")
+            notes.append(f"robots.txt blocks AI training crawlers ({', '.join(training)}). Training opt-out and search access are separate policies; this check does not measure answer behavior.")
         if probe is not None:
             status, body, headers = probe
             if _challenged(status, headers, body):
                 access.append((0, 10))
                 findings.append(_f("high", "Your site blocks AI search user agents",
                                    f"When your homepage is requested with an AI search crawler's user agent it answers {status}"
-                                   f"{' with a bot challenge' if 'challenge' in json.dumps(headers).lower() + body.lower() else ''}. Many hosts and CDNs block these crawlers by default.",
+                                   f"{' with a bot challenge' if 'challenge' in json.dumps(headers).lower() + body.lower() else ''}. This was a request using that user-agent string, not a verified crawler request; actual crawler access remains untested.",
                                    "Allow verified AI search crawlers in your CDN or firewall bot settings (for example Cloudflare's AI crawler controls), then rescan.",
                                    f"HTTP {status} for {PROBE_AGENT.split(';')[1].strip()}"))
             else:
@@ -153,14 +153,14 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
         if shell:
             content.append((0, 15))
             findings.append(_f("high", "Homepage content only appears after JavaScript runs",
-                               f"The server sends {len(root_html)} bytes of HTML with {len(text)} characters of visible text. Most AI crawlers do not run JavaScript, "
-                               "so ChatGPT, Claude and Perplexity see an empty page. Link previews on WhatsApp, LinkedIn and Slack do too. Google runs JavaScript but indexes it later.",
+                               f"The fetched HTML contains {len(root_html)} characters and {len(text)} characters of extracted visible text. "
+                               "The static fetch found a JavaScript shell. Rendered content, search indexing, assistant access and shared previews were not established by this check.",
                                "Prerender the homepage (static generation or server rendering), or at least put a real h1, description and a short paragraph about the product in index.html.",
                                root_url))
         elif words < MIN_WORDS:
             content.append((8, 15))
             findings.append(_f("medium", "The homepage says little before JavaScript runs",
-                               f"AI crawlers read {words} words on your homepage. That is thin for an assistant to explain what you do and for whom.",
+                               f"The static HTML fetch yielded {words} words of visible text. This is a content-coverage observation, not a measurement of what an assistant reads or understands.",
                                "Put a plain two or three sentence description of the product, who it is for and what it costs in the server-rendered HTML.", root_url))
         else:
             content.append((15, 15))
@@ -170,7 +170,7 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
             if shells:
                 page_map.append(("geo", f"{len(shells)} more page{'s' if len(shells) > 1 else ''} only render with JavaScript", shells))
                 findings.append(_f("medium", f"{len(shells)} more page{'s' if len(shells) > 1 else ''} only render with JavaScript",
-                                   "AI crawlers see these pages as empty: " + ", ".join(shells[:5]),
+                                   "The static fetch found JavaScript shells at: " + ", ".join(shells[:5]),
                                    "Prerender these routes too, starting with pricing, features and docs.", ", ".join(shells[:3])))
     score("content", "Content before JavaScript", content)
 
@@ -186,11 +186,11 @@ def audit(root_url: str, pages: list[tuple[str, str]], robots_text: str | None, 
                                         (4 if types & PAGE_TYPES else 0, 4), (2 if rich else 0, 2)])
     if broken:
         findings.append(_f("medium", "Structured data does not parse",
-                           "A JSON-LD block on your site is not valid JSON, so search engines and AI assistants ignore it.",
+                           "At least one JSON-LD block in the fetched HTML is not valid JSON. Consumer handling was not tested.",
                            "Validate the block (for example with Google's Rich Results Test) and fix the syntax.", root_url))
     if not objects:
         findings.append(_f("medium", "No structured data",
-                           "Your pages have no JSON-LD. Structured data tells AI assistants exactly what your product is, who makes it and what it costs.",
+                           "No JSON-LD was found in the checked HTML. Structured data can describe entities explicitly; assistant interpretation was not measured.",
                            "Add Organization and WebSite JSON-LD to the homepage, plus SoftwareApplication or Product where you describe the product.", root_url))
     else:
         if not types & {"Organization", "WebSite"}:

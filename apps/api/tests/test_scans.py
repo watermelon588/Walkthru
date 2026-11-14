@@ -148,3 +148,23 @@ def test_dns_txt_record_verifies_a_domain(monkeypatch):
     assert seen == [("_walkthru.shop.example.com", "TXT")]
     assert not security.verify_domain("https://shop.example.com/", "wt-other", None)
     assert not security.txt_verified("http://127.0.0.1:8102/", "wt-abc", None)  # no DNS for local servers
+
+
+def test_an_empty_alt_marks_a_decorative_image_and_is_not_missing():
+    """selectolax reads alt="" as None; that is the correct markup for decorative images, not a missing alt."""
+    from app.scans import accessibility, seo
+
+    html = '<html lang="en"><head><title>A decent page title</title></head><body><h1>Hi</h1><img src="/deco.png" alt=""><img src="/x.png"></body></html>'
+    alt = [f for f in seo.check_html(html, "https://s.test/") if f.title == "Images have no alt text"]
+    assert len(alt) == 1 and "1 of 2 images" in alt[0].detail and alt[0].evidence == "/x.png"
+    assert [f.title for f in accessibility.scan(html, "https://s.test/") if "alternative" in f.title] == ["Image is missing text alternative"]
+
+
+def test_robots_rules_use_the_most_specific_match_like_google():
+    """RFC 9309: the longest matching path wins, whatever the order; Python's parser takes the first match."""
+    from app.scans import site
+
+    rules = site._robots("User-agent: *\nAllow: /\nDisallow: /app/\nAllow: /app/public\n", "https://s.test/robots.txt")
+    assert not rules.can_fetch(site.USER_AGENT, "https://s.test/app/billing")
+    assert rules.can_fetch(site.USER_AGENT, "https://s.test/app/public/page")
+    assert rules.can_fetch(site.USER_AGENT, "https://s.test/pricing")

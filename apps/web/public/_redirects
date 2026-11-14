@@ -1,0 +1,9 @@
+# Cloudflare Pages routing. Public pages are prerendered files (scripts/prerender.mjs); unknown paths get 404.html
+# with a real 404 status. These app routes are drawn in the browser, so they get the plain app shell with a 200.
+/app /shell 200
+/app/* /shell 200
+/login /shell 200
+/join /shell 200
+/r/* /shell 200
+/agent-lab /shell 200
+/variants /shell 200

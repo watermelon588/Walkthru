@@ -82,6 +82,14 @@ def test_shared_python_web_fixture_roundtrips_the_full_versioned_contract():
     assert Report.model_validate(saved).model_dump() == saved
 
 
+def test_older_report_without_worklog_still_validates():
+    path = Path(__file__).resolve().parents[2] / "web/tests/fixtures/report-v2.json"
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    saved.pop("harness_worklog")
+    ensure_supported(saved)
+    assert Report.model_validate(saved).harness_worklog == []
+
+
 @pytest.mark.parametrize("field,value", [("observed_facts", ["Account created"]), ("actual_result", "Account created"),
                                          ("expected_result", "Account created")])
 def test_unsupported_facts_results_and_expectations_are_rejected(field, value):

@@ -91,9 +91,19 @@ def build_assessment(state: dict, findings: list[dict], code_findings: list[dict
     checkpoints = []
     proofs = [(n, p) for n, s in enumerate(steps, 1) for p in ([s["checkpoint_evidence"]] if s.get("checkpoint_evidence") else []) + s.get("additional_checkpoint_evidence", [])]
     for number, checkpoint in enumerate(state.get("checkpoints", [])[:4], 1):
-        expected_marker = checkpoint.get("text_contains") or checkpoint.get("url_contains")
+        expected_marker = checkpoint.get("section_key") if checkpoint.get("kind") == "section" else checkpoint.get("text_contains") or checkpoint.get("url_contains")
+        def supported_signal(n, p, checkpoint=checkpoint):
+            if checkpoint.get("kind") != "section":
+                return p.get("signal") in {"navigation", "public_text"}
+            step = steps[n - 1]
+            route = checkpoint.get("bound_route")
+            return bool(p.get("signal") == "section_visibility" and checkpoint.get("bound_document") and route and
+                        p.get("document_id") == checkpoint["bound_document"] == step.get("document_id") and
+                        p.get("route") == route and step.get("section_target") == checkpoint.get("section_key") and
+                        step.get("action") == "click" and (step.get("url") or "").split("#", 1)[0] == route and
+                        (step.get("result_url") or "").split("#", 1)[0] == route)
         proof = next((p for n, p in proofs if n in by_step and p.get("step") == n and p.get("checkpoint") == number and
-                      p.get("signal") in {"navigation", "public_text"} and expected_marker and
+                      supported_signal(n, p) and expected_marker and
                       " ".join(str(p.get("matched", "")).casefold().split()) == " ".join(expected_marker.casefold().split())), None)
         refs = []
         actual = None
