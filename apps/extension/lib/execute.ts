@@ -18,7 +18,7 @@ export type Step = {
 };
 
 /** confirm: "send" means the owner must approve in the side panel before this click runs for real. */
-export type ExecResult = { ok: boolean; note?: string; submits?: boolean; confirm?: "send"; executor_result?: ExecutorResult };
+export type ExecResult = { ok: boolean; note?: string; submits?: boolean; confirm?: "send"; executor_result?: ExecutorResult; point?: { x: number; y: number } };
 
 /** True when the element would submit a form (needs user confirmation on logged-in pages). */
 export function submits(el: Element): boolean {
@@ -37,7 +37,9 @@ export function submits(el: Element): boolean {
 const APP_LINKS: Record<string, string> = { mailto: "an email app", tel: "a phone call", sms: "a text message" };
 
 /** verified: the owner proved control of this domain. confirmed: the owner approved this exact send. */
-export type ExecOptions = { logged_in?: boolean; dryRun?: boolean; verified?: boolean; confirmed?: boolean; deadline_ms?: number };
+/** prepare: bring the target into view and report where it is (fractions of the viewport) without acting on it. Live
+ *  runs capture that view, so the replay's cursor lands on the element that was really clicked. */
+export type ExecOptions = { logged_in?: boolean; dryRun?: boolean; verified?: boolean; confirmed?: boolean; deadline_ms?: number; prepare?: boolean };
 
 /** dryRun reports what would happen (safe-mode block, form submit) without touching the page. */
 export function execute(step: Step, doc: Document = document, opts: ExecOptions = {}): ExecResult {
@@ -87,6 +89,11 @@ export function execute(step: Step, doc: Document = document, opts: ExecOptions 
       (el as HTMLElement).scrollIntoView?.({ block: "center", behavior: "instant" as ScrollBehavior });
       const ready = resolveTarget(doc, step.target_id, step.observation_revision, true);
       if (!ready.el) return { ok: false, note: ready.note };
+      if (opts.prepare) {
+        const box = (el as HTMLElement).getBoundingClientRect();
+        const inside = (value: number) => Math.min(1, Math.max(0, value));
+        return { ok: true, submits: willSubmit, point: { x: inside((box.left + box.width / 2) / win.innerWidth), y: inside((box.top + box.height / 2) / win.innerHeight) } };
+      }
       if (step.action === "type") return type(el as HTMLElement, step.text ?? "", () => resolveTarget(doc, step.target_id, step.observation_revision, true).note);
       (el as HTMLElement).click();
       return { ok: true, submits: willSubmit };

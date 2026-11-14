@@ -20,7 +20,7 @@ test("numbers visible interactive elements with labels", () => {
     </form>
     <div role="button" aria-label="Open menu"></div>`);
   expect(obs.elements.map(({ row: _row, region: _region, ...control }) => control)).toEqual([
-    { id: 1, tag: "a", text: "Pricing" },
+    { id: 1, tag: "a", text: "Pricing", destination: "/pricing" },
     { id: 2, tag: "input", text: "Email address", type: "email", state: "filled" },
     { id: 3, tag: "button", text: "Create account" },
     { id: 4, tag: "div", text: "Open menu" },
@@ -183,4 +183,21 @@ test("bot walls are told apart from CAPTCHAs and from ordinary pages", () => {
   expect(page(`<p>Access Denied</p><p>Reference #18.2f3b</p>`).note).toBe("bot wall detected");
   expect(page(`<div class="g-recaptcha"></div>`).note).toBe("captcha detected");
   expect(page(`<h1>Welcome</h1><p>Access to all features.</p>`).note).toBeUndefined();
+});
+
+test("execute: prepare reports where the target is without clicking it, and never past a safety block", () => {
+  page(`<a href="#" id="go">Go</a><button>Delete account</button>`);
+  let clicked = 0;
+  const link = document.getElementById("go")!;
+  link.addEventListener("click", () => { clicked++; });
+  link.getBoundingClientRect = () => ({ left: 100, top: 300, width: 200, height: 40, right: 300, bottom: 340, x: 100, y: 300, toJSON() {} });
+  const click = (id: number) => ({ thought: "", action: "click" as const, target_id: id, text: null, confusion: 0, observation_revision: currentRevision });
+  const prepared = execute(click(1), document, { prepare: true });
+  expect(prepared.ok).toBe(true);
+  expect(prepared.point!.x).toBeCloseTo(200 / window.innerWidth);
+  expect(prepared.point!.y).toBeCloseTo(320 / window.innerHeight);
+  expect(clicked).toBe(0);
+  const refused = execute(click(2), document, { prepare: true });
+  expect(refused.note).toMatch(/safe mode/);
+  expect(refused.point).toBeUndefined();
 });
