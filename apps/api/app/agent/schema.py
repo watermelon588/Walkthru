@@ -15,7 +15,7 @@ Action = Literal["click", "type", "scroll", "wait", "back", "done", "give_up"]
 Line = Annotated[str, Field(max_length=300)]
 
 
-def _context_text(text: str | None) -> str | None:
+def _context_text(text: str | None, limit: int = 160) -> str | None:
     """Extra contextual labels are untrusted visible text, never form values."""
     if text is None:
         return None
@@ -34,7 +34,33 @@ def _context_text(text: str | None) -> str | None:
     text = re.sub(r"(?<!\w)(?:\d{4}-\d{2}-\d{2}|\d{1,3}(?:\.\d{1,3}){3}|\+?\d[\d .-]{6,}\d)(?!\w)",
                   lambda m: m[0] if re.fullmatch(r"\d{4}-\d{2}-\d{2}|\d{1,3}(?:\.\d{1,3}){3}", m[0])
                   or len(re.sub(r"\D", "", m[0])) < 8 else "[number]", text)
-    return text[:160]
+    return text[:limit]
+
+
+class RevealHint(BaseModel):
+    container_id: int = Field(ge=0, le=100_000)
+    direction: Literal["up", "down", "left", "right"]
+
+
+class SectionObservation(BaseModel):
+    key: str = Field(max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9_-]{0,79}$")
+    label: str = Field(default="", max_length=160)
+    in_view: bool | None = None
+    occluded: bool | None = None
+    scroll_container_id: int | None = Field(default=None, ge=0, le=100_000)
+    reveal_direction: Literal["up", "down", "left", "right"] | None = None
+
+    @field_validator("key")
+    @classmethod
+    def public_section(cls, value: str) -> str:
+        if _context_text(value) != value:
+            raise ValueError("section identity and label must be public")
+        return value
+
+    @field_validator("label")
+    @classmethod
+    def mask_label(cls, value: str) -> str:
+        return _context_text(value) or ""
 
 
 class Element(BaseModel):
@@ -48,6 +74,23 @@ class Element(BaseModel):
     in_view: bool | None = None
     occluded: bool | None = None
     scroll_container_id: int | None = Field(default=None, ge=0, le=100_000)
+    destination: str | None = Field(default=None, max_length=240)
+    section_target: str | None = Field(default=None, max_length=80, pattern=r"^[A-Za-z][A-Za-z0-9_-]{0,79}$")
+    reveal: RevealHint | None = None
+
+    @field_validator("section_target")
+    @classmethod
+    def public_section_target(cls, value: str | None) -> str | None:
+        return value if _context_text(value) == value else None
+
+    @field_validator("destination")
+    @classmethod
+    def public_destination(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not re.fullmatch(r"/(?!/)[A-Za-z0-9/_~.-]*(?:#[A-Za-z][A-Za-z0-9_-]{0,79})?", value) or _context_text(value, 240) != value:
+            return None
+        return value
 
     @field_validator("region", "row")
     @classmethod
@@ -141,6 +184,9 @@ class Observation(BaseModel):
     scroll_pct: int | None = Field(default=None, ge=0, le=100)  # how far down the page the viewport is
     at_end: bool | None = None  # the viewport reaches the bottom of the page
     revision: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    document_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    sections: list[SectionObservation] = Field(default_factory=list, max_length=24)
+    sections_truncated: bool | None = None
     elements_truncated: bool | None = None
     candidate_limit_reached: bool | None = None
     omitted_elements: int | None = Field(default=None, ge=0, le=1_000_000)
@@ -150,15 +196,30 @@ class Observation(BaseModel):
     scroll_containers_truncated: bool | None = None
     executor_result: ExecutorResult | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def omit_private_sections(cls, value):
+        # Browser/API privacy patterns can differ across extension versions. An otherwise valid
+        # private-looking ID is unknown evidence, not grounds to discard the entire observation.
+        if not isinstance(value, dict) or not isinstance(value.get("sections"), list):
+            return value
+        rows = value["sections"]
+        if len(rows) > 24:
+            return value  # retain the wire bound, including for malformed clients
+        retained = [row for row in rows if not (isinstance(row, dict) and isinstance(row.get("key"), str)
+                    and re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,79}", row["key"])
+                    and _context_text(row["key"]) != row["key"])]
+        return {**value, "sections": retained, "sections_truncated": True} if len(retained) != len(rows) else value
+
     @model_validator(mode="after")
     def bound_context(self) -> "Observation":
         remaining = 6000
         for element in self.elements:
-            for field in ("region", "row"):
+            for field in ("region", "row", "destination", "section_target"):
                 text = getattr(element, field)
                 if text is not None:
                     if len(text) > remaining:
-                        setattr(element, field, text[:remaining] or None)
+                        setattr(element, field, None if field in {"destination", "section_target"} else text[:remaining] or None)
                         self.context_truncated = True
                     remaining -= min(len(text), remaining)
         ids = [container.id for container in self.scroll_containers]
@@ -169,6 +230,18 @@ class Observation(BaseModel):
                 container.label = container.label[:remaining]
                 self.context_truncated = True
             remaining -= min(len(container.label), remaining)
+        keys = [section.key for section in self.sections]
+        if len(keys) != len(set(keys)):
+            raise ValueError("section identities must be unique")
+        retained = []
+        for section in self.sections:
+            size = len(section.key) + len(section.label)
+            if size > remaining:
+                self.sections_truncated = True
+                continue
+            remaining -= size
+            retained.append(section)
+        self.sections = retained
         return self
 
 
@@ -190,6 +263,14 @@ class EvidenceRegion(BaseModel):
         return self
 
 
+class Pointer(BaseModel):
+    """A point in a captured frame, as fractions of its width and height."""
+
+    model_config = {"extra": "forbid"}
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
 class StepEvidence(BaseModel):
     """Private visual proof captured after one browser action."""
 
@@ -200,6 +281,11 @@ class StepEvidence(BaseModel):
     height: int = Field(ge=1, le=10000)
     note: str | None = Field(default=None, max_length=300)
     regions: list[EvidenceRegion] = Field(default_factory=list, max_length=10)
+    # Live runs (app/runner): the view just before a click or typing, where the target was in it, and a short action
+    # name built in code from the page's own control text. The replay moves its cursor from these, never from a guess.
+    aim_path: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}/step-\d{2}-aim\.jpg$", max_length=80)
+    pointer: Pointer | None = None
+    label: str | None = Field(default=None, max_length=80)
 
 
 class PersonaStep(BaseModel):
@@ -560,7 +646,34 @@ class ReportAssessment(BaseModel):
         return self
 
 
+class HarnessEvent(BaseModel):
+    """Code-owned execution explanation; never raw prompt, form value or model reasoning."""
+
+    sequence: int = Field(ge=1, le=256)
+    step: int = Field(ge=1, le=100)
+    node: Literal["validate", "revise", "prepare", "guard", "recover", "assess", "check"]
+    reason: str = Field(max_length=64, pattern=r"^[a-z_]+$")
+    checkpoint: int | None = Field(default=None, ge=1, le=5)
+    action: Action | None = None
+    target_id: int | None = Field(default=None, ge=0, le=100_000)
+    progress: int = Field(default=0, ge=0, le=4)
+    status: str | None = Field(default=None, max_length=32, pattern=r"^[a-z_]+$")
+    before_kind: Literal["navigation", "section", "outcome"] | None = None
+    after_kind: Literal["navigation", "section", "outcome"] | None = None
+    contract_revision: int | None = Field(default=None, ge=1, le=2)
+    source: Literal["observed_destination", "observed_section"] | None = None
+    document_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    before_target: str | None = Field(default=None, max_length=240)
+    after_target: str | None = Field(default=None, max_length=240)
+
+    @field_validator("before_target", "after_target")
+    @classmethod
+    def public_contract_target(cls, value: str | None) -> str | None:
+        return Element.public_destination(value)
+
+
 class Report(BaseModel):
+    harness_worklog: list[HarnessEvent] = Field(default_factory=list, max_length=256)
     version: Literal[1, 2] = 1
     assessment: ReportAssessment | None = None
     summary: str

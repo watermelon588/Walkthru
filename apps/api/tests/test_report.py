@@ -42,13 +42,15 @@ def fake_llm(monkeypatch):
 def test_run_report_merges_branches():
     steps = [{"thought": "Looking for sign up", "action": "click", "target_id": None, "text": None, "confusion": 2,
               "url": HARD + "/", "result_url": HARD + "/", "errors_after": ["Sign-up link could not be opened"]}]
-    rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps)
+    log = [{"sequence": 1, "step": 1, "node": "check", "reason": "gave_up", "status": "gave_up", "progress": 0}]
+    rep = report.run_report(HARD + "/", "Zentrix The platform for modern synergy", goal="sign up", persona="first_timer", status="gave_up", steps=steps, harness_worklog=log)
+    assert [e.model_dump(exclude_none=True) for e in rep.harness_worklog] == log
     kinds = {f.kind for f in rep.findings}
     assert kinds == {"ux", "accessibility", "seo", "security", "geo"}
     assert rep.geo and 0 <= rep.geo.score <= 100 and rep.checks["geo"] == "complete"
     assert rep.findings[0].severity == "high" and rep.findings[-1].severity == "low"  # sorted
     assert rep.first_impression and rep.first_impression.clarity == 3
-    assert rep.top_fixes[0].startswith("Add a Sign up")
+    assert rep.top_fixes == list(dict.fromkeys(f.fix for f in rep.findings))[:5]
     assert rep.tokens == 300  # 100 (first impression) + 200 (synthesis)
     assert all(f.rule for f in rep.findings)  # every scanner and the model-written UX finding
     assert rep.check_reasons["performance"] == "PageSpeed is not configured for this run."

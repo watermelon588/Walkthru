@@ -48,8 +48,10 @@ def test_analysis_names_cites_and_ranks_in_code():
     assert "【" not in answer
     result = citations.analyze(answer, got, "Acme Notes", "acmenotes.app", [{"name": "Notion", "domain": "notion.so"}, {"name": "Coda", "domain": "coda.io"}], citation_status="measured")
     you, notion, coda = result["brands"]
-    assert you == {"name": "Acme Notes", "domain": "acmenotes.app", "you": True, "mentioned": True, "mention_rank": 2, "cited": True, "source_rank": 2}
-    assert notion["mentioned"] and notion["mention_rank"] == 1 and notion["cited"] and notion["source_rank"] == 3
+    # These sources carry no answer positions, so citation order is unknown and no rank is given (not retrieval order).
+    assert you == {"name": "Acme Notes", "domain": "acmenotes.app", "you": True, "mentioned": True, "mention_rank": 2, "cited": True, "source_rank": None,
+                   "entity_status": "verified", "entity_evidence": {"kind": "owned_domain_cited", "host": "acmenotes.app"}}
+    assert notion["mentioned"] and notion["mention_rank"] == 1 and notion["cited"] and notion["source_rank"] is None
     assert not coda["mentioned"] and not coda["cited"] and coda["mention_rank"] is None
     # A word inside another word is not a mention.
     assert not citations.analyze("A notional plan.", [], "Notion", "notion.so", [])["brands"][0]["mentioned"]
@@ -66,10 +68,12 @@ def test_competitors_brand_and_prompts_come_from_what_the_owner_and_site_say():
     assert citations.parse_competitor("Notion (notion.so)") == {"name": "Notion", "domain": "notion.so"}
     assert citations.parse_competitor("https://www.coda.io") == {"name": "Coda", "domain": "coda.io"}
     assert citations.parse_competitor("Evernote") == {"name": "Evernote", "domain": ""}
+    assert citations.parse_competitor("Meerkat runmeerkat.com") == {"name": "Meerkat", "domain": "runmeerkat.com"}  # the MCP doc's form
+    assert citations.suggest("<title>The launch check for apps built with AI</title>", "Walkthru", [])[0] ==         "What is the best launch check for apps built with AI?"
     assert citations.brand_from(HOME, "acmenotes.app") == "Acme Notes"
     assert citations.brand_from("<title>Home</title>", "acme-notes.app") == "Acme Notes"
     prompts = citations.suggest(HOME, "Acme Notes", [{"name": "Notion", "domain": "notion.so"}])
-    assert prompts[0] == "What are the best notes app for small teams?"
+    assert prompts[0] == "What is the best notes app for small teams?"
     assert "What are the best alternatives to Notion?" in prompts and "Is Acme Notes worth it?" in prompts
     assert len(prompts) == len(set(prompts))
 
@@ -221,6 +225,31 @@ def test_free_accounts_see_the_upgrade_and_plus_starts_with_suggested_prompts(st
     assert c.post("/citations", json={"site": "https://acmenotes.app"}).status_code == 409
 
 
+def test_an_app_shell_site_gets_buyer_questions_from_its_rendered_page(store, passes, monkeypatch):
+    """Served HTML with no copy left only branded "What is X?" prompts (AI citation research 2026-11-13)."""
+    from app.scans import site as site_audit
+
+    shell = '<html><head><title>Acme Notes</title><script type="module" src="/assets/index.js"></script></head><body><div id="root"></div></body></html>'
+    monkeypatch.setattr(fetch, "get", lambda c, url, **k: type("R", (), {"status_code": 200, "text": shell})())
+    asked = []
+    monkeypatch.setattr(site_audit, "rendered_html", lambda urls, wait=20: asked.append((urls, wait)) or {u: HOME for u in urls})
+    plan(passes, "plus")
+    body = TestClient(app).post("/citations", json={"site": "https://acmenotes.app"}).json()
+    assert asked == [(["https://acmenotes.app"], 0)]  # never waits on a live run inside the request
+    prompts = [p["prompt"] for p in body["prompts"]]
+    assert "What is the best notes app for small teams?" in prompts and prompts[0] != "What is Acme Notes?"
+
+
+def test_an_app_shell_whose_title_already_names_a_category_is_not_rendered(store, passes, monkeypatch):
+    from app.scans import site as site_audit
+
+    shell = '<html><head><title>Acme Notes | Notes app for small teams</title><script type="module" src="/a.js"></script></head><body><div id="root"></div></body></html>'
+    monkeypatch.setattr(fetch, "get", lambda c, url, **k: type("R", (), {"status_code": 200, "text": shell})())
+    monkeypatch.setattr(site_audit, "rendered_html", lambda urls, wait=20: pytest.fail("rendered a page that already had a category"))
+    plan(passes, "plus")
+    assert TestClient(app).post("/citations", json={"site": "https://acmenotes.app"}).status_code == 200
+
+
 def test_prompt_limits_check_now_and_one_check_a_day(store, passes):
     _, _, checks = store
     plan(passes, "pro")
@@ -269,7 +298,7 @@ def test_the_queue_runs_within_caps_keeps_busy_checks_and_announces_the_finished
     monkeypatch.setitem(citations.ENGINES, "memory", lambda p: {"answer": "Notion.", "sources": [], "tokens": 5, "model": "g", "citation_status": "not_applicable"})
     assert citations.process(sleep=lambda s: None) == 2
     note = fake_db.notes[-1]
-    assert note["section"] == "visibility" and note["body"] == "Named in 2 of 4 answers." and note["link"] == "/app/visibility"
+    assert note["section"] == "visibility" and note["body"] == "Confirmed as you in 2 of 4 answers." and note["link"] == "/app/visibility"
     view = c.get(f"/citations/{site['id']}").json()
     assert view["status"] == {"queued": 0, "done": 4, "failed": 0}
     assert [(s["name"], s["mentions"]) for s in view["share_of_voice"]] == [("Notion", 4), ("Acme Notes", 2)]
@@ -361,5 +390,5 @@ def test_a_deploy_suffix_still_finds_the_name_and_no_generic_prompt_is_suggested
     brand = citations.brand_from(html, "tripverse-0.vercel.app")
     assert brand == "TripVerse"
     prompts = citations.suggest(html, brand, [{"name": "Mindtrip", "domain": "mindtrip.ai"}])
-    assert prompts[0] == "What are the best 3d travel universe?" and "What is TripVerse?" in prompts
+    assert prompts[0] == "What is the best 3D Travel Universe?" and "What is TripVerse?" in prompts
     assert not any("tools like this" in p for p in citations.suggest("<html></html>", "Acme", []))

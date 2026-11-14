@@ -117,3 +117,35 @@ def test_http_observation_resumes_after_api_lifespan_restart(conn, monkeypatch):
         assert response.json()["steps"][0]["checkpoint_evidence"]["checkpoint"] == 1
         assert runtime.checkpointer().conn is not first_pool
         assert client.get(f"/runs/{run_id}").json()["status"] == "done"
+
+
+def test_pending_legacy_act_resumes_in_expanded_graph_without_repeating_model_or_action(conn):
+    """Compatibility trial for the old graph's persisted act interrupt, not arbitrary checkpoint upgrades."""
+    from langgraph.graph import END, START, StateGraph
+    from langgraph.types import Command, interrupt
+
+    from app.agent.persona import SessionState, build_graph
+
+    install(conn)
+    conn.execute("set search_path to walkthru_checkpoints")
+    saver = PostgresSaver(conn)
+    old = StateGraph(SessionState)
+    old.add_node("act", lambda state: {"observation": interrupt(state["steps"][-1])})
+    old.add_edge(START, "act")
+    old.add_edge("act", END)
+    config = {"configurable": {"thread_id": "old-act-" + uuid.uuid4().hex}}
+    before = {"url": "https://fixture.test/", "title": "Guide", "text": "Open guide", "elements": []}
+    old.compile(checkpointer=saver).invoke({"run_id": "legacy", "site": before["url"], "goal": "Read guide", "persona": "skeptic",
+        "observation": before, "start_url": before["url"], "status": "running", "tokens": 21, "plan_done": 0,
+        "plan": {"intent": "Read guide", "checkpoints": [{"description": "Open guide", "kind": "navigation", "url_contains": "/guide"}]},
+        "steps": [{"action": "click", "target_id": 1, "thought": "Open guide", "url": before["url"]}]}, config)
+
+    class NoMoreModelCalls:
+        def invoke(self, messages):
+            pytest.fail("Resuming an old pending action must not repeat a decision")
+
+    graph = build_graph(NoMoreModelCalls(), PostgresSaver(conn))
+    result = graph.invoke(Command(resume={"observation": before | {"url": "https://fixture.test/guide", "text": "Guide"}}), config)
+    assert result["status"] == "done" and result["plan_done"] == 1
+    assert len(result["steps"]) == 1 and result["tokens"] == 21
+    assert result["harness_worklog"][-1]["status"] == "done"

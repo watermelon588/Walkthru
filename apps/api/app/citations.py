@@ -104,7 +104,7 @@ def parse_competitor(text: str) -> dict | None:
         return None
     found = _DOMAIN.search(text)
     domain = domain_of(found.group(1)) if found else ""
-    name = re.sub(r"\(.*?\)|https?://\S+", "", text).strip(" -,") if found else text
+    name = re.sub(r"\(.*?\)|https?://\S+", "", text).replace(found.group(1), "").strip(" -,") if found else text
     if not name or name.lower() == domain or (found and name == found.group(1)):
         name = domain.split(".")[0].capitalize() if domain else text
     return {"name": name[:60], "domain": domain}
@@ -160,10 +160,13 @@ def suggest(html: str, brand: str, competitors: list[dict]) -> list[str]:
         parts = [p.strip() for p in re.split(r"\s[|\-:–—]\s|\s*[|–—]\s*", text) if p.strip()]
         parts = [p for p in parts if brand.lower() not in p.lower()] or parts
         if parts and 2 <= len(parts[0].split()) <= 10:
-            category = parts[0].rstrip(".").lower()
+            # "The launch check for apps built with AI" -> "launch check for apps built with AI": drop a leading article,
+            # lower only the first letter so acronyms keep their case.
+            category = re.sub(r"^(the|a|an)\s+", "", parts[0].rstrip("."), flags=re.IGNORECASE)
+            category = category[:1].lower() + category[1:]
             break
     # No category in the page's own words: ask nothing generic ("the best tools like this?" measures nothing).
-    prompts = [f"What are the best {category}?", f"Which {category} do people recommend, and why?", f"How do I choose {category}?"] if category else []
+    prompts = [f"What is the best {category}?", f"Which {category} do people recommend, and why?", f"How do I choose the right {category}?"] if category else []
     prompts += [f"What is {brand}?", f"Is {brand} worth it?"]
     for c in competitors[:3]:
         prompts += [f"What are the best alternatives to {c['name']}?", f"{brand} vs {c['name']}: which is better?"]
@@ -358,9 +361,9 @@ def _maybe_announce(check: dict) -> None:
             done = [c for c in batch if c["status"] == "done"]
             # Idempotent: every finishing check of the batch sends the same settlement.
             reservations.settle(site["user_id"], f"citations-{check['batch_id']}", "completed", credit=bool(done))
-            named = sum(1 for c in done if any(b["you"] and b["mentioned"] for b in (c.get("result") or {}).get("brands", [])))
+            named = sum(1 for c in done if any(b["you"] and b.get("entity_status") == "verified" for b in (c.get("result") or {}).get("brands", [])))
             notify.send(site["user_id"], "visibility", "citations.done", f"AI answers checked for {site['brand']}"[:200],
-                        f"Named in {named} of {len(done)} answers.", "/app/visibility")
+                        f"Confirmed as you in {named} of {len(done)} answers.", "/app/visibility")
     except Exception:
         log.warning("citation batch notice failed", exc_info=True)
 
@@ -426,7 +429,16 @@ def observed(check: dict) -> dict:
     """Do not relabel old answers or reuse the old, incorrect citation verdicts."""
     result = check.get("result") or {}
     if result.get("measurement_version") == VERSION:
-        return check
+        brands = result.get("brands") or []
+        own = next((b for b in brands if b.get("you")), None)
+        if not own or "entity_status" in own:
+            return check
+        # Saved before identity was checked: add it from the saved answer and sources, keeping every citation verdict.
+        fresh = analyze(result.get("raw_answer") or check.get("answer") or "", check.get("sources") or [], own["name"], own["domain"],
+                        [{"name": b["name"], "domain": b["domain"]} for b in brands if not b.get("you")],
+                        citation_status=result.get("citation_status", "unresolved"))["brands"]
+        keep = ("entity_status", "entity_evidence", "source_rank")
+        return check | {"result": result | {"brands": [b | {k: f[k] for k in keep} for b, f in zip(brands, fresh, strict=True)]}}
     brands = result.get("brands") or []
     own = next((b for b in brands if b.get("you")), None)
     if own:
@@ -456,7 +468,8 @@ def summary(site: dict) -> dict:
         you = [next((x for x in (c.get("result") or {}).get("brands", []) if x["you"]), None) for c in ok]
         eligible = [c for c in ok if (c.get("result") or {}).get("citation_eligible") is True]
         trend.append({"at": min(c["created_at"] for c in b), "answers": len(ok),
-                      "mentioned": sum(1 for y in you if y and y["mentioned"]), "citation_answers": len(eligible),
+                      "mentioned": sum(1 for y in you if y and y["mentioned"]),
+                      "identified": sum(1 for y in you if y and y.get("entity_status") == "verified"), "citation_answers": len(eligible),
                       "cited": sum(1 for c in eligible if any(y.get("you") and y.get("cited") for y in c["result"]["brands"]))})
     return {
         "site": {k: site.get(k) for k in ("id", "site", "brand", "competitors", "next_check_at", "last_batch_at")},

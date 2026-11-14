@@ -120,10 +120,12 @@ def test_rollback_restores_r_s8_and_reapplies(conn):
     owner = str(uuid.uuid4())
     assert work(conn, owner, "scan", "gone", units=2)["status"] == "reserved"
     assert reserve(conn, owner, "kept")["status"] == "reserved"
+    for newer in ("0009", "0008", "0007"):  # the live-run migrations are newer and independent; undo them to reach 0006
+        assert migrate.down(conn) == newer
     assert migrate.down(conn) == "0006"
     assert [r[0] for r in conn.execute("select operation_key from run_reservations").fetchall()] == ["kept"]
     assert reserve(conn, owner, "after-rollback")["status"] == "reserved"  # the R-S8 function works again
     with pytest.raises(psycopg.Error):
         work(conn, owner, "scan", "no-function")
-    assert migrate.up(conn) == ["0006"]
+    assert migrate.up(conn) == ["0006", "0007", "0008", "0009"]
     assert work(conn, owner, "scan", "back")["status"] == "reserved"

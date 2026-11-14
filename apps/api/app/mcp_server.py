@@ -33,6 +33,10 @@ _request: contextvars.ContextVar[Request] = contextvars.ContextVar("mcp_request"
 log = logging.getLogger("walkthru.mcp")
 
 
+# A matched name is text, not proof it is this business (app/citation_evidence.py identity()).
+IDENTITY = {"verified": "confirmed as you", "ambiguous": "named, not confirmed as you",
+            "other": "named, but points to a same-name site", "absent": "did not name you"}
+
 def new_key() -> tuple[str, str]:
     """(key shown once, hash stored)."""
     key = KEY_PREFIX + secrets.token_urlsafe(32)
@@ -696,7 +700,7 @@ def _answers(view: dict) -> str:
         for b in view["share_of_voice"]:
             count = b.get("citation_answers", 0)
             citations = f"cited in {b['citations']} of {count} measurable answers" if count else "citations not measured"
-            lines.append(f"- {b['name']}{' (you)' if b['you'] else ''}: {b['share']}% of mentions, named in {b['mentions']} of {b['answers']} answers; {citations}")
+            lines.append(f"- {b['name']}{' (you)' if b['you'] else ''}: {b['share']}% of name matches, name matched in {b['mentions']} of {b['answers']} answers; {citations}")
     lines += ["", "## Prompts", *(f"{i + 1}. {p['prompt']}" for i, p in enumerate(view.get("prompts") or []))]
     done = [a for a in view.get("answers") or [] if a.get("status") == "done"]
     if done:
@@ -706,7 +710,9 @@ def _answers(view: dict) -> str:
             you = next((b for b in result.get("brands", []) if b.get("you")), {})
             cited = ("yes" if you.get("cited") else "no") if result.get("citation_eligible") is True else "not measurable"
             label = (result.get("provenance") or {}).get("label") or a["engine"]
-            lines.append(f"- [{label}] {a['prompt']}: you named {'yes' if you.get('mentioned') else 'no'}, cited {cited}")
+            identity = IDENTITY.get(you.get("entity_status") or ("ambiguous" if you.get("mentioned") else "absent"), "")
+            other = (you.get("entity_evidence") or {}).get("host") if you.get("entity_status") == "other" else None
+            lines.append(f"- [{label}] {a['prompt']}: {identity}{f' ({other})' if other else ''}, cited {cited}")
     if view.get("limit"):
         lim = view["limit"]
         lines += ["", f"Your plan: {lim['prompts']} prompts per site, engines {', '.join(lim['engines'])}, {'weekly checks' if lim['weekly'] else 'one batch'}."]

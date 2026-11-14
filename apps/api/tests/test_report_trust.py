@@ -100,14 +100,15 @@ def test_legacy_instant_scan_can_keep_first_impression_clarity_finding():
     assert report.grounded_ux([finding()], [], [], "scan") == [finding()]
 
 
-def test_stopped_with_observed_error_keeps_grounded_writer_narrative(monkeypatch):
+def test_stopped_with_observed_error_keeps_finding_but_uses_code_owned_summary(monkeypatch):
     steps = [{"action": "click", "thought": "Submit", "errors_after": ["Network error"], "result_url": "https://example.test/signup"}]
     observed = Finding(kind="ux", severity="high", title="Submit shows a network error", detail="The page showed Network error.",
                        fix="Investigate the failed Submit request.", evidence="Step 1: page then showed Network error")
     monkeypatch.setattr(runtime, "call", lambda *args, **kwargs: (Synthesis(summary="The page showed Network error after Submit.",
                                                                           ux_findings=[observed], top_fixes=["Investigate the recorded network error."]), 7))
     result = report.synthesize({"site": "https://example.test/", "status": "stopped", "steps": steps})["synthesis"]
-    assert result["summary"] == "The page showed Network error after Submit."
+    assert "1 step has recorded evidence eligible for issue review" in result["summary"]
+    assert result["top_fixes"] == [observed.fix]
     assert result["findings"][0]["kind"] == "ux"
 
 

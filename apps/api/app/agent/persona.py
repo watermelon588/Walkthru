@@ -1,4 +1,4 @@
-"""persona_session graph: decide -> act (interrupt for observation) -> check -> decide.
+"""Evidence-controlled journey with separate proposal, guard, execution and assessment.
 
 One HTTP call per step. The extension sends an Observation, we resume the thread
 and return the next PersonaStep. The LLM is only called inside `decide`, so an
@@ -13,7 +13,7 @@ from typing import Any, Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
-from app.agent import assertions
+from app.agent import assertions, harness
 from app.agent import goal as goals
 from app.agent.safety import LOOP_LIMIT, MAX_STEPS, is_basket, is_commerce, is_destructive, is_search_field, is_sending, is_social
 from app.agent.schema import FilterCountAssertion, Observation, PersonaStep
@@ -54,6 +54,13 @@ class SessionState(TypedDict, total=False):
     start_url: str
     assertion: dict | None
     assertion_outcome: dict
+    harness_context: dict
+    harness_worklog: list[dict]
+    proposal: dict | None
+    recovery_target: int | None
+    resume_payload: dict | None
+    contract_attempts: dict
+    contract_stop_reason: str | None
 
 
 def system_prompt(state: SessionState) -> str:
@@ -63,7 +70,7 @@ def system_prompt(state: SessionState) -> str:
     done = state.get("plan_done", 0)
     checklist = "\n".join(
         f"  {i}. {c['description']}" + (" (done)" if i <= done else " (current)" if i == done + 1 else "") +
-        " evidence=" + json.dumps({k: c.get(k) for k in ("kind", "url_contains", "text_contains")}, ensure_ascii=True)
+        " evidence=" + json.dumps({k: c.get(k) for k in ("kind", "url_contains", "text_contains", "section_key")}, ensure_ascii=True)
         for i, c in enumerate(plan["checkpoints"], start=1)
     )
     return (
@@ -112,6 +119,11 @@ def system_prompt(state: SessionState) -> str:
 def render_observation(obs: dict) -> str:
     o = Observation.model_validate(obs)
     lines = [f"URL: {o.url}", f"Title: {o.title}"]
+    if o.document_id:
+        lines.append(f"Document identity: {o.document_id}")
+    if o.sections:
+        lines.append("Observed sections (public identity; visibility is measured, not inferred): " +
+                     json.dumps([s.model_dump(exclude_none=True) for s in o.sections], ensure_ascii=True))
     if o.note:
         lines.append(f"Executor note: {o.note}")
     if o.errors:
@@ -132,7 +144,7 @@ def render_observation(obs: dict) -> str:
     for e in o.elements:
         kind = f" ({e.type})" if e.type else ""
         state = f" [{e.state}]" if e.state else ""
-        context = {k: getattr(e, k) for k in ("region", "row", "in_view", "occluded", "scroll_container_id") if getattr(e, k) is not None}
+        context = {k: getattr(e, k) for k in ("region", "row", "in_view", "occluded", "scroll_container_id", "destination", "section_target") if getattr(e, k) is not None}
         lines.append(f"  [{e.id}] {e.tag}{kind}{state}: {e.text}" + (" context=" + json.dumps(context, ensure_ascii=True) if context else ""))
     if o.elements_truncated or o.candidate_limit_reached or o.context_truncated:
         lines.append(f"Observation limits: omitted elements={o.omitted_elements or 0}" +
@@ -161,6 +173,8 @@ def render_history(steps: list[dict]) -> str:
         line = f"{i + 1}. {s['action']}"
         if s.get("target_id") is not None:
             line += f" #{s['target_id']}"
+        if s.get("target_label"):
+            line += " label=" + json.dumps(s["target_label"][:80], ensure_ascii=True)
         if s["action"] == "scroll":
             line += f" container={s.get('scroll_container_id')} direction={s.get('scroll_direction', 'down')}"
         if s["action"] == "wait":
@@ -182,12 +196,62 @@ def render_history(steps: list[dict]) -> str:
 def build_graph(model: Any, checkpointer: Any):
     """Build the loop around either a decision provider or a structured-output LLM."""
 
+    def validate(state: SessionState) -> dict:
+        if (state.get("plan") or {}).get("contract_version") != 2:
+            return {"contract_stop_reason": None}
+        index = state.get("plan_done", 0)
+        checkpoints = state["plan"].get("checkpoints", [])
+        if index >= len(checkpoints):
+            return {"contract_stop_reason": None}
+        problem = goals.checkpoint_problem(checkpoints[index], state["observation"])
+        return {"harness_worklog": harness.append_event(state, "validate", problem or "contract_grounded",
+                                                       next_step=True, checkpoint=index + 1)}
+
+    def revise(state: SessionState) -> dict:
+        plan = state.get("plan") or {}
+        if plan.get("contract_version") != 2:
+            return {}
+        index = state.get("plan_done", 0)
+        checkpoints = plan.get("checkpoints", [])
+        if index >= len(checkpoints):
+            return {}
+        updated, reason = goals.revision_candidate(state)
+        log = state.get("harness_worklog", [])
+        if updated:
+            old = checkpoints[index]
+            count = plan.get("revision_count", 0) + 1
+            plan = {**plan, "checkpoints": checkpoints[:index] + [updated] + checkpoints[index + 1:], "revision_count": count}
+            log = harness.append_event(state, "revise", "contract_revised", next_step=True, checkpoint=index + 1,
+                                       before_kind=old["kind"], after_kind=updated["kind"], contract_revision=count, source=reason,
+                                       before_target=old.get("url_contains"),
+                                       after_target=("/#" + updated["section_key"]) if updated["kind"] == "section" else updated.get("url_contains"))
+        current = plan["checkpoints"][index]
+        problem = goals.checkpoint_problem(current, state["observation"])
+        attempts = dict(state.get("contract_attempts", {}))
+        key = str(index)
+        stop = None
+        if problem:
+            attempts[key] = attempts.get(key, 0) + 1
+            if attempts[key] > 2:
+                stop = "contract_unresolved"
+            log = harness.append_event({**state, "harness_worklog": log}, "revise", stop or "discovery_pending",
+                                       next_step=True, checkpoint=index + 1)
+        return {"plan": plan, "harness_worklog": log, "contract_attempts": attempts, "contract_stop_reason": stop}
+
+    def prepare(state: SessionState) -> dict:
+        context = harness.context(state)
+        return {"harness_context": context, "harness_worklog": harness.append_event(
+            state, "prepare", context["predicate_problem"] or "observation_ready", next_step=True,
+            checkpoint=context["checkpoint"])}
+
     def decide(state: SessionState) -> dict:
         history = render_history(state.get("steps", []))
         page = render_observation(state["observation"])
         messages = [
             ("system", system_prompt(state)),
-            ("human", f"What you did so far:\n{history}\n\nCurrent page:\n{page}"),
+            ("human", "Harness assessment (code-owned diagnostics, not permission to change the goal):\n" +
+             json.dumps(state.get("harness_context", {}), ensure_ascii=True) +
+             f"\n\nWhat you did so far:\n{history}\n\nCurrent page:\n{page}"),
         ]
         from app.agent.runtime import unwrap  # local import: runtime imports this module
 
@@ -201,9 +265,11 @@ def build_graph(model: Any, checkpointer: Any):
                 answer, spent = unwrap(model.invoke(msgs))
                 return answer, spent, {"provider": "llm"}
 
-        observed_stop = _observation_stop(state["observation"])
+        observed_stop = _observation_stop(state["observation"]) or ("agent_lost" if state.get("contract_stop_reason") else None)
         if observed_stop:
-            step, used, metadata = PersonaStep(thought="Walkthru stopped at the observed browser boundary.", action="give_up", confusion=0), 0, {}
+            thought = ("Walkthru could not establish an observable task contract within its discovery budget. Completion remains unknown."
+                       if state.get("contract_stop_reason") else "Walkthru stopped at the observed browser boundary.")
+            step, used, metadata = PersonaStep(thought=thought, action="give_up", confusion=0), 0, {}
         else:
             step, used, metadata = ask(messages)
         site_block = _site_block(state)
@@ -217,14 +283,30 @@ def build_graph(model: Any, checkpointer: Any):
             stop = "site_block" if site_block and step.action == "give_up" else "agent_lost"
             step = PersonaStep(thought=f"{step.thought} (Walkthru could not confirm the requested outcome; unresolved checkpoints remain.)",
                                action="give_up", confusion=max(step.confusion, 2))
+        return {"proposal": {"step": step.model_dump(), "stop": stop, "metadata": metadata},
+                "tokens": state.get("tokens", 0) + used}
+
+    def guard(state: SessionState) -> dict:
+        proposal = state["proposal"]
+        step = PersonaStep.model_validate(proposal["step"])
+        stop = proposal["stop"]
+        metadata = {k: v for k, v in proposal["metadata"].items() if k in {
+            "provider", "model", "decision_model", "decision_confidence", "goal_probability",
+            "fallback_reason", "fallback_from", "jev_fallback_reason"}}
         plan_done = state.get("plan_done", 0)
         step = step.model_copy(update={"progress": plan_done})
+        target = next((e for e in state["observation"].get("elements", []) if e["id"] == step.target_id), None)
+        unavailable = step.action in {"click", "type"} and (target is None or target.get("in_view") is False or target.get("occluded"))
+        recovery_target = step.target_id if unavailable and not stop and harness.can_refresh(state, step.target_id) else None
         step, safety_stop = _enforce(step, state)
+        if unavailable and target is None and state["observation"].get("navigation_version") == 3:
+            step = PersonaStep(action="give_up", thought="Walkthru could not locate the proposed control in the current snapshot.", confusion=2)
+            safety_stop = "agent_lost"
         stop = safety_stop or stop
         observed = state["observation"]
         record = metadata | step.model_dump() | {"url": observed["url"], "scroll_pct": observed.get("scroll_pct")} | (
             {"code": stop} | ({"safe_stop": True} if stop in {"safe_stop", "visitor_mode_limit"} else {}) if stop else {})
-        for key in ("executor_result", "checkpoint_evidence", "additional_checkpoint_evidence", "unresolved_checkpoints", "result_url", "errors_after", "new_errors_after", "notices_after", "note_after", "interrupted", "no_change", "sent"):
+        for key in ("executor_result", "checkpoint_evidence", "additional_checkpoint_evidence", "unresolved_checkpoints", "result_url", "errors_after", "new_errors_after", "notices_after", "note_after", "interrupted", "no_change", "sent", "harness_recovery", "target_label", "scroll_position"):
             record.pop(key, None)  # outcomes and milestone proof never come from provider metadata
         if not stop:
             record.pop("code", None)
@@ -234,6 +316,7 @@ def build_graph(model: Any, checkpointer: Any):
         # Freshness is stamped after model metadata and safety replacement, never generated by a model.
         bound_action = step.action in {"click", "type", "wait"} or (step.action == "scroll" and step.scroll_container_id is not None)
         record["observation_revision"] = observed.get("revision") if bound_action else None
+        record["document_id"] = observed.get("document_id")
         if step.action == "scroll":
             container = next((c for c in observed.get("scroll_containers", []) if c["id"] == step.scroll_container_id), None)
             record["scroll_position"] = {key: container[key] for key in ("top", "left")} if container else None
@@ -241,22 +324,58 @@ def build_graph(model: Any, checkpointer: Any):
             target = next((e for e in observed.get("elements", []) if e["id"] == step.target_id), None)
             if target:
                 record["target_label"] = (target.get("text") or "")[:80]
+                if target.get("section_target"):
+                    record["section_target"] = target["section_target"]
         if step.action == "click" and state.get("verified"):
             target = next((e for e in state["observation"].get("elements", []) if e["id"] == step.target_id), {})
             if is_sending(target.get("text", "")) and target.get("tag") != "a":
                 record["sent"] = True  # the owner still confirms in the side panel; this marks the one allowed send
-        return {"steps": state.get("steps", []) + [record], "tokens": state.get("tokens", 0) + used, "plan_done": plan_done}
+        reason = "target_unavailable" if unavailable else stop or "action_accepted"
+        if unavailable and recovery_target is None and state["observation"].get("navigation_version") == 3:
+            reason = "recovery_exhausted"
+        return {"steps": state.get("steps", []) + [record], "plan_done": plan_done, "proposal": None,
+                "recovery_target": recovery_target, "harness_worklog": harness.append_event(
+                    state, "guard", reason, next_step=True, action=proposal["step"]["action"],
+                    target_id=proposal["step"].get("target_id"))}
+
+    def recover(state: SessionState) -> dict:
+        # Refresh public state once per target, twice per run. Never guess a scroll direction or replay a mutation.
+        observed = state["observation"]
+        step = PersonaStep(thought="Walkthru is refreshing the page state before choosing an available control.",
+                           action="wait", wait_condition="settled", wait_timeout_ms=1000, confusion=0,
+                           progress=state.get("plan_done", 0))
+        target = next((e for e in observed.get("elements", []) if e.get("id") == state["recovery_target"]), {})
+        hint = target.get("reveal") or {}
+        container = next((c for c in observed.get("scroll_containers", []) if c.get("id") == hint.get("container_id")), None)
+        direction = hint.get("direction")
+        if target.get("in_view") is False and not target.get("occluded") and direction in {"up", "down", "left", "right"} and container and container.get(f"can_{direction}"):
+            proposed = PersonaStep(thought="Walkthru is revealing the observed control in its measured scroll container.",
+                                   action="scroll", scroll_container_id=container["id"], scroll_direction=direction,
+                                   confusion=0, progress=state.get("plan_done", 0))
+            checked, refused = _enforce(proposed, state)
+            if not refused:
+                step = checked
+        record = step.model_dump() | {"url": observed["url"], "observation_revision": observed["revision"],
+                                     "harness_recovery": True, "document_id": observed.get("document_id")}
+        return {"steps": state["steps"][:-1] + [record], "recovery_target": None,
+                "harness_worklog": harness.append_event(state, "recover", "reveal_requested" if step.action == "scroll" else "refresh_requested", action=step.action,
+                                                       target_id=state["recovery_target"], document_id=observed.get("document_id"))}
 
     def act(state: SessionState) -> dict:
-        resumed = interrupt(state["steps"][-1])
+        return {"resume_payload": interrupt(state["steps"][-1])}
+
+    def assess(state: SessionState) -> dict:
+        resumed = state["resume_payload"]
+        base = {"resume_payload": None}
         if "observation" not in resumed:  # old extension contract
-            return {"observation": resumed}
+            return {**base, "observation": resumed, "harness_worklog": harness.append_event(state, "assess", "legacy_observation")}
         steps = list(state["steps"])
         after = resumed["observation"]
         if "stale target:" in (after.get("note") or "").lower():
             # Execution was refused. Fresh page errors/notices are not outcomes of this unexecuted action.
             steps[-1] = steps[-1] | {"interrupted": True, "code": "agent_lost", "note_after": after["note"][:200]}
-            return {"observation": after, "steps": steps}
+            return {**base, "observation": after, "steps": steps,
+                    "harness_worklog": harness.append_event(state, "assess", "execution_refused", action=steps[-1]["action"])}
         # What the step led to, so the report states what worked instead of guessing.
         outcome = {"result_url": after.get("url")}
         if after.get("errors"):
@@ -290,15 +409,20 @@ def build_graph(model: Any, checkpointer: Any):
         # Wait can observe delayed proof of one earlier click, never create proof from settlement alone.
         prior_actions = [s for s in steps[:-1] if s["action"] not in {"scroll", "wait"}]
         prior = prior_actions[-1] if prior_actions else {}
-        eligible = action != "wait" or (outcome.get("executor_result", {}).get("status") in {"changed", "settled"} and
+        eligible = action != "wait" or (not steps[-1].get("harness_recovery") and
+            outcome.get("executor_result", {}).get("status") in {"changed", "settled"} and
             prior.get("action") in {"click", "type"} and prior.get("result_url") and not prior.get("interrupted") and not prior.get("note_after"))
+        log = state.get("harness_worklog", [])
         if eligible and index < len(checkpoints):
             proofs = []
             seen = set()
             for current in range(index, len(checkpoints)):
-                proof = goals.evidence(checkpoints[current], before, after, action, state.get("start_url", ""))
+                proof, reason = goals.evaluate_evidence(checkpoints[current], before, after, action, state.get("start_url", ""), steps[-1].get("target_id"))
                 key = (proof["signal"], " ".join(proof["matched"].casefold().split())) if proof else None
-                if not proof or any(signal == key[0] and (signal == "navigation" or text in key[1] or key[1] in text) for signal, text in seen):
+                duplicate = proof and any(signal == key[0] and (signal == "navigation" or text in key[1] or key[1] in text) for signal, text in seen)
+                log = harness.append_event({**state, "harness_worklog": log}, "assess",
+                                           "duplicate_signal" if duplicate else reason, checkpoint=current + 1, action=action)
+                if not proof or duplicate:
                     break  # one generic signal cannot be counted as several different tasks
                 seen.add(key)
                 proofs.append({**proof, "checkpoint": current + 1, "step": len(steps)})
@@ -306,8 +430,11 @@ def build_graph(model: Any, checkpointer: Any):
                 steps[-1] = steps[-1] | {"checkpoint_evidence": proofs[0]}
                 if len(proofs) > 1:
                     steps[-1] = steps[-1] | {"additional_checkpoint_evidence": proofs[1:]}
+        else:
+            log = harness.append_event(state, "assess", "wait_without_causal_action" if not eligible else "no_pending_checkpoint", action=action)
         assertion_outcome = assertions.evaluate(FilterCountAssertion.model_validate(state["assertion"]), after, state.get("start_url", ""), len(steps)) if state.get("assertion") else None
-        return {"observation": after, "steps": steps, **({"assertion_outcome": assertion_outcome} if assertion_outcome else {})}
+        return {**base, "observation": after, "steps": steps, "harness_worklog": log,
+                **({"assertion_outcome": assertion_outcome} if assertion_outcome else {})}
 
     def check(state: SessionState) -> dict:
         steps = state["steps"]
@@ -355,8 +482,7 @@ def build_graph(model: Any, checkpointer: Any):
         tail = steps[-LOOP_LIMIT:]
         if len(tail) == LOOP_LIMIT and all(s.get("executor_result", {}).get("status") in {"no_progress", "timeout"} for s in tail):
             return {"status": "agent_lost"}  # bounded controller exhaustion, never proof that the website failed
-        keys = {json.dumps({k: s.get(k) for k in ("action", "target_id", "text", "url", "scroll_pct", "scroll_container_id",
-                                                  "scroll_direction", "scroll_position", "wait_condition")}, sort_keys=True) for s in tail}
+        keys = {harness.action_signature(s) for s in tail}
         if len(tail) == LOOP_LIMIT and len(keys) == 1:
             if last["action"] in {"scroll", "wait"} and result:
                 if all(s.get("executor_result", {}).get("status") in {"moved", "changed"} for s in tail):
@@ -369,20 +495,40 @@ def build_graph(model: Any, checkpointer: Any):
             return {"status": "looping", **progress}
         return {"status": "running", **progress}
 
-    def after_decide(state: SessionState) -> str:
+    def journal(state: SessionState) -> dict:
+        return {"harness_worklog": harness.append_event(state, "check", "continue" if state["status"] == "running" else state["status"],
+                                                       status=state["status"], action=state["steps"][-1]["action"])}
+
+    def after_guard(state: SessionState) -> Literal["recover", "check", "act"]:
+        if state.get("recovery_target") is not None:
+            return "recover"
         return "check" if state["steps"][-1]["action"] in ("done", "give_up") else "act"
 
-    def after_check(state: SessionState) -> str:
-        return "decide" if state["status"] == "running" else END
+    def after_journal(state: SessionState) -> Literal["validate", "__end__"]:
+        return "validate" if state["status"] == "running" else END
 
     g = StateGraph(SessionState)
+    g.add_node("validate", validate)
+    g.add_node("revise", revise)
+    g.add_node("prepare", prepare)
     g.add_node("decide", decide)
+    g.add_node("guard", guard)
+    g.add_node("recover", recover)
     g.add_node("act", act)
+    g.add_node("assess", assess)
     g.add_node("check", check)
-    g.add_edge(START, "decide")
-    g.add_conditional_edges("decide", after_decide)
-    g.add_edge("act", "check")
-    g.add_conditional_edges("check", after_check)
+    g.add_node("journal", journal)
+    g.add_edge(START, "validate")
+    g.add_edge("validate", "revise")
+    g.add_edge("revise", "prepare")
+    g.add_edge("prepare", "decide")
+    g.add_edge("decide", "guard")
+    g.add_conditional_edges("guard", after_guard)
+    g.add_edge("recover", "act")
+    g.add_edge("act", "assess")
+    g.add_edge("assess", "check")
+    g.add_edge("check", "journal")
+    g.add_conditional_edges("journal", after_journal)
     return g.compile(checkpointer=checkpointer)
 
 

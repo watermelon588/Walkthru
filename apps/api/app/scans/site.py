@@ -6,6 +6,7 @@ import logging
 import re
 import time
 from collections import OrderedDict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urldefrag, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
@@ -23,6 +24,8 @@ PAID_MAX_PAGES = 50  # paid run reports; they are written in a background task, 
 PAID_TIME_LIMIT = 60.0
 MAX_MAX_PAGES = PAID_MAX_PAGES
 MAX_VISITED = 5  # pages the test user visited, audited on top of the crawl
+MAX_RENDERED = 5  # JavaScript-only pages opened in a browser for the keyword map
+RENDER_BUDGET = 30.0  # seconds for all of them, including the browser start
 SIGNUP = re.compile(r"\b(sign ?up|get started|start (for )?free|create (an )?account|register|join now)\b", re.IGNORECASE)
 
 
@@ -92,8 +95,12 @@ def _signup_hidden(html: str, url: str) -> Finding | None:
 
 
 def _robots(text: str | None, url: str) -> RobotFileParser:
+    """Python's parser applies the first matching rule; RFC 9309 and Google apply the longest one (Allow wins a tie).
+    Sorting each group's rules that way makes first-match give the standard answer."""
     parser = RobotFileParser(url)
     parser.parse((text or "").splitlines())
+    for entry in [*parser.entries, *([parser.default_entry] if parser.default_entry else [])]:
+        entry.rulelines.sort(key=lambda rule: (len(rule.path), rule.allowance), reverse=True)
     return parser
 
 
@@ -199,8 +206,10 @@ def audit(
     visited: list[str] | tuple[str, ...] = (),
     max_pages: int = DEFAULT_MAX_PAGES,
     time_limit: float = DEFAULT_TIME_LIMIT,
+    render: Callable[[list[str]], dict[str, str]] | None = None,
 ) -> SiteAudit:
-    """Audit a small same-origin page set. No forms, probes or browser actions."""
+    """Audit a small same-origin page set. No forms or probes. `render` (url list -> rendered HTML) is only used to
+    read JavaScript-only pages for the advisory keyword map; every other check judges the served HTML."""
     max_pages = max(1, min(max_pages, MAX_MAX_PAGES))
     started = time.monotonic()
     deadline = started + max(0.5, time_limit)
@@ -332,9 +341,52 @@ def audit(
     )
     page_map: list[tuple[str, str, list[str]]] = []
     try:  # advisory content direction from the same crawled pages; never sinks the audit
-        advice = opportunities.build([(page_url, response.text, _links(response.text, page_url, base)) for page_url, response in pages]) if pages else None
+        html = {page_url: response.text for page_url, response in pages}
+        shells = [page_url for page_url, text in html.items() if fetch.is_js_shell(text)][:MAX_RENDERED]
+        if render and shells:
+            html.update({u: h for u, h in render(shells).items() if u in html and h})
+        advice = opportunities.build([(page_url, text, _links(text, page_url, base)) for page_url, text in html.items()]) if pages else None
     except Exception:
         logging.getLogger("walkthru").warning("opportunity map failed for %s", root_url, exc_info=True)
         advice = None
     return SiteAudit(_aggregate(seo_records, len(pages), page_map), _aggregate(security_records, len(pages), page_map), coverage,
                      production_like, readiness, page_map + readiness.pages, advice, backend_context)
+
+
+def rendered_html(urls: list[str], wait: float = 20) -> dict[str, str]:
+    """The HTML a visitor's browser ends up with, for JavaScript-only pages. One short-lived headless browser under the
+    live-run network guard, skipped when no Chrome is installed or a live run still holds this machine's browser after
+    `wait` seconds (0 inside a request).
+    ponytail: only the pages the crawl already found are rendered; their rendered links are not crawled further."""
+    from app import db
+    from app.runner import cdp, guard
+
+    if not urls or not cdp.chrome_path():
+        return {}
+    free_by = time.monotonic() + wait  # a live run's own report starts while its browser is still closing
+    while db.running_cloud_runs() > 0:
+        if time.monotonic() >= free_by:
+            return {}
+        time.sleep(2)
+    out: dict[str, str] = {}
+    deadline = time.monotonic() + RENDER_BUDGET
+    try:
+        with cdp.browser() as tab:
+            rules = guard.install(tab)
+            for url in urls:
+                if time.monotonic() >= deadline:
+                    break
+                tab.send("Page.navigate", url=url)
+                tab.wait_loaded(10)
+                if rules.blocked:
+                    break
+                settle = min(deadline, time.monotonic() + 6)  # many apps draw their copy a moment after load
+                html = tab.js("document.documentElement.outerHTML") or ""
+                while fetch.is_js_shell(html) and time.monotonic() < settle:
+                    time.sleep(0.5)
+                    html = tab.js("document.documentElement.outerHTML") or ""
+                if not fetch.is_js_shell(html):
+                    out[url] = html
+    except Exception:
+        logging.getLogger("walkthru").warning("could not render %s for the keyword map", fetch.origin(urls[0]), exc_info=True)
+    return out

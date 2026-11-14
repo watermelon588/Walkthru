@@ -1098,3 +1098,67 @@ def finish_run_request(user_id: str, key: str, owner: str, state: str, status: i
 
 def expire_run_requests() -> None:
     rpc("expire_run_requests", {})
+
+
+# ---------- in-app live runs: queue and record (migration 0007, app/runner) ----------
+
+_CLOUD = "id,group_id,site,goal,persona,max_steps,status,run_id,error,created_at,updated_at"
+CLOUD_ACTIVE = "in.(queued,running)"
+
+
+def queue_cloud_runs(rows: list[dict]) -> list[dict]:
+    return _request("POST", "/rest/v1/cloud_runs", params={"select": _CLOUD}, json_body=rows, prefer="return=representation") or []
+
+
+def claim_cloud_run(lease_seconds: int, limit: int) -> dict | None:
+    return _one(rpc("claim_cloud_run", {"p_lease_seconds": lease_seconds, "p_limit": limit}) or [])
+
+
+def hold_cloud_run(cloud_id: str, lease: str, lease_seconds: int, values: dict | None = None) -> bool:
+    """Extend the lease and save progress. False means the row is no longer this runner's: stopped by its owner, or
+    reclaimed after the lease ran out. The runner must stop acting then."""
+    until = (datetime.now(UTC) + timedelta(seconds=lease_seconds)).isoformat()
+    return bool(_update("cloud_runs", {"id": f"eq.{cloud_id}", "lease": f"eq.{lease}", "status": "eq.running", "select": "id"},
+                        (values or {}) | {"locked_until": until, "updated_at": _now()}))
+
+
+def end_cloud_run(cloud_id: str, lease: str, status: str, error: str | None = None) -> None:
+    _update("cloud_runs", {"id": f"eq.{cloud_id}", "lease": f"eq.{lease}", "status": "eq.running", "select": "id"},
+            {"status": status, "error": error[:300] if error else None, "lease": None, "locked_until": None, "updated_at": _now()})
+
+
+def cloud_runs_in_group(group_id: str, user_id: str) -> list[dict]:
+    return _select("cloud_runs", {"group_id": f"eq.{group_id}", "user_id": f"eq.{user_id}", "select": _CLOUD, "order": "created_at.asc,id.asc"})
+
+
+def active_cloud_runs(user_id: str) -> int:
+    return _exact_count("cloud_runs", {"user_id": f"eq.{user_id}", "status": CLOUD_ACTIVE})
+
+
+def running_cloud_runs() -> int:
+    return _exact_count("cloud_runs", {"status": "eq.running"})
+
+
+def cloud_runs_ahead(created_at: str) -> int:
+    """How many test users, anyone's, are queued or running before this one."""
+    return _exact_count("cloud_runs", {"status": CLOUD_ACTIVE, "created_at": f"lt.{created_at}"})
+
+
+def stop_cloud_runs(group_id: str, user_id: str) -> list[dict]:
+    """Queued test users end at once. A running one loses its row here, and its runner closes the journey on its next step."""
+    return _update("cloud_runs", {"group_id": f"eq.{group_id}", "user_id": f"eq.{user_id}", "status": CLOUD_ACTIVE, "select": "id,run_id"},
+                   {"status": "stopped", "updated_at": _now()})
+
+
+def upload_evidence(path: str, jpeg: bytes) -> None:
+    """Store one step frame in the private bucket with the service role (the extension uploads with the user's own token)."""
+    for attempt in range(2):  # same path and bytes, so one retry is safe
+        try:
+            r = client().post(f"/storage/v1/object/{BUCKET}/{path}", content=jpeg, headers={"content-type": "image/jpeg", "x-upsert": "true"})
+        except httpx.TransportError as e:
+            if attempt:
+                raise DatabaseUnavailable(str(e) or type(e).__name__) from e
+            continue
+        if r.status_code < 500 or attempt:
+            r.raise_for_status()
+            return

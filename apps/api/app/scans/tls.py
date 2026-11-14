@@ -96,7 +96,12 @@ def dns(c: httpx.Client, name: str, rtype: str) -> tuple[int, list[str]]:
     r = c.get(RESOLVER, params={"name": name, "type": rtype}, headers={"accept": "application/dns-json"}, timeout=3)
     r.raise_for_status()
     body = r.json()
-    return int(body.get("Status", 2)), [a["data"] for a in body.get("Answer", []) if a.get("type") == code]
+    if not isinstance(body, dict) or type(body.get("Status")) is not int:
+        raise ValueError("Malformed DNS status")
+    answers = body.get("Answer", [])
+    if not isinstance(answers, list) or any(not isinstance(a, dict) or not isinstance(a.get("data"), str) for a in answers):
+        raise ValueError("Malformed DNS answers")
+    return body["Status"], [a["data"] for a in answers if a.get("type") == code]
 
 
 def check_caa(url: str, c: httpx.Client) -> list[Finding]:
@@ -107,9 +112,10 @@ def check_caa(url: str, c: httpx.Client) -> list[Finding]:
     labels = domain.split(".")
     try:
         for i in range(len(labels) - 1):  # the host, then each parent, as CAs do (RFC 8659); never the bare TLD
-            if dns(c, ".".join(labels[i:]), "CAA")[1]:
+            status, records = dns(c, ".".join(labels[i:]), "CAA")
+            if status not in (0, 3) or records:
                 return []
     except (httpx.HTTPError, ValueError, KeyError):
         return []
-    return [_f("low", "No CAA record", f"{domain} does not name which certificate authorities may issue certificates for it, so a mistake or attack at any authority can produce a valid certificate.",
+    return [_f("low", "No CAA record", f"No CAA record was returned for {domain} or the checked parent names. This does not demonstrate certificate misissuance; certificate-authority validation still applies.",
                'Add a CAA record for the authority you use, for example: 0 issue "letsencrypt.org".', f"CAA {domain}")]

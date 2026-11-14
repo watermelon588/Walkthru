@@ -165,6 +165,24 @@ def test_a_real_crawl_carries_the_map_and_skips_private_pages(monkeypatch):
         "outline": ["Trip planning guide"], "basis": mapped["http://site.test/guide"]["proposed"]["basis"]}
 
 
+def test_a_javascript_only_site_is_mapped_from_its_rendered_page(monkeypatch):
+    """Plus reports said Keywords/Authority "Not measured" on app-shell sites: the map read pre-JavaScript HTML only."""
+    from app.scans import site
+    from tests.test_site_audit import _site
+
+    monkeypatch.setenv("ALLOW_LOCAL_SCANS", "1")
+    shell = '<html><head><title>TripVerse</title><script type="module" src="/assets/index.js"></script></head><body><div id="root"></div></body></html>'
+    drawn = ('<html><head><title>TripVerse</title></head><body><h1>Plan trips on a 3D globe</h1>'
+             '<p>Build an itinerary, see it on a map and keep the budget in one place with friends.</p></body></html>')
+    client = _site({"/": shell}, robots="User-agent: *\nAllow: /\n")
+    assert site.audit("http://site.test/", client, verified=False).opportunities is None
+    asked = []
+    result = site.audit("http://site.test/", client, verified=False, render=lambda urls: asked.extend(urls) or {u: drawn for u in urls})
+    assert asked == ["http://site.test/"]
+    assert result.opportunities["pages"][0]["primary_intent"] == {"text": "Plan trips on a 3D globe", "source": "h1"}
+    assert site.audit("http://site.test/", client, verified=False, render=lambda urls: {}).opportunities is None  # no browser: unchanged
+
+
 def test_a_javascript_only_site_gets_no_map_rather_than_a_topic_from_its_title():
     """W3: an app shell has a title but no copy; mapping it would invent briefs from the title alone."""
     shell = '<html><head><title>TripVerse — 3D Travel Universe</title><script type="module" src="/assets/index.js"></script></head><body><div id="root"></div></body></html>'

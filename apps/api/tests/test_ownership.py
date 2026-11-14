@@ -110,6 +110,10 @@ ROUTES: dict[str, str | tuple[str, dict | None]] = {
     "DELETE /teams/{team_id}/messages/{message_id}": (f"/teams/{ID}/messages/1", None),
     "POST /teams/{team_id}/read": (f"/teams/{ID}/read", {"message_id": 1}),
     "GET /teams/{team_id}/activity": (f"/teams/{ID}/activity", None),
+    "POST /cloud-runs": "self",
+    "GET /cloud-runs/goal-ideas": "self",
+    "GET /cloud-runs/{group_id}": (f"/cloud-runs/{ID}", None),
+    "POST /cloud-runs/{group_id}/stop": (f"/cloud-runs/{ID}/stop", None),
 }
 
 
@@ -139,6 +143,11 @@ def user_a_owns_everything(monkeypatch, fake_db, passes):
     monkeypatch.setattr(db, "membership", lambda team_id, user_id: {"team_id": team_id, "user_id": OWNER, "role": "owner", "name": "A", "email": "a@x.io",
                                                                     "auto_share": False, "last_read_message_id": 0, "last_seen_at": None,
                                                                     "team": {"id": team_id, "owner_id": OWNER, "name": "A"}} if user_id == OWNER else None)
+    monkeypatch.setattr(db, "cloud_runs_in_group", lambda group_id, user_id: [{"id": ID, "group_id": group_id, "site": "https://a.example/", "goal": "g",
+                                                                               "persona": "first_timer", "status": "running", "run_id": RUN, "error": None,
+                                                                               "created_at": "2026-11-12T00:00:00+00:00",
+                                                                               "updated_at": "2026-11-12T00:00:00+00:00"}] if user_id == OWNER else [])
+    monkeypatch.setattr(db, "stop_cloud_runs", lambda group_id, user_id: pytest.fail("another account's live test must not be stopped"))
     monkeypatch.setattr(db, "get_invite", lambda iid: {"id": iid, "team_id": ID, "kind": "email", "email": "a@x.io", "role": "member", "uses": 0,
                                                         "max_uses": 1, "revoked_at": None, "expires_at": "2999-01-01T00:00:00+00:00", "team": {"id": ID, "owner_id": OWNER}})
 

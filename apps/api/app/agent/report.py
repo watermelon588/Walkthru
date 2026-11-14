@@ -31,6 +31,7 @@ class ReportState(TypedDict, total=False):
     checkpoints: list[dict]  # declared expectations, not inferred by the report writer
     assertion: dict | None
     assertion_outcome: dict | None
+    harness_worklog: list[dict]
     steps: list[dict]
     page_text: str  # visible homepage text (from the first observation, or fetched)
     verified: bool
@@ -143,7 +144,8 @@ def site_scan(state: ReportState) -> dict:
             paid = state.get("paid", False)
             result = site.audit(state["site"], c, verified=state.get("verified", False), geo_full=paid, visited=visited,
                                 max_pages=site.PAID_MAX_PAGES if paid else site.DEFAULT_MAX_PAGES,
-                                time_limit=site.PAID_TIME_LIMIT if paid else site.DEFAULT_TIME_LIMIT)
+                                time_limit=site.PAID_TIME_LIMIT if paid else site.DEFAULT_TIME_LIMIT,
+                                render=site.rendered_html if paid else None)
             mail, mail_note = email.check(state["site"], c, full=state.get("paid", False))
         by_title = {(f.kind, f.title): f.model_dump() for f in [*result.seo, *result.security, *(result.geo.findings if result.geo else [])]}
         return {
@@ -523,19 +525,19 @@ def synthesis_inputs(state: ReportState) -> dict:
     if audit:
         context.append(f"Site audit coverage: {audit.get('pages_scanned', 0)} pages scanned, limit {audit.get('page_limit', 0)}, truncated: {audit.get('truncated', False)}.")
     if any(f.title == "Homepage content only appears after JavaScript runs" for f in code_findings):
-        context.append("Context: the homepage is rendered by JavaScript. Google and screen readers do run JavaScript and see the content; "
-                       "link previews (WhatsApp, LinkedIn, Slack), most AI crawlers and simpler search crawlers see an empty page. Do not overstate the impact.")
+        context.append("Context: the static fetch found a JavaScript shell. Rendered content and actual crawler, assistant, "
+                       "screen-reader or link-preview behavior were not established by that fetch. Do not infer indexing or citation outcomes.")
     if steps:
         from app.agent.policy import STOP_REASONS
 
         outcome = {
-            "safe_stop": "stopped by Walkthru at the send button (by design)",
+            "safe_stop": "stopped by a Walkthru safety boundary; the refused action proves neither completion nor a site defect",
             "looping": "stopped by Walkthru because the test user started going in circles. That is Walkthru's own limit, not a site problem; never report the repeated visits as a site problem",
             "stopped": "the journey stopped early; pending or interrupted actions were not confirmed and completion was not established",
             **{code: f"{STOP_REASONS[code][1]} Use this wording; never report it as a UX finding" for code in ("bot_wall", "captcha", "agent_lost")},
         }.get(state.get("status", ""), state.get("status"))
         if any(s.get("code") == "visitor_mode_limit" for s in steps):
-            outcome = f"{STOP_REASONS['visitor_mode_limit'][1]} Everything before that step worked; that stop is not a site problem"
+            outcome = f"{STOP_REASONS['visitor_mode_limit'][1]} Review earlier recorded outcomes separately; that stop is not a site problem"
         intent = f" Understood as: {state['intent']}." if state.get("intent") else ""
         context.append(f"Test user: {state.get('persona')}. Goal: {state.get('goal')}.{intent} Outcome: {outcome}.\nSteps:\n{render_steps(steps)}")
         context.append("Steps marked as stopped on purpose, or mentioning safe mode, were Walkthru's own choice. They are not site problems; never report them as findings.")
@@ -569,6 +571,30 @@ def plain(text: str) -> str:
     return re.sub(r"\s*[\u2014\u2013]\s*", ", ", text)
 
 
+def grounded_summary(state: ReportState, assessment, findings: list[Finding]) -> str:
+    """Only code-owned outcome and measured coverage enter the executive summary.
+
+    A writer's free-form summary cannot be validated by the existence of a related finding:
+    it may add causation, ranking impact, conversion estimates or an unsupported success claim.
+    """
+    outcomes = {
+        "completed": "All declared journey checkpoints have matching recorded public evidence.",
+        "not_tested": "No browser journey was tested.",
+    }
+    outcome = outcomes.get(assessment.outcome, "Journey completion was not confirmed; review the recorded outcomes and remaining checkpoints.")
+    if state.get("status") == "stopped":
+        outcome = "The journey stopped early. " + outcome
+    errors = len(problem_steps(state.get("steps", []), state.get("status")))
+    if errors:
+        outcome += f" {errors} step{'s have' if errors != 1 else ' has'} recorded evidence eligible for issue review."
+    elif state.get("status", "scan") != "scan":
+        outcome += " No observed journey failure was established."
+    audit = state.get("site_audit") or {}
+    coverage = f" Automated checks covered {audit['pages_scanned']} page(s)." if audit.get("pages_scanned") is not None else ""
+    return (outcome + coverage + f" The report contains {len(findings)} finding{'s' if len(findings) != 1 else ''}. "
+            "Findings describe the recorded checks and their limits; search rankings, AI citations, conversion impact and email delivery were not established by these checks.")
+
+
 def synthesize(state: ReportState) -> dict:
     from app.agent import runtime
     from app.agent.report_contract import build_assessment
@@ -584,16 +610,11 @@ def synthesize(state: ReportState) -> dict:
     findings = written + code_findings
     order = {"high": 0, "medium": 1, "low": 2}
     findings.sort(key=lambda f: order[f.severity])
-    summary, top_fixes = syn.summary, syn.top_fixes
-    if unfinished_without_failure:
-        confirmed = sum(bool(s.get("result_url") or s.get("errors_after") or s.get("notices_after") or s.get("no_change"))
-                        for s in steps if s.get("action") in {"click", "type", "scroll", "back"})
-        summary = (f"The journey stopped early with {confirmed} browser action{'s' if confirmed != 1 else ''} with recorded outcomes. "
-                   "Journey completion was not confirmed, and no observed journey failure was established. "
-                   f"Automated checks produced {len(code_findings)} finding{'s' if len(code_findings) != 1 else ''}; review their evidence and coverage separately.")
-        top_fixes = list(dict.fromkeys(f.fix for f in sorted(code_findings, key=lambda f: order[f.severity])))[:5]
+    # Fixes must belong to retained findings. Free-form model recommendations have no evidence identity.
+    top_fixes = list(dict.fromkeys(f.fix for f in findings))[:5]
     report = Report(
-        summary=plain(summary),
+        harness_worklog=state.get("harness_worklog", []),
+        summary="Report assessment pending.",
         first_impression=FirstImpression.model_validate({k: plain(v) if isinstance(v, str) else [plain(t) for t in v] if isinstance(v, list) else v for k, v in fi.items()}) if fi else None,
         findings=findings,
         top_fixes=[plain(t) for t in top_fixes[:5]],
@@ -618,6 +639,7 @@ def synthesize(state: ReportState) -> dict:
         stack=_with_backend(state.get("stack"), code_findings, state.get("backend_context")),
     )
     report.assessment = build_assessment(state, [f.model_dump() for f in findings], [f.model_dump() for f in code_findings], report.checks)
+    report.summary = grounded_summary(state, report.assessment, findings)
     report.version = 2
     report.launch_ready = LaunchReady.model_validate(score.launch_ready(report.model_dump(), state.get("status", "scan")))
     report.agent_ready = AgentReady.model_validate(score.agent_ready(report.model_dump(), state.get("status", "scan"), state.get("steps", [])))
@@ -655,10 +677,10 @@ def build_graph():
 _graph = None
 
 
-def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False, intent: str = "", checkpoints: list[dict] | None = None, assertion: dict | None = None, assertion_outcome: dict | None = None) -> Report:
+def run_report(site: str, page_text: str, *, goal: str = "", persona: str = "", status: str = "scan", steps: list[dict] | None = None, verified: bool = False, final_controls: list[str] | None = None, paid: bool = False, intent: str = "", checkpoints: list[dict] | None = None, assertion: dict | None = None, assertion_outcome: dict | None = None, harness_worklog: list[dict] | None = None) -> Report:
     global _graph
     _graph = _graph or build_graph()
-    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "intent": intent, "checkpoints": checkpoints or [], "assertion": assertion, "assertion_outcome": assertion_outcome, "tokens": 0, "notes": []})
+    out = _graph.invoke({"site": site, "page_text": page_text, "goal": goal, "persona": persona, "status": status, "steps": steps or [], "verified": verified, "final_controls": final_controls or [], "paid": paid, "intent": intent, "checkpoints": checkpoints or [], "assertion": assertion, "assertion_outcome": assertion_outcome, "harness_worklog": harness_worklog or [], "tokens": 0, "notes": []})
     report = Report.model_validate(out["synthesis"])
     report.tokens = out["tokens"]
     return report

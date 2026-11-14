@@ -43,7 +43,7 @@ def scan(html: str, url: str) -> list[Finding]:
     if skipped:
         out.append(_f("medium", "Heading levels are skipped", f"The heading order jumps from h{skipped[0]} to h{skipped[1]}.", "Use headings in a logical outline without skipping levels.", f"h{skipped[0]} to h{skipped[1]} at {url}"))
 
-    images = [node for node in tree.css("img") if node.attributes.get("alt") is None]
+    images = [node for node in tree.css("img") if "alt" not in node.attributes]  # alt="" is a valid decorative image
     if images:
         count = len(images)
         title = "Image is missing text alternative" if count == 1 else f"{count} images are missing text alternatives"

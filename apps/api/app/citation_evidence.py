@@ -158,15 +158,60 @@ def gemini_sources(candidate: dict, grounded: bool) -> tuple[list[dict], str]:
     return sources, status
 
 
+def _owns(host: str, own: str) -> bool:
+    return bool(host and own) and (host == own or host.endswith("." + own))
+
+
+def _written_hosts(text: str) -> list[str]:
+    """Every host the answer itself writes, as a URL or a bare domain."""
+    prose = URLS.sub(lambda m: " " * len(m.group()), text)
+    return [h for m in [*URLS.finditer(text), *DOMAINS.finditer(prose)] if (h := domain_of(m.group().rstrip(".,;:!?)")))]
+
+
+def identity(name: str, domain: str, mentioned: bool, written: list[str], sources: list[dict]) -> tuple[str, dict | None]:
+    """Whether a matched name is this business. Only the owned domain, written in the answer or cited, confirms it; a
+    same-name site among the answer's or retrieved hosts means the answer may be about someone else. A bare name
+    alone stays ambiguous (AI citation research 2026-11-13, Phase A)."""
+    own = domain_of(domain)
+    if not mentioned:
+        return "absent", None
+    if not own:
+        return "ambiguous", None
+    if any(_owns(h, own) for h in written):
+        return "verified", {"kind": "owned_domain_in_answer", "host": own}
+    if any(s.get("cited") is True and _owns(s.get("domain") or "", own) for s in sources):
+        return "verified", {"kind": "owned_domain_cited", "host": own}
+    token = re.sub(r"[^a-z0-9]", "", name.lower())
+    if len(token) >= 4:
+        for host in [*written, *(s.get("domain") or "" for s in sources)]:
+            if host and not _owns(host, own) and token in re.sub(r"[^a-z0-9]", "", host):
+                return "other", {"kind": "same_name_domain", "host": host}
+    return "ambiguous", None
+
+
 def analyze(answer: str, sources: list[dict], brand: str, domain: str, competitors: list[dict], *, citation_status: str = "unresolved") -> dict:
+    """`mentioned` is a lexical match (name or owned host); `entity_status` says whether it is this business."""
+    text = clean(answer)
+    written = _written_hosts(text)
     rows = [{"name": brand, "domain": domain, "you": True}] + [dict(c, you=False) for c in competitors]
-    positions = [first(clean(answer), r["name"], r.get("domain", "")) for r in rows]
+    positions = [first(text, r["name"], r.get("domain", "")) for r in rows]
     order = sorted((pos, i) for i, pos in enumerate(positions) if pos is not None)
-    cited_domains = list(dict.fromkeys(s["domain"] for s in sources if s.get("cited") is True and s.get("domain")))
+    # Cited domain -> earliest place the answer cites it. Retrieval order is not citation order, so without a
+    # position for every cited domain no rank is given.
+    cited_at: dict[str, int | None] = {}
+    for s in sources:
+        if s.get("cited") is True and s.get("domain"):
+            starts = [e["start"] for e in s.get("evidence") or [] if type(e.get("start")) is int]
+            known = [p for p in (cited_at.get(s["domain"]), min(starts) if starts else None) if p is not None]
+            cited_at[s["domain"]] = min(known) if known else None
+    ranked = sorted(cited_at, key=lambda d: cited_at[d]) if all(p is not None for p in cited_at.values()) else []
     for i, row in enumerate(rows):
         host = domain_of(row.get("domain", ""))
-        rank = next((n for n, d in enumerate(cited_domains, 1) if host and (d == host or d.endswith("." + host))), None)
+        hit = next((d for d in cited_at if _owns(d, host)), None)
+        status, evidence = identity(row["name"], row.get("domain", ""), positions[i] is not None, written, sources)
         row.update(mentioned=positions[i] is not None, mention_rank=next((n for n, (_, idx) in enumerate(order, 1) if idx == i), None),
-                   cited=True if rank else False if citation_status == "measured" and host else None, source_rank=rank)
-    return {"brands": rows, "sources": len(cited_domains), "citation_status": citation_status,
+                   cited=True if hit else False if citation_status == "measured" and host else None,
+                   source_rank=ranked.index(hit) + 1 if hit in ranked else None,
+                   entity_status=status, entity_evidence=evidence)
+    return {"brands": rows, "sources": len(cited_at), "citation_status": citation_status,
             "citation_eligible": citation_status == "measured", "measurement_version": VERSION}
