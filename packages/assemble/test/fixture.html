@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Assemble fixture</title>
+    <style>
+      body { margin: 0; padding: 40px; font: 16px/1.5 system-ui, sans-serif; background: #f4f1ea; color: #1b1b1b; }
+      h1 { font-size: 64px; line-height: 1.05; margin: 0 0 16px; font-weight: 300; }
+      h1 .word { display: inline-block; }
+      .row { display: flex; gap: 24px; align-items: center; margin: 24px 0; }
+      .btn { display: inline-block; padding: 12px 20px; background: #2b2fd9; color: #fff; border-radius: 6px; text-decoration: none; }
+      .card { position: relative; width: 320px; padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); }
+      .card::before { content: ""; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: #e2a336; border-radius: 12px 0 0 12px; }
+      .avatar { width: 96px; height: 96px; border-radius: 50%; overflow: hidden; }
+      .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .mix { isolation: isolate; position: relative; }
+      .mix b { position: absolute; left: 30px; top: -10px; mix-blend-mode: difference; color: #fff; font-size: 40px; }
+      .later { opacity: 0; }
+      .gone { display: none; }
+      hr { border: 0; border-top: 1px solid #1b1b1b; margin: 24px 0; }
+    </style>
+  </head>
+  <body>
+    <h1 id="headline"><span class="word">Launch</span> <span class="word">with</span> <span class="word">evidence</span></h1>
+    <p class="later" id="later">Not shown yet.</p>
+    <p id="para">A paragraph with <a href="#">a link</a>, some <em>emphasis</em> and enough words to wrap on to a second line at this width so the caret has to change lines while it types.</p>
+    <div class="row">
+      <a class="btn" id="button" href="#">Download now</a>
+      <div class="avatar" id="avatar"><img id="img" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect width='96' height='96' fill='%23333'/%3E%3Ccircle cx='48' cy='40' r='20' fill='%23bbb'/%3E%3C/svg%3E" /></div>
+      <span id="inline">Inline span text</span>
+    </div>
+    <hr id="rule" />
+    <div class="card" id="card">
+      <h3 id="title" style="margin: 0 0 8px">Card title</h3>
+      <div id="body">Card body text.</div>
+    </div>
+    <div class="mix row"><div style="width: 120px; height: 60px; background: #0a7" id="swatch"></div><b id="blend">Blend</b></div>
+    <section id="band" style="border-top: 1px solid #1b1b1b; margin-top: 24px; padding-top: 8px">
+      <ul id="list" style="list-style: none; margin: 0; padding: 0">
+        <li class="item" id="r1" style="border-bottom: 1px solid #ccc; padding: 8px 0"><h4 style="margin: 0">Row one</h4><p style="margin: 0">First row text.</p></li>
+        <li class="item" id="r2" style="border-bottom: 1px solid #ccc; padding: 8px 0"><h4 style="margin: 0">Row two</h4><p style="margin: 0">Second row text.</p></li>
+        <li class="item" id="r3" style="border-bottom: 1px solid #ccc; padding: 8px 0"><h4 style="margin: 0">Row three</h4><p style="margin: 0">Third row text.</p></li>
+        <li class="item" id="r4" style="border-bottom: 1px solid #ccc; padding: 8px 0"><h4 style="margin: 0">Row four</h4><p style="margin: 0">Fourth row text.</p></li>
+      </ul>
+    </section>
+    <p class="gone" id="gone">Never shown.</p>
+      <div class="later" id="below" style="margin-top: 1200px; visibility: hidden"><p id="belowText" style="margin: 0">Fades in on scroll.</p></div>
+  </body>
+</html>
