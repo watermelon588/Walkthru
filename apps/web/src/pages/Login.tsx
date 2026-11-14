@@ -171,7 +171,7 @@ export default function Login() {
 
       {/* Full-height photo. Swap public/assets/login.jpg to change it (portrait, 1600x2000 or larger). */}
       <aside className="relative hidden lg:block">
-        <Asset name="login.jpg" eager label="A person settling into a lounge chair, blurred in motion" className="absolute inset-0 h-full !rounded-none object-[50%_65%] saturate-[.55]" />
+        <Asset name="login.jpg" eager label="A person settling into a lounge chair, blurred in motion" className="absolute inset-0 !h-full !rounded-none object-[50%_65%] saturate-[.55]" />
       </aside>
     </div>
   )

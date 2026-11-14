@@ -45,7 +45,7 @@ export default function Pricing() {
               <Words text="Free to start. One pass when it counts." />
             </h1>
             <p className="hero-fade mx-auto mt-6 max-w-[52ch] text-lg leading-relaxed text-muted">
-              Scan any homepage for free. Buy 30 days of AI test users when you are testing the real product. Nothing renews on its own.
+              Scan any homepage for free. Buy 30 days of AI test users when you are testing the real product. Nothing renews on its own, and no card is needed for the free plan, so you only pay for the month you actually test.
             </p>
           </div>
         </section>

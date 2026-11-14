@@ -1,4 +1,5 @@
 import { assertSupportedReport, reportCsv, type ReportAssessment } from './reportContract'
+import type { LiveTest } from './live'
 import { supabase } from './supabase'
 import { apiError } from './apiError'
 import { confirmedAccessRequest } from './accessRequest'
@@ -59,6 +60,10 @@ export type StepEvidence = {
   note?: string
   /** R-S19: visible error boxes in this exact frame, as fractions of the captured viewport (drawn over, never into, the image). */
   regions?: { kind: 'error'; x: number; y: number; w: number; h: number }[]
+  /** Live runs: the view just before a click or typing, where the target was in it (fractions of the frame), and a short action name. */
+  aim_path?: string
+  pointer?: { x: number; y: number }
+  label?: string
 }
 
 export type Finding = {
@@ -94,7 +99,26 @@ export type Compared = {
   pages_unchecked?: string[]
 }
 
+export type HarnessEvent = {
+  sequence: number
+  step: number
+  node: 'validate' | 'revise' | 'prepare' | 'guard' | 'recover' | 'assess' | 'check'
+  reason: string
+  checkpoint?: number | null
+  action?: string | null
+  target_id?: number | null
+  progress: number
+  status?: string | null
+  before_kind?: string | null
+  after_kind?: string | null
+  before_target?: string | null
+  after_target?: string | null
+  contract_revision?: number | null
+  source?: string | null
+}
+
 export type Report = {
+  harness_worklog?: HarnessEvent[]
   version?: 1 | 2
   assessment?: ReportAssessment | null
   summary: string
@@ -216,7 +240,7 @@ export const PERSONA_LABEL: Record<string, string> = {
 export const KIND_LABEL: Record<Finding['kind'], string> = { ux: 'UX', accessibility: 'Accessibility', performance: 'Performance', seo: 'SEO', security: 'Security', geo: 'GEO' }
 
 export const API = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8010'
-const COLUMNS = 'id, site, goal, persona, kind, status, steps, report, public, created_at, updated_at, evidence_purged_at, group_id'
+// Run columns the browser reads are listed in read_run (apps/api/migrations/0008_read_runs_by_link.sql).
 
 /** Keep in sync with EVIDENCE_RETENTION_DAYS on the API (apps/api/app/retention.py). */
 export const EVIDENCE_RETENTION_DAYS = 30
@@ -249,9 +273,11 @@ export async function listRunsPage(cursor?: string, signal?: AbortSignal, expect
 /** Bounded recent selector for Compare. History downloads no report, journey text or screenshot paths. */
 export const listRuns = async () => (await listRunsPage()).runs
 
+/** One run this viewer may open: their own, shared by link or shared with their team (migrations/0008). Shared
+ *  reports are read by id only, so the public key cannot list them. */
 export async function getRun(id: string): Promise<Run | null> {
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase.from('runs').select(COLUMNS).eq('id', id).maybeSingle()
+  const { data, error } = await supabase.rpc('read_run', { p_id: id })
   if (error) throw error
   const run = data as Run | null
   assertSupportedReport(run?.report)
@@ -456,10 +482,10 @@ export const startCompare = (site: string, competitors: string[]) => api<{ run_i
 
 export type Funnel = { steps_to_goal: number | null; fields_typed: number; errors_seen: number; safe_stops: number; first_useful_step: number | null; seconds_to_first_useful: number | null }
 
-/** The other runs in a Plus group, oldest first. Row-level security returns only runs this viewer may read. */
+/** The other runs in a Plus group, oldest first; only runs this viewer may open (migrations/0008). */
 export async function groupRuns(groupId: string): Promise<Run[]> {
   if (!supabase) return []
-  const { data, error } = await supabase.from('runs').select(COLUMNS).eq('group_id', groupId).order('created_at', { ascending: true }).limit(10)
+  const { data, error } = await supabase.rpc('read_group_runs', { p_group: groupId })
   if (error) throw error
   return data as Run[]
 }
@@ -493,7 +519,8 @@ export const sendFeedback = (message: string, page: string) => api<{ sent: boole
 
 // ---------- AI answers: citation tracking (apps/api/app/citations.py) ----------
 
-export type CitationBrand = { name: string; domain: string; you: boolean; mentioned: boolean; mention_rank: number | null; cited: boolean | null; source_rank: number | null }
+export type CitationBrand = { name: string; domain: string; you: boolean; mentioned: boolean; mention_rank: number | null; cited: boolean | null; source_rank: number | null
+  entity_status?: 'verified' | 'ambiguous' | 'other' | 'absent'; entity_evidence?: { kind: string; host: string } | null }
 export type CitationAnswer = {
   id: number; prompt: string; engine: 'web' | 'memory'; status: 'queued' | 'done' | 'failed'; model: string; answer: string
   sources: { url: string; title: string; domain: string; cited?: boolean; attribution?: string; evidence?: { kind: string; reference: string; quote?: string; start?: number; end?: number }[] }[]
@@ -514,7 +541,7 @@ export type CitationView = {
   status: { queued: number; done: number; failed: number }
   share_of_voice: { name: string; domain: string; you: boolean; mentions: number; citations: number; share: number; answers: number }[]
   answers: CitationAnswer[]
-  trend: { at: string; answers: number; mentioned: number; cited: number; citation_answers?: number }[]
+  trend: { at: string; answers: number; mentioned: number; identified?: number; cited: number; citation_answers?: number }[]
 }
 export const getCitations = () =>
   api<{ plan: string; sites: CitationSite[]; limit: CitationLimit | null; engines: { engine: string; label: string }[]; not_measured: string[] }>('/citations', undefined, true, 'GET')
@@ -523,3 +550,9 @@ export const getCitationSite = (id: string) => api<CitationView>(`/citations/${e
 export const editCitationSite = (id: string, body: { brand?: string; competitors?: string[]; prompts?: string[] }) => api<CitationView>(`/citations/${encodeURIComponent(id)}`, body)
 export const checkCitationsNow = (id: string) => api<{ queued: number }>(`/citations/${encodeURIComponent(id)}/check`)
 export const untrackCitations = (id: string) => api<{ deleted: string }>(`/citations/${encodeURIComponent(id)}`, undefined, true, 'DELETE')
+
+/* In-app live runs (lib/live.ts, apps/api/app/cloud.py) */
+export const startLive = (site: string, goal: string, personas: string[]) => api<LiveTest>('/cloud-runs', { site, goal, personas })
+export const getLive = (groupId: string) => api<LiveTest>(`/cloud-runs/${encodeURIComponent(groupId)}`, undefined, true, 'GET')
+export const liveGoalIdeas = (site: string) => api<{ ideas: string[] }>(`/cloud-runs/goal-ideas?site=${encodeURIComponent(site)}`, undefined, true, 'GET')
+export const stopLive = (groupId: string) => api<{ stopped: number }>(`/cloud-runs/${encodeURIComponent(groupId)}/stop`)

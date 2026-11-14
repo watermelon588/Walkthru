@@ -1,4 +1,7 @@
-import type { CitationAnswer } from './runs'
+import type { CitationAnswer, CitationBrand } from './runs'
+
+// A matched name is text, not proof it is this business; answers saved before identity was checked count as unconfirmed.
+export const identity = (b?: CitationBrand) => b?.entity_status ?? (b?.mentioned ? 'ambiguous' : 'absent')
 
 export function citationMetrics(answers: CitationAnswer[]) {
   const done = answers.filter((a) => a.status === 'done')
@@ -14,8 +17,16 @@ export function citationMetrics(answers: CitationAnswer[]) {
   const total = [...brands.values()].reduce((sum, b) => sum + b.mentions, 0)
   const voice = [...brands.values()].map((b) => ({ ...b, share: total ? Math.round(100 * b.mentions / total) : 0 }))
     .sort((a, b) => b.mentions - a.mentions)
-  return { done, named: done.filter((a) => you(a)?.mentioned).length, cited: eligible.filter((a) => you(a)?.cited).length,
-    citationAnswers: eligible.length, voice, hasMentions: total > 0 }
+  const count = (status: string) => done.filter((a) => identity(you(a)) === status).length
+  // Citation slots: answers that searched the web, plus failed checks on that surface. Unknown never becomes a miss.
+  const searched = done.filter((a) => a.result?.citation_status !== 'not_applicable').length
+  const citationSlots = searched ? searched + answers.filter((a) => a.status === 'failed').length : 0
+  const cited = eligible.filter((a) => you(a)?.cited).length
+  const unknown = citationSlots - eligible.length
+  const pct = (n: number) => Math.round(100 * n / citationSlots)
+  return { done, identified: count('verified'), nameOnly: count('ambiguous'), otherEntity: count('other'), cited,
+    citationAnswers: eligible.length, citationSlots, unknown, bounds: citationSlots ? [pct(cited), pct(cited + unknown)] : null,
+    voice, hasMentions: total > 0 }
 }
 
 export function citationLabel(answer: CitationAnswer) {

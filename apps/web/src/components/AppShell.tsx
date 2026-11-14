@@ -1,4 +1,4 @@
-import { BookOpenTextIcon, ChatCircleTextIcon, ChatsCircleIcon, CreditCardIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, ChatCircleTextIcon, ChatsCircleIcon, CreditCardIcon, CursorClickIcon, EyeIcon, GearSixIcon, ListIcon, PathIcon, PuzzlePieceIcon, ScalesIcon, SignOutIcon, TerminalWindowIcon, UsersThreeIcon, XIcon, type Icon } from '@phosphor-icons/react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -14,6 +14,7 @@ import { Logo, SkipLink } from './Shared'
 
 const workspace: { to: string; label: string; icon: Icon; end?: boolean; section?: Section }[] = [
   { to: '/app', label: 'Runs', icon: PathIcon, end: true, section: 'runs' },
+  { to: '/app/live', label: 'Live run', icon: CursorClickIcon },
   { to: '/app/team', label: 'Team', icon: UsersThreeIcon, section: 'team' },
   { to: '/app/compare', label: 'Compare', icon: ScalesIcon, section: 'compare' },
   { to: '/app/watch', label: 'Watch', icon: EyeIcon, section: 'watch' },

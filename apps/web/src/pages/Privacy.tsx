@@ -145,7 +145,7 @@ export default function Privacy() {
   return (
     <DocLayout
       title="Privacy policy"
-      lead={`What ${brand.name} collects when you scan or test a site, why, who processes it and how to take it with you or delete it.`}
+      lead={`What ${brand.name} collects when you scan or test a site, why, who processes it and how to take it with you or delete it. Emails, long numbers and typed values are masked in your browser before any AI model sees a page.`}
       updated="2026-10-01"
       sections={sections}
     />

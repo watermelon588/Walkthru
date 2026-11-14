@@ -286,7 +286,7 @@ export default function Docs() {
   return (
     <DocLayout
       title="Documentation"
-      lead={`Everything you need to run your first scan, test a real flow and act on the report.`}
+      lead={`Everything you need to run your first scan, test a real flow and act on the report: Instant Scan for any public page, the Chrome extension for signed-in flows, the fix prompt for your AI editor and the MCP server.`}
       sections={sections}
     />
   )

@@ -52,7 +52,7 @@ export const personas = [
 ]
 
 export const reportParts = [
-  { img: 'stuck-closeup.png', title: 'Where they got stuck', body: 'Every reported stuck point has a step and the test user’s words. Screenshots and replay appear when capture was available.' },
+  { img: 'stuck-closeup.webp', title: 'Where they got stuck', body: 'Every reported stuck point has a step and the test user’s words. Screenshots and replay appear when capture was available.' },
   { img: 'report.png', title: 'A Launch Ready score', body: 'What a stranger thinks in five seconds, one score from 0 to 100, the fixes to do first and a live badge for your site.' },
   { img: 'seo.png', title: 'SEO and AI search', body: 'Titles, broken links, duplicates and sitemaps across audited pages, plus whether AI crawlers can fetch and understand your content.' },
   { img: 'security.png', title: 'Security hygiene', body: 'Missing headers and plain http on public sites, plus public files and browser-shipped keys on verified domains. Passive checks only.' },

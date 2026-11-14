@@ -27,6 +27,8 @@ function page<T extends ComponentType<any>>(load: () => Promise<{ default: T }>)
 const RELOADED = 'walkthru.chunk-reload'
 const RequireAuth = page(() => import('./components/RequireAuth').then((m) => ({ default: m.RequireAuth })))
 const Dashboard = page(() => import('./pages/Dashboard'))
+const Live = page(() => import('./pages/Live'))
+const LiveRun = page(() => import('./pages/LiveRun'))
 const AgentLab = page(() => import('./pages/AgentLab'))
 const Login = page(() => import('./pages/Login'))
 const Public = page(() => import('./pages/Public'))
@@ -77,9 +79,15 @@ function ScrollManager() {
 }
 
 export default function App() {
+  return <BrowserRouter><AppRoutes /></BrowserRouter>
+}
+
+/** Everything inside the router. The browser wraps it in BrowserRouter; the build-time prerender (src/prerender.tsx)
+ *  renders the same tree in a StaticRouter, so the browser can hydrate the public pages instead of replacing them. */
+export function AppRoutes() {
   useExtensionDisconnect()
   return (
-    <BrowserRouter>
+    <>
       <ScrollManager />
       <RouteLoader />
       <NotificationsProvider>
@@ -96,6 +104,8 @@ export default function App() {
             <Route path="/bot" element={<Bot />} />
             <Route path="/security" element={<Security />} />
             <Route path="/app" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/app/live" element={<RequireAuth><Live /></RequireAuth>} />
+            <Route path="/app/live/:groupId" element={<RequireAuth><LiveRun /></RequireAuth>} />
             <Route path="/app/settings" element={<RequireAuth><Settings /></RequireAuth>} />
             <Route path="/app/feedback" element={<RequireAuth><Feedback /></RequireAuth>} />
             <Route path="/app/billing" element={<RequireAuth><Billing /></RequireAuth>} />
@@ -115,6 +125,6 @@ export default function App() {
           </Routes>
         </Suspense>
       </NotificationsProvider>
-    </BrowserRouter>
+    </>
   )
 }

@@ -1,0 +1,22 @@
+# Walkthru
+
+> The launch check for apps built with AI: AI test users try your signup and dashboard in your own browser, plus SEO, AI search readiness and passive security in one ranked report.
+
+Walkthru is for indie developers, small startups and agencies who build with AI coding tools. An Instant Scan needs only a URL. The browser extension lets test users try logged-in pages in the tab you are already signed in to. Every report ends in a fix prompt for your coding agent.
+
+## Product
+
+- [Home](https://trywalkthru.com/): what Walkthru checks and a sample report
+- [Pricing](https://trywalkthru.com/pricing): Free, Launch Pack, Pro and Plus
+- [Documentation](https://trywalkthru.com/docs): Instant Scan, the extension, test users, the fix prompt and the MCP server
+
+## Trust
+
+- [Security](https://trywalkthru.com/security): passive checks only, extension permissions, how to report a vulnerability
+- [WalkthruBot](https://trywalkthru.com/bot): what the crawler fetches and how it identifies itself
+- [Privacy](https://trywalkthru.com/privacy)
+- [Terms](https://trywalkthru.com/terms)
+
+## Optional
+
+- [Full text of every public page](https://trywalkthru.com/llms-full.txt)

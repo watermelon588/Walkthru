@@ -7,7 +7,7 @@ import { NOTIFICATION_EVENT, type Notification } from '../lib/notifications'
 import { checkCitationsNow, editCitationSite, getCitations, getCitationSite, trackCitations, untrackCitations, type CitationLimit, type CitationSite, type CitationView } from '../lib/runs'
 import { toast } from '../lib/toast'
 import { SkeletonPanel } from '../components/Loading'
-import { citationLabel } from '../lib/citationMetrics'
+import { citationLabel, identity } from '../lib/citationMetrics'
 import { fileStamp, slug, type Cell } from '../lib/export'
 import { ExportBar, PrintHeader } from '../components/ExportBar'
 
@@ -172,10 +172,10 @@ function SiteView({ id, onRemoved }: { id: string; onRemoved: () => void }) {
 
 function answersCsv(view: CitationView): Cell[][] {
   return [
-    ['Prompt', 'Engine', 'Status', 'Named you', 'Cited you', 'Brands named', 'Model', 'Checked at', 'Answer', 'Sources'],
+    ['Prompt', 'Engine', 'Status', 'Identity', 'Cited you', 'Names matched', 'Model', 'Checked at', 'Answer', 'Sources'],
     ...view.answers.map((a) => {
       const you = a.result?.brands?.find((b) => b.you)
-      return [a.prompt, citationLabel(a), a.status, a.status === 'done' ? (you?.mentioned ? 'yes' : 'no') : '', you?.cited == null ? 'not measured' : you.cited ? 'yes' : 'no',
+      return [a.prompt, citationLabel(a), a.status, a.status === 'done' ? identity(you) : '', you?.cited == null ? 'not measured' : you.cited ? 'yes' : 'no',
         (a.result?.brands ?? []).filter((b) => b.mentioned).map((b) => b.name).join('; '), a.model, a.checked_at, a.result?.raw_answer || a.answer, (a.sources ?? []).map((s) => s.url).join(' ')]
     }),
   ]

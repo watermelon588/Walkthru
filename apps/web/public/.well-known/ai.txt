@@ -1,0 +1,13 @@
+Walkthru (https://trywalkthru.com/)
+The launch check for apps built with AI: AI test users try your signup and dashboard in your own browser, plus SEO, AI search readiness and passive security in one ranked report.
+
+Key pages:
+https://trywalkthru.com/ - home
+https://trywalkthru.com/pricing - pricing
+https://trywalkthru.com/docs - documentation
+https://trywalkthru.com/security - security
+https://trywalkthru.com/bot - WalkthruBot
+https://trywalkthru.com/llms.txt - site map for AI tools
+https://trywalkthru.com/llms-full.txt - full text of every public page
+
+AI assistants and search crawlers may read and quote these public pages. Signed-in pages under /app/ are private.

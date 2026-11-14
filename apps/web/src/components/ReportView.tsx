@@ -3,6 +3,10 @@ import { EVIDENCE_RETENTION_DAYS, ignoredKey, KIND_LABEL, PERSONA_LABEL, STATUS_
 import { BrandClosing, BrandCover } from './BrandCover'
 import { AgentPresence, type AgentPresenceState } from './AgentPresence'
 import { EvidenceTimeline } from './EvidenceTimeline'
+import { HarnessWorklog } from './HarnessWorklog'
+import { SessionPlayer } from './SessionPlayer'
+import { SessionVideoExport } from './SessionVideoExport'
+import { personaOrb } from '../lib/live'
 import { SkeletonReport, Working } from './Loading'
 import { LaunchReady } from './LaunchReady'
 import { FixPrompt } from './FixPrompt'
@@ -134,8 +138,18 @@ export function ReportView({ run, ignore, brand }: { run: Run; ignore?: IgnoreCo
             <ChapterSection key={c.key} chapter={c}>
               {c.key === 'journey' && (
                 <>
+                  {!isScan && steps.some((step) => step.evidence?.pointer) && (
+                    <section aria-labelledby="session-replay-title" className="no-print mt-14">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Live run</p>
+                      <h2 id="session-replay-title" className="mt-2 text-2xl font-light tracking-tight">Watch the visit again</h2>
+                      <p className="mb-6 mt-2 max-w-[58ch] text-sm leading-relaxed text-muted">This run happened in Walkthru's browser. Play it to follow the test user from page to page.</p>
+                      <SessionPlayer steps={steps} runId={run.id} orb={personaOrb(run.persona)} name={brand ? 'Test user' : PERSONA_LABEL[run.persona] ?? run.persona} />
+                      <SessionVideoExport steps={steps} runId={run.id} site={run.site} owner={brand?.name || undefined} name={brand ? 'Test user' : PERSONA_LABEL[run.persona] ?? run.persona} />
+                    </section>
+                  )}
                   {!isScan && steps.length > 0 && <EvidenceTimeline steps={steps} branded={!!brand} />}
                   {!isScan && steps.length > 0 && <RetentionNote run={run} />}
+                  {!isScan && <HarnessWorklog events={r.harness_worklog} />}
                   {run.group_id && <TestUsersCompared run={run} owner={!!ignore} />}
                   {r.first_impression && (
                     <section aria-label="First impression" className="mt-10">
